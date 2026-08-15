@@ -1,5 +1,7 @@
 # DSH Codex UI
 
+[English](README.en.md) | 简体中文
+
 独立 DSH Web 客户端插件，使用官方 `sidebar` 插槽替换左侧导航，不修改 DSH 源码和会话数据。原生项目树、会话菜单、消息、工具调用、权限、模型选择和流式输出均继续由 DSH 渲染。
 
 开发交接入口见 [docs\00-交接入口\00-阅读导航.md](docs/00-交接入口/00-阅读导航.md)。
@@ -18,3 +20,7 @@
 ## 安装
 
 在已构建的包目录中执行 `dsh plugin --profile web add .` 安装；卸载时执行 `dsh plugin --profile web remove @michengai/dsh-codex-ui`，默认侧栏会恢复。
+
+## 许可证
+
+本项目采用 [Apache License 2.0](LICENSE) 开源许可。

@@ -2,7 +2,7 @@
   "name": "@michengai/dsh-codex-ui",
   "version": "0.2.16",
   "description": "以 Codex 风格重构 DSH Web 侧栏的独立客户端插件",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "type": "module",
   "main": "dist/index.mjs",
   "types": "dist/index.d.mts",
@@ -18,7 +18,9 @@
   },
   "files": [
     "dist",
-    "cordis.patch.yml"
+    "cordis.patch.yml",
+    "LICENSE",
+    "README.en.md"
   ],
   "dsh": {
     "bundle": {
