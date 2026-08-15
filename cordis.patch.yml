@@ -1,0 +1,6 @@
+# 由本插件接管 sidebar 的子插槽声明，原设置面板仍通过 sidebar.settings 挂载。
+- id: ui-sidebar
+  disabled: true
+- insert:
+    - id: codex-ui
+      name: '@michengai/dsh-codex-ui'
