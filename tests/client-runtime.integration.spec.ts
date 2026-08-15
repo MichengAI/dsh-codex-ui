@@ -6,7 +6,7 @@ let runtime: SlotTestRuntime | undefined
 
 afterEach(async () => { await runtime?.dispose() })
 
-test('侧栏替换保留 footer action 子插槽，供第三方插件注册', async () => {
+test('侧栏替换以更低优先级接管工作区树，并保留 footer action 子插槽', async () => {
   runtime = await SlotTestRuntime.create()
   runtime.provide('layout', { toggleSidebar: () => {} })
   runtime.provide('locale', {
@@ -19,6 +19,8 @@ test('侧栏替换保留 footer action 子插槽，供第三方插件注册', as
 
   await runtime.mount({ inject, apply })
   expect(runtime.slots.entries('sidebar')).toHaveLength(1)
+  expect(runtime.slots.entries('sidebar.workspaces')).toHaveLength(1)
+  expect(runtime.slots.entries('sidebar.footer.action')).toHaveLength(0)
 
   const disposeFooter = runtime.slots.register({
     name: 'sidebar.footer.action', id: 'compatibility-probe', order: 0,

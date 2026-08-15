@@ -1,0 +1,195 @@
+import { useEffect, useMemo, useState } from 'react'
+import type { SessionId, WorkspaceId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import {
+  Button,
+  IconArchiveOutline20,
+  IconBranchOutline16,
+  IconCopyOutline16,
+  IconDownloadOutline16,
+  IconEditOutline16,
+  IconEllipsisOutline16,
+  IconFolderOpenOutline16,
+  IconFullscreenOutline16,
+  IconGoalOutline16,
+  IconLinkOutline16,
+  IconPlusOutline16,
+  IconShareOutline16,
+  Menu,
+  Modal,
+  writeClipboard,
+  type MenuEntry,
+} from '@deepseek-ai/dsh-client-ui-primitives'
+import { NS } from './locales.ts'
+import { readPinnedWorkspaceIds, savePinnedWorkspaceIds, togglePinnedWorkspace } from './pinned-workspaces.ts'
+import {
+  readSessionIds,
+  SESSION_PINS_STORAGE_KEY,
+  SESSION_UNREAD_STORAGE_KEY,
+  sessionDeepLink,
+  sessionExportFilename,
+  toggleSessionId,
+  writeSessionIds,
+} from './session-manager.ts'
+import { moveBefore, visibleSessionIds } from './workspace-browser.ts'
+
+type BrowserInjected = {
+  archiveSession: (sessionId: SessionId) => Promise<void>
+  forkSession: (sessionId: SessionId) => Promise<void>
+  insertSessionBefore: (workspaceId: WorkspaceId, sessionId: SessionId, beforeSessionId?: SessionId) => Promise<unknown>
+  insertWorkspaceBefore: (workspaceId: WorkspaceId, beforeWorkspaceId?: WorkspaceId) => Promise<unknown>
+  openPath: (path: string) => Promise<void>
+  openSession: (sessionId: SessionId) => void
+  renameSession: (sessionId: SessionId, title: string) => Promise<void>
+  renameWorkspace: (workspaceId: WorkspaceId, title: string) => Promise<unknown>
+  startSession: (workspaceId?: WorkspaceId) => void
+}
+
+type CodexWorkspaceBrowserProps = PropsRuntime<'sidebar.workspaces'> & PropsLocale<typeof NS> & BrowserInjected
+type MenuState = { id: string; type: 'workspace' | 'session' } | undefined
+type RenameTarget = { id: string; kind: 'workspace' | 'session'; title: string } | undefined
+
+const stylesheet = `
+.dcu-wb{--dcu-wb-inset:10px;display:flex;flex:1;min-height:0;flex-direction:column;padding:4px var(--dcu-wb-inset) 8px;color:var(--dsw-alias-label-primary)}.dcu-wb *{box-sizing:border-box}.dcu-wb-tree{flex:1;min-height:0;overflow-y:auto;padding-bottom:16px;scrollbar-gutter:stable}.dcu-wb-section+.dcu-wb-section{margin-top:10px}.dcu-wb-section-label{display:flex;align-items:center;min-height:28px;padding:0 6px;color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:650}.dcu-wb-project{position:relative}.dcu-wb-project-head,.dcu-wb-session{display:flex;align-items:center;gap:6px;width:100%;border-radius:8px;padding:0 8px;color:var(--dsw-alias-label-primary);cursor:pointer}.dcu-wb-project-head{height:34px;background:transparent;font:inherit;text-align:left}.dcu-wb-project-head:hover,.dcu-wb-project-head.dcu-wb-menu-open,.dcu-wb-session:hover,.dcu-wb-session.dcu-wb-selected,.dcu-wb-session.dcu-wb-menu-open{background:var(--dsw-alias-interactive-bg-hover)}.dcu-wb-project-head[draggable=true],.dcu-wb-session[draggable=true]{cursor:grab}.dcu-wb-project-head[draggable=true]:active,.dcu-wb-session[draggable=true]:active{cursor:grabbing}.dcu-wb-project-head.dcu-wb-drop,.dcu-wb-session.dcu-wb-drop{box-shadow:inset 0 2px var(--dsw-alias-state-business-primary)}.dcu-wb-folder,.dcu-wb-slot{display:grid;place-items:center;flex:none;width:16px;height:20px;color:var(--dsw-alias-label-tertiary)}.dcu-wb-project-title,.dcu-wb-session-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;line-height:20px}.dcu-wb-project-title{flex:1;font-weight:550}.dcu-wb-session{position:relative;min-height:32px;padding-left:30px}.dcu-wb-session-title{flex:1;margin-left:2px}.dcu-wb-time{flex:none;color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:20px}.dcu-wb-actions{display:none;align-items:center;gap:8px;flex:none}.dcu-wb-project-head:hover .dcu-wb-actions,.dcu-wb-project-head.dcu-wb-menu-open .dcu-wb-actions,.dcu-wb-session:hover .dcu-wb-actions,.dcu-wb-session.dcu-wb-menu-open .dcu-wb-actions{display:flex}.dcu-wb-session:hover .dcu-wb-time,.dcu-wb-session.dcu-wb-menu-open .dcu-wb-time{display:none}.dcu-wb-more{display:grid;place-items:center;width:20px;height:20px;border:0;border-radius:4px;padding:0;background:transparent;color:var(--dsw-alias-label-tertiary);cursor:pointer}.dcu-wb-more:hover{color:var(--dsw-alias-label-primary)}.dcu-wb-status{width:7px;height:7px;border-radius:50%;background:var(--dsw-alias-label-tertiary)}.dcu-wb-status-running{background:var(--dsw-alias-state-business-primary)}.dcu-wb-status-waiting{background:var(--dsw-alias-state-warning-primary)}.dcu-wb-pin{flex:none;color:var(--dsw-alias-state-business-primary);font-size:12px}.dcu-wb-unread{flex:none;width:7px;height:7px;border-radius:50%;background:var(--dsw-alias-state-business-primary)}.dcu-wb-empty{padding:14px 8px;color:var(--dsw-alias-label-tertiary);font-size:13px}.dcu-wb-error{margin:4px 0;padding:6px 8px;border-radius:6px;background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 12%,transparent);color:var(--dsw-alias-state-error-primary);font-size:12px}.dcu-wb-rail{display:none}.dcu-wb-rename-actions{display:flex;justify-content:flex-end;gap:8px}.dcu-wb-rename-input{width:100%;height:44px;border:1px solid var(--dsw-alias-border-l2);border-radius:22px;padding:7px 14px;outline:0;background:transparent;color:var(--dsw-alias-label-primary);font:inherit}.dcu-wb-rename-input:focus{border-color:var(--dsw-alias-button-info-fill)}
+`
+
+function storage(): Storage | undefined { return typeof window === 'undefined' ? undefined : window.localStorage }
+
+function browserBase(): string {
+  return typeof window === 'undefined' || window.location.origin === 'null' ? 'http://dsh.internal/' : `${window.location.origin}/`
+}
+
+async function exportSession(sessionId: string): Promise<void> {
+  const url = new URL('/api/session.export', browserBase())
+  url.searchParams.set('sessionId', sessionId)
+  url.searchParams.set('includeDescendants', 'true')
+  const response = await fetch(url, { method: 'HEAD' })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  const anchor = document.createElement('a')
+  anchor.href = url.toString()
+  anchor.download = sessionExportFilename(sessionId)
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+}
+
+function relativeTime(updatedAt: number): string {
+  const seconds = Math.max(0, Math.round((Date.now() - updatedAt) / 1000))
+  if (seconds < 60) return '刚刚'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小时前`
+  return `${Math.floor(seconds / 86400)} 天前`
+}
+
+/** 插件自有的工作区树：复刻原生层级和拖拽行为，并在每个会话菜单中增加管理操作。 */
+export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, archiveSession, forkSession, insertSessionBefore, insertWorkspaceBefore, openPath, openSession, renameSession, renameWorkspace, startSession }: CodexWorkspaceBrowserProps) {
+  const sessions = useSessions(state => state)
+  const workspaces = useWorkspaces(state => state)
+  const [pinnedWorkspaceIds, setPinnedWorkspaceIds] = useState(() => readPinnedWorkspaceIds(storage()))
+  const [pinnedSessionIds, setPinnedSessionIds] = useState(() => readSessionIds(storage(), SESSION_PINS_STORAGE_KEY))
+  const [unreadSessionIds, setUnreadSessionIds] = useState(() => readSessionIds(storage(), SESSION_UNREAD_STORAGE_KEY))
+  const [menu, setMenu] = useState<MenuState>()
+  const [renameTarget, setRenameTarget] = useState<RenameTarget>()
+  const [renameDraft, setRenameDraft] = useState('')
+  const [busy, setBusy] = useState<string>()
+  const [error, setError] = useState<string>()
+  const [workspaceDragId, setWorkspaceDragId] = useState<string>()
+  const [workspaceDropId, setWorkspaceDropId] = useState<string>()
+  const [sessionDrag, setSessionDrag] = useState<{ sessionId: string; workspaceId: string }>()
+  const [sessionDropId, setSessionDropId] = useState<string>()
+
+  useEffect(() => { savePinnedWorkspaceIds(storage(), pinnedWorkspaceIds) }, [pinnedWorkspaceIds])
+  useEffect(() => { writeSessionIds(storage(), SESSION_PINS_STORAGE_KEY, pinnedSessionIds) }, [pinnedSessionIds])
+  useEffect(() => { writeSessionIds(storage(), SESSION_UNREAD_STORAGE_KEY, unreadSessionIds) }, [unreadSessionIds])
+  useEffect(() => {
+    const valid = new Set(workspaces.items.map(workspace => String(workspace.workspaceId)))
+    setPinnedWorkspaceIds(ids => ids.filter(id => valid.has(id)))
+  }, [workspaces.items])
+  useEffect(() => {
+    const current = sessions.current
+    if (current !== undefined) setUnreadSessionIds(ids => ids.filter(id => id !== current))
+  }, [sessions.current])
+
+  const groups = useMemo(() => {
+    const archived = workspaces.archivedSessionIds
+    const known = new Set(workspaces.items.flatMap(workspace => workspace.sessionIds))
+    const visible = (ids: readonly string[]) => visibleSessionIds(ids, sessions.byId, archived).sort((left, right) => {
+      const leftPinned = pinnedSessionIds.indexOf(left)
+      const rightPinned = pinnedSessionIds.indexOf(right)
+      if (leftPinned !== -1 || rightPinned !== -1) return (leftPinned === -1 ? Number.MAX_SAFE_INTEGER : leftPinned) - (rightPinned === -1 ? Number.MAX_SAFE_INTEGER : rightPinned)
+      return 0
+    })
+    const items = workspaces.items.map(workspace => ({ ...workspace, visibleIds: visible(workspace.sessionIds) }))
+    const ungrouped = visible(sessions.ids.filter(id => !known.has(id)))
+    return { items, ungrouped }
+  }, [pinnedSessionIds, sessions.byId, sessions.ids, workspaces.archivedSessionIds, workspaces.items])
+
+  const projectPinned = (id: WorkspaceId | string): boolean => pinnedWorkspaceIds.includes(String(id))
+  const pinnedGroups = groups.items.filter(workspace => projectPinned(workspace.workspaceId))
+  const regularGroups = groups.items.filter(workspace => !projectPinned(workspace.workspaceId))
+  const run = async (key: string, action: () => Promise<unknown>): Promise<void> => {
+    setBusy(key)
+    setError(undefined)
+    try { await action(); setMenu(undefined) } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)) } finally { setBusy(undefined) }
+  }
+  const beginRename = (kind: NonNullable<RenameTarget>['kind'], id: string, title: string): void => { setRenameTarget({ kind, id, title }); setRenameDraft(title); setMenu(undefined) }
+  const submitRename = (): void => {
+    if (renameTarget === undefined || renameDraft.trim() === '') return
+    void run('rename', async () => {
+      if (renameTarget.kind === 'workspace') await renameWorkspace(renameTarget.id as WorkspaceId, renameDraft.trim())
+      else await renameSession(renameTarget.id as SessionId, renameDraft.trim())
+      setRenameTarget(undefined)
+    })
+  }
+  const copy = (value: string | undefined): void => {
+    if (value === undefined || value === '') return
+    void run('copy', async () => { await writeClipboard(value) })
+  }
+  const projectMenu = (workspace: (typeof groups.items)[number]): MenuEntry[] => [
+    { id: 'new', label: t('workspace.newSession'), icon: <IconPlusOutline16 size={16} /> },
+    { id: 'rename', label: t('workspace.rename'), icon: <IconEditOutline16 size={16} /> },
+    { id: 'pin', label: t(projectPinned(workspace.workspaceId) ? 'workspace.unpin' : 'workspace.pin'), icon: <IconGoalOutline16 size={16} /> },
+    { id: 'openPath', label: t('workspace.openPath'), icon: <IconFolderOpenOutline16 size={16} /> },
+  ]
+  const sessionMenu = (sessionId: string, title: string, path: string | undefined): MenuEntry[] => {
+    const pinned = pinnedSessionIds.includes(sessionId)
+    const unread = unreadSessionIds.includes(sessionId)
+    return [
+      { id: 'rename', label: t('sessions.rename'), icon: <IconEditOutline16 size={16} /> },
+      { id: 'pin', label: t(pinned ? 'sessions.unpin' : 'sessions.pin'), icon: <IconGoalOutline16 size={16} /> },
+      { id: 'unread', label: t(unread ? 'sessions.markRead' : 'sessions.markUnread'), icon: <span className="dcu-wb-unread" /> },
+      { id: 'archive', label: t('sessions.archive'), icon: <IconArchiveOutline20 size={16} /> },
+      { type: 'separator', id: 'main-separator' },
+      { id: 'fork', label: t('sessions.fork'), icon: <IconBranchOutline16 size={16} /> },
+      { id: 'export', label: t('sessions.export'), icon: <IconDownloadOutline16 size={16} /> },
+      { type: 'separator', id: 'copy-separator' },
+      { id: 'openPath', label: t('sessions.openPath'), icon: <IconFolderOpenOutline16 size={16} />, disabled: path === undefined },
+      { id: 'copyPath', label: t('sessions.copyPath'), icon: <IconCopyOutline16 size={16} />, disabled: path === undefined },
+      { id: 'copyTitle', label: t('sessions.copyTitle'), icon: <IconCopyOutline16 size={16} /> },
+      { id: 'copyId', label: t('sessions.copyId'), icon: <IconLinkOutline16 size={16} /> },
+      { id: 'copyLink', label: t('sessions.copyLink'), icon: <IconShareOutline16 size={16} /> },
+      { id: 'openWindow', label: t('sessions.openWindow'), icon: <IconFullscreenOutline16 size={16} /> },
+    ]
+  }
+  const renderGroup = (workspace: (typeof groups.items)[number]) => {
+    const isPinned = projectPinned(workspace.workspaceId)
+    const menuOpen = menu?.type === 'workspace' && menu.id === workspace.workspaceId
+    return <div className="dcu-wb-project" key={workspace.workspaceId} onDragOver={(event) => { if (workspaceDragId === undefined) return; event.preventDefault(); setWorkspaceDropId(workspace.workspaceId) }} onDrop={(event) => { event.preventDefault(); const dragged = workspaceDragId; setWorkspaceDragId(undefined); setWorkspaceDropId(undefined); if (dragged !== undefined && dragged !== workspace.workspaceId && moveBefore(groups.items.map(item => String(item.workspaceId)), dragged, String(workspace.workspaceId)).join() !== groups.items.map(item => String(item.workspaceId)).join()) void run('workspace-order', () => insertWorkspaceBefore(dragged as WorkspaceId, workspace.workspaceId)) }}>
+      <div className={`dcu-wb-project-head${menuOpen ? ' dcu-wb-menu-open' : ''}${workspaceDropId === workspace.workspaceId ? ' dcu-wb-drop' : ''}`} role="treeitem" draggable onDragStart={(event) => { event.dataTransfer.effectAllowed = 'move'; setWorkspaceDragId(workspace.workspaceId) }} onDragEnd={() => { setWorkspaceDragId(undefined); setWorkspaceDropId(undefined) }}>
+        <span className="dcu-wb-folder"><IconFolderOpenOutline16 size={16} /></span><span className="dcu-wb-project-title" title={workspace.path}>{workspace.title}</span>{isPinned && <span className="dcu-wb-pin" aria-label={t('workspace.pinned')}>★</span>}<span className="dcu-wb-actions"><Menu open={menuOpen} onClose={() => { setMenu(undefined) }} items={projectMenu(workspace)} onSelect={(id) => { if (busy !== undefined) return; if (id === 'new') { startSession(workspace.workspaceId); setMenu(undefined) }; if (id === 'rename') beginRename('workspace', workspace.workspaceId, workspace.title); if (id === 'pin') { setPinnedWorkspaceIds(ids => togglePinnedWorkspace(ids, workspace.workspaceId)); setMenu(undefined) }; if (id === 'openPath') void run('open-path', () => openPath(workspace.path)) }} portal dense compact anchor={<button type="button" className="dcu-wb-more" aria-label={t('workspace.actions', { name: workspace.title })} onClick={(event) => { event.stopPropagation(); setMenu(current => current?.id === workspace.workspaceId && current.type === 'workspace' ? undefined : { id: workspace.workspaceId, type: 'workspace' }) }}><IconEllipsisOutline16 size={16} /></button>} /></span><span className="dcu-wb-actions"><button type="button" className="dcu-wb-more" aria-label={t('workspace.newSession')} onClick={(event) => { event.stopPropagation(); startSession(workspace.workspaceId) }}><IconPlusOutline16 size={16} /></button></span>
+      </div>
+      {workspace.visibleIds.map((id) => {
+        const session = sessions.byId[id as SessionId]
+        if (session === undefined) return null
+        const path = session.cwd ?? workspace.path
+        const selected = sessions.current === id
+        const sessionMenuOpen = menu?.type === 'session' && menu.id === id
+        const status = session.pendingInteraction === undefined ? (session.running ? 'running' : '') : 'waiting'
+        return <div key={id} className={`dcu-wb-session${selected ? ' dcu-wb-selected' : ''}${sessionMenuOpen ? ' dcu-wb-menu-open' : ''}${sessionDropId === id ? ' dcu-wb-drop' : ''}`} role="treeitem" aria-selected={selected} draggable onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.effectAllowed = 'move'; setSessionDrag({ sessionId: id, workspaceId: workspace.workspaceId }) }} onDragEnd={() => { setSessionDrag(undefined); setSessionDropId(undefined) }} onDragOver={(event) => { if (sessionDrag?.workspaceId !== workspace.workspaceId) return; event.preventDefault(); setSessionDropId(id) }} onDrop={(event) => { event.preventDefault(); const drag = sessionDrag; setSessionDrag(undefined); setSessionDropId(undefined); if (drag !== undefined && drag.sessionId !== id && moveBefore(workspace.visibleIds, drag.sessionId, id).join() !== workspace.visibleIds.join()) void run('session-order', () => insertSessionBefore(workspace.workspaceId, drag.sessionId as SessionId, id as SessionId)) }} onClick={() => { setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }}><span className="dcu-wb-slot">{status === '' ? null : <span className={`dcu-wb-status dcu-wb-status-${status}`} />}</span>{unreadSessionIds.includes(id) && <span className="dcu-wb-unread" aria-label={t('sessions.unread')} />}{pinnedSessionIds.includes(id) && <span className="dcu-wb-pin" aria-label={t('sessions.pinned')}>★</span>}<span className="dcu-wb-session-title">{session.displayTitle}</span><span className="dcu-wb-time">{relativeTime(session.updatedAt)}</span><span className="dcu-wb-actions"><Menu open={sessionMenuOpen} onClose={() => { setMenu(undefined) }} items={sessionMenu(id, session.displayTitle, path)} onSelect={(action) => { if (busy !== undefined) return; const link = sessionDeepLink(browserBase(), id); if (action === 'rename') beginRename('session', id, session.displayTitle); if (action === 'pin') { setPinnedSessionIds(ids => toggleSessionId(ids, id)); setMenu(undefined) }; if (action === 'unread') { setUnreadSessionIds(ids => toggleSessionId(ids, id)); setMenu(undefined) }; if (action === 'archive') void run('archive', () => archiveSession(id as SessionId)); if (action === 'fork') void run('fork', () => forkSession(id as SessionId)); if (action === 'export') void run('export', () => exportSession(id)); if (action === 'openPath' && path !== undefined) void run('open-path', () => openPath(path)); if (action === 'copyPath') copy(path); if (action === 'copyTitle') copy(session.displayTitle); if (action === 'copyId') copy(id); if (action === 'copyLink') copy(link); if (action === 'openWindow') { window.open(link, '_blank', 'noopener,noreferrer'); setMenu(undefined) } }} portal dense compact anchor={<button type="button" className="dcu-wb-more" aria-label={t('sessions.actions', { name: session.displayTitle })} onClick={(event) => { event.stopPropagation(); setMenu(current => current?.id === id && current.type === 'session' ? undefined : { id, type: 'session' }) }}><IconEllipsisOutline16 size={16} /></button>} /></span></div>
+      })}
+    </div>
+  }
+
+  if (!wide) return <div className="dcu-wb dcu-wb-rail"><style>{stylesheet}</style></div>
+  return <section className="dcu-wb" aria-label={t('workspace.label')}><style>{stylesheet}</style>{error !== undefined && <div className="dcu-wb-error" role="alert">{t('sessions.failed', { message: error })}</div>}<div className="dcu-wb-tree" role="tree"><section className="dcu-wb-section" aria-label={t('workspace.pinned')} onDragOver={(event) => { if (workspaceDragId !== undefined) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); const dragged = workspaceDragId; setWorkspaceDragId(undefined); if (dragged !== undefined) setPinnedWorkspaceIds(ids => ids.includes(dragged) ? ids : [dragged, ...ids]) }}><div className="dcu-wb-section-label">{t('workspace.pinned')}</div>{pinnedGroups.length > 0 ? pinnedGroups.map(renderGroup) : <div className="dcu-wb-empty">{t('workspace.pinnedEmpty')}</div>}</section><section className="dcu-wb-section" aria-label={t('workspace.projects')}><div className="dcu-wb-section-label">{t('workspace.projects')}</div>{regularGroups.map(renderGroup)}{regularGroups.length === 0 && groups.ungrouped.length === 0 && <div className="dcu-wb-empty">{t('workspace.empty')}</div>}</section>{groups.ungrouped.length > 0 && <section className="dcu-wb-section" aria-label={t('workspace.recent')}><div className="dcu-wb-section-label">{t('workspace.recent')}</div>{groups.ungrouped.map((id) => { const session = sessions.byId[id as SessionId]; return session === undefined ? null : <div key={id} className={`dcu-wb-session${sessions.current === id ? ' dcu-wb-selected' : ''}`} onClick={() => { openSession(id as SessionId) }}><span className="dcu-wb-slot" /><span className="dcu-wb-session-title">{session.displayTitle}</span><span className="dcu-wb-time">{relativeTime(session.updatedAt)}</span></div> })}</section>}</div><Modal open={renameTarget !== undefined} onClose={() => { setRenameTarget(undefined); setError(undefined) }} closeLabel={t('sessions.close')} title={renameTarget?.kind === 'workspace' ? t('workspace.rename') : t('sessions.rename')} footer={<div className="dcu-wb-rename-actions"><Button variant="outline" onClick={() => { setRenameTarget(undefined) }}>{t('sessions.cancel')}</Button><Button variant="primary" disabled={busy !== undefined || renameDraft.trim() === ''} onClick={submitRename}>{t('sessions.save')}</Button></div>}><input className="dcu-wb-rename-input" value={renameDraft} autoFocus onFocus={event => { event.target.select() }} onChange={event => { setRenameDraft(event.target.value); setError(undefined) }} onKeyDown={event => { if (event.key === 'Enter') submitRename() }} />{error !== undefined && <div className="dcu-wb-error" role="alert">{t('sessions.failed', { message: error })}</div>}</Modal></section>
+}
