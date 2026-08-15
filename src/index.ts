@@ -1,49 +1,15 @@
 /** 浏览器客户端插件的 Host 入口；客户端逻辑由 dsh.client 加载。 */
 import type { Context } from '@deepseek-ai/cordis'
 import { hostServices } from './host-services.ts'
-import { skillGroupOf } from './skills.ts'
 
-const skillsEndpoint = '/api/michengai/codex-ui/skills'
 const connectorsEndpoint = '/api/michengai/codex-ui/connectors'
 
-export const inject = ['webServer', 'skills', 'sessions', 'agents', 'tools']
+export const inject = ['webServer', 'sessions', 'agents', 'tools']
 
-/** 提供只读技能目录；来源仅输出为分组，不向浏览器泄露本地路径。 */
+/** 提供不泄露地址、命令和凭证的连接器目录。 */
 export function apply(ctx: Context): void {
   const host = hostServices(ctx)
   ctx.effect(() => {
-    const disposeSkills = host.webServer.register({
-    kind: 'exact',
-    path: skillsEndpoint,
-    handler: async (request, response) => {
-      if (request.method !== 'GET' && request.method !== 'HEAD') {
-        response.writeHead(405)
-        response.end()
-        return
-      }
-      try {
-        const sessionId = new URL(request.url ?? '/', 'http://localhost').searchParams.get('sessionId')
-        const cwd = sessionId === null ? undefined : host.sessions.get(sessionId)?.header.cwd
-        const scope = sessionId === null ? undefined : host.agents.get(sessionId)
-        const skills = await host.skills.list({
-          ...(cwd === undefined ? {} : { cwd }),
-          ...(scope === undefined ? {} : { scope }),
-        })
-        const payload = skills.filter(skill => skill.invocation.userInvocable).map(skill => ({
-          name: skill.name,
-          description: skill.description,
-          ...(skill.whenToUse === undefined ? {} : { whenToUse: skill.whenToUse }),
-          modelInvocable: skill.invocation.modelInvocable,
-          group: skillGroupOf(skill.source),
-        }))
-        response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-        response.end(request.method === 'HEAD' ? undefined : JSON.stringify({ skills: payload }))
-      } catch {
-        response.writeHead(503, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-        response.end(JSON.stringify({ error: '技能目录暂不可用。' }))
-      }
-    },
-    })
     const disposeConnectors = host.webServer.register({
       kind: 'exact',
       path: connectorsEndpoint,
@@ -70,6 +36,6 @@ export function apply(ctx: Context): void {
         }
       },
     })
-    return () => { disposeSkills(); disposeConnectors() }
+    return () => { disposeConnectors() }
   }, 'michengai-codex-ui: catalogs')
 }

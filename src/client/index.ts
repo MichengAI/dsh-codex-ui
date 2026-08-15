@@ -9,7 +9,6 @@ import { CodexSidebar, type CodexSidebarProps } from './CodexSidebar.tsx'
 import { CodexWorkspaceBrowser } from './CodexWorkspaceBrowser.tsx'
 import { ConnectorsSection } from './ConnectorsSection.tsx'
 import { en, NS, zh } from './locales.ts'
-import { SkillsSettingsSection } from './SettingsSkillsSection.tsx'
 import { TurnNavigator } from './TurnNavigator.tsx'
 
 export const inject = ['slots', 'sessions', 'workspaces', 'layout', 'locale']
@@ -76,10 +75,6 @@ export function apply(ctx: ClientContext): void {
     return ctx.sessions.list.subscribe(openDeepLink)
   }, 'michengai-codex-ui: session deep link')
 
-  ctx.slots.inject('settings.section', () => ctx.slots.register({
-    name: 'settings.section', id: 'skills', order: 16, label: () => t('sidebar.skills'),
-    inject: () => ({ sessionStore: ctx.sessions.list, t }),
-  }, SkillsSettingsSection))
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section', id: 'archived-sessions', order: 17, label: () => t('archives.title'),
     inject: () => ({ sessionStore: ctx.sessions.list, workspaceStore: ctx.workspaces.list, t }),

@@ -13,3 +13,6 @@ assert.match(navigator, /conversationAnchor/, '轮次跳转必须使用集中管
 assert.match(navigator, /turns\.label/, '轮次导航必须有无障碍名称')
 assert.match(navigator, /focus-visible/, '轮次导航必须支持键盘聚焦展开')
 assert.match(navigator, /prefers-reduced-motion/, '轮次跳转必须遵循减少动态效果设置')
+assert.match(navigator, /left:calc\(50vw - var\(--dsh-chat-content-width\) \/ 2 - 36px\)/, '轮次导航必须对齐视口中的内容列左缘')
+assert.match(navigator, /height:32px/, '轮次导航悬停或聚焦后必须显著放大')
+assert.match(sidebar, /BrandWordmark size=\{24\}/, '侧栏品牌标识必须放大')

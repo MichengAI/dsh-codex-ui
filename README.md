@@ -9,8 +9,8 @@ For project handover documentation, see [docs/00-交接入口/00-阅读导航.md
 ## Scope
 
 - The custom navigation occupies only `sidebar` and declares `sidebar.workspaces`, `sidebar.settings`, and `sidebar.footer.action`, so third-party footer actions can continue to register.
-- The workspace tree is a plugin implementation rendered through the public `sidebar.workspaces` slot. It keeps the native hierarchy, collapse, search, hover, and drag-ordering interaction model while adding project pinning and richer conversation actions.
-- Skills, connectors, and archived conversations are DSH Settings sections. Skill and connector catalogs are scoped to the active conversation and never expose local paths, commands, or credentials.
+- The workspace tree is a plugin implementation rendered through the public `sidebar.workspaces` slot. It keeps the native hierarchy, collapse, hover, and drag-ordering interaction model while adding project pinning and richer conversation actions; global search remains available from the sidebar header.
+- Experts and skills open their dedicated management plugins from the DSH Settings panel. When either optional peer plugin is absent, the sidebar shows its package-specific installation prompt. Connectors and archived conversations remain this plugin's DSH Settings sections; connector catalogs never expose addresses, commands, or credentials.
 - The conversation area changes only its container and composer-card visuals. Turn navigation jumps through existing DSH chat anchors and does not change the conversation data model.
 
 ## Session management

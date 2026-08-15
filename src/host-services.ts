@@ -1,13 +1,5 @@
 import type { Context } from '@deepseek-ai/cordis'
 
-type HostSkill = {
-  name: string
-  description: string
-  whenToUse?: string
-  source: string
-  invocation: { modelInvocable: boolean; userInvocable: boolean }
-}
-
 type HostTool = { name: string; description?: string }
 
 type HttpRequest = { method?: string; url?: string }
@@ -18,7 +10,6 @@ type HttpResponse = {
 
 type HostServices = {
   webServer: { register: (route: { kind: 'exact'; path: string; handler: (request: HttpRequest, response: HttpResponse) => Promise<void> }) => () => void }
-  skills: { list: (options?: { cwd?: string; scope?: unknown }) => Promise<readonly HostSkill[]> }
   sessions: { get: (sessionId: string) => { header: { cwd?: string } } | undefined }
   agents: { get: (sessionId: string) => unknown }
   tools: { schemas: (scope?: unknown) => readonly HostTool[] }
@@ -36,11 +27,8 @@ function requireService<T extends object>(ctx: Context, key: string, method: key
 export function hostServices(ctx: Context): HostServices {
   return {
     webServer: requireService<HostServices['webServer']>(ctx, 'webServer', 'register'),
-    skills: requireService<HostServices['skills']>(ctx, 'skills', 'list'),
     sessions: requireService<HostServices['sessions']>(ctx, 'sessions', 'get'),
     agents: requireService<HostServices['agents']>(ctx, 'agents', 'get'),
     tools: requireService<HostServices['tools']>(ctx, 'tools', 'schemas'),
   }
 }
-
-export type { HostSkill }

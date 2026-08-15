@@ -4,22 +4,26 @@ import { readFileSync } from 'node:fs'
 const sidebar = readFileSync(new URL('../src/client/CodexSidebar.tsx', import.meta.url), 'utf8')
 const client = readFileSync(new URL('../src/client/index.ts', import.meta.url), 'utf8')
 const workspaceBrowser = readFileSync(new URL('../src/client/CodexWorkspaceBrowser.tsx', import.meta.url), 'utf8')
+const settingsNavigation = readFileSync(new URL('../src/client/settings-navigation.ts', import.meta.url), 'utf8')
 const visualSources = [
   sidebar,
   workspaceBrowser,
-  readFileSync(new URL('../src/client/SettingsSkillsSection.tsx', import.meta.url), 'utf8'),
   readFileSync(new URL('../src/client/ConnectorsSection.tsx', import.meta.url), 'utf8'),
   readFileSync(new URL('../src/client/ArchivedSessionsSection.tsx', import.meta.url), 'utf8'),
 ].join('\n')
 
-assert.match(client, /'settings\.section'/, '技能页必须注册为设置分区')
+assert.doesNotMatch(client, /SkillsSettingsSection|id: 'skills'/, '技能页必须由独立技能管理插件提供')
 assert.match(client, /'connectors'/, '连接器必须注册为设置分区')
 assert.match(sidebar, /sidebar\.newTask/, '侧栏必须显示新建任务')
 assert.match(sidebar, /sidebar\.extensions/, '侧栏必须显示扩展管理分组')
-assert.match(sidebar, /sidebar\.expertKit/, '扩展管理首项必须预留专家套件')
+assert.match(sidebar, /sidebar\.experts/, '扩展管理首项必须跳转专家插件')
 assert.match(sidebar, /sidebar\.schedule/, '侧栏必须显示定时任务占位入口')
 assert.match(sidebar, /sidebar\.assistant/, '侧栏必须显示个人助理入口')
-assert.match(sidebar, /selectSection\(t\('sidebar\.skills'\)\)/, '技能菜单必须直达设置内的技能页')
+assert.match(sidebar, /selectExternalSection\(t\('sidebar\.experts'\)/, '专家菜单必须直达外部专家插件')
+assert.match(sidebar, /selectExternalSection\(t\('sidebar\.skills'\)/, '技能菜单必须直达外部技能插件')
+assert.match(sidebar, /sidebar\.expertsInstallRequired/, '专家插件缺失时必须给出安装提示')
+assert.match(sidebar, /sidebar\.skillsInstallRequired/, '技能插件缺失时必须给出安装提示')
+assert.match(settingsNavigation, /onMissing\?\.\(\)/, '设置分区不存在时必须通知入口显示安装提示')
 assert.match(sidebar, /selectSection\(t\('sidebar\.plugins'\)\)/, '插件菜单必须直达设置内的插件页')
 assert.match(sidebar, /selectSection\(t\('sidebar\.connectors'\)\)/, '连接器菜单必须直达设置内的连接器页')
 assert.doesNotMatch(sidebar, />归档会话<\/button>/, '底部不得保留独立归档会话按钮')
@@ -40,4 +44,7 @@ assert.match(sidebar, /padding:0 4px/, '导航图标必须左移至设置图标�
 assert.match(sidebar, /dcu-search-dialog/, '顶栏搜索必须打开全局搜索面板')
 assert.doesNotMatch(workspaceBrowser, /dcu-wb-search/, '工作区区域不得保留重复搜索框')
 assert.doesNotMatch(workspaceBrowser, /IconChevronRightOutline14/, '项目树不得保留展开箭头')
+assert.match(workspaceBrowser, /toggleGroup\(workspace\.workspaceId\)/, '点击项目文件夹必须切换展开状态')
+assert.match(workspaceBrowser, /padding-left:24px/, '会话需要适度向左收紧')
+assert.doesNotMatch(workspaceBrowser, /isPinned && <span className="dcu-wb-pin"/, '项目置顶不应显示星标')
 assert.doesNotMatch(client, /as never|as unknown as/, '客户端插槽注册不得绕过官方类型')

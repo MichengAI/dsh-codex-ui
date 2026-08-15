@@ -1,6 +1,6 @@
 {
   "name": "@michengai/dsh-codex-ui",
-  "version": "0.2.19",
+  "version": "0.2.20",
   "description": "以 Codex 风格重构 DSH Web 侧栏的独立客户端插件",
   "license": "Apache-2.0",
   "type": "module",
@@ -39,7 +39,7 @@
   },
   "scripts": {
     "build": "tsc --noEmit && tsdown",
-    "test": "tsx tests/pinned-sessions.assert.ts && tsx tests/session-manager.assert.ts && tsx tests/workspace-browser.assert.ts && tsx tests/sidebar-search.assert.ts && tsx tests/skills-source.assert.ts && vitest run tests/client-runtime.integration.spec.ts && tsx tests/settings-integration.assert.ts && tsx tests/conversation-visuals.assert.ts && tsx tests/client-bundle.assert.ts"
+    "test": "tsx tests/pinned-sessions.assert.ts && tsx tests/session-manager.assert.ts && tsx tests/workspace-browser.assert.ts && tsx tests/sidebar-search.assert.ts && vitest run tests/client-runtime.integration.spec.ts && tsx tests/settings-integration.assert.ts && tsx tests/conversation-visuals.assert.ts && tsx tests/client-bundle.assert.ts"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": ">=4.0.1 <5.0.0",
@@ -52,7 +52,13 @@
     "@deepseek-ai/dsh-client-ui-settings-general": ">=0.1.0-rc.0 <0.2.0",
     "@deepseek-ai/dsh-client-ui-sidebar": ">=0.1.0-rc.0 <0.2.0",
     "@deepseek-ai/dsh-client-ui-slots": ">=0.1.0-rc.0 <0.2.0",
+    "@michengai/dsh-agency-agents": ">=0.1.3 <0.2.0",
+    "@michengai/dsh-skills-manager": ">=0.1.7 <0.2.0",
     "react": "^18.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@michengai/dsh-agency-agents": { "optional": true },
+    "@michengai/dsh-skills-manager": { "optional": true }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.1",
