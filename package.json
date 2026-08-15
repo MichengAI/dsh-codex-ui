@@ -20,7 +20,7 @@
     "dist",
     "cordis.patch.yml",
     "LICENSE",
-    "README.en.md"
+    "README.zh-CN.md"
   ],
   "dsh": {
     "bundle": {

@@ -1,26 +1,26 @@
 # DSH Codex UI
 
-[English](README.en.md) | 简体中文
+English | [简体中文](README.zh-CN.md)
 
-独立 DSH Web 客户端插件，使用官方 `sidebar` 插槽替换左侧导航，不修改 DSH 源码和会话数据。原生项目树、会话菜单、消息、工具调用、权限、模型选择和流式输出均继续由 DSH 渲染。
+An independent DSH Web client plugin that replaces the sidebar through the official `sidebar` slot. It does not modify DSH source code or conversation data. DSH continues to render the native workspace tree, conversation menus, messages, tool calls, permissions, model selection, and streaming output.
 
-开发交接入口见 [docs\00-交接入口\00-阅读导航.md](docs/00-交接入口/00-阅读导航.md)。
+For project handover documentation, see [docs/00-交接入口/00-阅读导航.md](docs/00-交接入口/00-阅读导航.md).
 
-## 功能边界
+## Scope
 
-- 自定义导航只占用 `sidebar`，并完整声明 `sidebar.workspaces`、`sidebar.settings` 与 `sidebar.footer.action`；第三方页脚动作可以继续注册。
-- 项目置顶仅保存浏览器本地快捷入口；会话操作、归档和项目管理仍使用 DSH 原生工作区浏览器。
-- 技能、连接器和归档会话作为 DSH 设置分区；技能和连接器目录按当前会话作用域读取，不泄露本地路径、命令或凭证。
-- 会话内容区只调整容器与输入卡片视觉。轮次导航通过 DSH 现有聊天锚点跳转，不修改会话数据。
+- The custom navigation occupies only `sidebar` and declares `sidebar.workspaces`, `sidebar.settings`, and `sidebar.footer.action`, so third-party footer actions can continue to register.
+- Pinned workspaces are browser-local shortcuts only. Conversation operations, archiving, and workspace management remain in the native DSH workspace browser.
+- Skills, connectors, and archived conversations are DSH Settings sections. Skill and connector catalogs are scoped to the active conversation and never expose local paths, commands, or credentials.
+- The conversation area changes only its container and composer-card visuals. Turn navigation jumps through existing DSH chat anchors and does not change the conversation data model.
 
-## 依赖与开发
+## Dependencies and development
 
-运行时依赖全部以 `peerDependencies` 声明，由 DSH 宿主提供；开发期固定使用公开 npm 的 DSH `0.1.0-rc.6` 包进行类型检查和测试。执行 `pnpm install` 后，`pnpm test` 会运行纯函数断言及 client test runtime 的集成测试。
+All runtime dependencies are declared as `peerDependencies` and supplied by the DSH host. Development uses the publicly available DSH `0.1.0-rc.6` packages for type checking and tests. After `pnpm install`, `pnpm test` runs pure-function assertions and a client test runtime integration test.
 
-## 安装
+## Installation
 
-在已构建的包目录中执行 `dsh plugin --profile web add .` 安装；卸载时执行 `dsh plugin --profile web remove @michengai/dsh-codex-ui`，默认侧栏会恢复。
+In the built package directory, run `dsh plugin --profile web add .`. To uninstall, run `dsh plugin --profile web remove @michengai/dsh-codex-ui`; the default sidebar is restored.
 
-## 许可证
+## License
 
-本项目采用 [Apache License 2.0](LICENSE) 开源许可。
+Licensed under the [Apache License 2.0](LICENSE).
