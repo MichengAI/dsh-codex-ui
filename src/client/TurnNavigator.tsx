@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { conversationAnchor, conversationScrollRoot } from './conversation-dom.ts'
@@ -9,7 +9,7 @@ type TurnLink = { key: string; summary: string }
 type TurnNavigatorProps = PropsRuntime<'conversation.session.header.utilities'> & PropsLocale<typeof NS>
 
 const stylesheet = `
-.dcu-turn-navigator{position:fixed;z-index:8;top:76px;left:calc(50vw - var(--dsh-chat-content-width) / 2 - 36px);max-height:calc(100vh - 96px);overflow-y:auto;padding:4px;scrollbar-width:none}.dcu-turn-navigator::-webkit-scrollbar{display:none}.dcu-turn-list{display:grid;gap:4px;margin:0;padding:0;list-style:none}.dcu-turn-link{display:flex;align-items:center;width:18px;height:16px;overflow:hidden;padding:0;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);font:12px/16px var(--dsw-font-family);text-align:left;cursor:pointer;transition:width 180ms ease,height 180ms ease,padding 180ms ease,background-color 180ms ease,color 180ms ease}.dcu-turn-link::before{width:18px;height:2px;flex:0 0 18px;border-radius:2px;background:currentcolor;content:''}.dcu-turn-summary{min-width:0;margin-left:10px;overflow:hidden;opacity:0;text-overflow:ellipsis;white-space:nowrap;transition:opacity 140ms ease}.dcu-turn-link:hover,.dcu-turn-link:focus-visible{width:min(280px,calc(100vw - 64px));height:32px;padding:0 10px;background:var(--dsw-alias-button-floating-hover);color:var(--dsw-alias-label-primary);outline:0}.dcu-turn-link:hover .dcu-turn-summary,.dcu-turn-link:focus-visible .dcu-turn-summary{opacity:1}.dcu-turn-link[aria-current=true]{color:var(--dsw-alias-state-business-primary)}.dcu-turn-link[aria-current=true]::before{height:4px}.dcu-turn-link:focus-visible{box-shadow:0 0 0 2px var(--dsw-alias-button-info-fill)}@media (prefers-reduced-motion:reduce){.dcu-turn-link,.dcu-turn-summary{transition:none}}@media (max-width:760px){.dcu-turn-navigator{top:64px;left:4px}.dcu-turn-link:hover,.dcu-turn-link:focus-visible{width:min(220px,calc(100vw - 40px))}}
+.dcu-turn-navigator{position:fixed;z-index:8;top:76px;left:var(--dcu-turn-left,288px);max-height:calc(100vh - 96px);overflow-y:auto;padding:4px;scrollbar-width:none}.dcu-turn-navigator::-webkit-scrollbar{display:none}.dcu-turn-list{display:grid;gap:4px;margin:0;padding:0;list-style:none}.dcu-turn-link{display:flex;align-items:center;width:18px;height:16px;overflow:hidden;padding:0;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);font:12px/16px var(--dsw-font-family);text-align:left;cursor:pointer;transition:width 180ms ease,height 180ms ease,padding 180ms ease,background-color 180ms ease,color 180ms ease}.dcu-turn-link::before{width:18px;height:2px;flex:0 0 18px;border-radius:2px;background:currentcolor;content:''}.dcu-turn-summary{min-width:0;margin-left:10px;overflow:hidden;opacity:0;text-overflow:ellipsis;white-space:nowrap;transition:opacity 140ms ease}.dcu-turn-link:hover,.dcu-turn-link:focus-visible{width:min(280px,calc(100vw - 64px));height:32px;padding:0 10px;background:var(--dsw-alias-button-floating-hover);color:var(--dsw-alias-label-primary);outline:0}.dcu-turn-link:hover .dcu-turn-summary,.dcu-turn-link:focus-visible .dcu-turn-summary{opacity:1}.dcu-turn-link[aria-current=true]{color:var(--dsw-alias-state-business-primary)}.dcu-turn-link[aria-current=true]::before{height:4px}.dcu-turn-link:focus-visible{box-shadow:0 0 0 2px var(--dsw-alias-button-info-fill)}@media (prefers-reduced-motion:reduce){.dcu-turn-link,.dcu-turn-summary{transition:none}}@media (max-width:760px){.dcu-turn-navigator{top:64px;left:4px}.dcu-turn-link:hover,.dcu-turn-link:focus-visible{width:min(220px,calc(100vw - 40px))}}
 `
 
 function textSummary(content: readonly unknown[], fallback: string): string {
@@ -45,7 +45,22 @@ function equalTurns(left: readonly TurnLink[], right: readonly TurnLink[]): bool
 export function TurnNavigator({ useSession, t }: TurnNavigatorProps) {
   const turns = useSession(snapshot => turnLinks(snapshot, t('turns.untitled')), equalTurns)
   const [current, setCurrent] = useState<string | null>(turns[0]?.key ?? null)
+  const [sidebarRight, setSidebarRight] = useState(288)
   const turnKeys = useMemo(() => turns.map(turn => turn.key).join('|'), [turns])
+
+  useEffect(() => {
+    const sidebar = document.querySelector<HTMLElement>('.dcu-root')
+    if (sidebar === null) return
+    const update = (): void => {
+      const next = Math.round(sidebar.getBoundingClientRect().right) + 8
+      setSidebarRight(previous => previous === next ? previous : next)
+    }
+    const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(update)
+    observer?.observe(sidebar)
+    window.addEventListener('resize', update)
+    update()
+    return () => { observer?.disconnect(); window.removeEventListener('resize', update) }
+  }, [])
 
   useEffect(() => {
     const host = conversationScrollRoot()
@@ -73,7 +88,8 @@ export function TurnNavigator({ useSession, t }: TurnNavigatorProps) {
   }, [turnKeys, turns])
 
   if (turns.length === 0) return null
-  return <nav className="dcu-turn-navigator" aria-label={t('turns.label')}><style>{stylesheet}</style><ol className="dcu-turn-list">{turns.map((turn, index) => <li key={turn.key}><button type="button" className="dcu-turn-link" aria-current={current === turn.key || undefined} aria-label={t('turns.jump', { index: index + 1, summary: turn.summary })} title={turn.summary} onClick={() => {
+  const style = { '--dcu-turn-left': `${sidebarRight}px` } as CSSProperties
+  return <nav className="dcu-turn-navigator" aria-label={t('turns.label')} style={style}><style>{stylesheet}</style><ol className="dcu-turn-list">{turns.map((turn, index) => <li key={turn.key}><button type="button" className="dcu-turn-link" aria-current={current === turn.key || undefined} aria-label={t('turns.jump', { index: index + 1, summary: turn.summary })} title={turn.summary} onClick={() => {
     const host = conversationScrollRoot()
     const anchor = host === null ? null : conversationAnchor(host, turn.key)
     if (host === null || anchor === null) return
