@@ -52,13 +52,11 @@ export function CodexSidebar({ collapsed, openSession, startSession, toggleSideb
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeSearchIndex, setActiveSearchIndex] = useState(0)
-  const [dependencyNotice, setDependencyNotice] = useState<string>()
   const sessions = useSessions(state => state)
   const workspaces = useWorkspaces(state => state)
   const selectSection = (label: string): void => { openSettingsSection(settingsSeat.current, label) }
-  const selectExternalSection = (label: string, missingMessage: string): void => {
-    setDependencyNotice(undefined)
-    openSettingsSection(settingsSeat.current, label, () => { setDependencyNotice(missingMessage) })
+  const selectExternalSection = (label: string): void => {
+    openSettingsSection(settingsSeat.current, label, () => { selectSection(t('about.nav')) })
   }
   const openSettings = (): void => { settingsSeat.current?.querySelector<HTMLButtonElement>('[aria-haspopup="dialog"]')?.click() }
   const closeSearch = (): void => { setSearchOpen(false); setSearchQuery(''); setActiveSearchIndex(0) }
@@ -72,10 +70,11 @@ export function CodexSidebar({ collapsed, openSession, startSession, toggleSideb
       .map(session => ({ id: `session:${session.id}`, group: 'sessions' as const, label: session.displayTitle, keywords: `${session.cwd ?? ''} ${session.id}`, detail: workspaceTitles.get(String(session.id)) ?? session.cwd, run: () => { closeSearch(); openSession(session.id) } }))
     const settingEntries: SearchEntry[] = [
       { id: 'settings:root', group: 'settings', label: t('search.settings'), keywords: t('search.settings'), run: () => { closeSearch(); openSettings() } },
-      { id: 'settings:experts', group: 'settings', label: t('sidebar.experts'), keywords: t('search.settings'), run: () => { closeSearch(); selectExternalSection(t('sidebar.experts'), t('sidebar.expertsInstallRequired')) } },
-      { id: 'settings:skills', group: 'settings', label: t('sidebar.skills'), keywords: t('search.settings'), run: () => { closeSearch(); selectExternalSection(t('sidebar.skills'), t('sidebar.skillsInstallRequired')) } },
+      { id: 'settings:experts', group: 'settings', label: t('sidebar.experts'), keywords: t('search.settings'), run: () => { closeSearch(); selectExternalSection(t('sidebar.experts')) } },
+      { id: 'settings:skills', group: 'settings', label: t('sidebar.skills'), keywords: t('search.settings'), run: () => { closeSearch(); selectExternalSection(t('sidebar.skills')) } },
       { id: 'settings:plugins', group: 'settings', label: t('sidebar.plugins'), keywords: t('search.settings'), run: () => { closeSearch(); selectSection(t('sidebar.plugins')) } },
       { id: 'settings:connectors', group: 'settings', label: t('sidebar.connectors'), keywords: t('search.settings'), run: () => { closeSearch(); selectSection(t('sidebar.connectors')) } },
+      { id: 'settings:about', group: 'settings', label: t('about.nav'), keywords: t('search.settings'), run: () => { closeSearch(); selectSection(t('about.nav')) } },
     ]
     return [...sessionEntries, ...settingEntries, { id: 'action:new', group: 'actions', label: t('sidebar.newTask'), keywords: t('search.actions'), run: () => { closeSearch(); startSession() } }]
   }, [openSession, sessions, startSession, t, workspaces])
@@ -100,12 +99,11 @@ export function CodexSidebar({ collapsed, openSession, startSession, toggleSideb
     <nav className="dcu-menu" aria-label={t('sidebar.mainMenu')}>
       <button type="button" onClick={() => { startSession() }}><MenuIcon><IconNewChatOutline16 size={16} /></MenuIcon>{t('sidebar.newTask')}</button>
       <button type="button" aria-expanded={extensionsOpen} onClick={() => { setExtensionsOpen(open => !open) }}><MenuIcon><IconEnhanceOutline16 size={16} /></MenuIcon>{t('sidebar.extensions')}</button>
-      {extensionsOpen && <div className="dcu-extension-items"><button type="button" onClick={() => { selectExternalSection(t('sidebar.experts'), t('sidebar.expertsInstallRequired')) }}><MenuIcon><IconAgentPresetOutline16 size={16} /></MenuIcon>{t('sidebar.experts')}</button><button type="button" onClick={() => { selectExternalSection(t('sidebar.skills'), t('sidebar.skillsInstallRequired')) }}><MenuIcon><IconSkillOutline16 size={16} /></MenuIcon>{t('sidebar.skills')}</button><button type="button" onClick={() => { selectSection(t('sidebar.plugins')) }}><MenuIcon><IconEnhanceOutline16 size={16} /></MenuIcon>{t('sidebar.plugins')}</button><button type="button" onClick={() => { selectSection(t('sidebar.connectors')) }}><MenuIcon><IconLinkOutline16 size={16} /></MenuIcon>{t('sidebar.connectors')}</button></div>}
+      {extensionsOpen && <div className="dcu-extension-items"><button type="button" onClick={() => { selectExternalSection(t('sidebar.experts')) }}><MenuIcon><IconAgentPresetOutline16 size={16} /></MenuIcon>{t('sidebar.experts')}</button><button type="button" onClick={() => { selectExternalSection(t('sidebar.skills')) }}><MenuIcon><IconSkillOutline16 size={16} /></MenuIcon>{t('sidebar.skills')}</button><button type="button" onClick={() => { selectSection(t('sidebar.plugins')) }}><MenuIcon><IconEnhanceOutline16 size={16} /></MenuIcon>{t('sidebar.plugins')}</button><button type="button" onClick={() => { selectSection(t('sidebar.connectors')) }}><MenuIcon><IconLinkOutline16 size={16} /></MenuIcon>{t('sidebar.connectors')}</button></div>}
       <button type="button" disabled title={t('sidebar.scheduleUnavailable')}><MenuIcon><IconGoalOutline16 size={16} /></MenuIcon>{t('sidebar.schedule')}</button>
       <button type="button" onClick={() => { selectSection(t('sidebar.agentPresets')) }}><MenuIcon><IconUserOutline16 size={16} /></MenuIcon>{t('sidebar.assistant')}</button>
     </nav>
     <div className="dcu-workspaces"><div className="dcu-native-workspaces">{renderSlot('sidebar.workspaces', { wide: true, expandSidebar: toggleSidebar })}</div></div>
-    {dependencyNotice !== undefined && <div className="dcu-dependency-notice" role="alert">{dependencyNotice}</div>}
     <footer className="dcu-foot"><div className="dcu-footer-actions">{renderSlot('sidebar.footer.action', { wide: true })}</div><div ref={settingsSeat} className="dcu-settings-seat">{renderSlot('sidebar.settings', { wide: true })}</div></footer>
     {searchOpen && <div className="dcu-search-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSearch() }}><section className="dcu-search-dialog" role="dialog" aria-modal="true" aria-label={t('sidebar.search')}><div className="dcu-search-input"><Input autoFocus icon={<IconSearchOutline16 size={16} />} value={searchQuery} placeholder={t('search.placeholder')} onChange={event => { setSearchQuery(event.target.value) }} /></div>{searchResults.length === 0 ? <div className="dcu-search-empty">{t('search.empty')}</div> : (['sessions', 'settings', 'actions'] as const).map(group => { const entries = searchResults.filter(entry => entry.group === group); if (entries.length === 0) return null; return <section className="dcu-search-section" key={group}><div className="dcu-search-title">{t(`search.${group}`)}</div>{entries.map(entry => { const index = searchResults.indexOf(entry); return <button type="button" className="dcu-search-row" data-active={index === activeSearchIndex} key={entry.id} onMouseEnter={() => { setActiveSearchIndex(index) }} onClick={entry.run}><span className="dcu-search-main">{entry.label}</span>{entry.detail !== undefined && <span className="dcu-search-detail">{entry.detail}</span>}</button> })}</section> })}</section></div>}
   </aside>

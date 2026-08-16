@@ -1,8 +1,10 @@
 /** 浏览器客户端插件的 Host 入口；客户端逻辑由 dsh.client 加载。 */
 import type { Context } from '@deepseek-ai/cordis'
+import { dependencyStatuses, installDependency } from './dependency-manager.ts'
 import { hostServices } from './host-services.ts'
 
 const connectorsEndpoint = '/api/michengai/codex-ui/connectors'
+const dependenciesEndpoint = '/api/michengai/codex-ui/dependencies'
 
 export const inject = ['webServer', 'sessions', 'agents', 'tools']
 
@@ -36,6 +38,36 @@ export function apply(ctx: Context): void {
         }
       },
     })
-    return () => { disposeConnectors() }
+    const disposeDependencies = host.webServer.register({
+      kind: 'exact',
+      path: dependenciesEndpoint,
+      handler: async (request, response) => {
+        const url = new URL(request.url ?? '/', 'http://localhost')
+        try {
+          if (request.method === 'GET') {
+            const dependencies = await dependencyStatuses()
+            response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+            response.end(JSON.stringify({ dependencies }))
+            return
+          }
+          if (request.method === 'POST') {
+            const dependencies = await installDependency(url.searchParams.get('dependency'))
+            response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+            response.end(JSON.stringify({ dependencies, restartRequired: true }))
+            return
+          }
+          response.writeHead(405)
+          response.end()
+        } catch (error) {
+          const message = error instanceof Error ? error.message : '依赖管理暂不可用。'
+          response.writeHead(503, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+          response.end(JSON.stringify({ error: message }))
+        }
+      },
+    })
+    return () => {
+      disposeConnectors()
+      disposeDependencies()
+    }
   }, 'michengai-codex-ui: catalogs')
 }
