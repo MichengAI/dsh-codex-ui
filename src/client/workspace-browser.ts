@@ -13,7 +13,7 @@ export function visibleSessionIds<T extends SessionSummary>(
   const archived = new Set(archivedIds)
   return ids.filter((id) => {
     const session = byId[id]
-    return session !== undefined && session.origin !== 'subagent' && !session.blank && !archived.has(id)
+    return session !== undefined && session.origin !== 'subagent' && session.origin !== 'im' && !session.blank && !archived.has(id)
   })
 }
 
@@ -25,3 +25,4 @@ export function moveBefore(ids: readonly string[], id: string, beforeId?: string
   next.splice(index < 0 ? next.length : index, 0, id)
   return next
 }
+
