@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { readFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { MANAGED_DEPENDENCIES, managedDependency, type ManagedDependencyId } from './dependencies.ts'
@@ -56,6 +56,27 @@ async function npmLatestVersion(packageName: string): Promise<string | undefined
   }
 }
 
+/** 将用户本次确认的精确版本加入 Profile 的 pnpm 发布时间保护例外。 */
+async function ensureLatestReleaseAllowed(packageName: string, version: string): Promise<void> {
+  if (versionParts(version) === undefined) throw new Error('npm 返回了无法识别的最新版本。')
+  const path = join(profileDirectory(), 'pnpm-workspace.yaml')
+  let source: string
+  try {
+    source = await readFile(path, 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    source = ''
+  }
+  const entry = `  - '${packageName}@${version}'`
+  if (source.includes(entry)) return
+  const eol = source.includes('\r\n') ? '\r\n' : '\n'
+  const section = /^minimumReleaseAgeExclude:\r?\n(?:(?:  |\t).*(?:\r?\n|$))*/m
+  const next = section.test(source)
+    ? source.replace(section, match => `${match}${entry}${eol}`)
+    : `${source}${source === '' || source.endsWith('\n') ? '' : eol}minimumReleaseAgeExclude:${eol}${entry}${eol}`
+  await writeFile(path, next, 'utf8')
+}
+
 function versionParts(version: string): readonly [number, number, number] | undefined {
   const match = /^v?(\d+)\.(\d+)\.(\d+)/.exec(version)
   return match === null ? undefined : [Number(match[1]), Number(match[2]), Number(match[3])]
@@ -107,11 +128,13 @@ function runDshPlugin(args: readonly string[]): Promise<void> {
 export async function installDependency(id: string | null): Promise<readonly DependencyStatus[]> {
   const dependency = managedDependency(id)
   if (dependency === undefined) throw new Error('不支持安装该依赖。')
+  const latestVersion = await npmLatestVersion(dependency.packageName)
+  if (latestVersion === undefined) throw new Error('无法获取 npm 最新版本，请检查网络或 npm registry 后重试。')
+  await ensureLatestReleaseAllowed(dependency.packageName, latestVersion)
   const manifest = await profileManifest()
   const declared = manifest.dependencies?.[dependency.packageName] ?? manifest.devDependencies?.[dependency.packageName]
-  // 用户点击安装或更新即明确选择信任本次 npm latest；仅本次命令跳过发布时间等待。
   await runDshPlugin(declared === undefined
-    ? ['add', '--config.minimumReleaseAge=0', `${dependency.packageName}@latest`]
-    : ['update', '--latest', '--config.minimumReleaseAge=0', dependency.packageName])
+    ? ['add', `${dependency.packageName}@latest`]
+    : ['update', '--latest', dependency.packageName])
   return dependencyStatuses()
 }
