@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   BrandWordmark, FishLogo, IconAgentPresetOutline16, IconEnhanceOutline16,
-  IconGoalOutline16, IconLinkOutline16, IconNewChatOutline16, IconSearchOutline16, IconSkillOutline16,
+  IconGoalOutline16, IconLinkOutline16, IconNewChatOutline16, IconPersonalizationOutline16, IconSearchOutline16, IconSkillOutline16,
   IconUserOutline16, Input,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SessionId, WorkspaceId } from '@deepseek-ai/dsh-client-runtime/client'
@@ -99,9 +99,9 @@ export function CodexSidebar({ collapsed, openSession, startSession, toggleSideb
     <nav className="dcu-menu" aria-label={t('sidebar.mainMenu')}>
       <button type="button" onClick={() => { startSession() }}><MenuIcon><IconNewChatOutline16 size={16} /></MenuIcon>{t('sidebar.newTask')}</button>
       <button type="button" aria-expanded={extensionsOpen} onClick={() => { setExtensionsOpen(open => !open) }}><MenuIcon><IconEnhanceOutline16 size={16} /></MenuIcon>{t('sidebar.extensions')}</button>
-      {extensionsOpen && <div className="dcu-extension-items"><button type="button" onClick={() => { selectExternalSection(t('sidebar.experts')) }}><MenuIcon><IconAgentPresetOutline16 size={16} /></MenuIcon>{t('sidebar.experts')}</button><button type="button" onClick={() => { selectExternalSection(t('sidebar.skills')) }}><MenuIcon><IconSkillOutline16 size={16} /></MenuIcon>{t('sidebar.skills')}</button><button type="button" onClick={() => { selectSection(t('sidebar.plugins')) }}><MenuIcon><IconEnhanceOutline16 size={16} /></MenuIcon>{t('sidebar.plugins')}</button><button type="button" onClick={() => { selectSection(t('sidebar.connectors')) }}><MenuIcon><IconLinkOutline16 size={16} /></MenuIcon>{t('sidebar.connectors')}</button></div>}
+      {extensionsOpen && <div className="dcu-extension-items"><button type="button" onClick={() => { selectExternalSection(t('sidebar.experts')) }}><MenuIcon><IconUserOutline16 size={16} /></MenuIcon>{t('sidebar.experts')}</button><button type="button" onClick={() => { selectExternalSection(t('sidebar.skills')) }}><MenuIcon><IconSkillOutline16 size={16} /></MenuIcon>{t('sidebar.skills')}</button><button type="button" onClick={() => { selectSection(t('sidebar.plugins')) }}><MenuIcon><IconPersonalizationOutline16 size={16} /></MenuIcon>{t('sidebar.plugins')}</button><button type="button" onClick={() => { selectSection(t('sidebar.connectors')) }}><MenuIcon><IconLinkOutline16 size={16} /></MenuIcon>{t('sidebar.connectors')}</button></div>}
       <button type="button" disabled title={t('sidebar.scheduleUnavailable')}><MenuIcon><IconGoalOutline16 size={16} /></MenuIcon>{t('sidebar.schedule')}</button>
-      <button type="button" onClick={() => { selectSection(t('sidebar.agentPresets')) }}><MenuIcon><IconUserOutline16 size={16} /></MenuIcon>{t('sidebar.assistant')}</button>
+      <button type="button" onClick={() => { selectSection(t('sidebar.agentPresets')) }}><MenuIcon><IconAgentPresetOutline16 size={16} /></MenuIcon>{t('sidebar.assistant')}</button>
     </nav>
     <div className="dcu-workspaces"><div className="dcu-native-workspaces">{renderSlot('sidebar.workspaces', { wide: true, expandSidebar: toggleSidebar })}</div></div>
     <footer className="dcu-foot"><div className="dcu-footer-actions">{renderSlot('sidebar.footer.action', { wide: true })}</div><div ref={settingsSeat} className="dcu-settings-seat">{renderSlot('sidebar.settings', { wide: true })}</div></footer>
