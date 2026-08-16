@@ -1,36 +1,171 @@
-# DSH Codex UI
+<p align="center">
+  <img src="assets/icon.png" alt="DSH Codex UI" width="96">
+</p>
 
-[English](README.md) | 简体中文
+<h1 align="center">DSH Codex UI</h1>
 
-独立 DSH Web 客户端插件，使用官方 `sidebar` 插槽替换左侧导航，不修改 DSH 源码和会话数据。原生消息、工具调用、权限、模型选择和流式输出均继续由 DSH 渲染。
+<p align="center">
+  <strong>为 DeepSeek Harness Web 提供 Codex 风格侧栏、工作区会话树、全局搜索和轮次导航的独立插件。</strong>
+</p>
 
-开发交接入口见 [docs/00-交接入口/00-阅读导航.md](docs/00-交接入口/00-阅读导航.md)。
+<p align="center">
+  <a href="https://github.com/MichengAI/dsh-codex-ui/issues">反馈问题</a>
+  · <a href="https://www.npmjs.com/package/@michengai/dsh-codex-ui">查看 npm</a>
+  · <a href="README.md">English</a>
+</p>
 
-## 功能边界
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="Apache License 2.0"></a>
+  <a href="https://www.npmjs.com/package/@michengai/dsh-codex-ui"><img src="https://img.shields.io/npm/v/%40michengai/dsh-codex-ui?label=npm" alt="npm package"></a>
+  <img src="https://img.shields.io/badge/DSH-Web%20Plugin-10b981" alt="DSH Web Plugin">
+  <img src="https://img.shields.io/badge/Node.js-%E2%89%A522-339933?logo=nodedotjs&logoColor=white" alt="Node.js 22 或更高版本">
+</p>
 
-- 自定义导航只占用 `sidebar`，并完整声明 `sidebar.workspaces`、`sidebar.settings` 与 `sidebar.footer.action`；第三方页脚动作可以继续注册。
-- 工作区树由插件通过公开 `sidebar.workspaces` 插槽实现，保留原生层级、折叠、悬停和拖拽排序模型，并补充项目置顶及更完整的会话操作；全局搜索保留在侧栏顶栏入口。
-- 专家和技能入口跳转到各自独立管理插件的 DSH 设置页；缺少可选 peer 插件时，侧栏会显示对应包的安装提示。连接器仍由本插件作为 DSH 设置分区提供；归档会话管理交由独立插件提供，连接器目录不泄露地址、命令或凭证。
-- 会话内容区只调整容器与输入卡片视觉。轮次导航通过 DSH 现有聊天锚点跳转，不修改会话数据。
+> DSH Codex UI 是社区维护的插件，并非 DeepSeek AI 官方产品。它只使用 DSH 公开插槽，不修改宿主源码或会话数据。
 
-## 会话管理
+## 功能概览
 
-项目与会话菜单只调用 DSH 公开服务。工作区树展示所有普通且未归档的会话，支持打开、本地置顶/取消置顶、标记未读/已读、重命名、删除项目注册、归档、派生新会话、导出 ZIP、在资源管理器打开工作区、复制路径/标题/ID/深链。删除项目注册不会删除文件夹或会话记录。
+- 通过官方 `sidebar` 插槽替换默认侧栏，并保留 `sidebar.workspaces`、`sidebar.settings` 和 `sidebar.footer.action`。
+- 提供 Codex 风格顶栏：品牌标识、侧栏折叠和全局搜索。
+- 工作区与会话支持展开折叠、拖拽排序、项目置顶、未读圆点和运行状态。
+- 项目和会话菜单支持重命名、置顶、未读、归档、派生、打开目录、复制和删除。
+- 调整会话列与输入卡片视觉，并为当前会话提供紧凑轮次导航。
+- 在设置中提供连接器目录和「关于」页，展示配套插件安装状态。
 
-置顶和未读状态仅保存在当前浏览器。DSH `0.1.0-rc.6` 未向客户端插件公开永久删除和撤销归档能力，因此插件不提供不可用的伪操作。
+![Codex 风格侧栏与空会话页](assets/screenshots/sidebar.png)
 
-## 依赖与开发
+## 前置条件
 
-运行时依赖全部以 `peerDependencies` 声明，由 DSH 宿主提供；开发期固定使用公开 npm 的 DSH `0.1.0-rc.6` 包进行类型检查和测试。执行 `pnpm install` 后，`pnpm test` 会运行纯函数断言及 client test runtime 的集成测试。
+- 已可正常运行 DeepSeek Harness Web，且可在 PowerShell 中使用 `dsh`。
+- 以下示例使用 `web` profile；请替换为实际目标 profile。
+- 从源码安装或二次开发需要 Node.js 22+ 与 pnpm；仅从 npm 安装无需在任意目录执行 `pnpm install`。
 
 ## 安装
 
-在已构建的包目录中执行 `dsh plugin --profile web add .` 安装；卸载时执行 `dsh plugin --profile web remove @michengai/dsh-codex-ui`，默认侧栏会恢复。
+### 从 npm 安装
 
-## 许可证
+在任意 PowerShell 目录执行。请通过 `dsh plugin` 安装到 DSH profile：
 
-本项目采用 [Apache License 2.0](LICENSE) 开源许可。
+```powershell
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+dsh plugin --profile web add @michengai/dsh-codex-ui
+dsh --profile web --dump-config
+```
 
-## 致谢
+安装或升级后重启 DSH Web，并硬刷新浏览器。插件会通过 `cordis.patch.yml` 接管默认侧栏；卸载后默认侧栏会恢复。若镜像未同步最新版本，可在安装命令末尾追加 `--registry=https://registry.npmjs.org/`。
 
-会话管理工作流参考了 [Semidia/dsh-session-manager](https://github.com/Semidia/dsh-session-manager)。本插件通过 DSH 公开插槽和服务独立实现，不需要该项目使用的宿主源码补丁。
+### 安装完整套件
+
+需要同时安装 Codex UI、专家、技能和归档会话管理时，待 `@michengai/dsh-codex-suite` 发布到 npm 后执行：
+
+```powershell
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+dsh plugin --profile web add @michengai/dsh-codex-suite
+dsh --profile web --dump-config
+```
+
+独立安装和聚合安装互斥。同一 profile 不要同时安装两者。切换为套件前，先卸载已单独安装的四个插件。
+
+### 从源码安装
+
+适用于调试或使用未发布改动。克隆后的目录会直接作为插件安装路径：
+
+```powershell
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+Set-Location D:\Repository\deepseek-harness-plugin
+git clone https://github.com/MichengAI/dsh-codex-ui.git
+Set-Location .\dsh-codex-ui
+pnpm install --frozen-lockfile
+pnpm build
+dsh plugin --profile web add .
+dsh --profile web --dump-config
+```
+
+完成后重启 DSH Web 并硬刷新浏览器。不要手工复制 `dist`；本地目录安装会同时读取包信息和 `cordis.patch.yml`。
+
+## 使用
+
+打开 DSH Web 后，左侧导航即由本插件渲染。
+
+| 目标 | 操作 |
+| --- | --- |
+| 新建会话 | 点击「新建任务」，或使用项目中的「+」/「新建会话」。 |
+| 查找会话或设置 | 使用顶栏搜索，选择会话、设置页或快捷操作。 |
+| 折叠侧栏 | 使用顶栏面板按钮。折叠后展开入口保留在窄轨顶部。 |
+| 置顶项目 | 拖到「置顶」区域，或在项目菜单中选择「置顶项目」。 |
+| 管理会话 | 打开会话菜单，进行重命名、置顶、未读、归档、派生、复制或删除。 |
+| 跳转轮次 | 使用当前会话左侧的轮次刻度跳转到对应提问。 |
+| 查看连接器 | 打开「设置 → 连接器」。不会展示地址、命令或凭证。 |
+| 查看配套插件 | 打开「设置 → 关于」，查看专家、技能和归档插件状态。 |
+
+![会话菜单](assets/screenshots/session-menu.png)
+
+![项目菜单](assets/screenshots/workspace-menu.png)
+
+![会话视图与轮次导航](assets/screenshots/conversation.png)
+
+![关于页与配套插件](assets/screenshots/settings-about.png)
+
+删除项目注册不会删除项目目录或会话记录。置顶和未读状态只保存在当前浏览器。
+
+## 持久化与安全边界
+
+| 数据 | 存储位置 | 范围 |
+| --- | --- | --- |
+| 置顶项目 | `localStorage` 键 `dsh-codex-ui.pinned-workspace-ids` | 仅当前浏览器 |
+| 置顶会话 | `localStorage` 键 `dsh.session-pins.v1` | 仅当前浏览器 |
+| 未读会话 | `localStorage` 键 `dsh.session-unread.v1` | 仅当前浏览器 |
+| 会话记录 | DSH 宿主服务 | 本插件不改写 |
+
+- 本插件只使用 DSH 公开插槽和服务。
+- 不修改宿主源码或会话数据模型。
+- 归档会话的永久删除由 `@michengai/dsh-archive-manager` 提供。
+- 专家和技能管理分别由对应可选 peer 插件提供。
+- 连接器目录不会展示地址、命令或凭证。
+
+## 配套插件
+
+| 插件 | npm 包 | 作用 |
+| --- | --- | --- |
+| 专家管理 | `@michengai/dsh-agency-agents` | 从「专家」进入对应设置页 |
+| 技能管理 | `@michengai/dsh-skills-manager` | 从「技能」进入对应设置页 |
+| 归档管理 | `@michengai/dsh-archive-manager` | 提供永久删除和已归档会话管理 |
+| 套件 | `@michengai/dsh-codex-suite` | 一次安装上述四个插件 |
+
+## 二次开发
+
+- [src\index.ts](src/index.ts)：Host 入口，以及不含敏感信息的连接器目录接口。
+- [src\client\index.ts](src/client/index.ts)：客户端入口，注册侧栏、工作区树、轮次导航和设置分区。
+- [src\client\CodexSidebar.tsx](src/client/CodexSidebar.tsx)：侧栏壳、搜索面板和视觉样式。
+- [src\client\CodexWorkspaceBrowser.tsx](src/client/CodexWorkspaceBrowser.tsx)：工作区和会话交互。
+- `tests\*.assert.ts` 与 `tests\*.spec.ts`：交互、样式和运行时集成验证。
+
+修改 `src` 后重新构建、测试，并以本地目录安装验证：
+
+```powershell
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+pnpm build
+pnpm test
+dsh plugin --profile web add .
+```
+
+新增功能应复用已有 DSH 插槽和公开服务；不要依赖宿主私有 DOM 或写入会话数据。
+
+## 验证
+
+```powershell
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+pnpm build
+pnpm test
+```
+
+## 文档与许可证
+
+项目状态、技术架构和迭代记录从[文档交接入口](docs/00-交接入口/00-阅读导航.md)开始。
+
+本项目采用 [Apache License 2.0](LICENSE)。会话管理工作流参考 [Semidia/dsh-session-manager](https://github.com/Semidia/dsh-session-manager)，但本插件独立通过 DSH 公开插槽和服务实现。

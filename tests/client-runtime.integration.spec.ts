@@ -28,3 +28,6 @@ test('侧栏替换以更低优先级接管工作区树，并保留 footer action
   expect(runtime.slots.entries('sidebar.footer.action')).toHaveLength(1)
   disposeFooter()
 })
+
+
+

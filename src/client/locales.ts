@@ -6,6 +6,7 @@ export const NS = 'michengai.codexUi'
 export const zh = {
   'sidebar.label': 'DSH 导航',
   'sidebar.expand': '展开侧边栏',
+  'sidebar.collapse': '收缩侧边栏',
   'sidebar.newTask': '新建任务',
   'sidebar.search': '搜索会话',
   'sidebar.mainMenu': '主菜单',
@@ -114,6 +115,7 @@ export const zh = {
 export const en: Record<keyof typeof zh, string> = {
   'sidebar.label': 'DSH navigation',
   'sidebar.expand': 'Expand sidebar',
+  'sidebar.collapse': 'Collapse sidebar',
   'sidebar.newTask': 'New task',
   'sidebar.search': 'Search conversations',
   'sidebar.mainMenu': 'Main menu',
@@ -226,3 +228,4 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'michengai.codexUi': CodexUiKey
   }
 }
+

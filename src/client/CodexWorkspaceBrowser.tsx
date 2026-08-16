@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SessionId, WorkspaceId } from '@deepseek-ai/dsh-client-runtime/client'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import {
@@ -10,7 +10,6 @@ import {
   IconEllipsisOutline16,
   IconFolderClose16,
   IconFolderOpenOutline16,
-  IconGoalOutline16,
   IconLinkOutline16,
   IconPlusOutline16,
   IconShareOutline16,
@@ -54,7 +53,7 @@ type DeleteTarget = { id: string; kind: 'workspace' | 'session'; title: string }
 const stylesheet = `
 .dcu-wb{--dcu-wb-inset:10px;display:flex;flex:1;min-height:0;flex-direction:column;padding:4px var(--dcu-wb-inset) 8px;color:var(--dcu-sidebar-primary)}
 .dcu-wb *{box-sizing:border-box}
-.dcu-wb-tree{flex:1;min-height:0;overflow-y:auto;padding-bottom:16px;scrollbar-gutter:stable}
+.dcu-wb-tree{flex:1;min-height:0;overflow-y:auto;padding-bottom:16px;scrollbar-gutter:stable;user-select:none;-webkit-user-select:none}
 .dcu-wb-section+.dcu-wb-section{margin-top:10px}
 .dcu-wb-section-label{display:flex;align-items:center;min-height:28px;padding:0 6px;color:var(--dcu-sidebar-secondary);font-size:12px;font-weight:650}
 .dcu-wb-project{position:relative}
@@ -63,7 +62,7 @@ const stylesheet = `
 .dcu-wb-project-head:hover,.dcu-wb-project-head.dcu-wb-menu-open,.dcu-wb-session:hover,.dcu-wb-session.dcu-wb-selected,.dcu-wb-session.dcu-wb-menu-open{background:var(--dcu-sidebar-hover)}
 .dcu-wb-project-head[draggable=true],.dcu-wb-session[draggable=true]{cursor:grab}
 .dcu-wb-project-head[draggable=true]:active,.dcu-wb-session[draggable=true]:active{cursor:grabbing}
-.dcu-wb-project-head.dcu-wb-drop,.dcu-wb-session.dcu-wb-drop{box-shadow:inset 0 2px var(--dsw-alias-state-business-primary)}
+.dcu-wb-project-head.dcu-wb-drop,.dcu-wb-session.dcu-wb-drop{box-shadow:inset 0 2px var(--dsw-alias-state-business-primary)}.dcu-wb-project-head:focus,.dcu-wb-session:focus{outline:0}.dcu-wb-drag-ghost{position:fixed;top:-120px;left:-240px;z-index:10040;max-width:220px;height:32px;padding:0 10px;border:1px solid var(--dcu-sidebar-border);border-radius:8px;background:var(--dcu-sidebar-hover);color:var(--dcu-sidebar-primary);font:13px/32px var(--dcu-font,inherit);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .dcu-wb-folder{display:grid;place-items:center;flex:none;width:16px;height:20px;color:var(--dcu-sidebar-icon)}
 .dcu-wb-project-current .dcu-wb-folder{color:var(--dsw-alias-state-business-primary)}
 .dcu-wb-project-title,.dcu-wb-session-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;line-height:20px}
@@ -95,6 +94,10 @@ const stylesheet = `
 const runningStyles = `.dcu-wb-running{flex:none;width:12px;height:12px;border:2px solid color-mix(in srgb,var(--dcu-sidebar-secondary) 25%,transparent);border-top-color:var(--dcu-sidebar-secondary);border-radius:50%;animation:dcu-wb-spin .8s linear infinite}@keyframes dcu-wb-spin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.dcu-wb-running{animation:none}}`
 
 const typographyStyles = `.dcu-wb{font:14px/20px var(--dcu-font,var(--dsw-font-family))}.dcu-wb-section-label{color:var(--dcu-sidebar-tertiary);font-size:12px;font-weight:500}.dcu-wb-project-title{font-weight:500}.dcu-wb-session-title{font-size:14px;line-height:20px;font-weight:400;color:var(--dcu-sidebar-primary)}.dcu-wb-time{color:var(--dcu-sidebar-secondary);font-size:12px;line-height:20px}.dcu-wb-empty{color:var(--dcu-sidebar-tertiary);font-size:12px;line-height:18px}`
+
+function PinIcon() {
+  return <svg viewBox="0 0 16 16" width={16} height={16} aria-hidden="true"><path d="M5.6 9.7 3.2 14M10.9 2.4c.9.9 1.1 2.2.5 3.3L10 7.6l2.3 2.3c.3.3.3.8 0 1.1l-.5.5c-.3.3-.8.3-1.1 0L8.4 9.2 6.5 10.6c-1.1.6-2.4.4-3.3-.5" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" /></svg>
+}
 
 function storage(): Storage | undefined { return typeof window === 'undefined' ? undefined : window.localStorage }
 
@@ -128,6 +131,7 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
   const [workspaceDropId, setWorkspaceDropId] = useState<string>()
   const [sessionDrag, setSessionDrag] = useState<{ sessionId: string; workspaceId: string }>()
   const [sessionDropId, setSessionDropId] = useState<string>()
+  const pendingPinRef = useRef<string>()
 
   useEffect(() => { savePinnedWorkspaceIds(storage(), pinnedWorkspaceIds) }, [pinnedWorkspaceIds])
   useEffect(() => { writeSessionIds(storage(), SESSION_PINS_STORAGE_KEY, pinnedSessionIds) }, [pinnedSessionIds])
@@ -196,7 +200,7 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
   const projectMenu = (workspace: (typeof groups.items)[number]): MenuEntry[] => [
     { id: 'new', label: t('workspace.newSession'), icon: <IconPlusOutline16 size={16} /> },
     { id: 'rename', label: t('workspace.rename'), icon: <IconEditOutline16 size={16} /> },
-    { id: 'pin', label: t(projectPinned(workspace.workspaceId) ? 'workspace.unpin' : 'workspace.pin'), icon: <IconGoalOutline16 size={16} /> },
+    { id: 'pin', label: t(projectPinned(workspace.workspaceId) ? 'workspace.unpin' : 'workspace.pin'), icon: <PinIcon /> },
     { id: 'openPath', label: t('workspace.openPath'), icon: <IconFolderOpenOutline16 size={16} /> },
     { type: 'separator', id: 'project-separator' },
     { id: 'delete', label: t('workspace.delete'), icon: <IconTrashOutline16 size={16} />, danger: true },
@@ -206,7 +210,7 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
     const unread = unreadSessionIds.includes(sessionId)
     return [
       { id: 'rename', label: t('sessions.rename'), icon: <IconEditOutline16 size={16} /> },
-      { id: 'pin', label: t(pinned ? 'sessions.unpin' : 'sessions.pin'), icon: <IconGoalOutline16 size={16} /> },
+      { id: 'pin', label: t(pinned ? 'sessions.unpin' : 'sessions.pin'), icon: <PinIcon /> },
       { id: 'unread', label: t(unread ? 'sessions.markRead' : 'sessions.markUnread'), icon: <span className="dcu-wb-unread" /> },
       { id: 'archive', label: t('sessions.archive'), icon: <IconArchiveOutline20 size={16} /> },
       { type: 'separator', id: 'main-separator' },
@@ -226,7 +230,7 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
     const menuOpen = menu?.type === 'workspace' && menu.id === workspace.workspaceId
     const isCurrentWorkspace = sessions.current !== undefined && workspace.visibleIds.includes(sessions.current)
     return <div className={`dcu-wb-project${isCurrentWorkspace ? ' dcu-wb-project-current' : ''}`} key={workspace.workspaceId} onDragOver={(event) => { if (workspaceDragId === undefined) return; event.preventDefault(); setWorkspaceDropId(workspace.workspaceId) }} onDrop={(event) => { event.preventDefault(); const dragged = workspaceDragId; setWorkspaceDragId(undefined); setWorkspaceDropId(undefined); if (dragged !== undefined && dragged !== workspace.workspaceId && moveBefore(groups.items.map(item => String(item.workspaceId)), dragged, String(workspace.workspaceId)).join() !== groups.items.map(item => String(item.workspaceId)).join()) void run('workspace-order', () => insertWorkspaceBefore(dragged as WorkspaceId, workspace.workspaceId)) }}>
-      <div className={`dcu-wb-project-head${menuOpen ? ' dcu-wb-menu-open' : ''}${workspaceDropId === workspace.workspaceId ? ' dcu-wb-drop' : ''}`} role="treeitem" aria-expanded={isExpanded} tabIndex={0} draggable onDragStart={(event) => { event.dataTransfer.effectAllowed = 'move'; setWorkspaceDragId(workspace.workspaceId) }} onDragEnd={() => { setWorkspaceDragId(undefined); setWorkspaceDropId(undefined) }} onClick={() => { toggleGroup(workspace.workspaceId) }} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setMenu({ id: workspace.workspaceId, type: 'workspace' }) }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleGroup(workspace.workspaceId) } }}>
+      <div className={`dcu-wb-project-head${menuOpen ? ' dcu-wb-menu-open' : ''}${workspaceDropId === workspace.workspaceId ? ' dcu-wb-drop' : ''}`} role="treeitem" aria-expanded={isExpanded} tabIndex={0} draggable onDragStart={(event) => { event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', workspace.title); const preview = document.createElement('div'); preview.className = 'dcu-wb-drag-ghost'; preview.textContent = workspace.title; document.body.appendChild(preview); event.dataTransfer.setDragImage(preview, 16, 18); window.requestAnimationFrame(() => { preview.remove() }); setWorkspaceDragId(workspace.workspaceId) }} onDragEnd={() => { const pin = pendingPinRef.current; pendingPinRef.current = undefined; setWorkspaceDragId(undefined); setWorkspaceDropId(undefined); if (pin !== undefined) setPinnedWorkspaceIds(ids => ids.includes(pin) ? ids : [pin, ...ids]) }} onClick={() => { toggleGroup(workspace.workspaceId) }} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setMenu({ id: workspace.workspaceId, type: 'workspace' }) }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleGroup(workspace.workspaceId) } }}>
         <span className="dcu-wb-folder">{isExpanded ? <IconFolderOpenOutline16 size={16} /> : <IconFolderClose16 size={16} />}</span><span className="dcu-wb-project-title" title={workspace.path}>{workspace.title}</span><span className="dcu-wb-actions"><Menu open={menuOpen} onClose={() => { setMenu(undefined) }} items={projectMenu(workspace)} onSelect={(id) => { if (busy !== undefined) return; if (id === 'new') { startSession(workspace.workspaceId); setMenu(undefined) }; if (id === 'rename') beginRename('workspace', workspace.workspaceId, workspace.title); if (id === 'pin') { setPinnedWorkspaceIds(ids => togglePinnedWorkspace(ids, workspace.workspaceId)); setMenu(undefined) }; if (id === 'openPath') void run('open-path', () => openPath(workspace.path)); if (id === 'delete') { setDeleteTarget({ id: workspace.workspaceId, kind: 'workspace', title: workspace.title }); setError(undefined); setMenu(undefined) } }} portal dense compact anchor={<button type="button" className="dcu-wb-more" aria-label={t('workspace.actions', { name: workspace.title })} onClick={(event) => { event.stopPropagation(); setMenu(current => current?.id === workspace.workspaceId && current.type === 'workspace' ? undefined : { id: workspace.workspaceId, type: 'workspace' }) }}><IconEllipsisOutline16 size={16} /></button>} /></span><span className="dcu-wb-actions"><button type="button" className="dcu-wb-more" aria-label={t('workspace.newSession')} onClick={(event) => { event.stopPropagation(); startSession(workspace.workspaceId) }}><IconPlusOutline16 size={16} /></button></span>
       </div>
       {isExpanded && workspace.visibleIds.map((id) => {
@@ -245,7 +249,7 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
     <style>{stylesheet}{runningStyles}{typographyStyles}</style>
     {error !== undefined && <div className="dcu-wb-error" role="alert">{t('sessions.failed', { message: error })}</div>}
     <div className="dcu-wb-tree" role="tree">
-      <section className="dcu-wb-section" aria-label={t('workspace.pinned')} onDragOver={(event) => { if (workspaceDragId !== undefined) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); const dragged = workspaceDragId; setWorkspaceDragId(undefined); if (dragged !== undefined) setPinnedWorkspaceIds(ids => ids.includes(dragged) ? ids : [dragged, ...ids]) }}>
+      <section className="dcu-wb-section" aria-label={t('workspace.pinned')} onDragOver={(event) => { if (workspaceDragId !== undefined) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); pendingPinRef.current = workspaceDragId; setWorkspaceDropId(undefined); if (event.currentTarget instanceof HTMLElement) event.currentTarget.blur() }}>
         <div className="dcu-wb-section-label">{t('workspace.pinned')}</div>
         {pinnedGroups.length > 0 ? pinnedGroups.map(renderGroup) : <div className="dcu-wb-empty">{t('workspace.pinnedEmpty')}</div>}
       </section>
