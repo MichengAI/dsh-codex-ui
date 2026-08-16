@@ -51,6 +51,8 @@ assert.match(sidebar, /dcu-search-dialog/, '顶栏搜索必须打开全局搜索
 assert.doesNotMatch(workspaceBrowser, /dcu-wb-search/, '工作区区域不得保留重复搜索框')
 assert.doesNotMatch(workspaceBrowser, /IconChevronRightOutline14/, '项目树不得保留展开箭头')
 assert.match(workspaceBrowser, /toggleGroup\(workspace\.workspaceId\)/, '点击项目文件夹必须切换展开状态')
+assert.match(workspaceBrowser, /IconFolderClose16/, '折叠项目必须使用关闭文件夹图标')
+assert.match(workspaceBrowser, /isExpanded \? <IconFolderOpenOutline16[^]*IconFolderClose16/, '项目图标必须随展开状态切换')
 assert.match(workspaceBrowser, /dcu-wb-project-current/, '当前会话所属项目必须显示选中态')
 assert.match(workspaceBrowser, /deleteWorkspace/, '项目菜单必须接入 DSH 公开删除工作区服务')
 assert.match(workspaceBrowser, /workspace\.delete/, '项目菜单必须提供删除工作区操作')
