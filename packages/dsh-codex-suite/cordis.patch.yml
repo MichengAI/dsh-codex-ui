@@ -1,0 +1,39 @@
+# DSH Codex UI 聚合包：将所有子插件注册到同一个 profile。
+# 子包须可从 profile 顶层解析；严格 pnpm 布局请参阅 README.zh-CN.md。
+
+# dsh-archive-manager：替换工作区与会话投影服务。
+- id: workspace
+  disabled: true
+- id: session-projection-cache
+  disabled: true
+- id: ui-workspace
+  disabled: true
+- insert:
+    - id: workspace-archive-manager
+      name: '@michengai/dsh-archive-manager/workspace'
+    - id: session-projection-cache-archive-manager
+      name: '@michengai/dsh-archive-manager/projcache'
+      config:
+        writeEveryEvents: 200
+        writeIntervalMs: 5000
+    - id: ui-workspace-archive-manager
+      name: '@michengai/dsh-archive-manager'
+
+# dsh-codex-ui：替换默认侧栏。
+- id: ui-sidebar
+  disabled: true
+- insert:
+    - id: codex-ui
+      name: '@michengai/dsh-codex-ui'
+
+# dsh-skills-manager：提供技能管理设置页。
+- insert:
+    - id: skills-manager
+      name: '@michengai/dsh-skills-manager'
+
+# dsh-agency-agents：先注册 remote 行，供 API gateway 发现专家路由。
+- insert:
+    - id: agency-agents-remote
+      name: '@michengai/dsh-agency-agents/remote'
+    - id: agency-agents
+      name: '@michengai/dsh-agency-agents'

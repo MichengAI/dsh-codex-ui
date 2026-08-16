@@ -39,7 +39,7 @@
   },
   "scripts": {
     "build": "tsc --noEmit && tsdown",
-    "test": "tsx tests/pinned-sessions.assert.ts && tsx tests/session-manager.assert.ts && tsx tests/workspace-browser.assert.ts && tsx tests/sidebar-search.assert.ts && vitest run tests/client-runtime.integration.spec.ts && tsx tests/settings-integration.assert.ts && tsx tests/about-dependencies.assert.ts && tsx tests/conversation-visuals.assert.ts && tsx tests/client-bundle.assert.ts"
+    "test": "tsx tests/pinned-sessions.assert.ts && tsx tests/session-manager.assert.ts && tsx tests/workspace-browser.assert.ts && tsx tests/sidebar-search.assert.ts && vitest run tests/client-runtime.integration.spec.ts && tsx tests/settings-integration.assert.ts && tsx tests/about-dependencies.assert.ts && tsx tests/conversation-visuals.assert.ts && tsx tests/client-bundle.assert.ts && tsx tests/codex-suite.assert.ts"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": ">=4.0.1 <5.0.0",
