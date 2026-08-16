@@ -10,11 +10,15 @@ type ProfileManifest = {
   dsh?: { profile?: { bundles?: string[] } }
 }
 
+type PackageManifest = { version?: string }
+
 export type DependencyStatus = {
   id: ManagedDependencyId
   packageName: string
   installed: boolean
   version?: string
+  latestVersion?: string
+  updateAvailable: boolean
 }
 
 function profileDirectory(): string {
@@ -31,15 +35,52 @@ async function profileManifest(): Promise<ProfileManifest> {
   }
 }
 
-/** 返回 web profile 中固定管理插件的安装状态。 */
+async function installedPackageVersion(packageName: string): Promise<string | undefined> {
+  try {
+    const manifest = JSON.parse(await readFile(join(profileDirectory(), 'node_modules', ...packageName.split('/'), 'package.json'), 'utf8')) as PackageManifest
+    return typeof manifest.version === 'string' ? manifest.version : undefined
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw error
+  }
+}
+
+async function npmLatestVersion(packageName: string): Promise<string | undefined> {
+  try {
+    const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(packageName)}/latest`, { signal: AbortSignal.timeout(5_000) })
+    if (!response.ok) return undefined
+    const manifest = await response.json() as PackageManifest
+    return typeof manifest.version === 'string' ? manifest.version : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function versionParts(version: string): readonly [number, number, number] | undefined {
+  const match = /^v?(\d+)\.(\d+)\.(\d+)/.exec(version)
+  return match === null ? undefined : [Number(match[1]), Number(match[2]), Number(match[3])]
+}
+
+function newerVersion(installed: string, latest: string): boolean {
+  const current = versionParts(installed)
+  const candidate = versionParts(latest)
+  if (current === undefined || candidate === undefined) return false
+  return candidate[0] > current[0]
+    || (candidate[0] === current[0] && candidate[1] > current[1])
+    || (candidate[0] === current[0] && candidate[1] === current[1] && candidate[2] > current[2])
+}
+
+/** 返回 Web profile 中固定管理插件的实际安装版本与 npm latest 状态。 */
 export async function dependencyStatuses(): Promise<readonly DependencyStatus[]> {
   const manifest = await profileManifest()
-  return MANAGED_DEPENDENCIES.map(dependency => {
-    const version = manifest.dependencies?.[dependency.packageName] ?? manifest.devDependencies?.[dependency.packageName]
-    return version === undefined
-      ? { ...dependency, installed: false }
-      : { ...dependency, installed: true, version }
-  })
+  return Promise.all(MANAGED_DEPENDENCIES.map(async dependency => {
+    const declared = manifest.dependencies?.[dependency.packageName] ?? manifest.devDependencies?.[dependency.packageName]
+    if (declared === undefined) return { ...dependency, installed: false, updateAvailable: false }
+    const version = await installedPackageVersion(dependency.packageName)
+    if (version === undefined) return { ...dependency, installed: false, updateAvailable: false }
+    const latestVersion = await npmLatestVersion(dependency.packageName)
+    return { ...dependency, installed: true, version, latestVersion, updateAvailable: latestVersion !== undefined && newerVersion(version, latestVersion) }
+  }))
 }
 
 /**
@@ -51,14 +92,14 @@ function runDshPluginAdd(packageName: string): Promise<void> {
   if (entry === undefined || entry === '') return Promise.reject(new Error('无法定位 DSH CLI。请从 DSH 命令启动 Web 服务后重试。'))
   const invocation = { args: [...process.execArgv, entry], cwd: dirname(entry) }
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [...invocation.args, 'plugin', '--profile', 'web', 'add', packageName], {
+    const child = spawn(process.execPath, [...invocation.args, 'plugin', '--profile', 'web', 'add', `${packageName}@latest`], {
       cwd: invocation.cwd,
       env: { ...process.env, CI: 'true' },
       windowsHide: true,
       stdio: 'ignore',
     })
     child.once('error', () => { reject(new Error('无法启动 DSH 插件安装命令。请确认 Node.js 与 pnpm 可用后重试。')) })
-    child.once('exit', code => { code === 0 ? resolve() : reject(new Error('从 npm 安装依赖失败。请检查网络或 npm registry 后重试。')) })
+    child.once('exit', code => { code === 0 ? resolve() : reject(new Error('从 npm 安装或更新依赖失败。请检查网络、npm registry 或发布时间保护后重试。')) })
   })
 }
 
