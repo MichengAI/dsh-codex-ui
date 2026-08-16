@@ -13,6 +13,8 @@ const manager = readFileSync(new URL('../src/dependency-manager.ts', import.meta
 
 assert.match(client, /id: 'about'/, '关于页必须注册为最后的设置分区')
 assert.match(client, /order: 100/, '关于页必须排在管理插件设置之后')
+assert.match(dependencies, /@michengai\/dsh-codex-ui/, 'about must manage this plugin')
+assert.match(dependencies, /id: 'ui'/, 'about must declare ui dependency id')
 assert.match(dependencies, /@michengai\/dsh-agency-agents/, '关于页必须声明专家插件依赖')
 assert.match(dependencies, /@michengai\/dsh-skills-manager/, '关于页必须声明技能插件依赖')
 assert.match(dependencies, /@michengai\/dsh-archive-manager/, '关于页必须声明归档插件依赖')
@@ -30,6 +32,7 @@ assert.match(manager, /registry\.npmjs\.org/, '依赖状态必须从 npm registr
 assert.match(manager, /updateAvailable/, '依赖状态必须标记可更新的已安装插件')
 assert.match(about, /data-installed=false\]\{color:var\(--dsw-alias-state-error-primary\)/, '未安装状态必须使用红色')
 assert.match(about, /data-installed=true\]\{color:var\(--dsw-alias-state-success-primary\)/, '已安装状态必须使用绿色')
+assert.match(about, /MANAGED_DEPENDENCIES.some/, 'about must accept all managed dependency ids')
 assert.match(about, /about\.update/, '关于页必须为落后版本提供更新操作')
 assert.match(about, /about\.feature\.search/, '关于页必须列出全局搜索能力')
 assert.match(about, /about\.feature\.navigator/, '关于页必须列出会话轮次导航能力')

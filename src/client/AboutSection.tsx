@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { IconCheckOutline16, IconDownloadOutline16, IconLoadingOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { ManagedDependencyId } from '../dependencies.ts'
+import { MANAGED_DEPENDENCIES, type ManagedDependencyId } from '../dependencies.ts'
 import { NS } from './locales.ts'
 
 type DependencyStatus = { id: ManagedDependencyId; packageName: string; installed: boolean; version?: string; latestVersion?: string; updateAvailable: boolean }
@@ -16,7 +16,7 @@ const stylesheet = `
 function isDependencyStatus(value: unknown): value is DependencyStatus {
   if (value === null || typeof value !== 'object') return false
   const status = value as Record<string, unknown>
-  return (status.id === 'experts' || status.id === 'skills' || status.id === 'archive')
+  return MANAGED_DEPENDENCIES.some(dependency => dependency.id === status.id)
     && typeof status.packageName === 'string' && typeof status.installed === 'boolean' && typeof status.updateAvailable === 'boolean'
 }
 
