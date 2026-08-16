@@ -92,6 +92,7 @@ export function apply(ctx: ClientContext): void {
 
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section', id: 'connectors', order: 17, label: () => t('sidebar.connectors'),
+    ...({ icon: 'connector' } as Record<string, unknown>),
     inject: () => ({ sessionStore: ctx.sessions.list, t }),
   }, ConnectorsSection))
 }
