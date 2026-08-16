@@ -84,15 +84,15 @@ export async function dependencyStatuses(): Promise<readonly DependencyStatus[]>
 }
 
 /**
- * 复用启动当前服务的 DSH CLI：它会通过 pnpm 从 npm 安装，并自动维护
+ * 复用启动当前服务的 DSH CLI：它会通过 pnpm 从 npm 安装或更新，并自动维护
  * dsh.profile.bundles，避免浏览器端直接管理 profile 文件。
  */
-function runDshPluginAdd(packageName: string): Promise<void> {
+function runDshPlugin(args: readonly string[]): Promise<void> {
   const entry = process.argv[1]
   if (entry === undefined || entry === '') return Promise.reject(new Error('无法定位 DSH CLI。请从 DSH 命令启动 Web 服务后重试。'))
   const invocation = { args: [...process.execArgv, entry], cwd: dirname(entry) }
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [...invocation.args, 'plugin', '--profile', 'web', 'add', `${packageName}@latest`], {
+    const child = spawn(process.execPath, [...invocation.args, 'plugin', '--profile', 'web', ...args], {
       cwd: invocation.cwd,
       env: { ...process.env, CI: 'true' },
       windowsHide: true,
@@ -107,6 +107,11 @@ function runDshPluginAdd(packageName: string): Promise<void> {
 export async function installDependency(id: string | null): Promise<readonly DependencyStatus[]> {
   const dependency = managedDependency(id)
   if (dependency === undefined) throw new Error('不支持安装该依赖。')
-  await runDshPluginAdd(dependency.packageName)
+  const manifest = await profileManifest()
+  const declared = manifest.dependencies?.[dependency.packageName] ?? manifest.devDependencies?.[dependency.packageName]
+  // 用户点击安装或更新即明确选择信任本次 npm latest；仅本次命令跳过发布时间等待。
+  await runDshPlugin(declared === undefined
+    ? ['add', '--config.minimumReleaseAge=0', `${dependency.packageName}@latest`]
+    : ['update', '--latest', '--config.minimumReleaseAge=0', dependency.packageName])
   return dependencyStatuses()
 }
