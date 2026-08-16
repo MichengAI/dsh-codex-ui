@@ -14,6 +14,7 @@ import {
   IconLinkOutline16,
   IconPlusOutline16,
   IconShareOutline16,
+  IconTrashOutline16,
   Menu,
   Modal,
   writeClipboard,
@@ -34,6 +35,7 @@ import { moveBefore, visibleSessionIds } from './workspace-browser.ts'
 
 type BrowserInjected = {
   archiveSession: (sessionId: SessionId) => Promise<void>
+  deleteWorkspace: (workspaceId: WorkspaceId) => Promise<void>
   forkSession: (sessionId: SessionId) => Promise<void>
   insertSessionBefore: (workspaceId: WorkspaceId, sessionId: SessionId, beforeSessionId?: SessionId) => Promise<unknown>
   insertWorkspaceBefore: (workspaceId: WorkspaceId, beforeWorkspaceId?: WorkspaceId) => Promise<unknown>
@@ -47,6 +49,7 @@ type BrowserInjected = {
 type CodexWorkspaceBrowserProps = PropsRuntime<'sidebar.workspaces'> & PropsLocale<typeof NS> & BrowserInjected
 type MenuState = { id: string; type: 'workspace' | 'session' } | undefined
 type RenameTarget = { id: string; kind: 'workspace' | 'session'; title: string } | undefined
+type DeleteTarget = { id: string; title: string } | undefined
 
 const stylesheet = `
 .dcu-wb{--dcu-wb-inset:10px;display:flex;flex:1;min-height:0;flex-direction:column;padding:4px var(--dcu-wb-inset) 8px;color:var(--dcu-sidebar-primary)}
@@ -62,6 +65,7 @@ const stylesheet = `
 .dcu-wb-project-head[draggable=true]:active,.dcu-wb-session[draggable=true]:active{cursor:grabbing}
 .dcu-wb-project-head.dcu-wb-drop,.dcu-wb-session.dcu-wb-drop{box-shadow:inset 0 2px var(--dsw-alias-state-business-primary)}
 .dcu-wb-folder{display:grid;place-items:center;flex:none;width:16px;height:20px;color:var(--dcu-sidebar-icon)}
+.dcu-wb-project-current .dcu-wb-folder{color:var(--dsw-alias-state-business-primary)}
 .dcu-wb-project-title,.dcu-wb-session-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;line-height:20px}
 .dcu-wb-project-title{flex:1;font-weight:550}
 .dcu-wb-session{position:relative;min-height:32px;gap:0;padding-left:32px}
@@ -79,6 +83,8 @@ const stylesheet = `
 .dcu-wb-error{margin:4px 0;padding:6px 8px;border-radius:6px;background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 12%,transparent);color:var(--dsw-alias-state-error-primary);font-size:12px}
 .dcu-wb-rail{display:none}
 .dcu-wb-rename-actions{display:flex;justify-content:flex-end;gap:8px}
+.dcu-wb-delete-button{color:var(--dsw-alias-state-error-primary)!important}
+.dcu-wb-delete-copy{margin:0;color:var(--dcu-sidebar-secondary);font-size:13px;line-height:20px}
 .dcu-wb-rename-input{width:100%;height:44px;border:1px solid var(--dcu-sidebar-border);border-radius:22px;padding:7px 14px;outline:0;background:transparent;color:var(--dcu-sidebar-primary);font:inherit}
 .dcu-wb-rename-input:focus{border-color:var(--dsw-alias-button-info-fill)}
 `
@@ -116,7 +122,7 @@ function relativeTime(updatedAt: number): string {
 }
 
 /** 插件自有的工作区树：复刻原生层级和拖拽行为，并在每个会话菜单中增加管理操作。 */
-export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, archiveSession, forkSession, insertSessionBefore, insertWorkspaceBefore, openPath, openSession, renameSession, renameWorkspace, startSession }: CodexWorkspaceBrowserProps) {
+export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, archiveSession, deleteWorkspace, forkSession, insertSessionBefore, insertWorkspaceBefore, openPath, openSession, renameSession, renameWorkspace, startSession }: CodexWorkspaceBrowserProps) {
   const sessions = useSessions(state => state)
   const workspaces = useWorkspaces(state => state)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
@@ -125,6 +131,7 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
   const [unreadSessionIds, setUnreadSessionIds] = useState(() => readSessionIds(storage(), SESSION_UNREAD_STORAGE_KEY))
   const [menu, setMenu] = useState<MenuState>()
   const [renameTarget, setRenameTarget] = useState<RenameTarget>()
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>()
   const [renameDraft, setRenameDraft] = useState('')
   const [busy, setBusy] = useState<string>()
   const [error, setError] = useState<string>()
@@ -174,6 +181,15 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
       setRenameTarget(undefined)
     })
   }
+  const submitDelete = (): void => {
+    if (deleteTarget === undefined) return
+    const target = deleteTarget
+    void run('delete-workspace', async () => {
+      await deleteWorkspace(target.id as WorkspaceId)
+      setPinnedWorkspaceIds(ids => ids.filter(id => id !== target.id))
+      setDeleteTarget(undefined)
+    })
+  }
   const copy = (value: string | undefined): void => {
     if (value === undefined || value === '') return
     void run('copy', async () => { await writeClipboard(value) })
@@ -186,6 +202,8 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
     { id: 'rename', label: t('workspace.rename'), icon: <IconEditOutline16 size={16} /> },
     { id: 'pin', label: t(projectPinned(workspace.workspaceId) ? 'workspace.unpin' : 'workspace.pin'), icon: <IconGoalOutline16 size={16} /> },
     { id: 'openPath', label: t('workspace.openPath'), icon: <IconFolderOpenOutline16 size={16} /> },
+    { type: 'separator', id: 'project-separator' },
+    { id: 'delete', label: t('workspace.delete'), icon: <IconTrashOutline16 size={16} />, danger: true },
   ]
   const sessionMenu = (sessionId: string, title: string, path: string | undefined): MenuEntry[] => {
     const pinned = pinnedSessionIds.includes(sessionId)
@@ -209,9 +227,10 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
   const renderGroup = (workspace: (typeof groups.items)[number]) => {
     const isExpanded = expanded[workspace.workspaceId] ?? true
     const menuOpen = menu?.type === 'workspace' && menu.id === workspace.workspaceId
-    return <div className="dcu-wb-project" key={workspace.workspaceId} onDragOver={(event) => { if (workspaceDragId === undefined) return; event.preventDefault(); setWorkspaceDropId(workspace.workspaceId) }} onDrop={(event) => { event.preventDefault(); const dragged = workspaceDragId; setWorkspaceDragId(undefined); setWorkspaceDropId(undefined); if (dragged !== undefined && dragged !== workspace.workspaceId && moveBefore(groups.items.map(item => String(item.workspaceId)), dragged, String(workspace.workspaceId)).join() !== groups.items.map(item => String(item.workspaceId)).join()) void run('workspace-order', () => insertWorkspaceBefore(dragged as WorkspaceId, workspace.workspaceId)) }}>
+    const isCurrentWorkspace = sessions.current !== undefined && workspace.visibleIds.includes(sessions.current)
+    return <div className={`dcu-wb-project${isCurrentWorkspace ? ' dcu-wb-project-current' : ''}`} key={workspace.workspaceId} onDragOver={(event) => { if (workspaceDragId === undefined) return; event.preventDefault(); setWorkspaceDropId(workspace.workspaceId) }} onDrop={(event) => { event.preventDefault(); const dragged = workspaceDragId; setWorkspaceDragId(undefined); setWorkspaceDropId(undefined); if (dragged !== undefined && dragged !== workspace.workspaceId && moveBefore(groups.items.map(item => String(item.workspaceId)), dragged, String(workspace.workspaceId)).join() !== groups.items.map(item => String(item.workspaceId)).join()) void run('workspace-order', () => insertWorkspaceBefore(dragged as WorkspaceId, workspace.workspaceId)) }}>
       <div className={`dcu-wb-project-head${menuOpen ? ' dcu-wb-menu-open' : ''}${workspaceDropId === workspace.workspaceId ? ' dcu-wb-drop' : ''}`} role="treeitem" aria-expanded={isExpanded} tabIndex={0} draggable onDragStart={(event) => { event.dataTransfer.effectAllowed = 'move'; setWorkspaceDragId(workspace.workspaceId) }} onDragEnd={() => { setWorkspaceDragId(undefined); setWorkspaceDropId(undefined) }} onClick={() => { toggleGroup(workspace.workspaceId) }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleGroup(workspace.workspaceId) } }}>
-        <span className="dcu-wb-folder"><IconFolderOpenOutline16 size={16} /></span><span className="dcu-wb-project-title" title={workspace.path}>{workspace.title}</span><span className="dcu-wb-actions"><Menu open={menuOpen} onClose={() => { setMenu(undefined) }} items={projectMenu(workspace)} onSelect={(id) => { if (busy !== undefined) return; if (id === 'new') { startSession(workspace.workspaceId); setMenu(undefined) }; if (id === 'rename') beginRename('workspace', workspace.workspaceId, workspace.title); if (id === 'pin') { setPinnedWorkspaceIds(ids => togglePinnedWorkspace(ids, workspace.workspaceId)); setMenu(undefined) }; if (id === 'openPath') void run('open-path', () => openPath(workspace.path)) }} portal dense compact anchor={<button type="button" className="dcu-wb-more" aria-label={t('workspace.actions', { name: workspace.title })} onClick={(event) => { event.stopPropagation(); setMenu(current => current?.id === workspace.workspaceId && current.type === 'workspace' ? undefined : { id: workspace.workspaceId, type: 'workspace' }) }}><IconEllipsisOutline16 size={16} /></button>} /></span><span className="dcu-wb-actions"><button type="button" className="dcu-wb-more" aria-label={t('workspace.newSession')} onClick={(event) => { event.stopPropagation(); startSession(workspace.workspaceId) }}><IconPlusOutline16 size={16} /></button></span>
+        <span className="dcu-wb-folder"><IconFolderOpenOutline16 size={16} /></span><span className="dcu-wb-project-title" title={workspace.path}>{workspace.title}</span><span className="dcu-wb-actions"><Menu open={menuOpen} onClose={() => { setMenu(undefined) }} items={projectMenu(workspace)} onSelect={(id) => { if (busy !== undefined) return; if (id === 'new') { startSession(workspace.workspaceId); setMenu(undefined) }; if (id === 'rename') beginRename('workspace', workspace.workspaceId, workspace.title); if (id === 'pin') { setPinnedWorkspaceIds(ids => togglePinnedWorkspace(ids, workspace.workspaceId)); setMenu(undefined) }; if (id === 'openPath') void run('open-path', () => openPath(workspace.path)); if (id === 'delete') { setDeleteTarget({ id: workspace.workspaceId, title: workspace.title }); setError(undefined); setMenu(undefined) } }} portal dense compact anchor={<button type="button" className="dcu-wb-more" aria-label={t('workspace.actions', { name: workspace.title })} onClick={(event) => { event.stopPropagation(); setMenu(current => current?.id === workspace.workspaceId && current.type === 'workspace' ? undefined : { id: workspace.workspaceId, type: 'workspace' }) }}><IconEllipsisOutline16 size={16} /></button>} /></span><span className="dcu-wb-actions"><button type="button" className="dcu-wb-more" aria-label={t('workspace.newSession')} onClick={(event) => { event.stopPropagation(); startSession(workspace.workspaceId) }}><IconPlusOutline16 size={16} /></button></span>
       </div>
       {isExpanded && workspace.visibleIds.map((id) => {
         const session = sessions.byId[id as SessionId]
@@ -225,5 +244,21 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
   }
 
   if (!wide) return <div className="dcu-wb dcu-wb-rail"><style>{stylesheet}</style></div>
-  return <section className="dcu-wb" aria-label={t('workspace.label')}><style>{stylesheet}{runningStyles}{typographyStyles}</style>{error !== undefined && <div className="dcu-wb-error" role="alert">{t('sessions.failed', { message: error })}</div>}<div className="dcu-wb-tree" role="tree"><section className="dcu-wb-section" aria-label={t('workspace.pinned')} onDragOver={(event) => { if (workspaceDragId !== undefined) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); const dragged = workspaceDragId; setWorkspaceDragId(undefined); if (dragged !== undefined) setPinnedWorkspaceIds(ids => ids.includes(dragged) ? ids : [dragged, ...ids]) }}><div className="dcu-wb-section-label">{t('workspace.pinned')}</div>{pinnedGroups.length > 0 ? pinnedGroups.map(renderGroup) : <div className="dcu-wb-empty">{t('workspace.pinnedEmpty')}</div>}</section><section className="dcu-wb-section" aria-label={t('workspace.projects')}><div className="dcu-wb-section-label">{t('workspace.projects')}</div>{regularGroups.map(renderGroup)}{regularGroups.length === 0 && <div className="dcu-wb-empty">{t('workspace.empty')}</div>}</section></div><Modal open={renameTarget !== undefined} onClose={() => { setRenameTarget(undefined); setError(undefined) }} closeLabel={t('sessions.close')} title={renameTarget?.kind === 'workspace' ? t('workspace.rename') : t('sessions.rename')} footer={<div className="dcu-wb-rename-actions"><Button variant="outline" onClick={() => { setRenameTarget(undefined) }}>{t('sessions.cancel')}</Button><Button variant="primary" disabled={busy !== undefined || renameDraft.trim() === ''} onClick={submitRename}>{t('sessions.save')}</Button></div>}><input className="dcu-wb-rename-input" value={renameDraft} autoFocus onFocus={event => { event.target.select() }} onChange={event => { setRenameDraft(event.target.value); setError(undefined) }} onKeyDown={event => { if (event.key === 'Enter') submitRename() }} />{error !== undefined && <div className="dcu-wb-error" role="alert">{t('sessions.failed', { message: error })}</div>}</Modal></section>
+  return <section className="dcu-wb" aria-label={t('workspace.label')}>
+    <style>{stylesheet}{runningStyles}{typographyStyles}</style>
+    {error !== undefined && <div className="dcu-wb-error" role="alert">{t('sessions.failed', { message: error })}</div>}
+    <div className="dcu-wb-tree" role="tree">
+      <section className="dcu-wb-section" aria-label={t('workspace.pinned')} onDragOver={(event) => { if (workspaceDragId !== undefined) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); const dragged = workspaceDragId; setWorkspaceDragId(undefined); if (dragged !== undefined) setPinnedWorkspaceIds(ids => ids.includes(dragged) ? ids : [dragged, ...ids]) }}>
+        <div className="dcu-wb-section-label">{t('workspace.pinned')}</div>
+        {pinnedGroups.length > 0 ? pinnedGroups.map(renderGroup) : <div className="dcu-wb-empty">{t('workspace.pinnedEmpty')}</div>}
+      </section>
+      <section className="dcu-wb-section" aria-label={t('workspace.projects')}>
+        <div className="dcu-wb-section-label">{t('workspace.projects')}</div>
+        {regularGroups.map(renderGroup)}
+        {regularGroups.length === 0 && <div className="dcu-wb-empty">{t('workspace.empty')}</div>}
+      </section>
+    </div>
+    <Modal open={renameTarget !== undefined} onClose={() => { setRenameTarget(undefined); setError(undefined) }} closeLabel={t('sessions.close')} title={renameTarget?.kind === 'workspace' ? t('workspace.rename') : t('sessions.rename')} footer={<div className="dcu-wb-rename-actions"><Button variant="outline" onClick={() => { setRenameTarget(undefined) }}>{t('sessions.cancel')}</Button><Button variant="primary" disabled={busy !== undefined || renameDraft.trim() === ''} onClick={submitRename}>{t('sessions.save')}</Button></div>}><input className="dcu-wb-rename-input" value={renameDraft} autoFocus onFocus={event => { event.target.select() }} onChange={event => { setRenameDraft(event.target.value); setError(undefined) }} onKeyDown={event => { if (event.key === 'Enter') submitRename() }} />{error !== undefined && <div className="dcu-wb-error" role="alert">{t('sessions.failed', { message: error })}</div>}</Modal>
+    <Modal open={deleteTarget !== undefined} onClose={() => { if (busy !== 'delete-workspace') { setDeleteTarget(undefined); setError(undefined) } }} closeLabel={t('sessions.close')} title={t('workspace.delete')} footer={<div className="dcu-wb-rename-actions"><Button variant="outline" disabled={busy === 'delete-workspace'} onClick={() => { setDeleteTarget(undefined); setError(undefined) }}>{t('sessions.cancel')}</Button><Button variant="outline" className="dcu-wb-delete-button" disabled={busy === 'delete-workspace'} onClick={submitDelete}>{t('workspace.delete')}</Button></div>}><p className="dcu-wb-delete-copy">{deleteTarget === undefined ? '' : t('workspace.deleteDescription', { name: deleteTarget.title })}</p>{busy === 'delete-workspace' && <div className="dcu-wb-error" role="status">{t('workspace.deletePending')}</div>}{error !== undefined && <div className="dcu-wb-error" role="alert">{t('sessions.failed', { message: error })}</div>}</Modal>
+  </section>
 }

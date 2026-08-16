@@ -49,6 +49,7 @@ export function apply(ctx: ClientContext): void {
     name: 'sidebar.workspaces', priority: -1, locale: NS,
     inject: () => ({
       archiveSession: (sessionId: SessionId) => ctx.workspaces.archiveSession(sessionId),
+      deleteWorkspace: (workspaceId: WorkspaceId) => ctx.workspaces.delete(workspaceId),
       forkSession,
       openPath: (path: string) => ctx.workspaces.openPath(path),
       openSession: (sessionId: SessionId) => { ctx.sessions.open(sessionId) },
