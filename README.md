@@ -15,7 +15,7 @@ For project handover documentation, see [docs/00-交接入口/00-阅读导航.md
 
 ## Session management
 
-Project and conversation menus use only public DSH services. The workspace tree lists ordinary, active conversations and supports opening, local pin/unpin and unread markers, renaming, archiving, forking, ZIP export, opening the workspace folder, copying the path/title/ID/deep link, and opening a conversation in a new window.
+Project and conversation menus use only public DSH services. The workspace tree lists ordinary, active conversations and supports opening, local pin/unpin and unread markers, renaming, archiving, forking, ZIP export, opening the workspace folder, and copying the path/title/ID/deep link.
 
 Pinned and unread state is browser-local. Permanent deletion and unarchiving are intentionally unavailable because DSH `0.1.0-rc.6` does not expose those operations to client plugins.
 
