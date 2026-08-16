@@ -48,7 +48,3 @@ export function sessionDeepLink(base: string, sessionId: string): string {
   url.searchParams.set('session', sessionId)
   return url.toString()
 }
-
-export function sessionExportFilename(sessionId: string): string {
-  return `dsh-session-${sessionId.replace(/[^A-Za-z0-9_-]/g, '_')}.zip`
-}

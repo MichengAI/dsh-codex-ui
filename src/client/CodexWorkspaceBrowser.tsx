@@ -6,7 +6,6 @@ import {
   IconArchiveOutline20,
   IconBranchOutline16,
   IconCopyOutline16,
-  IconDownloadOutline16,
   IconEditOutline16,
   IconEllipsisOutline16,
   IconFolderClose16,
@@ -28,7 +27,6 @@ import {
   SESSION_PINS_STORAGE_KEY,
   SESSION_UNREAD_STORAGE_KEY,
   sessionDeepLink,
-  sessionExportFilename,
   toggleSessionId,
   writeSessionIds,
 } from './session-manager.ts'
@@ -99,20 +97,6 @@ function storage(): Storage | undefined { return typeof window === 'undefined' ?
 
 function browserBase(): string {
   return typeof window === 'undefined' || window.location.origin === 'null' ? 'http://dsh.internal/' : `${window.location.origin}/`
-}
-
-async function exportSession(sessionId: string): Promise<void> {
-  const url = new URL('/api/session.export', browserBase())
-  url.searchParams.set('sessionId', sessionId)
-  url.searchParams.set('includeDescendants', 'true')
-  const response = await fetch(url, { method: 'HEAD' })
-  if (!response.ok) throw new Error(`HTTP ${response.status}`)
-  const anchor = document.createElement('a')
-  anchor.href = url.toString()
-  anchor.download = sessionExportFilename(sessionId)
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
 }
 
 function relativeTime(updatedAt: number): string {
@@ -223,15 +207,15 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
       { id: 'unread', label: t(unread ? 'sessions.markRead' : 'sessions.markUnread'), icon: <span className="dcu-wb-unread" /> },
       { id: 'archive', label: t('sessions.archive'), icon: <IconArchiveOutline20 size={16} /> },
       { type: 'separator', id: 'main-separator' },
-      { id: 'delete', label: t('sessions.delete'), icon: <IconTrashOutline16 size={16} />, danger: true },
       { id: 'fork', label: t('sessions.fork'), icon: <IconBranchOutline16 size={16} /> },
-      { id: 'export', label: t('sessions.export'), icon: <IconDownloadOutline16 size={16} /> },
       { type: 'separator', id: 'copy-separator' },
       { id: 'openPath', label: t('sessions.openPath'), icon: <IconFolderOpenOutline16 size={16} />, disabled: path === undefined },
       { id: 'copyPath', label: t('sessions.copyPath'), icon: <IconCopyOutline16 size={16} />, disabled: path === undefined },
       { id: 'copyTitle', label: t('sessions.copyTitle'), icon: <IconCopyOutline16 size={16} /> },
       { id: 'copyId', label: t('sessions.copyId'), icon: <IconLinkOutline16 size={16} /> },
       { id: 'copyLink', label: t('sessions.copyLink'), icon: <IconShareOutline16 size={16} /> },
+      { type: 'separator', id: 'delete-separator' },
+      { id: 'delete', label: t('sessions.delete'), icon: <IconTrashOutline16 size={16} />, danger: true },
     ]
   }
   const renderGroup = (workspace: (typeof groups.items)[number]) => {
@@ -248,7 +232,7 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
         const path = session.cwd ?? workspace.path
         const selected = sessions.current === id
         const sessionMenuOpen = menu?.type === 'session' && menu.id === id
-        return <div key={id} className={`dcu-wb-session${selected ? ' dcu-wb-selected' : ''}${sessionMenuOpen ? ' dcu-wb-menu-open' : ''}${sessionDropId === id ? ' dcu-wb-drop' : ''}`} role="treeitem" aria-selected={selected} draggable onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.effectAllowed = 'move'; setSessionDrag({ sessionId: id, workspaceId: workspace.workspaceId }) }} onDragEnd={() => { setSessionDrag(undefined); setSessionDropId(undefined) }} onDragOver={(event) => { if (sessionDrag?.workspaceId !== workspace.workspaceId) return; event.preventDefault(); setSessionDropId(id) }} onDrop={(event) => { event.preventDefault(); const drag = sessionDrag; setSessionDrag(undefined); setSessionDropId(undefined); if (drag !== undefined && drag.sessionId !== id && moveBefore(workspace.visibleIds, drag.sessionId, id).join() !== workspace.visibleIds.join()) void run('session-order', () => insertSessionBefore(workspace.workspaceId, drag.sessionId as SessionId, id as SessionId)) }} onClick={() => { setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }}>{unreadSessionIds.includes(id) && <span className="dcu-wb-unread" aria-label={t('sessions.unread')} />}<span className="dcu-wb-session-title">{session.displayTitle}</span>{pinnedSessionIds.includes(id) && <span className="dcu-wb-pin" aria-label={t('sessions.pinned')} title={t('sessions.pinned')}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2.5h6M5 2.5v2L3.75 6v1h8.5V6L11 4.5v-2M8 7v6" /></svg></span>}{session.running ? <span className="dcu-wb-running" aria-hidden="true" /> : <span className="dcu-wb-time">{relativeTime(session.updatedAt)}</span>}<span className="dcu-wb-actions"><Menu open={sessionMenuOpen} onClose={() => { setMenu(undefined) }} items={sessionMenu(id, session.displayTitle, path)} onSelect={(action) => { if (busy !== undefined) return; const link = sessionDeepLink(browserBase(), id); if (action === 'rename') beginRename('session', id, session.displayTitle); if (action === 'pin') { setPinnedSessionIds(ids => toggleSessionId(ids, id)); setMenu(undefined) }; if (action === 'unread') { setUnreadSessionIds(ids => toggleSessionId(ids, id)); setMenu(undefined) }; if (action === 'archive') void run('archive', () => archiveSession(id as SessionId)); if (action === 'delete') { setDeleteTarget({ id, kind: 'session', title: session.displayTitle }); setError(undefined); setMenu(undefined) }; if (action === 'fork') void run('fork', () => forkSession(id as SessionId)); if (action === 'export') void run('export', () => exportSession(id)); if (action === 'openPath' && path !== undefined) void run('open-path', () => openPath(path)); if (action === 'copyPath') copy(path); if (action === 'copyTitle') copy(session.displayTitle); if (action === 'copyId') copy(id); if (action === 'copyLink') copy(link) }} portal dense compact anchor={<button type="button" className="dcu-wb-more" aria-label={t('sessions.actions', { name: session.displayTitle })} onClick={(event) => { event.stopPropagation(); setMenu(current => current?.id === id && current.type === 'session' ? undefined : { id, type: 'session' }) }}><IconEllipsisOutline16 size={16} /></button>} /></span></div>
+        return <div key={id} className={`dcu-wb-session${selected ? ' dcu-wb-selected' : ''}${sessionMenuOpen ? ' dcu-wb-menu-open' : ''}${sessionDropId === id ? ' dcu-wb-drop' : ''}`} role="treeitem" aria-selected={selected} draggable onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.effectAllowed = 'move'; setSessionDrag({ sessionId: id, workspaceId: workspace.workspaceId }) }} onDragEnd={() => { setSessionDrag(undefined); setSessionDropId(undefined) }} onDragOver={(event) => { if (sessionDrag?.workspaceId !== workspace.workspaceId) return; event.preventDefault(); setSessionDropId(id) }} onDrop={(event) => { event.preventDefault(); const drag = sessionDrag; setSessionDrag(undefined); setSessionDropId(undefined); if (drag !== undefined && drag.sessionId !== id && moveBefore(workspace.visibleIds, drag.sessionId, id).join() !== workspace.visibleIds.join()) void run('session-order', () => insertSessionBefore(workspace.workspaceId, drag.sessionId as SessionId, id as SessionId)) }} onClick={() => { setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }}>{unreadSessionIds.includes(id) && <span className="dcu-wb-unread" aria-label={t('sessions.unread')} />}<span className="dcu-wb-session-title">{session.displayTitle}</span>{pinnedSessionIds.includes(id) && <span className="dcu-wb-pin" aria-label={t('sessions.pinned')} title={t('sessions.pinned')}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2.5h6M5 2.5v2L3.75 6v1h8.5V6L11 4.5v-2M8 7v6" /></svg></span>}{session.running ? <span className="dcu-wb-running" aria-hidden="true" /> : <span className="dcu-wb-time">{relativeTime(session.updatedAt)}</span>}<span className="dcu-wb-actions"><Menu open={sessionMenuOpen} onClose={() => { setMenu(undefined) }} items={sessionMenu(id, session.displayTitle, path)} onSelect={(action) => { if (busy !== undefined) return; const link = sessionDeepLink(browserBase(), id); if (action === 'rename') beginRename('session', id, session.displayTitle); if (action === 'pin') { setPinnedSessionIds(ids => toggleSessionId(ids, id)); setMenu(undefined) }; if (action === 'unread') { setUnreadSessionIds(ids => toggleSessionId(ids, id)); setMenu(undefined) }; if (action === 'archive') void run('archive', () => archiveSession(id as SessionId)); if (action === 'delete') { setDeleteTarget({ id, kind: 'session', title: session.displayTitle }); setError(undefined); setMenu(undefined) }; if (action === 'fork') void run('fork', () => forkSession(id as SessionId)); if (action === 'openPath' && path !== undefined) void run('open-path', () => openPath(path)); if (action === 'copyPath') copy(path); if (action === 'copyTitle') copy(session.displayTitle); if (action === 'copyId') copy(id); if (action === 'copyLink') copy(link) }} portal dense compact anchor={<button type="button" className="dcu-wb-more" aria-label={t('sessions.actions', { name: session.displayTitle })} onClick={(event) => { event.stopPropagation(); setMenu(current => current?.id === id && current.type === 'session' ? undefined : { id, type: 'session' }) }}><IconEllipsisOutline16 size={16} /></button>} /></span></div>
       })}
     </div>
   }
