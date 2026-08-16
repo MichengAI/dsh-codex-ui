@@ -76,7 +76,6 @@ export function CodexSidebar({ collapsed, openSession, startSession, toggleSideb
       { id: 'settings:skills', group: 'settings', label: t('sidebar.skills'), keywords: t('search.settings'), run: () => { closeSearch(); selectExternalSection(t('sidebar.skills'), t('sidebar.skillsInstallRequired')) } },
       { id: 'settings:plugins', group: 'settings', label: t('sidebar.plugins'), keywords: t('search.settings'), run: () => { closeSearch(); selectSection(t('sidebar.plugins')) } },
       { id: 'settings:connectors', group: 'settings', label: t('sidebar.connectors'), keywords: t('search.settings'), run: () => { closeSearch(); selectSection(t('sidebar.connectors')) } },
-      { id: 'settings:archives', group: 'settings', label: t('archives.title'), keywords: t('search.settings'), run: () => { closeSearch(); selectSection(t('archives.title')) } },
     ]
     return [...sessionEntries, ...settingEntries, { id: 'action:new', group: 'actions', label: t('sidebar.newTask'), keywords: t('search.actions'), run: () => { closeSearch(); startSession() } }]
   }, [openSession, sessions, startSession, t, workspaces])

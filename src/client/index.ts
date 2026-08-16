@@ -4,7 +4,6 @@ import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
-import { ArchivedSessionsSection } from './ArchivedSessionsSection.tsx'
 import { CodexSidebar, type CodexSidebarProps } from './CodexSidebar.tsx'
 import { CodexWorkspaceBrowser } from './CodexWorkspaceBrowser.tsx'
 import { ConnectorsSection } from './ConnectorsSection.tsx'
@@ -76,11 +75,7 @@ export function apply(ctx: ClientContext): void {
   }, 'michengai-codex-ui: session deep link')
 
   ctx.slots.inject('settings.section', () => ctx.slots.register({
-    name: 'settings.section', id: 'archived-sessions', order: 17, label: () => t('archives.title'),
-    inject: () => ({ sessionStore: ctx.sessions.list, workspaceStore: ctx.workspaces.list, t }),
-  }, ArchivedSessionsSection))
-  ctx.slots.inject('settings.section', () => ctx.slots.register({
-    name: 'settings.section', id: 'connectors', order: 18, label: () => t('sidebar.connectors'),
+    name: 'settings.section', id: 'connectors', order: 17, label: () => t('sidebar.connectors'),
     inject: () => ({ sessionStore: ctx.sessions.list, t }),
   }, ConnectorsSection))
 }

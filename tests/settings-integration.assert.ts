@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 
 const sidebar = readFileSync(new URL('../src/client/CodexSidebar.tsx', import.meta.url), 'utf8')
 const client = readFileSync(new URL('../src/client/index.ts', import.meta.url), 'utf8')
@@ -9,11 +9,12 @@ const visualSources = [
   sidebar,
   workspaceBrowser,
   readFileSync(new URL('../src/client/ConnectorsSection.tsx', import.meta.url), 'utf8'),
-  readFileSync(new URL('../src/client/ArchivedSessionsSection.tsx', import.meta.url), 'utf8'),
 ].join('\n')
 
 assert.doesNotMatch(client, /SkillsSettingsSection|id: 'skills'/, '技能页必须由独立技能管理插件提供')
 assert.match(client, /'connectors'/, '连接器必须注册为设置分区')
+assert.doesNotMatch(client, /ArchivedSessionsSection|id: 'archived-sessions'/, '归档设置分区必须交由独立归档插件提供')
+assert.equal(existsSync(new URL('../src/client/ArchivedSessionsSection.tsx', import.meta.url)), false, '本插件不得保留归档会话设置页面')
 assert.match(sidebar, /sidebar\.newTask/, '侧栏必须显示新建任务')
 assert.match(sidebar, /sidebar\.extensions/, '侧栏必须显示扩展管理分组')
 assert.match(sidebar, /sidebar\.experts/, '扩展管理首项必须跳转专家插件')
@@ -26,6 +27,7 @@ assert.match(sidebar, /sidebar\.skillsInstallRequired/, '技能插件缺失时�
 assert.match(settingsNavigation, /onMissing\?\.\(\)/, '设置分区不存在时必须通知入口显示安装提示')
 assert.match(sidebar, /selectSection\(t\('sidebar\.plugins'\)\)/, '插件菜单必须直达设置内的插件页')
 assert.match(sidebar, /selectSection\(t\('sidebar\.connectors'\)\)/, '连接器菜单必须直达设置内的连接器页')
+assert.doesNotMatch(sidebar, /settings:archives|archives\.title/, '全局搜索不得提供本插件的归档设置入口')
 assert.doesNotMatch(sidebar, />归档会话<\/button>/, '底部不得保留独立归档会话按钮')
 assert.match(sidebar, /openSettingsSection/, '设置跳转必须经过集中兼容层')
 assert.match(sidebar, /\[role="dialog"\]\[aria-labelledby\]\{width:min\(1200px,calc\(100vw - 48px\)\);max-width:calc\(100vw - 48px\);height:min\(800px,calc\(100vh - 48px\)\)\}/, '设置窗口必须使用 1200px 宽度与 800px 高度，并保留视口边距')
@@ -37,6 +39,7 @@ assert.match(workspaceBrowser, /workspace\.pinnedEmpty/, '置顶区域必须支�
 assert.match(workspaceBrowser, /insertWorkspaceBefore/, '工作区树必须保留项目拖拽排序')
 assert.match(workspaceBrowser, /insertSessionBefore/, '工作区树必须保留会话拖拽排序')
 assert.match(workspaceBrowser, /sessions\.export/, '会话菜单必须提供导出操作')
+assert.match(workspaceBrowser, /archiveSession/, '会话菜单必须保留归档操作')
 assert.doesNotMatch(visualSources, /--dsw-alias-text-l[123]/, '不得使用宿主未提供的文字色令牌')
 assert.match(visualSources, /--dcu-sidebar-primary/, '界面主文字必须使用侧栏自己的语义文字色')
 assert.match(workspaceBrowser, /color:var\(--dcu-sidebar-primary\)/, '工作区树主文字必须继承侧栏的柔和主文字色')
