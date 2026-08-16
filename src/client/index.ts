@@ -12,6 +12,14 @@ import { TurnNavigator } from './TurnNavigator.tsx'
 
 export const inject = ['slots', 'sessions', 'workspaces', 'layout', 'locale']
 
+type ArchiveRegistry = {
+  deleteSession: (sessionId: SessionId) => Promise<{ ok: boolean; error?: { message: string } }>
+}
+
+function hasDeleteSession(value: unknown): value is ArchiveRegistry {
+  return value !== null && typeof value === 'object' && 'deleteSession' in value && typeof value.deleteSession === 'function'
+}
+
 /** 替换 DSH 的官方 sidebar 插槽，不修改 DSH 源码或会话数据。 */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'michengai-codex-ui: dictionaries')
@@ -45,10 +53,17 @@ export function apply(ctx: ClientContext): void {
     const result = await session.rename(title)
     if (!result.ok) throw new Error(result.error.message)
   }
+  const deleteSession = async (sessionId: SessionId): Promise<void> => {
+    const registry = ctx.get('remote.workspaceRegistry')
+    if (!hasDeleteSession(registry)) throw new Error(t('sessions.deleteUnavailable'))
+    const result = await registry.deleteSession(sessionId)
+    if (!result.ok) throw new Error(result.error?.message ?? t('sessions.deleteUnavailable'))
+  }
   ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({
     name: 'sidebar.workspaces', priority: -1, locale: NS,
     inject: () => ({
       archiveSession: (sessionId: SessionId) => ctx.workspaces.archiveSession(sessionId),
+      deleteSession,
       deleteWorkspace: (workspaceId: WorkspaceId) => ctx.workspaces.delete(workspaceId),
       forkSession,
       openPath: (path: string) => ctx.workspaces.openPath(path),
