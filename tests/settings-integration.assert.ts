@@ -30,7 +30,7 @@ assert.match(sidebar, /selectSection\(t\('sidebar\.connectors'\)\)/, '连接器�
 assert.doesNotMatch(sidebar, /settings:archives|archives\.title/, '全局搜索不得提供本插件的归档设置入口')
 assert.doesNotMatch(sidebar, />归档会话<\/button>/, '底部不得保留独立归档会话按钮')
 assert.match(sidebar, /openSettingsSection/, '设置跳转必须经过集中兼容层')
-assert.match(sidebar, /\[role="dialog"\]\[aria-labelledby\]\{width:min\(1200px,calc\(100vw - 48px\)\);max-width:calc\(100vw - 48px\);height:min\(800px,calc\(100vh - 48px\)\)\}/, '设置窗口必须使用 1200px 宽度与 800px 高度，并保留视口边距')
+assert.match(sidebar, /\[role="dialog"\]\[aria-labelledby\]\{width:min\(1000px,calc\(100vw - 48px\)\);max-width:calc\(100vw - 48px\);height:min\(800px,calc\(100vh - 48px\)\)\}/, '设置窗口必须使用 1000px 宽度与 800px 高度，并保留视口边距')
 assert.match(client, /'sidebar\.workspaces'/, '侧栏必须声明 DSH 工作区插槽')
 assert.match(client, /'sidebar\.footer\.action'/, '侧栏必须声明 DSH footer action 插槽')
 assert.match(sidebar, /renderSlot\('sidebar\.workspaces'/, '会话区域必须通过工作区插槽渲染')
