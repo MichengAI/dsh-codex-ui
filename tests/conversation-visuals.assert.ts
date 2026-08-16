@@ -24,6 +24,7 @@ assert.match(sidebar, /\.dcu-compact\{width:24px;min-width:24px/, '折叠侧栏�
 assert.match(sidebar, /BrandWordmark size=\{24\}/, '侧栏品牌标识必须放大')
 assert.match(sidebar, /background:#eef7f5/, '浅色侧栏必须使用 Codex 风格的浅青灰背景')
 assert.match(sidebar, /body\[data-ds-dark-theme\] \.dcu-root\{background:#1c1f1e/, '暗色侧栏必须使用 Codex 风格的深灰绿背景')
+assert.match(sidebar, /--dcu-sidebar-primary:#d1d5d3;--dcu-sidebar-secondary:#9ca39f;--dcu-sidebar-tertiary:#747b77;--dcu-sidebar-icon:#b2b8b5/, '暗色侧栏必须使用 Codex 风格的柔和文字层级，不能沿用宿主纯白文字')
 assert.match(sidebar, /\.dcu-menu button[^}]*font-weight:500/, '主导航必须使用 Codex 风格的中等字重')
 assert.match(sidebar, /\.dcu-extension-items button\{[^}]*font-size:14px;font-weight:400/, '扩展二级导航必须使用与主导航一致的字号和常规字重')
 assert.match(sidebar, /--dcu-font:Inter,ui-sans-serif,system-ui/, '侧栏必须使用 Codex 风格的系统无衬线字体栈')
