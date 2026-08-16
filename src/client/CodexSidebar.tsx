@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  BrandWordmark, IconAgentPresetOutline16, IconEnhanceOutline16,
-  IconGoalOutline16, IconLinkOutline16, IconNewChatOutline16, IconPanelLeftOutline16, IconPersonalizationOutline16, IconSearchOutline16, IconSkillOutline16,
+  BrandWordmark, IconEnhanceOutline16,
+  IconLinkOutline16, IconNewChatOutline16, IconPanelLeftOutline16, IconPersonalizationOutline16, IconSearchOutline16, IconSkillOutline16,
   IconUserOutline16, Input,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SessionId, WorkspaceId } from '@deepseek-ai/dsh-client-runtime/client'
@@ -14,6 +14,11 @@ type CodexSidebarInjected = {
   openSession: (sessionId: SessionId) => void
   startSession: (workspaceId?: WorkspaceId) => void
   toggleSidebar: () => void
+  archiveSession: (sessionId: SessionId) => Promise<void>
+  deleteSession: (sessionId: SessionId) => Promise<void>
+  forkSession: (sessionId: SessionId) => Promise<void>
+  renameSession: (sessionId: SessionId, title: string) => Promise<void>
+  openPath: (path: string) => Promise<void> | void
 }
 
 export type CodexSidebarProps =
@@ -38,6 +43,12 @@ const stylesheet = `
 `
 
 function MenuIcon({ children }: { children: ReactNode }) { return <span className="dcu-menu-icon">{children}</span> }
+function ScheduleIcon() {
+  return <svg viewBox="0 0 16 16" width={16} height={16} fill="none" aria-hidden="true"><path fill="currentColor" d="M8 1.15A6.85 6.85 0 1 0 8 14.85 6.85 6.85 0 0 0 8 1.15Zm0 1.4a5.45 5.45 0 1 1 0 10.9 5.45 5.45 0 0 1 0-10.9Z" /><path fill="currentColor" d="M8.62 4.35H7.28v4.2l3.02 1.78.67-1.13-2.35-1.39V4.35Z" /></svg>
+}
+function ImAssistantIcon() {
+  return <svg viewBox="0 0 16 16" width={16} height={16} fill="none" aria-hidden="true"><path fill="currentColor" d="M2.15 2.9h11.7v8.2H6.42L2.15 13.85V2.9Zm1.4 1.4v6.62l1.78-1.12h7.12V4.3H3.55Z" /></svg>
+}
 
 type SearchEntry = SidebarSearchItem & {
   readonly group: 'sessions' | 'settings' | 'actions'
@@ -46,7 +57,7 @@ type SearchEntry = SidebarSearchItem & {
 }
 
 /** Codex 风格的 DSH 侧栏，只替换导航外观，项目浏览和设置仍由 DSH 官方组件提供。 */
-export function CodexSidebar({ collapsed, width, openSession, startSession, toggleSidebar, renderSlot, t, useSessions, useWorkspaces }: CodexSidebarProps) {
+export function CodexSidebar({ collapsed, width, openSession, startSession, toggleSidebar, archiveSession, deleteSession, forkSession, renameSession, openPath, renderSlot, t, useSessions, useWorkspaces }: CodexSidebarProps) {
   const settingsSeat = useRef<HTMLDivElement>(null)
   const [extensionsOpen, setExtensionsOpen] = useState(true)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -78,6 +89,8 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
       { id: 'settings:skills', group: 'settings', label: t('sidebar.skills'), keywords: t('search.settings'), run: () => { closeSearch(); selectExternalSection(t('sidebar.skills')) } },
       { id: 'settings:plugins', group: 'settings', label: t('sidebar.plugins'), keywords: t('search.settings'), run: () => { closeSearch(); selectSection(t('sidebar.plugins')) } },
       { id: 'settings:connectors', group: 'settings', label: t('sidebar.connectors'), keywords: t('search.settings'), run: () => { closeSearch(); selectSection(t('sidebar.connectors')) } },
+      { id: 'settings:schedule', group: 'settings', label: t('sidebar.schedule'), keywords: t('search.settings'), run: () => { closeSearch(); selectExternalSection(t('sidebar.schedule')) } },
+      { id: 'settings:assistant', group: 'settings', label: t('sidebar.assistant'), keywords: t('search.settings'), run: () => { closeSearch(); selectExternalSection(t('sidebar.imSettings')) } },
       { id: 'settings:about', group: 'settings', label: t('about.nav'), keywords: t('search.settings'), run: () => { closeSearch(); selectSection(t('about.nav')) } },
     ]
     return [...sessionEntries, ...settingEntries, { id: 'action:new', group: 'actions', label: t('sidebar.newTask'), keywords: t('search.actions'), run: () => { closeSearch(); startSession() } }]
@@ -110,8 +123,8 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
       <button type="button" onClick={() => { startSession() }}><MenuIcon><IconNewChatOutline16 size={16} /></MenuIcon>{t('sidebar.newTask')}</button>
       <button type="button" aria-expanded={extensionsOpen} onClick={() => { setExtensionsOpen(open => !open) }}><MenuIcon><IconEnhanceOutline16 size={16} /></MenuIcon>{t('sidebar.extensions')}</button>
       {extensionsOpen && <div className="dcu-extension-items"><button type="button" onClick={() => { selectExternalSection(t('sidebar.experts')) }}><MenuIcon><IconUserOutline16 size={16} /></MenuIcon>{t('sidebar.experts')}</button><button type="button" onClick={() => { selectExternalSection(t('sidebar.skills')) }}><MenuIcon><IconSkillOutline16 size={16} /></MenuIcon>{t('sidebar.skills')}</button><button type="button" onClick={() => { selectSection(t('sidebar.plugins')) }}><MenuIcon><IconPersonalizationOutline16 size={16} /></MenuIcon>{t('sidebar.plugins')}</button><button type="button" onClick={() => { selectSection(t('sidebar.connectors')) }}><MenuIcon><IconLinkOutline16 size={16} /></MenuIcon>{t('sidebar.connectors')}</button></div>}
-      <button type="button" disabled title={t('sidebar.scheduleUnavailable')}><MenuIcon><IconGoalOutline16 size={16} /></MenuIcon>{t('sidebar.schedule')}</button>
-      <button type="button" disabled title={t('sidebar.assistantUnavailable')}><MenuIcon><IconAgentPresetOutline16 size={16} /></MenuIcon>{t('sidebar.assistant')}</button>
+      <button type="button" onClick={() => { selectExternalSection(t('sidebar.schedule')) }}><MenuIcon><ScheduleIcon /></MenuIcon>{t('sidebar.schedule')}</button>
+      <button type="button" onClick={() => { selectExternalSection(t('sidebar.imSettings')) }}><MenuIcon><ImAssistantIcon /></MenuIcon>{t('sidebar.assistant')}</button>
     </nav>
     <div className="dcu-workspaces">
       <div className="dcu-im-tabs">
@@ -119,13 +132,14 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
         <button type="button" className="dcu-im-tab" data-on={imTab === 'channels'} onClick={() => { setImTab('channels') }}>频道</button>
       </div>
       {imTab === 'channels'
-        ? <div className="dcu-native-workspaces">{renderSlot('sidebar.channels', { wide: true, expandSidebar: toggleSidebar })}</div>
+        ? <div className="dcu-native-workspaces">{renderSlot('sidebar.channels', { wide: true, expandSidebar: toggleSidebar, openSession, archiveSession, deleteSession, forkSession, renameSession, openPath })}</div>
         : <div className="dcu-native-workspaces">{renderSlot('sidebar.workspaces', { wide: true, expandSidebar: toggleSidebar })}</div>}
     </div>
     <footer className="dcu-foot"><div className="dcu-footer-actions">{renderSlot('sidebar.footer.action', { wide: true })}</div><div ref={settingsSeat} className="dcu-settings-seat">{renderSlot('sidebar.settings', { wide: true })}</div></footer>
     {searchOpen && <div className="dcu-search-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSearch() }}><section className="dcu-search-dialog" role="dialog" aria-modal="true" aria-label={t('sidebar.search')}><div className="dcu-search-input"><Input autoFocus icon={<IconSearchOutline16 size={16} />} value={searchQuery} placeholder={t('search.placeholder')} onChange={event => { setSearchQuery(event.target.value) }} /></div>{searchResults.length === 0 ? <div className="dcu-search-empty">{t('search.empty')}</div> : (['sessions', 'settings', 'actions'] as const).map(group => { const entries = searchResults.filter(entry => entry.group === group); if (entries.length === 0) return null; return <section className="dcu-search-section" key={group}><div className="dcu-search-title">{t(`search.${group}`)}</div>{entries.map(entry => { const index = searchResults.indexOf(entry); return <button type="button" className="dcu-search-row" data-active={index === activeSearchIndex} key={entry.id} onMouseEnter={() => { setActiveSearchIndex(index) }} onClick={entry.run}><span className="dcu-search-main">{entry.label}</span>{entry.detail !== undefined && <span className="dcu-search-detail">{entry.detail}</span>}</button> })}</section> })}</section></div>}
   </aside>
 }
+
 
 
 

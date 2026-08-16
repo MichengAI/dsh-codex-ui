@@ -16,7 +16,16 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'sidebar.channels': {
       kind: 'single'
       scope: 'root'
-      owner: { wide: boolean; expandSidebar: () => void }
+      owner: {
+        wide: boolean
+        expandSidebar: () => void
+        openSession: (sessionId: SessionId) => void
+        renameSession: (sessionId: SessionId, title: string) => Promise<void>
+        archiveSession: (sessionId: SessionId) => Promise<void>
+        deleteSession: (sessionId: SessionId) => Promise<void>
+        forkSession: (sessionId: SessionId) => Promise<void>
+        openPath: (path: string) => Promise<void> | void
+      }
     }
   }
 }
@@ -48,6 +57,11 @@ export function apply(ctx: ClientContext): void {
       openSession: (sessionId: SessionId) => { ctx.sessions.open(sessionId) },
       startSession: (workspaceId?: WorkspaceId) => { ctx.workspaces.startSession(workspaceId) },
       toggleSidebar: () => { ctx.layout.toggleSidebar() },
+      archiveSession: (sessionId: SessionId) => ctx.workspaces.archiveSession(sessionId),
+      deleteSession,
+      forkSession,
+      renameSession,
+      openPath: (path: string) => ctx.workspaces.openPath(path),
     }),
   }, CodexSidebar))
 
