@@ -49,6 +49,7 @@ assert.match(sidebar, /--dcu-sidebar-primary:#d1d5d3;--dcu-sidebar-secondary:#9c
 assert.match(sidebar, /\.dcu-menu button[^}]*font-weight:500/, '主导航必须使用 Codex 风格的中等字重')
 assert.match(sidebar, /\.dcu-extension-items button\{[^}]*font-size:13px;font-weight:400/, '扩展二级导航必须比父级更淡更小，形成缩进层级')
 assert.match(sidebar, /\.dcu-im-tabs\{[^}]*border-bottom:1px solid var\(--dcu-sidebar-border\)/, '任务频道定时页签必须是整行切换器')
+assert.match(sidebar, /\.dcu-im-tab\{[^}]*font:14px\/22px/, '任务频道定时页签必须与主导航同级字号')
 assert.match(sidebar, /\.dcu-im-tab\[data-on=true\]\{[^}]*font-weight:600/, '选中页签必须比未选项更重')
 assert.match(sidebar, /dcu-extension-items[\s\S]*MenuIcon><IconUserOutline16/, '扩展子项必须保留二级图标')
 assert.match(sidebar, /dcu-workspaces-tabs/, '有页签时不得再保留动作区和页签之间的第二条分隔线')
