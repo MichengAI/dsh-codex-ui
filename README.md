@@ -133,7 +133,10 @@ Deleting a workspace registration does not delete its folder or conversation rec
 | Expert management | `@michengai/dsh-agency-agents` | Settings page opened from **Experts** |
 | Skill management | `@michengai/dsh-skills-manager` | Settings page opened from **Skills** |
 | Archive management | `@michengai/dsh-archive-manager` | Permanent deletion and archived-session management |
-| Suite | `@michengai/dsh-codex-suite` | Installs the four plugins together |
+| IM Assistant | `@michengai/dsh-im-connect` | Settings page opened from **IM Assistant** |
+| Scheduled tasks | `@michengai/dsh-automation` | Settings page opened from **Scheduled tasks** |
+| Plugin Market | `dshmarket` | When installed, the **Plugins** entry opens the market first |
+| Suite | `@michengai/dsh-codex-suite` | Installs Codex UI and companion management plugins |
 
 ## Secondary development
 

@@ -99,7 +99,7 @@ dsh --profile web --dump-config
 | 管理会话 | 打开会话菜单，进行重命名、置顶、未读、归档、派生、复制或删除。 |
 | 跳转轮次 | 使用当前会话左侧的轮次刻度跳转到对应提问。 |
 | 查看连接器 | 打开「设置 → 连接器」。不会展示地址、命令或凭证。 |
-| 查看配套插件 | 打开「设置 → 关于」，查看专家、技能和归档插件状态。 |
+| 查看配套插件 | 打开「设置 → 关于」，查看专家、技能、归档、IM、定时任务和插件市场状态。 |
 
 ![会话菜单](assets/screenshots/session-menu.png)
 
@@ -133,7 +133,10 @@ dsh --profile web --dump-config
 | 专家管理 | `@michengai/dsh-agency-agents` | 从「专家」进入对应设置页 |
 | 技能管理 | `@michengai/dsh-skills-manager` | 从「技能」进入对应设置页 |
 | 归档管理 | `@michengai/dsh-archive-manager` | 提供永久删除和已归档会话管理 |
-| 套件 | `@michengai/dsh-codex-suite` | 一次安装上述四个插件 |
+| IM 助理 | `@michengai/dsh-im-connect` | 从「IM助理」进入对应设置页 |
+| 定时任务 | `@michengai/dsh-automation` | 从「定时任务」进入对应设置页 |
+| 插件市场 | `dshmarket` | 已安装时，「插件」入口优先进入市场 |
+| 套件 | `@michengai/dsh-codex-suite` | 一次安装 Codex UI 及配套管理插件 |
 
 ## 二次开发
 
