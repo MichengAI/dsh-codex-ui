@@ -48,3 +48,23 @@ export function moveBefore(ids: readonly string[], id: string, beforeId?: string
   next.splice(index < 0 ? next.length : index, 0, id)
   return next
 }
+
+/**
+ * 按指针落在目标项上/下半区，算出应插入到哪一项之前。
+ * 落在最后一项下半区时返回 undefined，表示追加到末尾。
+ */
+export function dropBeforeId(ids: readonly string[], hoveredId: string, after: boolean): string | undefined {
+  const index = ids.indexOf(hoveredId)
+  if (index < 0) return hoveredId
+  if (!after) return hoveredId
+  return index >= ids.length - 1 ? undefined : ids[index + 1]
+}
+
+/** 按指定 id 顺序取出对应项；未出现在 ids 中的项丢弃。 */
+export function orderByIds<T>(items: readonly T[], ids: readonly string[], idOf: (item: T) => string): T[] {
+  const byId = new Map(items.map(item => [idOf(item), item]))
+  return ids.flatMap(id => {
+    const item = byId.get(id)
+    return item === undefined ? [] : [item]
+  })
+}

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { HOVER_TIP_SHOW_DELAY_MS } from '../src/client/hover-shell.tsx'
 import { clampHoverCardPosition, formatHoverTime, hoverCardAnchor } from '../src/client/hover-tip.ts'
 import { shouldCollapseOnSidebarDrag } from '../src/client/sidebar-drag.ts'
 import { parseSidebarGrid, slimedSidebarWidth } from '../src/client/sidebar-width.ts'
@@ -29,3 +30,6 @@ assert.deepEqual(parseSidebarGrid('280px minmax(0, 1fr) 0px')?.sidebar, 280)
 const hoverShell = readFileSync(new URL('../src/client/hover-shell.tsx', import.meta.url), 'utf8')
 assert.match(hoverShell, /clearTimeout\(hideTipTimer\.current\)/, '悬停层卸载必须清掉延迟关闭定时器')
 assert.match(hoverShell, /HoverValueContext/, '悬停值必须与树的 dispatch 分上下文，避免整树重绘')
+assert.equal(HOVER_TIP_SHOW_DELAY_MS, 1000, '划过行必须停满 1 秒才出卡片，避免闪现')
+assert.match(hoverShell, /showTipTimer/, '首次悬停必须用独立定时器，离开时取消')
+assert.match(hoverShell, /immediate/, '点击文件夹必须能立刻出卡片')

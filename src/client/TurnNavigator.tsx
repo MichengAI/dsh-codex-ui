@@ -14,7 +14,7 @@ const stylesheet = `
 .dcu-turn-list::-webkit-scrollbar{display:none}
 .dcu-turn-link{pointer-events:auto;position:relative;display:flex;align-items:center;width:16px;height:8px;overflow:visible;padding:0;border:0;border-radius:4px;background:transparent;color:var(--dsw-alias-label-tertiary);font:13px/18px var(--dsw-font-family);text-align:left;cursor:pointer;transition:color 320ms cubic-bezier(.16,1,.3,1)}
 .dcu-turn-link::before{width:var(--dcu-tick-w,5px);height:var(--dcu-tick-h,1px);flex:0 0 var(--dcu-tick-w,5px);border-radius:1px;background:currentcolor;content:'';transition:width 360ms cubic-bezier(.16,1,.3,1),height 360ms cubic-bezier(.16,1,.3,1),flex-basis 360ms cubic-bezier(.16,1,.3,1),background-color 320ms cubic-bezier(.16,1,.3,1)}
-.dcu-turn-summary{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:max-content;max-width:min(280px,calc(100vw - 80px));height:32px;padding:0 12px;border-radius:16px;background:var(--dsw-alias-button-floating-hover,#3a3d3c);color:var(--dsw-alias-label-primary);box-shadow:none;opacity:0;pointer-events:none;z-index:2;display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:32px;transition:opacity 220ms cubic-bezier(.16,1,.3,1)}
+.dcu-turn-summary{position:absolute;left:16px;top:50%;transform:translateY(-50%);box-sizing:border-box;width:max-content;max-width:240px;height:32px;padding:0 12px;border-radius:16px;background:var(--dsw-alias-button-floating-hover,#3a3d3c);color:var(--dsw-alias-label-primary);box-shadow:none;opacity:0;pointer-events:none;z-index:2;display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:32px;transition:opacity 220ms cubic-bezier(.16,1,.3,1)}
 .dcu-turn-link[data-active=true]{color:var(--dsw-alias-label-primary)}
 .dcu-turn-link[data-active=true] .dcu-turn-summary{opacity:1}
 .dcu-turn-link[aria-current=true]{color:var(--dsw-alias-label-primary)}
@@ -23,7 +23,7 @@ const stylesheet = `
 .dcu-turn-navigator[data-hovering=true] .dcu-turn-link[data-active=true]{color:var(--dsw-alias-label-primary)}
 .dcu-turn-link:focus-visible{outline:0;box-shadow:0 0 0 2px var(--dsw-alias-button-info-fill)}
 @media (prefers-reduced-motion:reduce){.dcu-turn-link,.dcu-turn-link::before,.dcu-turn-summary{transition:none}}
-@media (max-width:760px){.dcu-turn-summary{max-width:min(220px,calc(100vw - 56px))}}
+@media (max-width:760px){.dcu-turn-summary{max-width:200px}}
 `
 
 export function tickMarkSize(index: number, hoverAt: number | null, _isCurrent: boolean): { width: number; height: number } {

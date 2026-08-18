@@ -72,6 +72,11 @@ export function copySessionLink(sessionId: string): string {
   return sessionDeepLink(typeof window === 'undefined' || window.location.origin === 'null' ? 'http://dsh.internal/' : `${window.location.origin}/`, sessionId)
 }
 
+/** 把右键落点收成 Menu 的锚点矩形，让列表贴着指针打开。 */
+export function pointerMenuRect(x: number, y: number): DOMRect {
+  return new DOMRect(x, y, 0, 0)
+}
+
 export type SessionRowProps = {
   id: string
   title: string
@@ -90,11 +95,12 @@ export type SessionRowProps = {
   onHover: (event: MouseEvent<HTMLDivElement>) => void
   onLeave: () => void
   onContextMenu: (event: MouseEvent<HTMLDivElement>) => void
+  menuPoint?: { x: number; y: number }
 }
 
 export function SessionRow({
   id, title, selected, menuOpen, pinned, unread, running, t, menuItems,
-  onOpen, onMenuChange, onSelectAction, onPin, onArchive, onHover, onLeave, onContextMenu,
+  onOpen, onMenuChange, onSelectAction, onPin, onArchive, onHover, onLeave, onContextMenu, menuPoint,
 }: SessionRowProps) {
   return <div className={`dcu-wb-session${selected ? ' dcu-wb-selected' : ''}${menuOpen ? ' dcu-wb-menu-open' : ''}`} role="treeitem" aria-selected={selected} onClick={onOpen} onContextMenu={onContextMenu} onMouseEnter={onHover} onMouseLeave={onLeave}>
     <span className="dcu-wb-session-title">{title}</span>
@@ -105,7 +111,7 @@ export function SessionRow({
       <button type="button" className="dcu-wb-more" aria-label={t('sessions.archive')} title={t('sessions.archive')} onClick={(event) => { event.stopPropagation(); onArchive() }}><IconArchiveOutline20 size={16} /></button>
     </span>
     <span className="dcu-wb-actions">
-      <Menu open={menuOpen} onClose={() => { onMenuChange(false) }} items={menuItems} onSelect={onSelectAction} portal dense compact anchor={<button type="button" className="dcu-wb-more dcu-wb-context-anchor" aria-label={t('sessions.actions', { name: title })} onClick={(event) => { event.stopPropagation(); onMenuChange(!menuOpen) }}><IconEllipsisOutline16 size={16} /></button>} />
+      <Menu open={menuOpen} onClose={() => { onMenuChange(false) }} items={menuItems} onSelect={onSelectAction} portal dense compact getAnchorRect={menuPoint === undefined ? undefined : () => pointerMenuRect(menuPoint.x, menuPoint.y)} anchor={<button type="button" className="dcu-wb-more dcu-wb-context-anchor" aria-label={t('sessions.actions', { name: title })} onClick={(event) => { event.stopPropagation(); onMenuChange(!menuOpen) }}><IconEllipsisOutline16 size={16} /></button>} />
     </span>
   </div>
 }

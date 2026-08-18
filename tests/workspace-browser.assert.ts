@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { isTaskSession, moveBefore, ungroupedSessionIds, visibleSessionIds } from '../src/client/workspace-browser.ts'
+import { dropBeforeId, isTaskSession, moveBefore, orderByIds, ungroupedSessionIds, visibleSessionIds } from '../src/client/workspace-browser.ts'
 
 const sessions = {
   a: { id: 'a', origin: 'user', blank: false },
@@ -20,3 +20,12 @@ assert.equal(isTaskSession(sessions.a), true)
 assert.deepEqual(moveBefore(['a', 'b', 'c'], 'c', 'a'), ['c', 'a', 'b'])
 assert.deepEqual(moveBefore(['a', 'b', 'c'], 'a', undefined), ['b', 'c', 'a'])
 assert.deepEqual(moveBefore(['a', 'b'], 'a', 'a'), ['a', 'b'])
+assert.equal(dropBeforeId(['a', 'b', 'c'], 'b', false), 'b', '落在上半区必须插到该项前面')
+assert.equal(dropBeforeId(['a', 'b', 'c'], 'b', true), 'c', '落在中项下半区必须插到下一项前面')
+assert.equal(dropBeforeId(['a', 'b', 'c'], 'c', true), undefined, '落在末项下半区必须追加到末尾')
+assert.deepEqual(moveBefore(['a', 'b', 'c'], 'a', dropBeforeId(['a', 'b', 'c'], 'b', true)), ['b', 'a', 'c'], '往下拖到下一项下半区必须真正换位')
+assert.deepEqual(
+  orderByIds([{ id: 'a' }, { id: 'b' }, { id: 'c' }], ['c', 'a'], item => item.id),
+  [{ id: 'c' }, { id: 'a' }],
+  '置顶展示必须按置顶 id 顺序，而不是宿主列表顺序',
+)

@@ -11,6 +11,8 @@ import { SessionHoverCardLayer, SessionModals, useBusyAction, useSessionDialogs,
 import { HoverShell, useHoverDispatch } from './hover-shell.tsx'
 import { GroupHead, SessionRow, sessionMenuItems } from './session-tree.tsx'
 
+type OpenMenu = { id: string; x?: number; y?: number }
+
 type SessionStore = {
   current?: string
   byId: Record<string, { running?: boolean; displayTitle?: string; updatedAt?: number }>
@@ -28,19 +30,19 @@ type ChannelBrowserProps = {
 
 /** 频道树：数据来自 IM，行/菜单/悬停与任务树共用。 */
 export function ChannelBrowser(props: ChannelBrowserProps) {
-  const [menuId, setMenuId] = useState<string>()
-  return <HoverShell blocked={menuId !== undefined}><ChannelBrowserTree {...props} menuId={menuId} setMenuId={setMenuId} /></HoverShell>
+  const [menu, setMenu] = useState<OpenMenu>()
+  return <HoverShell blocked={menu !== undefined}><ChannelBrowserTree {...props} menu={menu} setMenu={setMenu} /></HoverShell>
 }
 
-function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSession, renameSession, useSessions, t, menuId, setMenuId }: ChannelBrowserProps & { menuId?: string; setMenuId: (id?: string) => void }) {
+function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSession, renameSession, useSessions, t, menu, setMenu }: ChannelBrowserProps & { menu?: OpenMenu; setMenu: (menu?: OpenMenu) => void }) {
   const sessions = useSessions(state => state)
   const [groups, setGroups] = useState<ChannelGroup[]>([])
   const [pollError, setPollError] = useState<string>()
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const flags = useSessionFlags(sessions.current)
   const { showTip, hideTip, dismissTip } = useHoverDispatch()
-  const { busy, error, setError, run } = useBusyAction(() => { setMenuId(undefined) })
-  const dialogs = useSessionDialogs({ archiveSession, deleteSession, forkSession, renameSession }, flags, run, () => { setMenuId(undefined); setError(undefined) })
+  const { busy, error, setError, run } = useBusyAction(() => { setMenu(undefined) })
+  const dialogs = useSessionDialogs({ archiveSession, deleteSession, forkSession, renameSession }, flags, run, () => { setMenu(undefined); setError(undefined) })
   useEffect(() => {
     let disposed = false
     let loading = false
@@ -78,7 +80,7 @@ function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSe
             const updatedAt = session.updatedAt ?? sessions.byId[id]?.updatedAt
             const pinned = flags.pinnedSessionIds.includes(id)
             const unread = flags.unreadSessionIds.includes(id)
-            return <SessionRow key={id} id={id} title={title} selected={selected} menuOpen={menuId === id} pinned={pinned} unread={unread} running={running} t={t} menuItems={sessionMenuItems(t, { pinned, unread })} onOpen={() => { flags.setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenuId(open ? id : undefined) }} onPin={() => { flags.setPinnedSessionIds(ids => toggleSessionId(ids, id)) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ title, project: group.label, time: updatedAt === undefined ? undefined : formatHoverTime(updatedAt), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenuId(id) }} onSelectAction={(action) => { if (busy === undefined) dialogs.handleAction(action, id, title) }} />
+            return <SessionRow key={id} id={id} title={title} selected={selected} menuOpen={menu?.id === id} pinned={pinned} unread={unread} running={running} t={t} menuItems={sessionMenuItems(t, { pinned, unread })} menuPoint={menu?.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { flags.setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id } : undefined) }} onPin={() => { flags.setPinnedSessionIds(ids => toggleSessionId(ids, id)) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ title, project: group.label, time: updatedAt === undefined ? undefined : formatHoverTime(updatedAt), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => { if (busy === undefined) dialogs.handleAction(action, id, title) }} />
           })}
         </div>
       })}

@@ -14,8 +14,11 @@ export type HoverCardTip = {
   count?: number
 }
 
+export const HOVER_TIP_SHOW_DELAY_MS = 1000
+export const HOVER_TIP_HIDE_DELAY_MS = 120
+
 export type HoverDispatch = {
-  showTip: (tip: HoverCardTip) => void
+  showTip: (tip: HoverCardTip, options?: { immediate?: boolean }) => void
   hideTip: () => void
   dismissTip: () => void
   keepTip: () => void
@@ -37,30 +40,54 @@ const HoverValueContext = createContext<HoverCardTip | undefined>(undefined)
 export function HoverShell({ blocked = false, children }: { blocked?: boolean; children: ReactNode }) {
   const [hoverTip, setHoverTip] = useState<HoverCardTip>()
   const hideTipTimer = useRef<number>()
+  const showTipTimer = useRef<number>()
+  const pendingTip = useRef<HoverCardTip>()
   const blockedRef = useRef(blocked)
   blockedRef.current = blocked
   const tipRef = useRef(hoverTip)
   tipRef.current = hoverTip
+  const place = (tip: HoverCardTip): HoverCardTip => ({
+    ...tip,
+    ...clampHoverCardPosition(tip.left, tip.top, 248, 148, window.innerWidth, window.innerHeight),
+  })
   const dispatch = useMemo<HoverDispatch>(() => ({
-    showTip: (tip) => {
+    showTip: (tip, options) => {
       if (blockedRef.current) return
-      if (hideTipTimer.current !== undefined) window.clearTimeout(hideTipTimer.current)
-      setHoverTip({ ...tip, ...clampHoverCardPosition(tip.left, tip.top, 248, 148, window.innerWidth, window.innerHeight) })
+      if (hideTipTimer.current !== undefined) { window.clearTimeout(hideTipTimer.current); hideTipTimer.current = undefined }
+      pendingTip.current = tip
+      // 已经在看卡片时换行立刻更新；划过空行必须停满 1 秒才出现，避免闪现
+      if (options?.immediate === true || tipRef.current !== undefined) {
+        if (showTipTimer.current !== undefined) { window.clearTimeout(showTipTimer.current); showTipTimer.current = undefined }
+        setHoverTip(place(tip))
+        return
+      }
+      if (showTipTimer.current !== undefined) window.clearTimeout(showTipTimer.current)
+      showTipTimer.current = window.setTimeout(() => {
+        showTipTimer.current = undefined
+        const next = pendingTip.current
+        if (blockedRef.current || next === undefined) return
+        setHoverTip(place(next))
+      }, HOVER_TIP_SHOW_DELAY_MS)
     },
     hideTip: () => {
-      hideTipTimer.current = window.setTimeout(() => { setHoverTip(undefined) }, 120)
+      pendingTip.current = undefined
+      if (showTipTimer.current !== undefined) { window.clearTimeout(showTipTimer.current); showTipTimer.current = undefined }
+      hideTipTimer.current = window.setTimeout(() => { setHoverTip(undefined) }, HOVER_TIP_HIDE_DELAY_MS)
     },
     dismissTip: () => {
-      if (hideTipTimer.current !== undefined) window.clearTimeout(hideTipTimer.current)
+      pendingTip.current = undefined
+      if (showTipTimer.current !== undefined) { window.clearTimeout(showTipTimer.current); showTipTimer.current = undefined }
+      if (hideTipTimer.current !== undefined) { window.clearTimeout(hideTipTimer.current); hideTipTimer.current = undefined }
       setHoverTip(undefined)
     },
     keepTip: () => {
-      if (hideTipTimer.current !== undefined) window.clearTimeout(hideTipTimer.current)
+      if (hideTipTimer.current !== undefined) { window.clearTimeout(hideTipTimer.current); hideTipTimer.current = undefined }
     },
     isShowing: (kind, id) => tipRef.current?.kind === kind && tipRef.current.id === id,
   }), [])
   useEffect(() => () => {
     if (hideTipTimer.current !== undefined) window.clearTimeout(hideTipTimer.current)
+    if (showTipTimer.current !== undefined) window.clearTimeout(showTipTimer.current)
   }, [])
   return <HoverDispatchContext.Provider value={dispatch}><HoverValueContext.Provider value={hoverTip}>{children}</HoverValueContext.Provider></HoverDispatchContext.Provider>
 }
