@@ -14,6 +14,8 @@ const manager = readFileSync(new URL('../src/dependency-manager.ts', import.meta
 
 assert.match(client, /id: 'about'/, '关于页必须注册为最后的设置分区')
 assert.match(client, /order: 100/, '关于页必须排在管理插件设置之后')
+assert.match(dependencies, /@michengai\/dsh-codex-suite/, '关于页必须提供套件一键安装')
+assert.match(dependencies, /id: 'suite'/, 'about must declare suite dependency id')
 assert.match(dependencies, /@michengai\/dsh-codex-ui/, 'about must manage this plugin')
 assert.match(dependencies, /id: 'ui'/, 'about must declare ui dependency id')
 assert.match(dependencies, /@michengai\/dsh-agency-agents/, '关于页必须声明专家插件依赖')
@@ -47,6 +49,7 @@ assert.match(about, /about\.feature\.search/, '关于页必须列出全局搜索
 assert.match(about, /about\.feature\.navigator/, '关于页必须列出会话轮次导航能力')
 assert.match(sidebar, /selectSection\(t\('about\.nav'\)\)/, '缺失依赖的侧栏入口必须跳转关于页面')
 
+assert.match(locales, /about\.dependency\.suite/, '关于页必须提供套件名称')
 assert.match(locales, /about\.dependency\.im/, '关于页必须提供 IM 插件名称')
 assert.match(locales, /about\.dependency\.schedule/, '关于页必须提供定时任务插件名称')
 assert.match(locales, /about\.dependency\.market/, '关于页必须提供插件市场名称')

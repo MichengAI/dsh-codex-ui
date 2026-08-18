@@ -5,12 +5,6 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { MANAGED_DEPENDENCIES, managedDependency, type ManagedDependencyId } from './dependencies.ts'
 
-type ProfileManifest = {
-  dependencies?: Record<string, string>
-  devDependencies?: Record<string, string>
-  dsh?: { profile?: { bundles?: string[] } }
-}
-
 type PackageManifest = { version?: string }
 
 export type DependencyStatus = {
@@ -27,15 +21,6 @@ function profileDirectory(): string {
   return resolve(homedir(), '.dsh', 'profiles', 'web')
 }
 
-async function profileManifest(): Promise<ProfileManifest> {
-  try {
-    return JSON.parse(await readFile(resolve(profileDirectory(), 'package.json'), 'utf8')) as ProfileManifest
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return {}
-    throw error
-  }
-}
-
 async function installedPackageVersion(packageName: string): Promise<string | undefined> {
   try {
     const manifest = JSON.parse(await readFile(resolve(profileDirectory(), 'node_modules', ...packageName.split('/'), 'package.json'), 'utf8')) as PackageManifest
@@ -44,6 +29,11 @@ async function installedPackageVersion(packageName: string): Promise<string | un
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
     throw error
   }
+}
+
+/** 以 node_modules 实际版本为准；套件嵌套安装没有写进顶层 dependencies，也算已安装。 */
+export function isManagedPackageInstalled(input: { installedVersion: string | undefined }): boolean {
+  return input.installedVersion !== undefined && input.installedVersion !== ''
 }
 
 /** npm latest 查询缓存有效期：避免每次打开“关于”页都打 7 个 registry 请求。 */
@@ -124,12 +114,9 @@ function newerVersion(installed: string, latest: string): boolean {
 
 /** 返回 Web profile 中固定管理插件的实际安装版本与 npm latest 状态。 */
 export async function dependencyStatuses(): Promise<readonly DependencyStatus[]> {
-  const manifest = await profileManifest()
   return Promise.all(MANAGED_DEPENDENCIES.map(async dependency => {
-    const declared = manifest.dependencies?.[dependency.packageName] ?? manifest.devDependencies?.[dependency.packageName]
-    if (declared === undefined) return { ...dependency, installed: false, updateAvailable: false }
     const version = await installedPackageVersion(dependency.packageName)
-    if (version === undefined) return { ...dependency, installed: false, updateAvailable: false }
+    if (!isManagedPackageInstalled({ installedVersion: version })) return { ...dependency, installed: false, updateAvailable: false }
     const latestVersion = await npmLatestVersion(dependency.packageName)
     return { ...dependency, installed: true, version, latestVersion, updateAvailable: latestVersion !== undefined && newerVersion(version, latestVersion) }
   }))

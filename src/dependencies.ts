@@ -1,4 +1,5 @@
 export const MANAGED_DEPENDENCIES = [
+  { id: 'suite', packageName: '@michengai/dsh-codex-suite' },
   { id: 'ui', packageName: '@michengai/dsh-codex-ui' },
   { id: 'experts', packageName: '@michengai/dsh-agency-agents' },
   { id: 'skills', packageName: '@michengai/dsh-skills-manager' },

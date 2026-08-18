@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { applyReleaseExclude, resolveDshCliEntry } from '../src/dependency-manager.ts'
+import { applyReleaseExclude, isManagedPackageInstalled, resolveDshCliEntry } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 assert.equal(
@@ -118,4 +118,20 @@ assert.equal(
   publicDependencyError(new Error("ENOENT: no such file or directory, open 'C:\\\\Users\\\\demo\\\\.dsh\\\\profiles\\\\web\\\\package.json'")),
   '依赖管理暂不可用，请查看服务端日志。',
   '带本地路径的底层错误不得回传浏览器',
+)
+
+assert.equal(
+  isManagedPackageInstalled({ installedVersion: '0.2.56' }),
+  true,
+  '套件嵌套安装后，node_modules 里有版本就必须视为已安装',
+)
+assert.equal(
+  isManagedPackageInstalled({ installedVersion: undefined }),
+  false,
+  'node_modules 没有该包时不得标已安装',
+)
+assert.equal(
+  isManagedPackageInstalled({ installedVersion: '0.1.20' }),
+  true,
+  '顶层直接安装仍视为已安装',
 )
