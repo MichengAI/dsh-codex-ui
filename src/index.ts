@@ -30,7 +30,19 @@ export function crossSiteRequest(request: HostRequest): boolean {
   const origin = headerValue(headers, 'origin')
   if (origin === undefined) return false
   const host = headerValue(headers, 'host')
-  return origin !== new URL(request.url ?? '/', `http://${host ?? 'localhost'}`).origin
+  if (host === undefined) return true
+  try {
+    return new URL(origin).host !== host
+  } catch {
+    return true
+  }
+}
+
+/** 把安装错误收成可给浏览器看的文案：我们自己的中文说明保留，带本地路径的底层错误脱敏。 */
+export function publicDependencyError(error: unknown): string {
+  const message = error instanceof Error ? error.message : '依赖管理暂不可用。'
+  if (/[A-Za-z]:[\\/]|\/(?:home|Users|var|tmp)\//.test(message)) return '依赖管理暂不可用，请查看服务端日志。'
+  return message
 }
 
 export const inject = ['webServer', 'agents', 'tools']
@@ -91,10 +103,9 @@ export function apply(ctx: Context): void {
           response.writeHead(405)
           response.end()
         } catch (error) {
-          // 详情只进服务端日志：readFile 等错误带 profile 绝对路径，不得原样回传浏览器
           ctx.logger.warn('dependencies endpoint failed: %s', error)
           response.writeHead(503, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-          response.end(JSON.stringify({ error: '依赖管理暂不可用，请查看服务端日志。' }))
+          response.end(JSON.stringify({ error: publicDependencyError(error) }))
         }
       },
     })

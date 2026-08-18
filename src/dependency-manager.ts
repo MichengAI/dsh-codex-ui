@@ -153,6 +153,9 @@ function pluginCommandError(stderr: string): Error {
   if (detail.includes('EPERM') || detail.includes('EBUSY') || detail.includes('EACCES')) {
     return new Error('无法覆盖正在运行的插件文件。请先停止 DSH Web，再点击更新。')
   }
+  if (detail.includes('NO_MATCHING_VERSION') || detail.includes('No matching version')) {
+    return new Error('当前 npm 镜像还没有这个版本。请稍后重试，或改用官方源安装。')
+  }
   return new Error('从 npm 安装或更新依赖失败。请检查网络、npm registry 或发布时间保护后重试。')
 }
 
@@ -196,7 +199,7 @@ async function installDependencyLocked(id: string | null): Promise<readonly Depe
   const latestVersion = await npmLatestVersion(dependency.packageName)
   if (latestVersion === undefined) throw new Error('无法获取 npm 最新版本，请检查网络或 npm registry 后重试。')
   await ensureLatestReleaseAllowed(dependency.packageName, latestVersion)
-  await runDshPlugin(['add', `${dependency.packageName}@${latestVersion}`])
+  await runDshPlugin(['add', `${dependency.packageName}@${latestVersion}`, '--registry=https://registry.npmjs.org/'])
   const installed = await installedPackageVersion(dependency.packageName)
   if (installed !== latestVersion) {
     throw new Error(`已请求 ${dependency.packageName}@${latestVersion}，但当前仍是 ${installed ?? '未安装'}。请先停止 DSH Web 后再更新。`)

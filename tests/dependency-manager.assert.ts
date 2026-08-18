@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { applyReleaseExclude, resolveDshCliEntry } from '../src/dependency-manager.ts'
-import { crossSiteRequest } from '../src/index.ts'
+import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 assert.equal(
   resolveDshCliEntry('apps/cli/src/bin.ts', 'D:\\Repository\\deepseek-harness'),
@@ -107,4 +107,15 @@ assert.equal(
   }),
   true,
   'Origin 为 null 的沙盒页面请求必须拦截',
+)
+
+assert.equal(
+  publicDependencyError(new Error('从 npm 安装或更新依赖失败。请检查网络、npm registry 或发布时间保护后重试。')),
+  '从 npm 安装或更新依赖失败。请检查网络、npm registry 或发布时间保护后重试。',
+  '安装失败的安全文案必须回给浏览器',
+)
+assert.equal(
+  publicDependencyError(new Error("ENOENT: no such file or directory, open 'C:\\\\Users\\\\demo\\\\.dsh\\\\profiles\\\\web\\\\package.json'")),
+  '依赖管理暂不可用，请查看服务端日志。',
+  '带本地路径的底层错误不得回传浏览器',
 )
