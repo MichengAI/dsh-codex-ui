@@ -46,12 +46,21 @@ async function installedPackageVersion(packageName: string): Promise<string | un
   }
 }
 
+/** npm latest 查询缓存有效期：避免每次打开“关于”页都打 7 个 registry 请求。 */
+const LATEST_CACHE_TTL_MS = 5 * 60 * 1000
+
+const latestCache = new Map<string, { version: string; at: number }>()
+
 async function npmLatestVersion(packageName: string): Promise<string | undefined> {
+  const hit = latestCache.get(packageName)
+  if (hit !== undefined && Date.now() - hit.at < LATEST_CACHE_TTL_MS) return hit.version
   try {
     const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(packageName)}/latest`, { signal: AbortSignal.timeout(5_000) })
     if (!response.ok) return undefined
     const manifest = await response.json() as PackageManifest
-    return typeof manifest.version === 'string' ? manifest.version : undefined
+    if (typeof manifest.version !== 'string') return undefined
+    latestCache.set(packageName, { version: manifest.version, at: Date.now() })
+    return manifest.version
   } catch {
     return undefined
   }
@@ -61,8 +70,14 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+/** 允许写入 YAML 单引号白名单的版本：semver 及常见预发布后缀，禁止引号与空白。 */
+function isSafeReleaseVersion(version: string): boolean {
+  return /^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)
+}
+
 /** 将用户确认的精确版本合并进 Profile 的 pnpm 发布时间保护例外。 */
 export function applyReleaseExclude(source: string, packageName: string, version: string): string {
+  if (!isSafeReleaseVersion(version)) throw new Error('npm 返回了无法识别的最新版本。')
   const eol = source.includes('\r\n') ? '\r\n' : '\n'
   const linePattern = new RegExp(`^  - '${escapeRegExp(packageName)}@([^']*)'\\s*$`, 'm')
   const existing = linePattern.exec(source)
@@ -161,8 +176,21 @@ function runDshPlugin(args: readonly string[]): Promise<void> {
   })
 }
 
+/** 并发安装互斥：pnpm 锁文件竞争会触发 EPERM/EBUSY，同一时间只允许一个安装进程。 */
+let installing = false
+
 /** 仅允许安装固定依赖，避免把浏览器输入转成任意命令。 */
 export async function installDependency(id: string | null): Promise<readonly DependencyStatus[]> {
+  if (installing) throw new Error('已有依赖安装正在进行，请等待完成后再试。')
+  installing = true
+  try {
+    return await installDependencyLocked(id)
+  } finally {
+    installing = false
+  }
+}
+
+async function installDependencyLocked(id: string | null): Promise<readonly DependencyStatus[]> {
   const dependency = managedDependency(id)
   if (dependency === undefined) throw new Error('不支持安装该依赖。')
   const latestVersion = await npmLatestVersion(dependency.packageName)

@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict'
 import {
-  findWorkspaceForSession,
   normalizeSessionIds,
   sessionDeepLink,
   toggleSessionId,
@@ -10,7 +9,3 @@ assert.deepEqual(normalizeSessionIds(['a', '', 'a', '  ', 'b']), ['a', 'b'])
 assert.deepEqual(toggleSessionId(['a', 'b'], 'a'), ['b'])
 assert.deepEqual(toggleSessionId(['a'], 'b'), ['b', 'a'])
 assert.equal(sessionDeepLink('https://example.test/root', 'session 1'), 'https://example.test/root?session=session+1')
-assert.equal(findWorkspaceForSession([
-  { workspaceId: 'w1', sessionIds: ['s1'], title: 'One', path: 'C:\\one' },
-  { workspaceId: 'w2', sessionIds: ['s2'], title: 'Two', path: 'C:\\two' },
-], 's2')?.workspaceId, 'w2')

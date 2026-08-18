@@ -2,7 +2,12 @@ import type { Context } from '@deepseek-ai/cordis'
 
 type HostTool = { name: string; description?: string }
 
-type HttpRequest = { method?: string; url?: string }
+type HttpRequest = {
+  method?: string
+  url?: string
+  /** Node 原生请求头（小写键名），用于跨站请求判定。 */
+  headers?: Record<string, string | string[] | undefined>
+}
 type HttpResponse = {
   writeHead: (status: number, headers?: Record<string, string>) => void
   end: (body?: string) => void

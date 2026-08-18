@@ -52,18 +52,27 @@ export function applySlimSidebar(frame: HTMLElement): boolean {
 export function observeSlimSidebar(): () => void {
   if (typeof document === 'undefined' || document.body === null) return () => {}
   let applying = false
+  let frame: HTMLElement | undefined
+  let pending: number | undefined
   const apply = (): void => {
     if (applying) return
     applying = true
     try {
-      const frame = findSidebarFrame(document)
+      if (frame === undefined || !frame.isConnected) frame = findSidebarFrame(document)
       if (frame !== undefined) applySlimSidebar(frame)
     } finally {
       applying = false
     }
   }
+  const schedule = (): void => {
+    if (pending !== undefined) return
+    pending = window.requestAnimationFrame(() => { pending = undefined; apply() })
+  }
   apply()
-  const observer = new MutationObserver(() => { apply() })
+  const observer = new MutationObserver(schedule)
   observer.observe(document.body, { attributes: true, attributeFilter: ['style', 'data-sidebar-collapsed', 'data-dragging'], childList: true, subtree: true })
-  return () => { observer.disconnect() }
+  return () => {
+    observer.disconnect()
+    if (pending !== undefined) window.cancelAnimationFrame(pending)
+  }
 }

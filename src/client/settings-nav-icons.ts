@@ -64,14 +64,22 @@ export function applySettingsNavIcons(root: ParentNode): number {
 export function observeSettingsNavIcons(): () => void {
   if (typeof document === 'undefined' || document.body === null) return () => {}
   let applying = false
+  let frame: number | undefined
   const apply = (): void => {
     if (applying) return
     applying = true
     try { applySettingsNavIcons(document) }
     finally { applying = false }
   }
+  const schedule = (): void => {
+    if (frame !== undefined) return
+    frame = window.requestAnimationFrame(() => { frame = undefined; apply() })
+  }
   apply()
-  const observer = new MutationObserver(() => { apply() })
+  const observer = new MutationObserver(schedule)
   observer.observe(document.body, { childList: true, subtree: true })
-  return () => { observer.disconnect() }
+  return () => {
+    observer.disconnect()
+    if (frame !== undefined) window.cancelAnimationFrame(frame)
+  }
 }

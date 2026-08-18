@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { settingsNavIconId, SETTINGS_NAV_ICON_HTML } from '../src/client/settings-nav-icons.ts'
 
 assert.equal(settingsNavIconId('专家'), 'experts')
@@ -25,3 +26,7 @@ assert.equal(SETTINGS_NAV_ICON_HTML.connectors.includes('M9.94133 6.50173'), tru
 assert.equal(SETTINGS_NAV_ICON_HTML.schedule.includes('M8 1.15A6.85'), true, '定时任务必须使用侧栏时钟图标')
 assert.equal(SETTINGS_NAV_ICON_HTML.assistant.includes('M2.15 2.9h11.7v8.2'), true, 'IM 必须使用侧栏气泡图标')
 assert.equal(SETTINGS_NAV_ICON_HTML.archive.includes('M15.8659 2.05975'), true, '已归档必须使用归档盒图标')
+
+const observer = readFileSync(new URL('../src/client/settings-nav-icons.ts', import.meta.url), 'utf8')
+assert.match(observer, /requestAnimationFrame/, '设置导航观察必须按帧合并，与其他观察器一致')
+assert.match(observer, /cancelAnimationFrame/, '卸载时必须取消挂起的设置导航帧')

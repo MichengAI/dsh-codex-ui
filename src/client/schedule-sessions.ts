@@ -1,5 +1,7 @@
 export const AUTOMATION_SESSION_PREFIX = 'dsh-automation-session-'
-export const AUTOMATION_TITLE_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/
+// 自动化运行的标题恒为 “YYYY-MM-DD HH:mm - 任务名”（见 dsh-automation 的 automationSessionTitle）；
+// 必须带 “ - ” 分隔符，避免用户手动改名为时间开头的普通会话被误判成定时任务。
+export const AUTOMATION_TITLE_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}\s+-\s+/
 
 export type ScheduleSession = {
   id: string

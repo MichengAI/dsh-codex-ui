@@ -143,14 +143,22 @@ export function observePermissionMenus(t: (key: string) => string): () => void {
     document.head.append(style)
   }
   let applying = false
+  let frame: number | undefined
   const apply = (): void => {
     if (applying) return
     applying = true
     try { localizePermissionMenus(document, t) }
     finally { applying = false }
   }
+  const schedule = (): void => {
+    if (frame !== undefined) return
+    frame = window.requestAnimationFrame(() => { frame = undefined; apply() })
+  }
   apply()
-  const observer = new MutationObserver(() => { apply() })
+  const observer = new MutationObserver(schedule)
   observer.observe(document.body, { childList: true, subtree: true, characterData: true })
-  return () => { observer.disconnect() }
+  return () => {
+    observer.disconnect()
+    if (frame !== undefined) window.cancelAnimationFrame(frame)
+  }
 }

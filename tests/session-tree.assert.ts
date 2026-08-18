@@ -20,4 +20,5 @@ assert.doesNotMatch(channel, /showTip\(\{ title: group/, '频道项目行不得�
 assert.doesNotMatch(schedule, /showTip\(\{ title: group/, '定时项目行不得显示悬停卡片')
 assert.match(workspace, /showTip\(\{ kind: 'workspace'/, '任务项目文件夹悬停必须显示卡片')
 assert.match(tree, /dcu-wb-tip-title/, '悬停卡片必须有标题行')
-assert.match(tree, /SessionHoverCard[\s\S]*IconFolderClose16/, '悬停卡片标题必须带 Codex 官方收起文件夹图标')
+assert.doesNotMatch(tree, /dcu-wb-tip-title"><span className="dcu-wb-folder"><IconFolderClose16/, '会话卡片标题不得放文件夹图标：会话不是文件夹，且项目行已有同款图标')
+assert.match(tree, /dcu-wb-tip-row"><span className="dcu-wb-folder"><IconFolderClose16/, '悬停卡片项目行必须带 Codex 官方收起文件夹图标')

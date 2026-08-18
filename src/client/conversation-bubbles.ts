@@ -34,15 +34,22 @@ function isPlainTextBubble(bubble: HTMLElement): boolean {
   return bubble.querySelector('pre,table,img,[class*="Json"]') === null
 }
 
+/** 撤销某个气泡的替换装饰：删除卡片并恢复原气泡显示。 */
+function rollbackUserCard(stack: HTMLElement): void {
+  for (const card of stack.querySelectorAll('[data-dcu-user-card]')) card.remove()
+  for (const source of stack.querySelectorAll<HTMLElement>('[data-dcu-user-source]')) delete source.dataset.dcuUserSource
+}
+
 export function decorateUserBubbles(root: ParentNode): void {
   const rows = root.querySelectorAll<HTMLElement>('[data-chat-flow-kind="user"] [data-time-hover-root], [data-pending-steering][data-time-hover-root]')
   for (const row of rows) {
     const stack = row.firstElementChild
     if (!(stack instanceof HTMLElement)) continue
     const bubble = findPlainBubble(stack)
-    if (bubble === undefined || !isPlainTextBubble(bubble)) continue
-    const text = (bubble.innerText ?? bubble.textContent ?? '').replace(/\s+\n/g, '\n').trim()
-    if (text === '') continue
+    // 气泡被编辑成富文本或清空后必须回退，否则会一直展示过时的纯文本卡片
+    if (bubble === undefined || !isPlainTextBubble(bubble)) { rollbackUserCard(stack); continue }
+    const text = (bubble.textContent ?? '').replace(/\s+\n/g, '\n').trim()
+    if (text === '') { rollbackUserCard(stack); continue }
     bubble.dataset.dcuUserSource = ''
     let card = stack.querySelector<HTMLElement>(':scope > [data-dcu-user-card]')
     if (card === null) {

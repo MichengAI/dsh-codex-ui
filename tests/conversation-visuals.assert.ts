@@ -53,6 +53,9 @@ assert.match(sidebar, /--dcu-font:Inter,ui-sans-serif,system-ui/, '侧栏必须�
 assert.match(sidebar, /\.dcu-settings-seat>button[^}]*font:14px\/20px var\(--dcu-font\);font-weight:500/, '底部设置入口必须与主导航保持同一文字层级')
 
 assert.match(client, /observeConversationHeader/, '会话顶栏必须把对话/轨迹页签挪到子代理右侧')
+assert.match(navigator, /TURN_SUMMARY_LIMIT = 72/, '轮次摘要必须截断到 72 字符，防止长文本拖垮刻度')
+assert.match(navigator, /slice\(0, TURN_SUMMARY_LIMIT\)/, '轮次摘要必须真正应用截断')
+assert.match(navigator, /max-height:inherit;overflow-y:auto/, '长会话刻度必须恢复纵向滚动，不得溢出遮挡输入区')
 assert.deepEqual(tickMarkSize(2, null, true), { width: 5, height: 1 })
 assert.deepEqual(tickMarkSize(2, null, false), { width: 5, height: 1 })
 assert.ok(tickMarkSize(2, 2, true).width > 14, '悬停当前条必须明显拉长')

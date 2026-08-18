@@ -1,13 +1,6 @@
 export const SESSION_PINS_STORAGE_KEY = 'dsh.session-pins.v1'
 export const SESSION_UNREAD_STORAGE_KEY = 'dsh.session-unread.v1'
 
-type SessionWorkspace = {
-  workspaceId: string
-  sessionIds: readonly string[]
-  title: string
-  path: string
-}
-
 export function normalizeSessionIds(ids: readonly string[]): string[] {
   return [...new Set(ids.filter(id => id.trim() !== ''))]
 }
@@ -37,10 +30,6 @@ export function writeSessionIds(storage: Storage | undefined, key: string, ids: 
   } catch {
     // 隐私模式或存储配额不足时保留当前页面内状态。
   }
-}
-
-export function findWorkspaceForSession<T extends SessionWorkspace>(workspaces: readonly T[], sessionId: string): T | undefined {
-  return workspaces.find(workspace => workspace.sessionIds.includes(sessionId))
 }
 
 export function sessionDeepLink(base: string, sessionId: string): string {

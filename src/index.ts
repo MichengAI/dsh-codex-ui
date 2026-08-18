@@ -6,6 +6,33 @@ import { hostServices } from './host-services.ts'
 const connectorsEndpoint = '/api/michengai/codex-ui/connectors'
 const dependenciesEndpoint = '/api/michengai/codex-ui/dependencies'
 
+type HostRequest = { method?: string; url?: string; headers?: Record<string, string | string[] | undefined> }
+
+function headerValue(headers: Record<string, string | string[] | undefined>, name: string): string | undefined {
+  const value = headers[name]
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) return value[0]
+  return undefined
+}
+
+/**
+ * 判断浏览器请求是否跨站。依赖安装会改写用户配置并拉起子进程，
+ * 恶意网页只需一个表单就能跨站触发，必须先按 Sec-Fetch-Site（优先，
+ * 且无法被页面伪造）再按 Origin 与 Host 的比对阻断；无这些头的
+ * 非浏览器客户端（curl、CLI）仍然放行。
+ */
+export function crossSiteRequest(request: HostRequest): boolean {
+  const headers = request.headers
+  if (headers === undefined) return false
+  const site = headerValue(headers, 'sec-fetch-site')
+  if (site === 'same-origin' || site === 'none') return false
+  if (site !== undefined) return true
+  const origin = headerValue(headers, 'origin')
+  if (origin === undefined) return false
+  const host = headerValue(headers, 'host')
+  return origin !== new URL(request.url ?? '/', `http://${host ?? 'localhost'}`).origin
+}
+
 export const inject = ['webServer', 'sessions', 'agents', 'tools']
 
 /** 提供不泄露地址、命令和凭证的连接器目录。 */
@@ -51,6 +78,11 @@ export function apply(ctx: Context): void {
             return
           }
           if (request.method === 'POST') {
+            if (crossSiteRequest(request)) {
+              response.writeHead(403, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+              response.end(JSON.stringify({ error: '已拒绝跨站请求。' }))
+              return
+            }
             const dependencies = await installDependency(url.searchParams.get('dependency'))
             response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
             response.end(JSON.stringify({ dependencies, restartRequired: true }))
@@ -59,9 +91,10 @@ export function apply(ctx: Context): void {
           response.writeHead(405)
           response.end()
         } catch (error) {
-          const message = error instanceof Error ? error.message : '依赖管理暂不可用。'
+          // 详情只进服务端日志：readFile 等错误带 profile 绝对路径，不得原样回传浏览器
+          ctx.logger.warn('dependencies endpoint failed: %s', error)
           response.writeHead(503, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-          response.end(JSON.stringify({ error: message }))
+          response.end(JSON.stringify({ error: '依赖管理暂不可用，请查看服务端日志。' }))
         }
       },
     })

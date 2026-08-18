@@ -10,7 +10,8 @@ type TurnNavigatorProps = PropsRuntime<'conversation.session.header.utilities'> 
 
 const stylesheet = `
 .dcu-turn-navigator{position:fixed;z-index:20;top:50%;left:var(--dcu-turn-left,288px);transform:translateY(-50%);width:16px;max-height:calc(100vh - 120px);overflow:visible;pointer-events:none}
-.dcu-turn-list{display:grid;gap:2px;margin:0;padding:4px 0;list-style:none;pointer-events:auto}
+.dcu-turn-list{display:grid;gap:2px;margin:0;padding:4px 0;list-style:none;max-height:inherit;overflow-y:auto;scrollbar-width:none;width:min(296px,calc(100vw - 64px));pointer-events:none}
+.dcu-turn-list::-webkit-scrollbar{display:none}
 .dcu-turn-link{pointer-events:auto;position:relative;display:flex;align-items:center;width:16px;height:8px;overflow:visible;padding:0;border:0;border-radius:4px;background:transparent;color:var(--dsw-alias-label-tertiary);font:13px/18px var(--dsw-font-family);text-align:left;cursor:pointer;transition:color 320ms cubic-bezier(.16,1,.3,1)}
 .dcu-turn-link::before{width:var(--dcu-tick-w,5px);height:var(--dcu-tick-h,1px);flex:0 0 var(--dcu-tick-w,5px);border-radius:1px;background:currentcolor;content:'';transition:width 360ms cubic-bezier(.16,1,.3,1),height 360ms cubic-bezier(.16,1,.3,1),flex-basis 360ms cubic-bezier(.16,1,.3,1),background-color 320ms cubic-bezier(.16,1,.3,1)}
 .dcu-turn-summary{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:max-content;max-width:min(280px,calc(100vw - 80px));height:32px;padding:0 12px;border-radius:16px;background:var(--dsw-alias-button-floating-hover,#3a3d3c);color:var(--dsw-alias-label-primary);box-shadow:none;opacity:0;pointer-events:none;z-index:2;display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:32px;transition:opacity 220ms cubic-bezier(.16,1,.3,1)}
@@ -42,13 +43,17 @@ function hoverIndexFromPoint(list: HTMLElement, clientY: number, count: number):
   return (y / box.height) * count - 0.5
 }
 
+/** 轮目摘要上限：整段长文本会同时进入 title、aria-label 与 DOM 文本，必须截断。 */
+const TURN_SUMMARY_LIMIT = 72
+
 function textSummary(content: readonly unknown[], fallback: string): string {
   const text = content.flatMap(block => {
     if (typeof block !== 'object' || block === null) return []
     const value = block as { type?: unknown; text?: unknown }
     return value.type === 'text' && typeof value.text === 'string' ? [value.text] : []
   }).join(' ').replace(/\s+/g, ' ').trim()
-  return text === '' ? fallback : text
+  const summary = text === '' ? fallback : text
+  return summary.length > TURN_SUMMARY_LIMIT ? `${summary.slice(0, TURN_SUMMARY_LIMIT)}…` : summary
 }
 
 function userContent(data: unknown): readonly unknown[] {

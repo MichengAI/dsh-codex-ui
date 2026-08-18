@@ -4,14 +4,21 @@ export const CONVERSATION_HEADER_STYLE_ID = 'dcu-conversation-header-style'
 export const HEADER_PROJECT_TIP_EVENT = 'dcu-header-project-tip'
 export const HEADER_SESSION_MENU_EVENT = 'dcu-header-session-menu'
 
+// 宿主 header 的结构是 header > titleRow > titleCluster > [crumbs, headerActions] + headerUtilities，
+// 页签（role=tablist）是 header 的直接子节点。这里只用 display:contents 把标题行摊平、
+// 再用 order 重排为 [面包屑][操作区][页签][扩展区]，绝不物理搬移 React 管理的节点，
+// 否则宿主重渲染时会因节点父级脱钩抛 NotFoundError 导致整个界面白屏。
 export const CONVERSATION_HEADER_STYLE = `
-header [data-dcu-inline-tabs]{display:flex;align-items:center;gap:4px;margin:0 0 0 12px;padding:0;position:relative;z-index:1}
+header:has([data-dcu-inline-tabs]){display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding-bottom:12px}
+header:has([data-dcu-inline-tabs]) [class*="titleRow"],header:has([data-dcu-inline-tabs]) [class*="titleCluster"]{display:contents}
+header:has([data-dcu-inline-tabs]) [class*="crumbs"]{order:1;flex:1;min-width:0}
+header:has([data-dcu-inline-tabs]) [class*="headerActions"]{order:2;flex:none}
+header [data-dcu-inline-tabs]{order:3;flex:none;display:flex;align-items:center;gap:4px;margin:0;padding:0;position:relative;z-index:1}
+header:has([data-dcu-inline-tabs]) [class*="headerUtilities"]{order:4;flex:none}
 header [data-dcu-tab-slider]{position:absolute;left:0;top:50%;height:28px;margin-top:-14px;border-radius:8px;background:color-mix(in srgb,var(--dsw-alias-button-info-fill,#4c8dff) 18%,transparent);pointer-events:none;z-index:0;opacity:0;transform:translateX(0);width:0;transition:transform 280ms cubic-bezier(.16,1,.3,1),width 280ms cubic-bezier(.16,1,.3,1),opacity 160ms ease}
 header [data-dcu-inline-tabs] [role=tab]{position:relative;z-index:1;padding:8px 10px 10px;margin:0;line-height:20px;color:var(--dsw-alias-label-tertiary);border:0;box-shadow:none;background:transparent}
 header [data-dcu-inline-tabs] [role=tab][aria-selected=true],header [data-dcu-inline-tabs] [role=tab][data-state=active]{color:var(--dsw-alias-button-info-fill,#4c8dff);font-weight:500}
 header [data-dcu-inline-tabs] [role=tab]:after,header [data-dcu-inline-tabs] [role=tab]:before{display:none!important;content:none!important;background:transparent!important;height:0!important}
-header:has([data-dcu-inline-tabs]){padding-bottom:12px}
-header [data-dcu-title-chrome]{display:inline-flex;align-items:center;gap:4px;min-width:0}
 header [data-dcu-title-folder],header [data-dcu-title-more]{appearance:none;border:0;background:transparent;color:var(--dsw-alias-label-tertiary,currentColor);display:inline-grid;place-items:center;padding:0;cursor:pointer;border-radius:4px}
 header [data-dcu-title-folder]{width:16px;height:20px}
 header [data-dcu-title-more]{width:20px;height:20px}
@@ -26,20 +33,11 @@ export function findConversationTablist(root: ParentNode): HTMLElement | undefin
   return root.querySelector<HTMLElement>('header [role=tablist]') ?? undefined
 }
 
-export function findHeaderActions(header: Element): HTMLElement | undefined {
-  return header.querySelector<HTMLElement>('[class*="headerActions"]') ?? undefined
-}
-
+/** 只给宿主页签打内联标记，视觉重排交给样式表；DOM 结构保持宿主原样。 */
 export function placeConversationTabs(root: ParentNode): boolean {
   const tabs = findConversationTablist(root)
-  if (tabs === undefined) return false
-  const header = tabs.closest('header')
-  if (header === null) return false
-  const actions = findHeaderActions(header)
-  if (actions === undefined || actions.parentElement === null) return false
+  if (tabs === undefined || tabs.dataset.dcuInlineTabs === '') return false
   tabs.dataset.dcuInlineTabs = ''
-  if (tabs.previousElementSibling === actions) return false
-  actions.after(tabs)
   return true
 }
 
@@ -65,25 +63,34 @@ function emit(name: string, target: HTMLElement, extra: Partial<HeaderAnchorDeta
   }))
 }
 
+function buildTitleButton(doc: Document, marker: 'folder' | 'more', svg: string, event: string, extra?: Partial<HeaderAnchorDetail>): HTMLButtonElement {
+  const button = doc.createElement('button')
+  button.type = 'button'
+  if (marker === 'folder') button.dataset.dcuTitleFolder = ''
+  else button.dataset.dcuTitleMore = ''
+  button.innerHTML = svg
+  button.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); emit(event, button, extra) })
+  return button
+}
+
+/** 在标题前后插入文件夹/三点按钮：只插入插件自己的节点，不搬移宿主标题。 */
 export function decorateConversationTitle(root: ParentNode): boolean {
   const title = root.querySelector<HTMLElement>('header [class*="crumbCurrent"]')
   if (title === null) return false
-  if (title.parentElement?.hasAttribute('data-dcu-title-chrome')) return false
+  const scope = title.closest('header') ?? title.ownerDocument
+  // 宿主可能整体重建标题节点：清掉不再紧邻当前标题的旧按钮，避免残留出重复图标
+  for (const stale of scope.querySelectorAll('[data-dcu-title-folder], [data-dcu-title-more]')) {
+    if (stale.previousElementSibling !== title && stale.nextElementSibling !== title) stale.remove()
+  }
+  const folder = title.previousElementSibling
+  const more = title.nextElementSibling
+  if (folder?.matches('[data-dcu-title-folder]') === true && more?.matches('[data-dcu-title-more]') === true) return false
+  // 装饰不完整（只剩一侧按钮）时先撤掉旧按钮，保证成对插入
+  folder?.matches('[data-dcu-title-folder]') === true && folder.remove()
+  more?.matches('[data-dcu-title-more]') === true && more.remove()
   const doc = title.ownerDocument
-  const wrap = doc.createElement('span')
-  wrap.dataset.dcuTitleChrome = ''
-  const folder = doc.createElement('button')
-  folder.type = 'button'
-  folder.dataset.dcuTitleFolder = ''
-  folder.innerHTML = FOLDER_SVG
-  folder.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); emit(HEADER_PROJECT_TIP_EVENT, folder, { toggle: true }) })
-  const more = doc.createElement('button')
-  more.type = 'button'
-  more.dataset.dcuTitleMore = ''
-  more.innerHTML = MORE_SVG
-  more.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); emit(HEADER_SESSION_MENU_EVENT, more) })
-  title.before(wrap)
-  wrap.append(folder, title, more)
+  title.before(buildTitleButton(doc, 'folder', FOLDER_SVG, HEADER_PROJECT_TIP_EVENT, { toggle: true }))
+  title.after(buildTitleButton(doc, 'more', MORE_SVG, HEADER_SESSION_MENU_EVENT))
   return true
 }
 
@@ -130,20 +137,37 @@ function ensureStyle(doc: Document): void {
   doc.head.append(style)
 }
 
+/** 观察会话顶栏与用户气泡；所有变更按帧合并，避免流式输出时每个 token 都全文档扫描。 */
 export function observeConversationHeader(doc: Document = document): () => void {
   if (doc.head === null) return () => {}
   ensureStyle(doc)
   ensureUserBubbleStyle(doc)
+  let applying = false
+  let frame: number | undefined
+  const run = (): void => {
+    frame = undefined
+    if (applying) return
+    applying = true
+    try {
+      placeConversationTabs(doc)
+      const tabs = findConversationTablist(doc)
+      if (tabs !== undefined) watchTabSelection(tabs)
+      syncTabSlider(doc)
+      decorateConversationTitle(doc)
+      decorateUserBubbles(doc)
+    } finally {
+      applying = false
+    }
+  }
   const sync = (): void => {
-    placeConversationTabs(doc)
-    const tabs = findConversationTablist(doc)
-    if (tabs !== undefined) watchTabSelection(tabs)
-    syncTabSlider(doc)
-    decorateConversationTitle(doc)
-    decorateUserBubbles(doc)
+    if (frame !== undefined) return
+    frame = window.requestAnimationFrame(run)
   }
   sync()
   const observer = new MutationObserver(sync)
   observer.observe(doc.documentElement, { childList: true, subtree: true })
-  return () => { observer.disconnect() }
+  return () => {
+    observer.disconnect()
+    if (frame !== undefined) window.cancelAnimationFrame(frame)
+  }
 }
