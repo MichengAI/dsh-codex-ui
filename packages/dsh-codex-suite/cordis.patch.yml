@@ -37,3 +37,18 @@
       name: '@michengai/dsh-agency-agents/remote'
     - id: agency-agents
       name: '@michengai/dsh-agency-agents'
+
+# dsh-im-connect：提供 IM 助理与频道页签。
+- insert:
+    - id: im-connect
+      name: '@michengai/dsh-im-connect'
+
+# dsh-automation：提供定时任务 Host 服务与设置页。
+- insert:
+    - id: dsh-automation
+      name: '@michengai/dsh-automation'
+      config:
+        maxConcurrentRuns: 2
+        runTimeoutMinutes: 60
+        misfireGraceMinutes: 15
+        historyLimit: 200

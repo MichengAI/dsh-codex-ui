@@ -1,11 +1,12 @@
 {
   "name": "@michengai/dsh-codex-suite",
   "version": "0.1.0",
-  "description": "DSH Codex UI 聚合包：一键安装侧栏、专家、技能和归档会话插件",
+  "description": "DSH Codex UI 聚合包：一键安装侧栏、专家、技能、归档、IM 助理和定时任务",
   "license": "Apache-2.0",
   "type": "module",
   "files": [
     "cordis.patch.yml",
+    "README.md",
     "README.zh-CN.md"
   ],
   "dsh": {
@@ -18,9 +19,11 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@michengai/dsh-agency-agents": "0.1.4",
-    "@michengai/dsh-archive-manager": "0.1.0",
+    "@michengai/dsh-agency-agents": "latest",
+    "@michengai/dsh-archive-manager": "latest",
+    "@michengai/dsh-automation": "latest",
     "@michengai/dsh-codex-ui": "workspace:*",
-    "@michengai/dsh-skills-manager": "0.1.7"
+    "@michengai/dsh-im-connect": "latest",
+    "@michengai/dsh-skills-manager": "latest"
   }
 }

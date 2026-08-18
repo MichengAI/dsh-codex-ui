@@ -1,27 +1,23 @@
 <p align="center">
-  <img src="assets/icon.png" alt="DSH Codex UI" width="96">
+  <img src="assets/branding/dsh-banner.png" alt="DSH Codex UI" width="100%">
 </p>
 
-<h1 align="center">DSH Codex UI</h1>
+<div align="center">
 
-<p align="center">
-  <strong>为 DeepSeek Harness Web 提供 Codex 风格侧栏、工作区会话树、全局搜索和轮次导航的独立插件。</strong>
-</p>
+  # DSH Codex UI
 
-<p align="center">
-  <a href="https://github.com/MichengAI/dsh-codex-ui/issues">反馈问题</a>
-  · <a href="https://www.npmjs.com/package/@michengai/dsh-codex-ui">查看 npm</a>
-  · <a href="README.md">English</a>
-</p>
+  **为 DeepSeek Harness Web 重构 Codex 风格侧栏、工作区会话树、全局搜索和轮次导航**
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="Apache License 2.0"></a>
-  <a href="https://www.npmjs.com/package/@michengai/dsh-codex-ui"><img src="https://img.shields.io/npm/v/%40michengai/dsh-codex-ui?label=npm" alt="npm package"></a>
-  <img src="https://img.shields.io/badge/DSH-Web%20Plugin-10b981" alt="DSH Web Plugin">
-  <img src="https://img.shields.io/badge/Node.js-%E2%89%A522-339933?logo=nodedotjs&logoColor=white" alt="Node.js 22 或更高版本">
-</p>
+  [English](README.md) · [Apache-2.0](LICENSE)
 
-> DSH Codex UI 是社区维护的插件，并非 DeepSeek AI 官方产品。它只使用 DSH 公开插槽，不修改宿主源码或会话数据。
+  [![许可证：Apache-2.0](https://img.shields.io/badge/许可证-Apache--2.0-blue.svg)](LICENSE)
+  [![npm package](https://img.shields.io/npm/v/%40michengai%2Fdsh-codex-ui.svg?label=npm%20package)](https://www.npmjs.com/package/@michengai/dsh-codex-ui)
+  [![DSH Web Plugin](https://img.shields.io/badge/DSH%20Web-Plugin-0f766e.svg)](https://github.com/MichengAI/dsh-codex-ui)
+  [![Node.js 22 or later](https://img.shields.io/badge/Node.js-22%20or%20later-339933.svg?logo=node.js&logoColor=white)](https://nodejs.org/)
+
+</div>
+
+> DSH Codex UI 是社区维护的 DeepSeek Harness（DSH）插件，并非 DeepSeek AI 官方产品。它只使用 DSH 公开插槽，不修改宿主源码或会话数据。
 
 ## 功能概览
 
@@ -30,9 +26,25 @@
 - 工作区与会话支持展开折叠、拖拽排序、项目置顶、未读圆点和运行状态。
 - 项目和会话菜单支持重命名、置顶、未读、归档、派生、打开目录、复制和删除。
 - 调整会话列与输入卡片视觉，并为当前会话提供紧凑轮次导航。
-- 在设置中提供连接器目录和「关于」页，展示配套插件安装状态。
+- 在「设置 → 关于」展示配套插件状态，并可从 npm 安装缺失项。
 
-![Codex 风格侧栏与空会话页](assets/screenshots/sidebar.png)
+## 界面预览
+
+浅色主题：Codex 风格侧栏、工作区会话树和会话列。
+
+![浅色主题会话页](assets/screenshots/conversation-light.png)
+
+深色主题：同一布局，使用 Codex 暗色令牌。
+
+![深色主题会话页](assets/screenshots/conversation.png)
+
+会话菜单：重命名、置顶、未读、归档、派生、复制和删除。
+
+![会话菜单](assets/screenshots/session-menu.png)
+
+「设置 → 关于」列出配套插件及其安装状态。
+
+![关于页与配套插件](assets/screenshots/settings-about.png)
 
 ## 前置条件
 
@@ -40,33 +52,76 @@
 - 以下示例使用 `web` profile；请替换为实际目标 profile。
 - 从源码安装或二次开发需要 Node.js 22+ 与 pnpm；仅从 npm 安装无需在任意目录执行 `pnpm install`。
 
+## 插件组合
+
+`@michengai/dsh-codex-suite` 是一键套件，会把下面 6 个插件装进同一个 profile：
+
+| 插件 | npm 包 | 作用 |
+| --- | --- | --- |
+| Codex UI | `@michengai/dsh-codex-ui` | Codex 风格侧栏、工作区会话树、搜索和轮次导航 |
+| 专家管理 | `@michengai/dsh-agency-agents` | 从「专家」进入对应设置页 |
+| 技能管理 | `@michengai/dsh-skills-manager` | 从「技能」进入对应设置页 |
+| 归档管理 | `@michengai/dsh-archive-manager` | 提供永久删除和已归档会话管理 |
+| IM 助理 | `@michengai/dsh-im-connect` | IM 设置页和「频道」页签 |
+| 定时任务 | `@michengai/dsh-automation` | 定时任务设置页和「定时」页签 |
+
+`dshmarket` 仍是可选项。已安装时，「插件」入口会优先进入市场。
+
+套件安装和单独安装互斥。同一 profile 不要同时安装两者，两套 patch 会冲突。
+
 ## 安装
 
-### 从 npm 安装
+`dsh plugin add` 会转发到 profile 目录里的 `pnpm add`。不写版本、不指定官方源时，本机镜像和最短发布间隔可能让你停在旧版。
 
-在任意 PowerShell 目录执行。请通过 `dsh plugin` 安装到 DSH profile：
+### 交给其他 Agent 一句话安装套件
 
-```powershell
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
-dsh plugin --profile web add @michengai/dsh-codex-ui
-dsh --profile web --dump-config
+把下面其中一句复制到 DSH、Codex 或 WorkBuddy，让它代你安装到本机 `web` profile。
+
+从 npm 安装完整套件：
+
+```text
+请把 DSH 套件 @michengai/dsh-codex-suite 最新版装进本机 web profile，使用官方 npm 源执行：dsh plugin --profile web add @michengai/dsh-codex-suite@latest --registry=https://registry.npmjs.org/。装完执行 dsh --profile web --dump-config，确认已挂载 codex-ui、agency-agents、skills-manager、archive-manager、im-connect 和 dsh-automation，并提醒我重启 DSH Web 后硬刷新浏览器。
 ```
 
-安装或升级后重启 DSH Web，并硬刷新浏览器。插件会通过 `cordis.patch.yml` 接管默认侧栏；卸载后默认侧栏会恢复。若镜像未同步最新版本，可在安装命令末尾追加 `--registry=https://registry.npmjs.org/`。
+只安装 Codex UI：
+
+```text
+请把 DSH 插件 @michengai/dsh-codex-ui 最新版装进本机 web profile，使用官方 npm 源执行：dsh plugin --profile web add @michengai/dsh-codex-ui@latest --registry=https://registry.npmjs.org/。装完执行 dsh --profile web --dump-config，确认已挂载 codex-ui，并提醒我重启 DSH Web 后硬刷新浏览器。
+```
+
+| 产品 | 怎么用 |
+| --- | --- |
+| DSH | 把上面其中一句发给当前会话。 |
+| Codex | 把上面其中一句发给 Codex，让它在本机执行安装。 |
+| WorkBuddy | 把上面其中一句发给 WorkBuddy。 |
+
+未把 `dsh` 装进 PATH 时，把开头的 `dsh` 换成 `npx --yes @deepseek-ai/dsh`。
 
 ### 安装完整套件
 
-需要同时安装 Codex UI、专家、技能和归档会话管理时，待 `@michengai/dsh-codex-suite` 发布到 npm 后执行：
+这是一键组合安装。在任意 PowerShell 目录执行：
 
 ```powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
-dsh plugin --profile web add @michengai/dsh-codex-suite
+dsh plugin --profile web add @michengai/dsh-codex-suite@latest --registry=https://registry.npmjs.org/
 dsh --profile web --dump-config
 ```
 
-独立安装和聚合安装互斥。同一 profile 不要同时安装两者。切换为套件前，先卸载已单独安装的四个插件。
+需要钉死某一版时，把 `@latest` 换成具体版本，例如 `@0.1.0`。
+
+安装后重启 DSH Web 并硬刷新浏览器。若该 profile 已单独安装上述任一插件，先卸载这些独立插件，再装套件。
+
+### 只安装 Codex UI
+
+```powershell
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+dsh plugin --profile web add @michengai/dsh-codex-ui@latest --registry=https://registry.npmjs.org/
+dsh --profile web --dump-config
+```
+
+插件会通过 `cordis.patch.yml` 接管默认侧栏；卸载后默认侧栏会恢复。
 
 ### 从源码安装
 
@@ -99,15 +154,7 @@ dsh --profile web --dump-config
 | 管理会话 | 打开会话菜单，进行重命名、置顶、未读、归档、派生、复制或删除。 |
 | 跳转轮次 | 使用当前会话左侧的轮次刻度跳转到对应提问。 |
 | 查看连接器 | 打开「设置 → 连接器」。不会展示地址、命令或凭证。 |
-| 查看配套插件 | 打开「设置 → 关于」，查看专家、技能、归档、IM、定时任务和插件市场状态。 |
-
-![会话菜单](assets/screenshots/session-menu.png)
-
-![项目菜单](assets/screenshots/workspace-menu.png)
-
-![会话视图与轮次导航](assets/screenshots/conversation.png)
-
-![关于页与配套插件](assets/screenshots/settings-about.png)
+| 查看配套插件 | 打开「设置 → 关于」，安装或更新套件中的配套插件。 |
 
 删除项目注册不会删除项目目录或会话记录。置顶和未读状态只保存在当前浏览器。
 
@@ -123,20 +170,7 @@ dsh --profile web --dump-config
 - 本插件只使用 DSH 公开插槽和服务。
 - 不修改宿主源码或会话数据模型。
 - 归档会话的永久删除由 `@michengai/dsh-archive-manager` 提供。
-- 专家和技能管理分别由对应可选 peer 插件提供。
 - 连接器目录不会展示地址、命令或凭证。
-
-## 配套插件
-
-| 插件 | npm 包 | 作用 |
-| --- | --- | --- |
-| 专家管理 | `@michengai/dsh-agency-agents` | 从「专家」进入对应设置页 |
-| 技能管理 | `@michengai/dsh-skills-manager` | 从「技能」进入对应设置页 |
-| 归档管理 | `@michengai/dsh-archive-manager` | 提供永久删除和已归档会话管理 |
-| IM 助理 | `@michengai/dsh-im-connect` | 从「IM助理」进入对应设置页 |
-| 定时任务 | `@michengai/dsh-automation` | 从「定时任务」进入对应设置页 |
-| 插件市场 | `dshmarket` | 已安装时，「插件」入口优先进入市场 |
-| 套件 | `@michengai/dsh-codex-suite` | 一次安装 Codex UI 及配套管理插件 |
 
 ## 二次开发
 
