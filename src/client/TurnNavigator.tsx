@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
 import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { conversationAnchor, conversationScrollRoot } from './conversation-dom.ts'
@@ -10,19 +10,19 @@ type TurnNavigatorProps = PropsRuntime<'conversation.session.header.utilities'> 
 
 const stylesheet = `
 .dcu-turn-navigator{position:fixed;z-index:20;top:50%;left:var(--dcu-turn-left,288px);transform:translateY(-50%);width:16px;max-height:calc(100vh - 120px);overflow:visible;pointer-events:none}
-.dcu-turn-list{display:grid;gap:2px;margin:0;padding:4px 0;list-style:none;max-height:inherit;overflow-y:auto;scrollbar-width:none;width:min(296px,calc(100vw - 64px));pointer-events:none}
-.dcu-turn-list::-webkit-scrollbar{display:none}
+.dcu-turn-scroll{width:16px;max-height:inherit;overflow-x:hidden;overflow-y:auto;scrollbar-width:none;pointer-events:none}
+.dcu-turn-scroll::-webkit-scrollbar{display:none}
+.dcu-turn-list{display:grid;gap:2px;margin:0;padding:4px 0;list-style:none;width:16px;pointer-events:none}
 .dcu-turn-link{pointer-events:auto;position:relative;display:flex;align-items:center;width:16px;height:8px;overflow:visible;padding:0;border:0;border-radius:4px;background:transparent;color:var(--dsw-alias-label-tertiary);font:13px/18px var(--dsw-font-family);text-align:left;cursor:pointer;transition:color 320ms cubic-bezier(.16,1,.3,1)}
 .dcu-turn-link::before{width:var(--dcu-tick-w,5px);height:var(--dcu-tick-h,1px);flex:0 0 var(--dcu-tick-w,5px);border-radius:1px;background:currentcolor;content:'';transition:width 360ms cubic-bezier(.16,1,.3,1),height 360ms cubic-bezier(.16,1,.3,1),flex-basis 360ms cubic-bezier(.16,1,.3,1),background-color 320ms cubic-bezier(.16,1,.3,1)}
-.dcu-turn-summary{position:absolute;left:16px;top:50%;transform:translateY(-50%);box-sizing:border-box;width:max-content;max-width:240px;height:32px;padding:0 12px;border-radius:16px;background:var(--dsw-alias-button-floating-hover,#3a3d3c);color:var(--dsw-alias-label-primary);box-shadow:none;opacity:0;pointer-events:none;z-index:2;display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:32px;transition:opacity 220ms cubic-bezier(.16,1,.3,1)}
+.dcu-turn-summary{position:absolute;left:16px;top:var(--dcu-summary-top,50%);transform:translateY(-50%);box-sizing:border-box;width:max-content;max-width:240px;height:32px;padding:0 12px;border-radius:16px;background:#3a3d3c;color:#e8ebe9;box-shadow:0 8px 24px rgba(0,0,0,.28);pointer-events:none;z-index:2;display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:32px}
 .dcu-turn-link[data-active=true]{color:var(--dsw-alias-label-primary)}
-.dcu-turn-link[data-active=true] .dcu-turn-summary{opacity:1}
 .dcu-turn-link[aria-current=true]{color:var(--dsw-alias-label-primary)}
 .dcu-turn-link[aria-current=true]::before{width:var(--dcu-tick-w,5px);flex-basis:var(--dcu-tick-w,5px);height:var(--dcu-tick-h,1px)}
 .dcu-turn-navigator[data-hovering=true] .dcu-turn-link[aria-current=true]{color:var(--dsw-alias-label-tertiary)}
 .dcu-turn-navigator[data-hovering=true] .dcu-turn-link[data-active=true]{color:var(--dsw-alias-label-primary)}
 .dcu-turn-link:focus-visible{outline:0;box-shadow:0 0 0 2px var(--dsw-alias-button-info-fill)}
-@media (prefers-reduced-motion:reduce){.dcu-turn-link,.dcu-turn-link::before,.dcu-turn-summary{transition:none}}
+@media (prefers-reduced-motion:reduce){.dcu-turn-link,.dcu-turn-link::before{transition:none}}
 @media (max-width:760px){.dcu-turn-summary{max-width:200px}}
 `
 
@@ -88,8 +88,12 @@ export function TurnNavigator({ useSession, t }: TurnNavigatorProps) {
   const [current, setCurrent] = useState<string | null>(turns[0]?.key ?? null)
   const [hoverAt, setHoverAt] = useState<number | null>(null)
   const [railLeft, setRailLeft] = useState(288)
+  const [summaryTop, setSummaryTop] = useState(0)
+  const navRef = useRef<HTMLElement>(null)
+  const listRef = useRef<HTMLOListElement>(null)
   const turnKeys = useMemo(() => turns.map(turn => turn.key).join('|'), [turns])
   const activeIndex = hoverAt === null ? -1 : Math.max(0, Math.min(turns.length - 1, Math.round(hoverAt)))
+  const activeTurn = activeIndex >= 0 ? turns[activeIndex] : undefined
 
   useEffect(() => {
     const sidebar = document.querySelector<HTMLElement>('.dcu-root')
@@ -129,12 +133,22 @@ export function TurnNavigator({ useSession, t }: TurnNavigatorProps) {
     }
   }, [turnKeys, turns])
 
+  useEffect(() => {
+    const nav = navRef.current
+    const list = listRef.current
+    if (nav === null || list === null || activeIndex < 0) return
+    const button = list.querySelectorAll<HTMLElement>('.dcu-turn-link')[activeIndex]
+    if (button === undefined) return
+    const next = Math.round(button.getBoundingClientRect().top + button.getBoundingClientRect().height / 2 - nav.getBoundingClientRect().top)
+    setSummaryTop(previous => previous === next ? previous : next)
+  }, [activeIndex, turns.length])
+
   if (turns.length === 0) return null
   const moveHover = (event: MouseEvent<HTMLElement>): void => {
     setHoverAt(hoverIndexFromPoint(event.currentTarget, event.clientY, turns.length))
   }
-  const style = { '--dcu-turn-left': `${railLeft}px` } as CSSProperties
-  return <nav className="dcu-turn-navigator" data-hovering={hoverAt !== null || undefined} aria-label={t('turns.label')} style={style}><style>{stylesheet}</style><ol className="dcu-turn-list" onMouseMove={moveHover} onMouseLeave={() => { setHoverAt(null) }}>{turns.map((turn, index) => {
+  const style = { '--dcu-turn-left': `${railLeft}px`, '--dcu-summary-top': `${summaryTop}px` } as CSSProperties
+  return <nav ref={navRef} className="dcu-turn-navigator" data-hovering={hoverAt !== null || undefined} aria-label={t('turns.label')} style={style}><style>{stylesheet}</style><div className="dcu-turn-scroll"><ol ref={listRef} className="dcu-turn-list" onMouseMove={moveHover} onMouseLeave={() => { setHoverAt(null) }}>{turns.map((turn, index) => {
     const mark = tickMarkSize(index, hoverAt, current === turn.key)
     const active = hoverAt !== null && index === activeIndex
     const tickStyle = hoverAt === null ? undefined : { '--dcu-tick-w': `${mark.width}px`, '--dcu-tick-h': `${mark.height}px` } as CSSProperties
@@ -144,6 +158,6 @@ export function TurnNavigator({ useSession, t }: TurnNavigatorProps) {
       if (host === null || anchor === null) return
       const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
       host.scrollTo({ top: host.scrollTop + anchor.getBoundingClientRect().top - host.getBoundingClientRect().top - 12, behavior: reduceMotion ? 'auto' : 'smooth' })
-    }}><span className="dcu-turn-summary">{turn.summary}</span></button></li>
-  })}</ol></nav>
+    }} /></li>
+  })}</ol></div>{activeTurn !== undefined && <span className="dcu-turn-summary">{activeTurn.summary}</span>}</nav>
 }
