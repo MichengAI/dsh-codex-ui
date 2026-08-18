@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { MANAGED_DEPENDENCIES, managedDependency, type ManagedDependencyId } from './dependencies.ts'
+import { MANAGED_DEPENDENCIES, SUITE_MEMBER_PACKAGES, SUITE_PACKAGE, managedDependency, type ManagedDependencyId } from './dependencies.ts'
 
 type PackageManifest = { version?: string }
 
@@ -19,6 +19,35 @@ export type DependencyStatus = {
 function profileDirectory(): string {
   if (process.env.DSH_PROFILE_DIR !== undefined) return process.env.DSH_PROFILE_DIR
   return resolve(homedir(), '.dsh', 'profiles', 'web')
+}
+
+type ProfileManifest = {
+  dependencies?: Record<string, string>
+  devDependencies?: Record<string, string>
+}
+
+async function declaredPluginNames(): Promise<string[]> {
+  try {
+    const manifest = JSON.parse(await readFile(resolve(profileDirectory(), 'package.json'), 'utf8')) as ProfileManifest
+    return Object.keys({ ...manifest.devDependencies, ...manifest.dependencies })
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
+    throw error
+  }
+}
+
+/** 安装套件前卸掉已单独安装的子插件，避免两套 patch 重复注册同一 id。 */
+export function pluginsToRemoveBeforeInstall(declared: readonly string[], installing: string): string[] {
+  if (installing !== SUITE_PACKAGE) return []
+  return SUITE_MEMBER_PACKAGES.filter(name => declared.includes(name))
+}
+
+/** 已装套件时，子插件的安装/更新改走套件，避免再写入一份 bundle。 */
+export function resolveDshPluginTarget(installing: string, declared: readonly string[]): string {
+  if (installing !== SUITE_PACKAGE && (SUITE_MEMBER_PACKAGES as readonly string[]).includes(installing) && declared.includes(SUITE_PACKAGE)) {
+    return SUITE_PACKAGE
+  }
+  return installing
 }
 
 async function installedPackageVersion(packageName: string): Promise<string | undefined> {
@@ -185,11 +214,17 @@ async function installDependencyLocked(id: string | null): Promise<readonly Depe
   if (dependency === undefined) throw new Error('不支持安装该依赖。')
   const latestVersion = await npmLatestVersion(dependency.packageName)
   if (latestVersion === undefined) throw new Error('无法获取 npm 最新版本，请检查网络或 npm registry 后重试。')
-  await ensureLatestReleaseAllowed(dependency.packageName, latestVersion)
-  await runDshPlugin(['add', `${dependency.packageName}@${latestVersion}`, '--registry=https://registry.npmjs.org/'])
-  const installed = await installedPackageVersion(dependency.packageName)
-  if (installed !== latestVersion) {
-    throw new Error(`已请求 ${dependency.packageName}@${latestVersion}，但当前仍是 ${installed ?? '未安装'}。请先停止 DSH Web 后再更新。`)
+  const declared = await declaredPluginNames()
+  const target = resolveDshPluginTarget(dependency.packageName, declared)
+  const targetVersion = target === dependency.packageName ? latestVersion : await npmLatestVersion(target)
+  if (targetVersion === undefined) throw new Error('无法获取 npm 最新版本，请检查网络或 npm registry 后重试。')
+  const remove = pluginsToRemoveBeforeInstall(declared, target)
+  if (remove.length > 0) await runDshPlugin(['remove', ...remove])
+  await ensureLatestReleaseAllowed(target, targetVersion)
+  await runDshPlugin(['add', `${target}@${targetVersion}`, '--registry=https://registry.npmjs.org/'])
+  const installed = await installedPackageVersion(target)
+  if (installed !== targetVersion) {
+    throw new Error(`已请求 ${target}@${targetVersion}，但当前仍是 ${installed ?? '未安装'}。请先停止 DSH Web 后再更新。`)
   }
   return dependencyStatuses()
 }

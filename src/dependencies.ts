@@ -1,5 +1,16 @@
+export const SUITE_PACKAGE = '@michengai/dsh-codex-suite'
+
+export const SUITE_MEMBER_PACKAGES = [
+  '@michengai/dsh-codex-ui',
+  '@michengai/dsh-agency-agents',
+  '@michengai/dsh-skills-manager',
+  '@michengai/dsh-archive-manager',
+  '@michengai/dsh-im-connect',
+  '@michengai/dsh-automation',
+] as const
+
 export const MANAGED_DEPENDENCIES = [
-  { id: 'suite', packageName: '@michengai/dsh-codex-suite' },
+  { id: 'suite', packageName: SUITE_PACKAGE },
   { id: 'ui', packageName: '@michengai/dsh-codex-ui' },
   { id: 'experts', packageName: '@michengai/dsh-agency-agents' },
   { id: 'skills', packageName: '@michengai/dsh-skills-manager' },

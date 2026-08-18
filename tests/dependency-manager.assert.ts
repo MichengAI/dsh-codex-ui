@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { applyReleaseExclude, isManagedPackageInstalled, resolveDshCliEntry } from '../src/dependency-manager.ts'
+import { applyReleaseExclude, isManagedPackageInstalled, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 assert.equal(
@@ -134,4 +134,30 @@ assert.equal(
   isManagedPackageInstalled({ installedVersion: '0.1.20' }),
   true,
   '顶层直接安装仍视为已安装',
+)
+
+assert.deepEqual(
+  pluginsToRemoveBeforeInstall(['@michengai/dsh-codex-ui', '@deepseek-ai/dsh-base'], '@michengai/dsh-codex-suite'),
+  ['@michengai/dsh-codex-ui'],
+  '安装套件前必须卸掉已单独安装的子插件，避免重复注册 codex-ui',
+)
+assert.deepEqual(
+  pluginsToRemoveBeforeInstall(['@michengai/dsh-codex-suite'], '@michengai/dsh-codex-suite'),
+  [],
+  '只装套件时无需先卸载',
+)
+assert.deepEqual(
+  resolveDshPluginTarget('@michengai/dsh-codex-ui', ['@michengai/dsh-codex-suite']),
+  '@michengai/dsh-codex-suite',
+  '已装套件时单独安装子插件必须改走套件，避免重复 patch',
+)
+assert.deepEqual(
+  resolveDshPluginTarget('@michengai/dsh-codex-suite', ['@michengai/dsh-codex-ui']),
+  '@michengai/dsh-codex-suite',
+  '安装套件本身仍安装套件',
+)
+assert.deepEqual(
+  resolveDshPluginTarget('dshmarket', ['@michengai/dsh-codex-suite']),
+  'dshmarket',
+  '插件市场不在套件内，仍单独安装',
 )
