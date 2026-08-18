@@ -5,6 +5,7 @@ const sidebar = readFileSync(new URL('../src/client/CodexSidebar.tsx', import.me
 const client = readFileSync(new URL('../src/client/index.ts', import.meta.url), 'utf8')
 const locales = readFileSync(new URL('../src/client/locales.ts', import.meta.url), 'utf8')
 const workspaceBrowser = readFileSync(new URL('../src/client/CodexWorkspaceBrowser.tsx', import.meta.url), 'utf8')
+const hoverCard = readFileSync(new URL('../src/client/workspace-hover-card.tsx', import.meta.url), 'utf8')
 const sessionTree = readFileSync(new URL('../src/client/session-tree.tsx', import.meta.url), 'utf8')
 const settingsNavigation = readFileSync(new URL('../src/client/settings-navigation.ts', import.meta.url), 'utf8')
 const visualSources = [
@@ -103,7 +104,7 @@ assert.match(workspaceBrowser, /dcu-wb-tip/, '会话必须提供 Codex 风格悬
 assert.match(workspaceBrowser, /dcu-wb-tip-time/, '会话时间必须出现在悬停卡片右上角')
 assert.match(workspaceBrowser, /formatHoverTime\(session.updatedAt\)/, '会话悬停必须使用紧凑相对时间')
 assert.match(workspaceBrowser, /showTip\(\{ kind: 'workspace'/, '项目文件夹悬停必须显示卡片，供顶栏文件夹复用')
-assert.match(workspaceBrowser, /workspace\.edit/, '项目悬停必须提供编辑项目')
+assert.match(hoverCard, /workspace\.edit/, '项目悬停必须提供编辑项目')
 assert.doesNotMatch(workspaceBrowser, /dcu-wb-status/, '工作区行不得将运行状态渲染为未读标记')
 assert.match(workspaceBrowser, /dcu-wb-session-title[^]*unreadSessionIds\.includes\(id\) \? <span className="dcu-wb-unread"[^]*session\.running/, '未读点必须位于标题右侧，并替代右侧时间状态')
 assert.match(workspaceBrowser, /\.dcu-wb-unread\{[^}]*width:7px[^}]*margin-left:8px/, '未读点必须保持 Codex 风格的小尺寸并与标题留出间距')

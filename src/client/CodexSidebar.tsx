@@ -111,7 +111,7 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
       { id: 'settings:about', group: 'settings', label: t('about.nav'), keywords: t('search.settings'), run: () => { closeSearch(); selectSection(t('about.nav')) } },
     ]
     return [...sessionEntries, ...settingEntries, { id: 'action:new', group: 'actions', label: t('sidebar.newTask'), keywords: t('search.actions'), run: () => { closeSearch(); startSession() } }]
-  }, [openSession, sessions, startSession, t, workspaces])
+  }, [openSession, sessions.byId, sessions.ids, startSession, t, workspaces.archivedSessionIds, workspaces.items])
   const searchResults = useMemo(() => filterSidebarSearchItems(searchEntries, searchQuery).slice(0, 12), [searchEntries, searchQuery])
   useEffect(() => { setActiveSearchIndex(0) }, [searchQuery, searchOpen])
   useEffect(() => {

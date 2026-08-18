@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { Button, Modal, writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives'
 import { NS } from './locales.ts'
-import { clampHoverCardPosition } from './hover-tip.ts'
 import { readSessionIds, SESSION_PINS_STORAGE_KEY, SESSION_UNREAD_STORAGE_KEY, toggleSessionId, writeSessionIds } from './session-manager.ts'
-import { copySessionLink, type SessionHoverTip } from './session-tree.tsx'
+import { copySessionLink, SessionHoverCard } from './session-tree.tsx'
+import { useHoverDispatch, useHoverValue } from './hover-shell.tsx'
 
 export type DialogTarget = { id: string; title: string }
 
@@ -32,24 +32,11 @@ export function useSessionFlags(current?: string) {
   return { pinnedSessionIds, setPinnedSessionIds, unreadSessionIds, setUnreadSessionIds }
 }
 
-/** 菜单打开时不弹出悬停卡片；离开后延迟关闭，便于移入卡片本身。 */
-export function useHoverTip(blocked: boolean) {
-  const [hoverTip, setHoverTip] = useState<SessionHoverTip>()
-  const hideTipTimer = useRef<number>()
-  const showTip = (tip: SessionHoverTip): void => {
-    if (blocked) return
-    if (hideTipTimer.current !== undefined) window.clearTimeout(hideTipTimer.current)
-    setHoverTip({ ...tip, ...clampHoverCardPosition(tip.left, tip.top, 248, 148, window.innerWidth, window.innerHeight) })
-  }
-  const hideTip = (): void => { hideTipTimer.current = window.setTimeout(() => { setHoverTip(undefined) }, 120) }
-  const dismissTip = (): void => {
-    if (hideTipTimer.current !== undefined) window.clearTimeout(hideTipTimer.current)
-    setHoverTip(undefined)
-  }
-  const keepTip = (): void => {
-    if (hideTipTimer.current !== undefined) window.clearTimeout(hideTipTimer.current)
-  }
-  return { hoverTip, showTip, hideTip, dismissTip, keepTip }
+export function SessionHoverCardLayer() {
+  const tip = useHoverValue()
+  const { keepTip, hideTip } = useHoverDispatch()
+  if (tip === undefined) return null
+  return <SessionHoverCard tip={tip} onEnter={keepTip} onLeave={hideTip} />
 }
 
 export function useBusyAction(onSuccess?: () => void) {

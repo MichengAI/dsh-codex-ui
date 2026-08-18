@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { IconCheckOutline16, IconDownloadOutline16, IconLoadingOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { MANAGED_DEPENDENCIES, type ManagedDependencyId } from '../dependencies.ts'
@@ -26,19 +26,27 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
   const [state, setState] = useState<LoadState>('loading')
   const [installing, setInstalling] = useState<ManagedDependencyId>()
   const [message, setMessage] = useState<{ error: boolean; text: string }>()
-  const load = useCallback(async () => {
+  const alive = useRef(true)
+  useEffect(() => () => { alive.current = false }, [])
+  const load = useCallback(async (signal?: AbortSignal) => {
     setState('loading')
     try {
-      const response = await fetch(endpoint, { cache: 'no-store' })
+      const response = await fetch(endpoint, { cache: 'no-store', signal })
       const payload = await response.json() as { dependencies?: unknown }
+      if (signal?.aborted) return
       if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) throw new Error()
       setDependencies(payload.dependencies)
       setState('ready')
-    } catch {
+    } catch (error) {
+      if (signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')) return
       setState('failed')
     }
   }, [])
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    const controller = new AbortController()
+    void load(controller.signal)
+    return () => { controller.abort() }
+  }, [load])
   const install = async (id: ManagedDependencyId): Promise<void> => {
     setInstalling(id)
     setMessage(undefined)
@@ -46,13 +54,15 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
       const response = await fetch(`${endpoint}?dependency=${encodeURIComponent(id)}`, { method: 'POST' })
       const payload = await response.json() as { dependencies?: unknown; error?: unknown }
       if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) throw new Error(typeof payload.error === 'string' ? payload.error : t('about.installFailed'))
+      if (!alive.current) return
       setDependencies(payload.dependencies)
       setState('ready')
       setMessage({ error: false, text: t('about.restartRequired') })
     } catch (error) {
+      if (!alive.current) return
       setMessage({ error: true, text: error instanceof Error ? error.message : t('about.installFailed') })
     } finally {
-      setInstalling(undefined)
+      if (alive.current) setInstalling(undefined)
     }
   }
   const title = (id: ManagedDependencyId): string => t(`about.dependency.${id}`)

@@ -7,8 +7,9 @@ import { loadChannelGroups, type ChannelGroup } from './channel-api.ts'
 import { WORKSPACE_TREE_STYLE } from './CodexWorkspaceBrowser.tsx'
 import { formatHoverTime, hoverCardAnchor } from './hover-tip.ts'
 import { toggleSessionId } from './session-manager.ts'
-import { SessionModals, useBusyAction, useHoverTip, useSessionDialogs, useSessionFlags } from './session-row-actions.tsx'
-import { GroupHead, SessionHoverCard, SessionRow, sessionMenuItems } from './session-tree.tsx'
+import { SessionHoverCardLayer, SessionModals, useBusyAction, useSessionDialogs, useSessionFlags } from './session-row-actions.tsx'
+import { HoverShell, useHoverDispatch } from './hover-shell.tsx'
+import { GroupHead, SessionRow, sessionMenuItems } from './session-tree.tsx'
 
 type SessionStore = {
   current?: string
@@ -26,14 +27,18 @@ type ChannelBrowserProps = {
 }
 
 /** 频道树：数据来自 IM，行/菜单/悬停与任务树共用。 */
-export function ChannelBrowser({ openSession, archiveSession, deleteSession, forkSession, renameSession, useSessions, t }: ChannelBrowserProps) {
+export function ChannelBrowser(props: ChannelBrowserProps) {
+  const [menuId, setMenuId] = useState<string>()
+  return <HoverShell blocked={menuId !== undefined}><ChannelBrowserTree {...props} menuId={menuId} setMenuId={setMenuId} /></HoverShell>
+}
+
+function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSession, renameSession, useSessions, t, menuId, setMenuId }: ChannelBrowserProps & { menuId?: string; setMenuId: (id?: string) => void }) {
   const sessions = useSessions(state => state)
   const [groups, setGroups] = useState<ChannelGroup[]>([])
   const [pollError, setPollError] = useState<string>()
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
-  const [menuId, setMenuId] = useState<string>()
   const flags = useSessionFlags(sessions.current)
-  const { hoverTip, showTip, hideTip, dismissTip, keepTip } = useHoverTip(menuId !== undefined)
+  const { showTip, hideTip, dismissTip } = useHoverDispatch()
   const { busy, error, setError, run } = useBusyAction(() => { setMenuId(undefined) })
   const dialogs = useSessionDialogs({ archiveSession, deleteSession, forkSession, renameSession }, flags, run, () => { setMenuId(undefined); setError(undefined) })
   useEffect(() => {
@@ -78,7 +83,7 @@ export function ChannelBrowser({ openSession, archiveSession, deleteSession, for
         </div>
       })}
     </div>
-    {hoverTip !== undefined && <SessionHoverCard tip={hoverTip} onEnter={keepTip} onLeave={hideTip} />}
+    <SessionHoverCardLayer />
     <SessionModals t={t} busy={busy} error={error} {...dialogs} setError={setError} />
   </section>
 }

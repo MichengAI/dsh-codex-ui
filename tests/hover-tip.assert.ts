@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { clampHoverCardPosition, formatHoverTime, hoverCardAnchor } from '../src/client/hover-tip.ts'
 import { shouldCollapseOnSidebarDrag } from '../src/client/sidebar-drag.ts'
 import { parseSidebarGrid, slimedSidebarWidth } from '../src/client/sidebar-width.ts'
@@ -24,3 +25,7 @@ assert.equal(slimedSidebarWidth(280, false), 240)
 assert.equal(slimedSidebarWidth(264, false), 240)
 assert.equal(slimedSidebarWidth(360, false), 320)
 assert.deepEqual(parseSidebarGrid('280px minmax(0, 1fr) 0px')?.sidebar, 280)
+
+const hoverShell = readFileSync(new URL('../src/client/hover-shell.tsx', import.meta.url), 'utf8')
+assert.match(hoverShell, /clearTimeout\(hideTipTimer\.current\)/, '悬停层卸载必须清掉延迟关闭定时器')
+assert.match(hoverShell, /HoverValueContext/, '悬停值必须与树的 dispatch 分上下文，避免整树重绘')

@@ -7,8 +7,9 @@ import { formatHoverTime, hoverCardAnchor } from './hover-tip.ts'
 import { isChannelSession } from './channel-api.ts'
 import { groupScheduleSessions, type ScheduleSession } from './schedule-sessions.ts'
 import { toggleSessionId } from './session-manager.ts'
-import { SessionModals, useBusyAction, useHoverTip, useSessionDialogs, useSessionFlags } from './session-row-actions.tsx'
-import { GroupHead, SessionHoverCard, SessionRow, sessionMenuItems } from './session-tree.tsx'
+import { SessionHoverCardLayer, SessionModals, useBusyAction, useSessionDialogs, useSessionFlags } from './session-row-actions.tsx'
+import { HoverShell, useHoverDispatch } from './hover-shell.tsx'
+import { GroupHead, SessionRow, sessionMenuItems } from './session-tree.tsx'
 
 type SessionRecord = {
   displayTitle?: string
@@ -45,13 +46,17 @@ function ScheduleClock() {
 }
 
 /** 定时树：数据来自会话快照，行/菜单/悬停与任务树共用。 */
-export function ScheduleBrowser({ openSession, archiveSession, deleteSession, forkSession, renameSession, useSessions, useWorkspaces, t }: ScheduleBrowserProps) {
+export function ScheduleBrowser(props: ScheduleBrowserProps) {
+  const [menuId, setMenuId] = useState<string>()
+  return <HoverShell blocked={menuId !== undefined}><ScheduleBrowserTree {...props} menuId={menuId} setMenuId={setMenuId} /></HoverShell>
+}
+
+function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkSession, renameSession, useSessions, useWorkspaces, t, menuId, setMenuId }: ScheduleBrowserProps & { menuId?: string; setMenuId: (id?: string) => void }) {
   const sessions = useSessions(state => state)
   const workspaces = useWorkspaces(state => state)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
-  const [menuId, setMenuId] = useState<string>()
   const flags = useSessionFlags(sessions.current)
-  const { hoverTip, showTip, hideTip, dismissTip, keepTip } = useHoverTip(menuId !== undefined)
+  const { showTip, hideTip, dismissTip } = useHoverDispatch()
   const { busy, error, setError, run } = useBusyAction(() => { setMenuId(undefined) })
   const dialogs = useSessionDialogs({ archiveSession, deleteSession, forkSession, renameSession }, flags, run, () => { setMenuId(undefined); setError(undefined) })
   const groups = useMemo(() => {
@@ -62,7 +67,7 @@ export function ScheduleBrowser({ openSession, archiveSession, deleteSession, fo
       return [{ id, title: session.displayTitle ?? session.title ?? id, updatedAt: session.updatedAt, running: session.running === true }]
     })
     return groupScheduleSessions(items)
-  }, [sessions, workspaces.archivedSessionIds])
+  }, [sessions.byId, sessions.ids, workspaces.archivedSessionIds])
   return <section className="dcu-wb" aria-label={t('sidebar.scheduleTab')}>
     <style>{WORKSPACE_TREE_STYLE}</style>
     <div className="dcu-wb-tree" role="tree">
@@ -82,7 +87,7 @@ export function ScheduleBrowser({ openSession, archiveSession, deleteSession, fo
         </div>
       })}
     </div>
-    {hoverTip !== undefined && <SessionHoverCard tip={hoverTip} onEnter={keepTip} onLeave={hideTip} />}
+    <SessionHoverCardLayer />
     <SessionModals t={t} busy={busy} error={error} {...dialogs} setError={setError} />
   </section>
 }

@@ -38,6 +38,8 @@ assert.doesNotMatch(manager, /runPnpm|pnpm\.cmd/, '不得直接启动 Windows �
 assert.match(manager, /registry\.npmjs\.org/, '依赖状态必须从 npm registry 查询 latest 版本')
 assert.match(manager, /updateAvailable/, '依赖状态必须标记可更新的已安装插件')
 assert.match(about, /data-installed=false\]\{color:var\(--dsw-alias-state-error-primary\)/, '未安装状态必须使用红色')
+assert.match(about, /AbortController/, '关于页卸载必须中止进行中的依赖查询')
+assert.match(about, /alive\.current/, '关于页卸载后不得再写入安装状态')
 assert.match(about, /data-installed=true\]\{color:var\(--dsw-alias-state-success-primary\)/, '已安装状态必须使用绿色')
 assert.match(about, /MANAGED_DEPENDENCIES.some/, 'about must accept all managed dependency ids')
 assert.match(about, /about\.update/, '关于页必须为落后版本提供更新操作')

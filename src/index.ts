@@ -33,7 +33,7 @@ export function crossSiteRequest(request: HostRequest): boolean {
   return origin !== new URL(request.url ?? '/', `http://${host ?? 'localhost'}`).origin
 }
 
-export const inject = ['webServer', 'sessions', 'agents', 'tools']
+export const inject = ['webServer', 'agents', 'tools']
 
 /** 提供不泄露地址、命令和凭证的连接器目录。 */
 export function apply(ctx: Context): void {

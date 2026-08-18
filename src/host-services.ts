@@ -15,7 +15,6 @@ type HttpResponse = {
 
 type HostServices = {
   webServer: { register: (route: { kind: 'exact'; path: string; handler: (request: HttpRequest, response: HttpResponse) => Promise<void> }) => () => void }
-  sessions: { get: (sessionId: string) => { header: { cwd?: string } } | undefined }
   agents: { get: (sessionId: string) => unknown }
   tools: { schemas: (scope?: unknown) => readonly HostTool[] }
 }
@@ -32,7 +31,6 @@ function requireService<T extends object>(ctx: Context, key: string, method: key
 export function hostServices(ctx: Context): HostServices {
   return {
     webServer: requireService<HostServices['webServer']>(ctx, 'webServer', 'register'),
-    sessions: requireService<HostServices['sessions']>(ctx, 'sessions', 'get'),
     agents: requireService<HostServices['agents']>(ctx, 'agents', 'get'),
     tools: requireService<HostServices['tools']>(ctx, 'tools', 'schemas'),
   }

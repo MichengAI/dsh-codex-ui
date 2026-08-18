@@ -48,8 +48,6 @@ export type HeaderAnchorDetail = {
   toggle?: boolean
 }
 
-export const HEADER_PROJECT_TIP_HIDE_EVENT = 'dcu-header-project-tip-hide'
-
 function emit(name: string, target: HTMLElement, extra: Partial<HeaderAnchorDetail> = {}): void {
   const box = target.getBoundingClientRect()
   target.dispatchEvent(new CustomEvent<HeaderAnchorDetail>(name, {

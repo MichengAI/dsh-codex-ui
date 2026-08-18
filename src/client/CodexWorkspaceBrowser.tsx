@@ -4,7 +4,6 @@ import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots
 import {
   Button,
   IconArchiveOutline20,
-  IconBranchOutline16,
   IconEditOutline16,
   IconEllipsisOutline16,
   IconFolderClose16,
@@ -27,8 +26,10 @@ import {
   toggleSessionId,
   writeSessionIds,
 } from './session-manager.ts'
-import { clampHoverCardPosition, formatHoverTime, hoverCardAnchor } from './hover-tip.ts'
-import { HEADER_PROJECT_TIP_EVENT, HEADER_PROJECT_TIP_HIDE_EVENT, HEADER_SESSION_MENU_EVENT, type HeaderAnchorDetail } from './conversation-header.ts'
+import { formatHoverTime, hoverCardAnchor } from './hover-tip.ts'
+import { HEADER_PROJECT_TIP_EVENT, HEADER_SESSION_MENU_EVENT, type HeaderAnchorDetail } from './conversation-header.ts'
+import { HoverShell, useHoverDispatch, type HoverCardTip } from './hover-shell.tsx'
+import { WorkspaceHoverCard } from './workspace-hover-card.tsx'
 import { moveBefore, ungroupedSessionIds, visibleSessionIds } from './workspace-browser.ts'
 
 type BrowserInjected = {
@@ -49,7 +50,6 @@ type CodexWorkspaceBrowserProps = PropsRuntime<'sidebar.workspaces'> & PropsLoca
 type MenuState = { id: string; type: 'workspace' | 'session' } | undefined
 type RenameTarget = { id: string; kind: 'workspace' | 'session'; title: string } | undefined
 type DeleteTarget = { id: string; kind: 'workspace' | 'session'; title: string } | undefined
-type HoverTip = { kind: 'workspace' | 'session'; id: string; title: string; project?: string; path?: string; count?: number; branch?: string; time?: string; left: number; top: number }
 
 const stylesheet = `
 .dcu-wb{--dcu-wb-inset:4px;display:flex;flex:1;min-height:0;flex-direction:column;padding:4px var(--dcu-wb-inset) 8px;color:var(--dcu-sidebar-primary)}
@@ -109,7 +109,11 @@ function optionalText(value: object, key: string): string | undefined {
   return typeof next === 'string' && next !== '' ? next : undefined
 }
 /** 插件自有的工作区树：复刻原生层级和拖拽行为，并在每个会话菜单中增加管理操作。 */
-export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, archiveSession, deleteSession, deleteWorkspace, forkSession, insertSessionBefore, insertWorkspaceBefore, openPath, openSession, renameSession, renameWorkspace, startSession }: CodexWorkspaceBrowserProps) {
+export function CodexWorkspaceBrowser(props: CodexWorkspaceBrowserProps) {
+  return <HoverShell><CodexWorkspaceTree {...props} /></HoverShell>
+}
+
+function CodexWorkspaceTree({ wide, useSessions, useWorkspaces, t, archiveSession, deleteSession, deleteWorkspace, forkSession, insertSessionBefore, insertWorkspaceBefore, openPath, openSession, renameSession, renameWorkspace, startSession }: CodexWorkspaceBrowserProps) {
   const sessions = useSessions(state => state)
   const workspaces = useWorkspaces(state => state)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
@@ -119,10 +123,11 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
   const [menu, setMenu] = useState<MenuState>()
   const [renameTarget, setRenameTarget] = useState<RenameTarget>()
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>()
-  const [hoverTip, setHoverTip] = useState<HoverTip>()
-  const hoverTipRef = useRef<HoverTip>()
-  hoverTipRef.current = hoverTip
-  const hideTipTimer = useRef<number>()
+  const { showTip: publishTip, hideTip, dismissTip, isShowing } = useHoverDispatch()
+  const showTip = (tip: HoverCardTip): void => {
+    if (menu !== undefined) return
+    publishTip(tip)
+  }
   const [renameDraft, setRenameDraft] = useState('')
   const [busy, setBusy] = useState<string>()
   const [error, setError] = useState<string>()
@@ -136,30 +141,6 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
   const [pinSlot, setPinSlot] = useState<'header' | 'end' | string>()
   const [sessionDrag, setSessionDrag] = useState<{ sessionId: string; workspaceId: string }>()
   const [sessionDropId, setSessionDropId] = useState<string>()
-  const showTip = (tip: HoverTip): void => {
-    if (menu !== undefined) return
-    if (hideTipTimer.current !== undefined) window.clearTimeout(hideTipTimer.current)
-    const pos = clampHoverCardPosition(tip.left, tip.top, 248, 148, window.innerWidth, window.innerHeight)
-    setHoverTip({ ...tip, ...pos })
-  }
-  const hideTip = (): void => {
-    hideTipTimer.current = window.setTimeout(() => { setHoverTip(undefined) }, 120)
-  }
-  const dismissTip = (): void => {
-    if (hideTipTimer.current !== undefined) window.clearTimeout(hideTipTimer.current)
-    setHoverTip(undefined)
-  }
-  useEffect(() => {
-    if (hoverTip === undefined) return
-    const onPointerDown = (event: PointerEvent): void => {
-      const target = event.target
-      if (!(target instanceof Element)) return
-      if (target.closest('.dcu-wb-tip') !== null || target.closest('[data-dcu-title-folder]') !== null || target.closest('.dcu-wb-project-head') !== null) return
-      dismissTip()
-    }
-    window.addEventListener('pointerdown', onPointerDown, true)
-    return () => { window.removeEventListener('pointerdown', onPointerDown, true) }
-  }, [hoverTip])
 
   useEffect(() => { savePinnedWorkspaceIds(storage(), pinnedWorkspaceIds) }, [pinnedWorkspaceIds])
   useEffect(() => { writeSessionIds(storage(), SESSION_PINS_STORAGE_KEY, pinnedSessionIds) }, [pinnedSessionIds])
@@ -202,13 +183,12 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
       const current = sessions.current
       const workspace = groups.items.find(item => current !== undefined && item.visibleIds.includes(String(current)))
       if (workspace === undefined || detail === undefined) return
-      if (detail.toggle === true && hoverTipRef.current?.kind === 'workspace' && hoverTipRef.current.id === workspace.workspaceId) {
+      if (detail.toggle === true && isShowing('workspace', workspace.workspaceId)) {
         dismissTip()
         return
       }
       showTip({ kind: 'workspace', id: workspace.workspaceId, title: workspace.title, path: workspace.path, count: workspace.visibleIds.length, left: detail.left, top: detail.top })
     }
-    const onProjectHide = (): void => { hideTip() }
     const onMenu = (event: Event): void => {
       const detail = (event as CustomEvent<HeaderAnchorDetail>).detail
       const current = sessions.current
@@ -223,11 +203,9 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
       setHeaderMenu({ id: current, getRect: detail.getRect })
     }
     window.addEventListener(HEADER_PROJECT_TIP_EVENT, onProject)
-    window.addEventListener(HEADER_PROJECT_TIP_HIDE_EVENT, onProjectHide)
     window.addEventListener(HEADER_SESSION_MENU_EVENT, onMenu)
     return () => {
       window.removeEventListener(HEADER_PROJECT_TIP_EVENT, onProject)
-      window.removeEventListener(HEADER_PROJECT_TIP_HIDE_EVENT, onProjectHide)
       window.removeEventListener(HEADER_SESSION_MENU_EVENT, onMenu)
     }
   }, [groups.items, sessions.current, menu])
@@ -295,7 +273,7 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
     const isCurrentWorkspace = sessions.current !== undefined && workspace.visibleIds.includes(sessions.current)
     return <div className={`dcu-wb-project${isCurrentWorkspace ? ' dcu-wb-project-current' : ''}`} key={workspace.workspaceId} onDragOver={(event) => { if (workspaceDragId === undefined) return; event.preventDefault(); event.stopPropagation(); const after = event.clientY > event.currentTarget.getBoundingClientRect().top + event.currentTarget.getBoundingClientRect().height / 2; if (zone === 'pinned') { const ids = pinnedGroups.map(item => String(item.workspaceId)); const index = ids.indexOf(String(workspace.workspaceId)); setPinSlot(after ? (index === ids.length - 1 ? 'end' : ids[index + 1]) : String(workspace.workspaceId)); setWorkspaceDropId(after && index !== ids.length - 1 ? ids[index + 1] : after ? undefined : String(workspace.workspaceId)) } else { setPinSlot(undefined); setWorkspaceDropId(workspace.workspaceId) } }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const dragged = workspaceDragId; const slot = pinSlot; setWorkspaceDragId(undefined); setWorkspaceDropId(undefined); setPinSlot(undefined); if (dragged === undefined || dragged === workspace.workspaceId) return; if (zone === 'pinned') { pinWorkspaceAt(dragged, slot === 'end' || slot === 'header' ? undefined : slot); return } setPinnedWorkspaceIds(ids => ids.filter(id => id !== dragged)); if (moveBefore(groups.items.map(item => String(item.workspaceId)), dragged, String(workspace.workspaceId)).join() !== groups.items.map(item => String(item.workspaceId)).join()) void run('workspace-order', () => insertWorkspaceBefore(dragged as WorkspaceId, workspace.workspaceId)) }}>
       <div className={`dcu-wb-project-head${menuOpen ? ' dcu-wb-menu-open' : ''}${workspaceDropId === workspace.workspaceId ? ' dcu-wb-drop' : ''}`} role="treeitem" aria-expanded={isExpanded} tabIndex={0} draggable onDragStart={(event) => { event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', workspace.title); const preview = document.createElement('div'); preview.className = 'dcu-wb-drag-ghost'; preview.textContent = workspace.title; document.body.appendChild(preview); event.dataTransfer.setDragImage(preview, 16, 18); window.requestAnimationFrame(() => { preview.remove() }); setWorkspaceDragId(workspace.workspaceId) }} onDragEnd={() => { setWorkspaceDragId(undefined); setWorkspaceDropId(undefined); setPinSlot(undefined) }} onClick={() => { toggleGroup(workspace.workspaceId) }} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id: workspace.workspaceId, type: 'workspace' }) }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleGroup(workspace.workspaceId) } }}>
-        <span className="dcu-wb-folder" onClick={(event) => { event.stopPropagation(); const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); if (hoverTipRef.current?.kind === 'workspace' && hoverTipRef.current.id === workspace.workspaceId) { dismissTip(); return } showTip({ kind: 'workspace', id: workspace.workspaceId, title: workspace.title, path: workspace.path, count: workspace.visibleIds.length, left: box.left, top: box.top }) }}>{isExpanded ? <IconFolderOpenOutline16 size={16} /> : <IconFolderClose16 size={16} />}</span><span className="dcu-wb-project-title" title={workspace.path}>{workspace.title}</span><span className="dcu-wb-actions"><Menu open={menuOpen} onClose={() => { setMenu(undefined) }} items={projectMenu(workspace)} onSelect={(id) => { if (busy !== undefined) return; if (id === 'new') { startSession(workspace.workspaceId); setMenu(undefined) }; if (id === 'rename') beginRename('workspace', workspace.workspaceId, workspace.title); if (id === 'pin') { setPinnedWorkspaceIds(ids => togglePinnedWorkspace(ids, workspace.workspaceId)); setMenu(undefined) }; if (id === 'openPath') void run('open-path', () => openPath(workspace.path)); if (id === 'delete') { setDeleteTarget({ id: workspace.workspaceId, kind: 'workspace', title: workspace.title }); setError(undefined); setMenu(undefined) } }} portal dense compact anchor={<button type="button" className="dcu-wb-more" aria-label={t('workspace.actions', { name: workspace.title })} onClick={(event) => { event.stopPropagation(); setMenu(current => current?.id === workspace.workspaceId && current.type === 'workspace' ? undefined : { id: workspace.workspaceId, type: 'workspace' }) }}><IconEllipsisOutline16 size={16} /></button>} /></span><span className="dcu-wb-actions"><button type="button" className="dcu-wb-more" aria-label={t('workspace.newSession')} onClick={(event) => { event.stopPropagation(); startSession(workspace.workspaceId) }}><IconPlusOutline16 size={16} /></button></span>
+        <span className="dcu-wb-folder" onClick={(event) => { event.stopPropagation(); const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); if (isShowing('workspace', workspace.workspaceId)) { dismissTip(); return } showTip({ kind: 'workspace', id: workspace.workspaceId, title: workspace.title, path: workspace.path, count: workspace.visibleIds.length, left: box.left, top: box.top }) }}>{isExpanded ? <IconFolderOpenOutline16 size={16} /> : <IconFolderClose16 size={16} />}</span><span className="dcu-wb-project-title" title={workspace.path}>{workspace.title}</span><span className="dcu-wb-actions"><Menu open={menuOpen} onClose={() => { setMenu(undefined) }} items={projectMenu(workspace)} onSelect={(id) => { if (busy !== undefined) return; if (id === 'new') { startSession(workspace.workspaceId); setMenu(undefined) }; if (id === 'rename') beginRename('workspace', workspace.workspaceId, workspace.title); if (id === 'pin') { setPinnedWorkspaceIds(ids => togglePinnedWorkspace(ids, workspace.workspaceId)); setMenu(undefined) }; if (id === 'openPath') void run('open-path', () => openPath(workspace.path)); if (id === 'delete') { setDeleteTarget({ id: workspace.workspaceId, kind: 'workspace', title: workspace.title }); setError(undefined); setMenu(undefined) } }} portal dense compact anchor={<button type="button" className="dcu-wb-more" aria-label={t('workspace.actions', { name: workspace.title })} onClick={(event) => { event.stopPropagation(); setMenu(current => current?.id === workspace.workspaceId && current.type === 'workspace' ? undefined : { id: workspace.workspaceId, type: 'workspace' }) }}><IconEllipsisOutline16 size={16} /></button>} /></span><span className="dcu-wb-actions"><button type="button" className="dcu-wb-more" aria-label={t('workspace.newSession')} onClick={(event) => { event.stopPropagation(); startSession(workspace.workspaceId) }}><IconPlusOutline16 size={16} /></button></span>
       </div>
       {isExpanded && workspace.visibleIds.length === 0 && <div className="dcu-wb-nochat">{t('workspace.noChat')}</div>}
       {isExpanded && workspace.visibleIds.map((id) => {
@@ -351,7 +329,7 @@ export function CodexWorkspaceBrowser({ wide, useSessions, useWorkspaces, t, arc
       </section>
     </div>
     {headerMenu !== undefined && sessions.byId[headerMenu.id as SessionId] !== undefined && <Menu open onClose={() => { setHeaderMenu(undefined) }} items={sessionMenu(headerMenu.id, sessions.byId[headerMenu.id as SessionId]!.displayTitle, sessions.byId[headerMenu.id as SessionId]!.cwd ?? groups.items.find(item => item.visibleIds.includes(headerMenu.id))?.path)} onSelect={(action) => { const id = headerMenu.id; const session = sessions.byId[id as SessionId]; if (session === undefined || busy !== undefined) return; const path = session.cwd ?? groups.items.find(item => item.visibleIds.includes(id))?.path; const link = sessionDeepLink(browserBase(), id); if (action === 'rename') beginRename('session', id, session.displayTitle); if (action === 'pin') { setPinnedSessionIds(ids => toggleSessionId(ids, id)) }; if (action === 'unread') { setUnreadSessionIds(ids => toggleSessionId(ids, id)) }; if (action === 'archive') void run('archive', () => archiveSession(id as SessionId)); if (action === 'delete') { setDeleteTarget({ id, kind: 'session', title: session.displayTitle }); setError(undefined) }; if (action === 'fork') void run('fork', () => forkSession(id as SessionId)); if (action === 'openPath' && path !== undefined) void run('open-path', () => openPath(path)); if (action === 'copyPath') copy(path); if (action === 'copyTitle') copy(session.displayTitle); if (action === 'copyId') copy(id); if (action === 'copyLink') copy(link); setHeaderMenu(undefined) }} portal dense compact side="bottom" align="start" getAnchorRect={() => headerMenu.getRect()} anchor={<span />} />}
-    {hoverTip !== undefined && <div className="dcu-wb-tip" style={{ left: hoverTip.left, top: hoverTip.top }} onMouseEnter={() => { if (hideTipTimer.current !== undefined) window.clearTimeout(hideTipTimer.current) }} onMouseLeave={hideTip}><div className="dcu-wb-tip-title">{hoverTip.kind === 'workspace' && <span className="dcu-wb-folder"><IconFolderClose16 size={16} /></span>}<span>{hoverTip.title}</span>{hoverTip.time !== undefined && <span className="dcu-wb-tip-time">{hoverTip.time}</span>}</div>{hoverTip.kind === 'workspace' && hoverTip.count !== undefined && <div className="dcu-wb-tip-meta">{t('workspace.taskCount', { count: hoverTip.count })}</div>}{hoverTip.kind === 'workspace' && hoverTip.path !== undefined && hoverTip.path !== '' && <div className="dcu-wb-tip-row"><span className="dcu-wb-folder"><IconFolderClose16 size={16} /></span><span title={hoverTip.path}>{hoverTip.path}</span></div>}{hoverTip.kind === 'session' && hoverTip.project !== undefined && <div className="dcu-wb-tip-row"><span className="dcu-wb-folder"><IconFolderClose16 size={16} /></span><span>{hoverTip.project}</span></div>}{hoverTip.kind === 'session' && hoverTip.branch !== undefined && hoverTip.branch !== '' && <div className="dcu-wb-tip-row"><span className="dcu-wb-folder"><IconBranchOutline16 size={16} /></span><span>{hoverTip.branch}</span></div>}{hoverTip.kind === 'workspace' && <><div className="dcu-wb-tip-sep" /><button type="button" className="dcu-wb-tip-edit" onClick={() => { beginRename('workspace', hoverTip.id, hoverTip.title); setHoverTip(undefined) }}><svg viewBox="0 0 16 16" width={16} height={16} aria-hidden="true"><path fill="currentColor" d="M8 1.4A6.6 6.6 0 1 0 8 14.6 6.6 6.6 0 0 0 8 1.4Zm0 1.4a5.2 5.2 0 1 1 0 10.4A5.2 5.2 0 0 1 8 2.8Zm-.7 2.3h1.4v3.05l2.2 1.3-.7 1.18L7.3 9.1V5.1Z" /></svg>{t('workspace.edit')}</button></>}</div>}
+    <WorkspaceHoverCard t={t} onEditWorkspace={(id, title) => { beginRename('workspace', id, title) }} />
     <Modal open={renameTarget !== undefined} onClose={() => { setRenameTarget(undefined); setError(undefined) }} closeLabel={t('sessions.close')} title={renameTarget?.kind === 'workspace' ? t('workspace.rename') : t('sessions.rename')} footer={<div className="dcu-wb-rename-actions"><Button variant="outline" onClick={() => { setRenameTarget(undefined) }}>{t('sessions.cancel')}</Button><Button variant="primary" disabled={busy !== undefined || renameDraft.trim() === ''} onClick={submitRename}>{t('sessions.save')}</Button></div>}><input className="dcu-wb-rename-input" value={renameDraft} autoFocus onFocus={event => { event.target.select() }} onChange={event => { setRenameDraft(event.target.value); setError(undefined) }} onKeyDown={event => { if (event.key === 'Enter') submitRename() }} />{error !== undefined && <div className="dcu-wb-error" role="alert">{t('sessions.failed', { message: error })}</div>}</Modal>
     <Modal open={deleteTarget !== undefined} onClose={() => { if (busy !== 'delete-workspace' && busy !== 'delete-session') { setDeleteTarget(undefined); setError(undefined) } }} closeLabel={t('sessions.close')} title={deleteTarget?.kind === 'session' ? t('sessions.delete') : t('workspace.delete')} footer={<div className="dcu-wb-rename-actions"><Button variant="outline" disabled={busy === 'delete-workspace' || busy === 'delete-session'} onClick={() => { setDeleteTarget(undefined); setError(undefined) }}>{t('sessions.cancel')}</Button><Button variant="outline" className="dcu-wb-delete-button" disabled={busy === 'delete-workspace' || busy === 'delete-session'} onClick={submitDelete}>{deleteTarget?.kind === 'session' ? t('sessions.delete') : t('workspace.delete')}</Button></div>}><p className="dcu-wb-delete-copy">{deleteTarget === undefined ? '' : deleteTarget.kind === 'session' ? t('sessions.deleteDescription', { name: deleteTarget.title }) : t('workspace.deleteDescription', { name: deleteTarget.title })}</p>{busy === 'delete-workspace' && <div className="dcu-wb-error" role="status">{t('workspace.deletePending')}</div>}{busy === 'delete-session' && <div className="dcu-wb-error" role="status">{t('sessions.deletePending')}</div>}{error !== undefined && <div className="dcu-wb-error" role="alert">{t('sessions.failed', { message: error })}</div>}</Modal>
   </section>
