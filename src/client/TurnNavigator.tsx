@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from 'react'
 import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { conversationAnchor, conversationScrollRoot } from './conversation-dom.ts'
@@ -9,16 +9,46 @@ type TurnLink = { key: string; summary: string }
 type TurnNavigatorProps = PropsRuntime<'conversation.session.header.utilities'> & PropsLocale<typeof NS>
 
 const stylesheet = `
-.dcu-turn-navigator{position:fixed;z-index:8;top:50%;left:var(--dcu-turn-left,288px);transform:translateY(-50%);max-height:calc(100vh - 120px);overflow-y:auto;padding:0;scrollbar-width:none}.dcu-turn-navigator::-webkit-scrollbar{display:none}.dcu-turn-list{display:grid;gap:2px;margin:0;padding:0;list-style:none}.dcu-turn-link{display:flex;align-items:center;width:16px;height:8px;overflow:hidden;padding:0;border:0;border-radius:4px;background:transparent;color:var(--dsw-alias-label-tertiary);font:12px/16px var(--dsw-font-family);text-align:left;cursor:pointer;transition:width 180ms ease,height 180ms ease,padding 180ms ease,background-color 180ms ease,color 180ms ease}.dcu-turn-link::before{width:7px;height:1px;flex:0 0 7px;border-radius:1px;background:currentcolor;content:''}.dcu-turn-summary{min-width:0;margin-left:8px;overflow:hidden;opacity:0;text-overflow:ellipsis;white-space:nowrap;transition:opacity 140ms ease}.dcu-turn-link:hover,.dcu-turn-link:focus-visible{width:min(280px,calc(100vw - 64px));height:32px;padding:0 12px;background:var(--dsw-alias-button-floating-hover);color:var(--dsw-alias-label-primary);outline:0}.dcu-turn-link:hover .dcu-turn-summary,.dcu-turn-link:focus-visible .dcu-turn-summary{opacity:1}.dcu-turn-link[aria-current=true]{color:var(--dsw-alias-label-primary)}.dcu-turn-link[aria-current=true]::before{width:12px;flex-basis:12px;height:2px}.dcu-turn-link:focus-visible{box-shadow:0 0 0 2px var(--dsw-alias-button-info-fill)}@media (prefers-reduced-motion:reduce){.dcu-turn-link,.dcu-turn-summary{transition:none}}@media (max-width:760px){.dcu-turn-link:hover,.dcu-turn-link:focus-visible{width:min(220px,calc(100vw - 40px))}}
+.dcu-turn-navigator{position:fixed;z-index:20;top:50%;left:var(--dcu-turn-left,288px);transform:translateY(-50%);width:16px;max-height:calc(100vh - 120px);overflow:visible;pointer-events:none}
+.dcu-turn-list{display:grid;gap:2px;margin:0;padding:4px 0;list-style:none;pointer-events:auto}
+.dcu-turn-link{pointer-events:auto;position:relative;display:flex;align-items:center;width:16px;height:8px;overflow:visible;padding:0;border:0;border-radius:4px;background:transparent;color:var(--dsw-alias-label-tertiary);font:13px/18px var(--dsw-font-family);text-align:left;cursor:pointer;transition:color 320ms cubic-bezier(.16,1,.3,1)}
+.dcu-turn-link::before{width:var(--dcu-tick-w,5px);height:var(--dcu-tick-h,1px);flex:0 0 var(--dcu-tick-w,5px);border-radius:1px;background:currentcolor;content:'';transition:width 360ms cubic-bezier(.16,1,.3,1),height 360ms cubic-bezier(.16,1,.3,1),flex-basis 360ms cubic-bezier(.16,1,.3,1),background-color 320ms cubic-bezier(.16,1,.3,1)}
+.dcu-turn-summary{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:max-content;max-width:min(280px,calc(100vw - 80px));height:32px;padding:0 12px;border-radius:16px;background:var(--dsw-alias-button-floating-hover,#3a3d3c);color:var(--dsw-alias-label-primary);box-shadow:none;opacity:0;pointer-events:none;z-index:2;display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:32px;transition:opacity 220ms cubic-bezier(.16,1,.3,1)}
+.dcu-turn-link[data-active=true]{color:var(--dsw-alias-label-primary)}
+.dcu-turn-link[data-active=true] .dcu-turn-summary{opacity:1}
+.dcu-turn-link[aria-current=true]{color:var(--dsw-alias-label-primary)}
+.dcu-turn-link[aria-current=true]::before{width:var(--dcu-tick-w,5px);flex-basis:var(--dcu-tick-w,5px);height:var(--dcu-tick-h,1px)}
+.dcu-turn-navigator[data-hovering=true] .dcu-turn-link[aria-current=true]{color:var(--dsw-alias-label-tertiary)}
+.dcu-turn-navigator[data-hovering=true] .dcu-turn-link[data-active=true]{color:var(--dsw-alias-label-primary)}
+.dcu-turn-link:focus-visible{outline:0;box-shadow:0 0 0 2px var(--dsw-alias-button-info-fill)}
+@media (prefers-reduced-motion:reduce){.dcu-turn-link,.dcu-turn-link::before,.dcu-turn-summary{transition:none}}
+@media (max-width:760px){.dcu-turn-summary{max-width:min(220px,calc(100vw - 56px))}}
 `
+
+export function tickMarkSize(index: number, hoverAt: number | null, _isCurrent: boolean): { width: number; height: number } {
+  if (hoverAt === null) return { width: 5, height: 1 }
+  const distance = Math.abs(index - hoverAt)
+  const wave = Math.exp(-(distance * distance) / 2.1)
+  return {
+    width: Number((5 + 13 * wave).toFixed(1)),
+    height: Number((1 + 1.2 * wave).toFixed(1)),
+  }
+}
+
+function hoverIndexFromPoint(list: HTMLElement, clientY: number, count: number): number {
+  const box = list.getBoundingClientRect()
+  if (count <= 0 || box.height <= 0) return 0
+  const y = Math.min(Math.max(clientY - box.top, 0), box.height)
+  return (y / box.height) * count - 0.5
+}
 
 function textSummary(content: readonly unknown[], fallback: string): string {
   const text = content.flatMap(block => {
     if (typeof block !== 'object' || block === null) return []
     const value = block as { type?: unknown; text?: unknown }
     return value.type === 'text' && typeof value.text === 'string' ? [value.text] : []
-  }).join('').replace(/\s+/g, ' ').trim()
-  return text === '' ? fallback : text.slice(0, 72)
+  }).join(' ').replace(/\s+/g, ' ').trim()
+  return text === '' ? fallback : text
 }
 
 function userContent(data: unknown): readonly unknown[] {
@@ -41,22 +71,29 @@ function equalTurns(left: readonly TurnLink[], right: readonly TurnLink[]): bool
   return left.length === right.length && left.every((turn, index) => turn.key === right[index]?.key && turn.summary === right[index]?.summary)
 }
 
+function railLeftFromSidebar(): number {
+  const sidebar = document.querySelector<HTMLElement>('.dcu-root')
+  if (sidebar === null) return 288
+  return Math.round(sidebar.getBoundingClientRect().right) + 16
+}
+
 /** 当前会话的轮次导航；只读取原生聊天锚点并滚动，不改写会话数据或消息视图。 */
 export function TurnNavigator({ useSession, t }: TurnNavigatorProps) {
   const turns = useSession(snapshot => turnLinks(snapshot, t('turns.untitled')), equalTurns)
   const [current, setCurrent] = useState<string | null>(turns[0]?.key ?? null)
-  const [sidebarRight, setSidebarRight] = useState(288)
+  const [hoverAt, setHoverAt] = useState<number | null>(null)
+  const [railLeft, setRailLeft] = useState(288)
   const turnKeys = useMemo(() => turns.map(turn => turn.key).join('|'), [turns])
+  const activeIndex = hoverAt === null ? -1 : Math.max(0, Math.min(turns.length - 1, Math.round(hoverAt)))
 
   useEffect(() => {
     const sidebar = document.querySelector<HTMLElement>('.dcu-root')
-    if (sidebar === null) return
     const update = (): void => {
-      const next = Math.round(sidebar.getBoundingClientRect().right) + 16
-      setSidebarRight(previous => previous === next ? previous : next)
+      const next = railLeftFromSidebar()
+      setRailLeft(previous => previous === next ? previous : next)
     }
     const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(update)
-    observer?.observe(sidebar)
+    if (sidebar !== null) observer?.observe(sidebar)
     window.addEventListener('resize', update)
     update()
     return () => { observer?.disconnect(); window.removeEventListener('resize', update) }
@@ -88,12 +125,20 @@ export function TurnNavigator({ useSession, t }: TurnNavigatorProps) {
   }, [turnKeys, turns])
 
   if (turns.length === 0) return null
-  const style = { '--dcu-turn-left': `${sidebarRight}px` } as CSSProperties
-  return <nav className="dcu-turn-navigator" aria-label={t('turns.label')} style={style}><style>{stylesheet}</style><ol className="dcu-turn-list">{turns.map((turn, index) => <li key={turn.key}><button type="button" className="dcu-turn-link" aria-current={current === turn.key || undefined} aria-label={t('turns.jump', { index: index + 1, summary: turn.summary })} title={turn.summary} onClick={() => {
-    const host = conversationScrollRoot()
-    const anchor = host === null ? null : conversationAnchor(host, turn.key)
-    if (host === null || anchor === null) return
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-    host.scrollTo({ top: host.scrollTop + anchor.getBoundingClientRect().top - host.getBoundingClientRect().top - 12, behavior: reduceMotion ? 'auto' : 'smooth' })
-  }}><span className="dcu-turn-summary">{turn.summary}</span></button></li>)}</ol></nav>
+  const moveHover = (event: MouseEvent<HTMLElement>): void => {
+    setHoverAt(hoverIndexFromPoint(event.currentTarget, event.clientY, turns.length))
+  }
+  const style = { '--dcu-turn-left': `${railLeft}px` } as CSSProperties
+  return <nav className="dcu-turn-navigator" data-hovering={hoverAt !== null || undefined} aria-label={t('turns.label')} style={style}><style>{stylesheet}</style><ol className="dcu-turn-list" onMouseMove={moveHover} onMouseLeave={() => { setHoverAt(null) }}>{turns.map((turn, index) => {
+    const mark = tickMarkSize(index, hoverAt, current === turn.key)
+    const active = hoverAt !== null && index === activeIndex
+    const tickStyle = hoverAt === null ? undefined : { '--dcu-tick-w': `${mark.width}px`, '--dcu-tick-h': `${mark.height}px` } as CSSProperties
+    return <li key={turn.key}><button type="button" className="dcu-turn-link" data-active={active || undefined} aria-current={current === turn.key || undefined} aria-label={t('turns.jump', { index: index + 1, summary: turn.summary })} title={turn.summary} style={tickStyle} onFocus={() => { setHoverAt(index) }} onBlur={() => { setHoverAt(null) }} onClick={() => {
+      const host = conversationScrollRoot()
+      const anchor = host === null ? null : conversationAnchor(host, turn.key)
+      if (host === null || anchor === null) return
+      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+      host.scrollTo({ top: host.scrollTop + anchor.getBoundingClientRect().top - host.getBoundingClientRect().top - 12, behavior: reduceMotion ? 'auto' : 'smooth' })
+    }}><span className="dcu-turn-summary">{turn.summary}</span></button></li>
+  })}</ol></nav>
 }
