@@ -9,10 +9,31 @@ import { AboutSection } from './AboutSection.tsx'
 import { CodexWorkspaceBrowser } from './CodexWorkspaceBrowser.tsx'
 import { ConnectorsSection } from './ConnectorsSection.tsx'
 import { en, NS, zh } from './locales.ts'
+import { createCompanionTabSource } from './companion-slots.ts'
+import { observePermissionMenus } from './permission-i18n.ts'
+import { observeSettingsNavIcons } from './settings-nav-icons.ts'
+import { observeSlimSidebar } from './sidebar-width.ts'
 import { TurnNavigator } from './TurnNavigator.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
+    'sidebar.schedule': {
+      kind: 'single'
+      scope: 'root'
+      owner: {
+        wide: boolean
+        expandSidebar: () => void
+        openSession: (sessionId: SessionId) => void
+        renameSession: (sessionId: SessionId, title: string) => Promise<void>
+        archiveSession: (sessionId: SessionId) => Promise<void>
+        deleteSession: (sessionId: SessionId) => Promise<void>
+        forkSession: (sessionId: SessionId) => Promise<void>
+        openPath: (path: string) => Promise<void> | void
+        skin?: 'codex' | 'native'
+        useSessions: unknown
+        useWorkspaces: unknown
+      }
+    }
     'sidebar.channels': {
       kind: 'single'
       scope: 'root'
@@ -25,6 +46,9 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
         deleteSession: (sessionId: SessionId) => Promise<void>
         forkSession: (sessionId: SessionId) => Promise<void>
         openPath: (path: string) => Promise<void> | void
+        skin?: 'codex' | 'native'
+        useSessions: unknown
+        useWorkspaces: unknown
       }
     }
   }
@@ -44,14 +68,20 @@ function hasDeleteSession(value: unknown): value is ArchiveRegistry {
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'michengai-codex-ui: dictionaries')
   const t = ctx.locale.bind(NS)
+  ctx.effect(() => observePermissionMenus((key) => t(key as keyof typeof zh)), 'michengai-codex-ui: permission i18n')
+  ctx.effect(() => observeSlimSidebar(), 'michengai-codex-ui: slim sidebar')
+  ctx.effect(() => observeSettingsNavIcons(), 'michengai-codex-ui: settings nav icons')
+  const companionSlots = createCompanionTabSource(ctx.slots)
   ctx.slots.inject('sidebar', () => ctx.slots.register({
     name: 'sidebar',
+    registrant: 'michengai-codex-ui',
     locale: NS,
     children: {
       'sidebar.workspaces': { kind: 'single', scope: 'root' },
       'sidebar.settings': { kind: 'single', scope: 'root' },
       'sidebar.footer.action': { kind: 'list', scope: 'root' },
       'sidebar.channels': { kind: 'single', scope: 'root' },
+      'sidebar.schedule': { kind: 'single', scope: 'root' },
     },
     inject: () => ({
       openSession: (sessionId: SessionId) => { ctx.sessions.open(sessionId) },
@@ -62,6 +92,7 @@ export function apply(ctx: ClientContext): void {
       forkSession,
       renameSession,
       openPath: (path: string) => ctx.workspaces.openPath(path),
+      companionSlots,
     }),
   }, CodexSidebar))
 

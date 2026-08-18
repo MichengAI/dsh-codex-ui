@@ -7,6 +7,17 @@ export function normalizePinnedWorkspaceIds(ids: readonly string[]): string[] {
 }
 
 /** 在置顶列表中切换一个工作区。 */
+
+/** 把工作区插入置顶列表的指定位置；省略锚点时追加到末尾。 */
+export function insertPinnedWorkspace(ids: readonly string[], id: string, beforeId?: string): string[] {
+  const next = ids.filter(item => item !== id)
+  if (beforeId === undefined) return [...next, id]
+  if (beforeId === id) return ids.includes(id) ? [...ids] : [...next, id]
+  const index = next.indexOf(beforeId)
+  next.splice(index < 0 ? next.length : index, 0, id)
+  return next
+}
+
 export function togglePinnedWorkspace(ids: readonly string[], workspaceId: string): string[] {
   return ids.includes(workspaceId)
     ? ids.filter(id => id !== workspaceId)
