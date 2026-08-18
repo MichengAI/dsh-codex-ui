@@ -104,11 +104,11 @@ export function SessionRow({
 }: SessionRowProps) {
   return <div className={`dcu-wb-session${selected ? ' dcu-wb-selected' : ''}${menuOpen ? ' dcu-wb-menu-open' : ''}`} role="treeitem" aria-selected={selected} onClick={onOpen} onContextMenu={onContextMenu} onMouseEnter={onHover} onMouseLeave={onLeave}>
     <span className="dcu-wb-session-title">{title}</span>
-    {pinned && <span className="dcu-wb-pin" aria-label={t('sessions.pinned')} title={t('sessions.pinned')}><PinMark /></span>}
+    {pinned && <span className="dcu-wb-pin" aria-label={t('sessions.pinned')}><PinMark /></span>}
     {unread ? <span className="dcu-wb-unread" aria-label={t('sessions.unread')} /> : running ? <span className="dcu-wb-running" aria-hidden="true" /> : null}
     <span className="dcu-wb-quick-actions">
-      <button type="button" className="dcu-wb-more dcu-wb-quick-pin" aria-label={t(pinned ? 'sessions.unpin' : 'sessions.pin')} title={t(pinned ? 'sessions.unpin' : 'sessions.pin')} onClick={(event) => { event.stopPropagation(); onPin() }}><PinMark /></button>
-      <button type="button" className="dcu-wb-more" aria-label={t('sessions.archive')} title={t('sessions.archive')} onClick={(event) => { event.stopPropagation(); onArchive() }}><IconArchiveOutline20 size={16} /></button>
+      <button type="button" className="dcu-wb-more dcu-wb-quick-pin" aria-label={t(pinned ? 'sessions.unpin' : 'sessions.pin')} onClick={(event) => { event.stopPropagation(); onPin() }}><PinMark /></button>
+      <button type="button" className="dcu-wb-more" aria-label={t('sessions.archive')} onClick={(event) => { event.stopPropagation(); onArchive() }}><IconArchiveOutline20 size={16} /></button>
     </span>
     <span className="dcu-wb-actions">
       <Menu open={menuOpen} onClose={() => { onMenuChange(false) }} items={menuItems} onSelect={onSelectAction} portal dense compact getAnchorRect={menuPoint === undefined ? undefined : () => pointerMenuRect(menuPoint.x, menuPoint.y)} anchor={<button type="button" className="dcu-wb-more dcu-wb-context-anchor" aria-label={t('sessions.actions', { name: title })} onClick={(event) => { event.stopPropagation(); onMenuChange(!menuOpen) }}><IconEllipsisOutline16 size={16} /></button>} />

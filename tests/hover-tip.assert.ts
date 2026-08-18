@@ -33,3 +33,6 @@ assert.match(hoverShell, /HoverValueContext/, '悬停值必须与树的 dispatch
 assert.equal(HOVER_TIP_SHOW_DELAY_MS, 1000, '划过行必须停满 1 秒才出卡片，避免闪现')
 assert.match(hoverShell, /showTipTimer/, '首次悬停必须用独立定时器，离开时取消')
 assert.match(hoverShell, /immediate/, '点击文件夹必须能立刻出卡片')
+
+const hoverCard = readFileSync(new URL('../src/client/workspace-hover-card.tsx', import.meta.url), 'utf8')
+assert.doesNotMatch(hoverCard, /title=\{hoverTip\.path\}/, '悬停卡片路径不得再套原生 title，避免叠出浏览器 tips')
