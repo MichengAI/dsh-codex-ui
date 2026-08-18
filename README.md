@@ -201,8 +201,6 @@ pnpm build
 pnpm test
 ```
 
-## Documentation and license
-
-Start from the [handoff index](docs/00-交接入口/00-阅读导航.md) for project status, architecture, and iteration notes.
+## License
 
 This project is licensed under [Apache License 2.0](LICENSE). Conversation-management workflow is informed by [Semidia/dsh-session-manager](https://github.com/Semidia/dsh-session-manager), but this plugin is implemented independently through public DSH slots and services.

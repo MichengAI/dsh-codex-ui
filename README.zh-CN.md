@@ -201,8 +201,6 @@ pnpm build
 pnpm test
 ```
 
-## 文档与许可证
-
-项目状态、技术架构和迭代记录从[文档交接入口](docs/00-交接入口/00-阅读导航.md)开始。
+## 许可证
 
 本项目采用 [Apache License 2.0](LICENSE)。会话管理工作流参考 [Semidia/dsh-session-manager](https://github.com/Semidia/dsh-session-manager)，但本插件独立通过 DSH 公开插槽和服务实现。
