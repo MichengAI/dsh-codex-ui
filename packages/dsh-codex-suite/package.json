@@ -1,6 +1,6 @@
 {
   "name": "@michengai/dsh-codex-suite",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "DSH Codex UI 聚合包：一键安装侧栏、专家、技能、归档、IM 助理和定时任务",
   "license": "Apache-2.0",
   "type": "module",
