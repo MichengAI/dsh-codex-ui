@@ -1,4 +1,4 @@
-import type { MouseEvent, ReactNode } from 'react'
+import type { DragEvent, MouseEvent, ReactNode } from 'react'
 import {
   IconArchiveOutline20,
   IconBranchOutline16,
@@ -96,14 +96,23 @@ export type SessionRowProps = {
   onLeave: () => void
   onContextMenu: (event: MouseEvent<HTMLDivElement>) => void
   menuPoint?: { x: number; y: number }
+  subtitle?: string
+  flat?: boolean
+  draggable?: boolean
+  dropActive?: boolean
+  onDragStart?: (event: DragEvent<HTMLDivElement>) => void
+  onDragEnd?: () => void
+  onDragOver?: (event: DragEvent<HTMLDivElement>) => void
+  onDrop?: (event: DragEvent<HTMLDivElement>) => void
 }
 
 export function SessionRow({
   id, title, selected, menuOpen, pinned, unread, running, t, menuItems,
   onOpen, onMenuChange, onSelectAction, onPin, onArchive, onHover, onLeave, onContextMenu, menuPoint,
+  subtitle, flat, draggable, dropActive, onDragStart, onDragEnd, onDragOver, onDrop,
 }: SessionRowProps) {
-  return <div className={`dcu-wb-session${selected ? ' dcu-wb-selected' : ''}${menuOpen ? ' dcu-wb-menu-open' : ''}`} role="treeitem" aria-selected={selected} onClick={onOpen} onContextMenu={onContextMenu} onMouseEnter={onHover} onMouseLeave={onLeave}>
-    <span className="dcu-wb-session-title">{title}</span>
+  return <div className={`dcu-wb-session${selected ? ' dcu-wb-selected' : ''}${menuOpen ? ' dcu-wb-menu-open' : ''}${dropActive === true ? ' dcu-wb-drop' : ''}${flat === true ? ' dcu-wb-session-flat' : ''}`} role="treeitem" aria-selected={selected} draggable={draggable} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragOver={onDragOver} onDrop={onDrop} onClick={onOpen} onContextMenu={onContextMenu} onMouseEnter={onHover} onMouseLeave={onLeave}>
+    {subtitle !== undefined && subtitle !== '' ? <span className="dcu-wb-session-copy"><span className="dcu-wb-session-title">{title.split(/\r?\n/)[0] ?? title}</span><span className="dcu-wb-session-sub">{subtitle}</span></span> : <span className="dcu-wb-session-title">{title.split(/\r?\n/)[0] ?? title}</span>}
     {pinned && <span className="dcu-wb-pin" aria-label={t('sessions.pinned')}><PinMark /></span>}
     {unread ? <span className="dcu-wb-unread" aria-label={t('sessions.unread')} /> : running ? <span className="dcu-wb-running" aria-hidden="true" /> : null}
     <span className="dcu-wb-quick-actions">

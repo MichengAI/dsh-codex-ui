@@ -68,3 +68,72 @@ export function orderByIds<T>(items: readonly T[], ids: readonly string[], idOf:
     return item === undefined ? [] : [item]
   })
 }
+
+/** 置顶区的会话按拖入顺序展示；不因父项目已置顶而隐藏。 */
+export function standalonePinnedSessionIds(pinnedSessionIds: readonly string[]): string[] {
+  return [...pinnedSessionIds]
+}
+
+/** 置顶区已有会话时，不再同时展示任何项目文件夹，避免旧置顶项目叠成两条。 */
+export function workspaceIdsHiddenByPinnedSessions(
+  workspaces: readonly { workspaceId: string; sessionIds: readonly string[] }[],
+  pinnedSessionIds: readonly string[],
+): string[] {
+  if (pinnedSessionIds.length === 0) return []
+  return workspaces.map(workspace => String(workspace.workspaceId))
+}
+export const SESSION_DRAG_TYPE = 'application/x-dcu-session'
+export const WORKSPACE_DRAG_TYPE = 'application/x-dcu-workspace'
+const SESSION_DRAG_PREFIX = 'dcu-session:'
+const WORKSPACE_DRAG_PREFIX = 'dcu-workspace:'
+
+function dragTypes(data: DataTransfer | undefined): string[] {
+  return data === undefined ? [] : Array.from(data.types)
+}
+
+function textPayload(data: DataTransfer | undefined): string {
+  try { return data?.getData('text/plain') ?? '' } catch { return '' }
+}
+
+/** 拖过置顶区时用来决定是否 preventDefault；只看 types，不读数据。 */
+export function isSidebarItemDrag(data: DataTransfer | undefined): boolean {
+  const types = dragTypes(data)
+  return types.includes(SESSION_DRAG_TYPE) || types.includes(WORKSPACE_DRAG_TYPE) || types.includes('text/plain')
+}
+
+/** 写入会话拖拽载荷；drop 时以这个为准，不依赖尚未刷新的 React 状态。 */
+export function writeSessionDrag(data: DataTransfer, sessionId: string, title: string): void {
+  data.effectAllowed = 'move'
+  data.setData('text/plain', `${SESSION_DRAG_PREFIX}${sessionId}`)
+  data.setData(SESSION_DRAG_TYPE, sessionId)
+  void title
+}
+
+export function writeWorkspaceDrag(data: DataTransfer, workspaceId: string, title: string): void {
+  data.effectAllowed = 'move'
+  data.setData('text/plain', `${WORKSPACE_DRAG_PREFIX}${workspaceId}`)
+  data.setData(WORKSPACE_DRAG_TYPE, workspaceId)
+  void title
+}
+
+export function readSessionDrag(data: DataTransfer | undefined, fallback?: string): string | undefined {
+  try {
+    const typed = data?.getData(SESSION_DRAG_TYPE)
+    if (typed !== undefined && typed.trim() !== '') return typed
+  } catch { /* Chrome 在 dragover 阶段不允许 getData */ }
+  const text = textPayload(data)
+  if (text.startsWith(SESSION_DRAG_PREFIX)) return text.slice(SESSION_DRAG_PREFIX.length)
+  return fallback !== undefined && fallback.trim() !== '' ? fallback : undefined
+}
+
+/** 会话拖拽优先；有会话载荷时不得再把父项目置顶。 */
+export function readWorkspaceDrag(data: DataTransfer | undefined, fallback?: string): string | undefined {
+  if (readSessionDrag(data) !== undefined) return undefined
+  try {
+    const typed = data?.getData(WORKSPACE_DRAG_TYPE)
+    if (typed !== undefined && typed.trim() !== '') return typed
+  } catch { /* Chrome 在 dragover 阶段不允许 getData */ }
+  const text = textPayload(data)
+  if (text.startsWith(WORKSPACE_DRAG_PREFIX)) return text.slice(WORKSPACE_DRAG_PREFIX.length)
+  return fallback !== undefined && fallback.trim() !== '' ? fallback : undefined
+}

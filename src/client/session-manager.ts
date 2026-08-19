@@ -1,4 +1,5 @@
 export const SESSION_PINS_STORAGE_KEY = 'dsh.session-pins.v1'
+export const SESSION_SECTION_PINS_STORAGE_KEY = 'dsh-codex-ui.pinned-section-sessions.v1'
 export const SESSION_UNREAD_STORAGE_KEY = 'dsh.session-unread.v1'
 
 export function normalizeSessionIds(ids: readonly string[]): string[] {
@@ -36,4 +37,14 @@ export function sessionDeepLink(base: string, sessionId: string): string {
   const url = new URL(base)
   url.searchParams.set('session', sessionId)
   return url.toString()
+}
+
+/** 把会话插入置顶列表的指定位置；省略锚点时追加到末尾。 */
+export function insertSessionId(ids: readonly string[], id: string, beforeId?: string): string[] {
+  const next = ids.filter(item => item !== id)
+  if (beforeId === undefined) return [...next, id]
+  if (beforeId === id) return ids.includes(id) ? [...ids] : [...next, id]
+  const index = next.indexOf(beforeId)
+  next.splice(index < 0 ? next.length : index, 0, id)
+  return next
 }

@@ -31,7 +31,7 @@ export const zh = {
   'search.actions': '快捷操作',
   'workspace.label': '工作区会话',
   'workspace.pinned': '置顶',
-  'workspace.pinnedEmpty': '拖动项目到此处置顶',
+  'workspace.pinnedEmpty': '拖动项目或会话到此处置顶',
   'workspace.projects': '项目',
   'workspace.recent': '最近',
   'workspace.recentEmpty': '无聊天',
@@ -102,7 +102,7 @@ export const zh = {
   'about.feature.conversation': '保留原生消息、工具调用、输入、权限和模型选择，仅调整容器视觉',
   'about.feature.navigator': '当前会话提供轮次缩略导航，可快速跳转至每一次用户提问',
   'about.dependencies': '配套管理插件',
-  'about.dependenciesDescription': '可先安装 Codex 套件一键装齐配套插件，也可单独检查并更新专家、技能、归档、IM、定时任务和第三方插件市场。',
+  'about.dependenciesDescription': '每个配套插件都单独安装和更新，互不影响。可分别检查 Codex UI、专家、技能、归档、IM、定时任务和第三方插件市场。',
   'about.loading': '正在读取依赖安装状态…',
   'about.statusFailed': '暂时无法读取依赖安装状态。',
   'about.installed': '已安装',
@@ -112,7 +112,8 @@ export const zh = {
   'about.update': '更新',
   'about.installing': '安装中',
   'about.installFailed': '依赖安装失败，请稍后重试。',
-  'about.restartRequired': '依赖安装完成。请重启 DSH Web 服务以加载新插件。',
+  'about.restartRequired': '正在热更新插件，窗口会自动刷新。',
+  'about.dependency.dsh': 'DeepSeek Harness',
   'about.dependency.suite': 'Codex 套件',
   'about.dependency.ui': 'Codex UI',
   'about.dependency.experts': '专家管理',
@@ -163,7 +164,7 @@ export const en: Record<keyof typeof zh, string> = {
   'workspace.pin': 'Pin project',
   'workspace.unpin': 'Unpin',
   'workspace.pinned': 'Pinned',
-  'workspace.pinnedEmpty': 'Drag a project here to pin it',
+  'workspace.pinnedEmpty': 'Drag a project or chat here to pin it',
   'workspace.openPath': 'Open in file explorer',
   'workspace.delete': 'Delete project',
   'workspace.deleteDescription': 'This removes “{name}” from the project list. The folder and conversation records remain.',
@@ -225,7 +226,7 @@ export const en: Record<keyof typeof zh, string> = {
   'about.feature.conversation': 'Keeps native messages, tool calls, composer, permissions, and model selection while refining the container visuals',
   'about.feature.navigator': 'Navigate directly to each user prompt with the current conversation turn navigator',
   'about.dependencies': 'Companion management plugins',
-  'about.dependenciesDescription': 'Install the Codex suite to get all companion plugins at once, or check and update the expert, skill, archive, IM, scheduled-task, and marketplace plugins individually.',
+  'about.dependenciesDescription': 'Each companion plugin is installed and updated separately. Check Codex UI, expert, skill, archive, IM, scheduled-task, and marketplace plugins on their own.',
   'about.loading': 'Loading dependency status…',
   'about.statusFailed': 'Dependency status is temporarily unavailable.',
   'about.installed': 'Installed',
@@ -235,7 +236,8 @@ export const en: Record<keyof typeof zh, string> = {
   'about.update': 'Update',
   'about.installing': 'Installing',
   'about.installFailed': 'Dependency installation failed. Try again later.',
-  'about.restartRequired': 'Installation is complete. Restart DSH Web to load the new plugin.',
+  'about.restartRequired': 'Updating plugins now. The window will refresh automatically.',
+  'about.dependency.dsh': 'DeepSeek Harness',
   'about.dependency.suite': 'Codex suite',
   'about.dependency.ui': 'Codex UI',
   'about.dependency.experts': 'Expert management',
@@ -256,4 +258,5 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'michengai.codexUi': CodexUiKey
   }
 }
+
 

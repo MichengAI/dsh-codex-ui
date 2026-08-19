@@ -10,7 +10,6 @@ export const SUITE_MEMBER_PACKAGES = [
 ] as const
 
 export const MANAGED_DEPENDENCIES = [
-  { id: 'suite', packageName: SUITE_PACKAGE },
   { id: 'ui', packageName: '@michengai/dsh-codex-ui' },
   { id: 'experts', packageName: '@michengai/dsh-agency-agents' },
   { id: 'skills', packageName: '@michengai/dsh-skills-manager' },

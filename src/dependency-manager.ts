@@ -5,6 +5,9 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { MANAGED_DEPENDENCIES, SUITE_MEMBER_PACKAGES, SUITE_PACKAGE, managedDependency, type ManagedDependencyId } from './dependencies.ts'
 
+export const PROFILE_PENDING_UPDATES_FILE = '.dsh-pending-updates.json'
+export const APPLY_PLUGIN_UPDATES_IPC = 'apply-plugin-updates'
+
 type PackageManifest = { version?: string }
 
 export type DependencyStatus = {
@@ -36,17 +39,19 @@ async function declaredPluginNames(): Promise<string[]> {
   }
 }
 
-/** 安装套件前卸掉已单独安装的子插件，避免两套 patch 重复注册同一 id。 */
+/** 单独更新子插件时先卸套件，避免两套 patch 冲突。 */
 export function pluginsToRemoveBeforeInstall(declared: readonly string[], installing: string): string[] {
-  if (installing !== SUITE_PACKAGE) return []
-  return SUITE_MEMBER_PACKAGES.filter(name => declared.includes(name))
+  if ((SUITE_MEMBER_PACKAGES as readonly string[]).includes(installing) && declared.includes(SUITE_PACKAGE)) {
+    return [SUITE_PACKAGE]
+  }
+  if (installing === SUITE_PACKAGE) {
+    return SUITE_MEMBER_PACKAGES.filter(name => declared.includes(name))
+  }
+  return []
 }
 
-/** 已装套件时，子插件的安装/更新改走套件，避免再写入一份 bundle。 */
-export function resolveDshPluginTarget(installing: string, declared: readonly string[]): string {
-  if (installing !== SUITE_PACKAGE && (SUITE_MEMBER_PACKAGES as readonly string[]).includes(installing) && declared.includes(SUITE_PACKAGE)) {
-    return SUITE_PACKAGE
-  }
+/** 点击哪个包就更新哪个包，不再把子插件重定向到套件。 */
+export function resolveDshPluginTarget(installing: string, _declared: readonly string[] = []): string {
   return installing
 }
 
@@ -161,18 +166,59 @@ export function resolveDshCliEntry(entry = process.argv[1], cwd = process.cwd())
   return resolve(cwd, entry)
 }
 
-function pluginCommandError(stderr: string): Error {
+export function requestDesktopHotUpdate(send: NodeJS.Process['send'] = process.send): boolean {
+  if (typeof send !== 'function') return false
+  send(APPLY_PLUGIN_UPDATES_IPC)
+  return true
+}
+
+export function isRestartableInstallError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return /完全退出桌面端|正在运行的插件|pnpm 仓库不一致/.test(message)
+}
+
+async function recordPendingUpdate(packageName: string, version: string): Promise<void> {
+  const pendingPath = resolve(profileDirectory(), PROFILE_PENDING_UPDATES_FILE)
+  let packages: Array<{ packageName: string; version: string }> = []
+  try {
+    const parsed = JSON.parse(await readFile(pendingPath, 'utf8')) as { packages?: unknown }
+    if (Array.isArray(parsed.packages)) {
+      packages = parsed.packages.flatMap((item) => {
+        if (item === null || typeof item !== 'object') return []
+        const record = item as { packageName?: unknown; version?: unknown }
+        if (typeof record.packageName !== 'string' || typeof record.version !== 'string') return []
+        return [{ packageName: record.packageName, version: record.version }]
+      })
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  }
+  packages = packages.filter((item) => item.packageName !== packageName)
+  packages.push({ packageName, version })
+  await writeFile(pendingPath, `${JSON.stringify({ packages }, undefined, 2)}\n`, 'utf8')
+}
+
+async function recordDeclaredVersion(packageName: string, version: string): Promise<void> {
+  const manifestPath = resolve(profileDirectory(), 'package.json')
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as { dependencies?: Record<string, string> }
+  manifest.dependencies = { ...manifest.dependencies, [packageName]: version }
+  await writeFile(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`, 'utf8')
+}
+export function pluginCommandError(stderr: string): Error {
   const detail = stderr.replace(/\s+/g, ' ').trim()
   if (detail.includes('minimumReleaseAge') || detail.includes('Release age')) {
     return new Error('更新被 pnpm 发布时间保护拦截。请确认已写入当前版本白名单后重试。')
   }
-  if (detail.includes('EPERM') || detail.includes('EBUSY') || detail.includes('EACCES')) {
-    return new Error('无法覆盖正在运行的插件文件。请先停止 DSH Web，再点击更新。')
+  if (/EPERM|EBUSY|EACCES|unable to unlink|ERR_PNPM_LOCKED|Lock/i.test(detail)) {
+    return new Error('无法覆盖正在运行的插件文件。请先完全退出桌面端，再重新打开后更新。')
   }
-  if (detail.includes('NO_MATCHING_VERSION') || detail.includes('No matching version')) {
-    return new Error('当前 npm 镜像还没有这个版本。请稍后重试，或改用官方源安装。')
+  if (/UNEXPECTED_STORE|Unexpected store location/i.test(detail)) {
+    return new Error('插件目录和 pnpm 仓库不一致。请完全退出桌面端后再更新。')
   }
-  return new Error('从 npm 安装或更新依赖失败。请检查网络、npm registry 或发布时间保护后重试。')
+  if (/pnpm not found/i.test(detail)) {
+    return new Error('当前环境找不到 pnpm。请从桌面端启动后再更新。')
+  }
+  return new Error('无法在应用运行时更新插件。请先完全退出桌面端，再重新打开后更新。')
 }
 
 /**
@@ -186,12 +232,14 @@ function runDshPlugin(args: readonly string[]): Promise<void> {
       cwd: process.cwd(),
       env: { ...process.env, CI: 'true' },
       windowsHide: true,
-      stdio: ['ignore', 'ignore', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe'],
     })
-    let stderr = ''
-    child.stderr?.on('data', chunk => { stderr += String(chunk) })
+    let output = ''
+    const collect = (chunk: Buffer): void => { output += String(chunk) }
+    child.stdout?.on('data', collect)
+    child.stderr?.on('data', collect)
     child.once('error', () => { reject(new Error('无法启动 DSH 插件安装命令。请确认 Node.js 与 pnpm 可用后重试。')) })
-    child.once('exit', code => { code === 0 ? resolvePromise() : reject(pluginCommandError(stderr)) })
+    child.once('exit', code => { code === 0 ? resolvePromise() : reject(pluginCommandError(output)) })
   })
 }
 
@@ -221,10 +269,16 @@ async function installDependencyLocked(id: string | null): Promise<readonly Depe
   const remove = pluginsToRemoveBeforeInstall(declared, target)
   if (remove.length > 0) await runDshPlugin(['remove', ...remove])
   await ensureLatestReleaseAllowed(target, targetVersion)
-  await runDshPlugin(['add', `${target}@${targetVersion}`, '--registry=https://registry.npmjs.org/'])
-  const installed = await installedPackageVersion(target)
-  if (installed !== targetVersion) {
-    throw new Error(`已请求 ${target}@${targetVersion}，但当前仍是 ${installed ?? '未安装'}。请先停止 DSH Web 后再更新。`)
+  await recordDeclaredVersion(target, targetVersion)
+  await recordPendingUpdate(target, targetVersion)
+  if (requestDesktopHotUpdate()) return dependencyStatuses()
+  try {
+    await runDshPlugin(['add', `${target}@${targetVersion}`, '--registry=https://registry.npmjs.org/'])
+  } catch (error) {
+    if (isRestartableInstallError(error)) return dependencyStatuses()
+    throw error
   }
+  const installed = await installedPackageVersion(target)
+  if (installed !== targetVersion) return dependencyStatuses()
   return dependencyStatuses()
 }

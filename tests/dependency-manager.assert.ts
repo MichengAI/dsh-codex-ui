@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { applyReleaseExclude, isManagedPackageInstalled, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry } from '../src/dependency-manager.ts'
+import { applyReleaseExclude, isManagedPackageInstalled, isRestartableInstallError, pluginCommandError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 assert.equal(
@@ -137,27 +137,38 @@ assert.equal(
 )
 
 assert.deepEqual(
-  pluginsToRemoveBeforeInstall(['@michengai/dsh-codex-ui', '@deepseek-ai/dsh-base'], '@michengai/dsh-codex-suite'),
-  ['@michengai/dsh-codex-ui'],
-  '安装套件前必须卸掉已单独安装的子插件，避免重复注册 codex-ui',
+  pluginsToRemoveBeforeInstall(['@michengai/dsh-codex-suite'], '@michengai/dsh-codex-ui'),
+  ['@michengai/dsh-codex-suite'],
+  '单独更新子插件前必须卸掉套件，避免两套 patch',
 )
 assert.deepEqual(
-  pluginsToRemoveBeforeInstall(['@michengai/dsh-codex-suite'], '@michengai/dsh-codex-suite'),
+  pluginsToRemoveBeforeInstall(['@michengai/dsh-codex-ui'], '@michengai/dsh-codex-ui'),
   [],
-  '只装套件时无需先卸载',
+  '只装子插件时无需先卸载',
 )
 assert.deepEqual(
   resolveDshPluginTarget('@michengai/dsh-codex-ui', ['@michengai/dsh-codex-suite']),
-  '@michengai/dsh-codex-suite',
-  '已装套件时单独安装子插件必须改走套件，避免重复 patch',
-)
-assert.deepEqual(
-  resolveDshPluginTarget('@michengai/dsh-codex-suite', ['@michengai/dsh-codex-ui']),
-  '@michengai/dsh-codex-suite',
-  '安装套件本身仍安装套件',
+  '@michengai/dsh-codex-ui',
+  '已装套件时仍更新用户点的那个子插件',
 )
 assert.deepEqual(
   resolveDshPluginTarget('dshmarket', ['@michengai/dsh-codex-suite']),
   'dshmarket',
   '插件市场不在套件内，仍单独安装',
 )
+assert.match(
+  pluginCommandError('EPERM: unlink failed').message,
+  /完全退出桌面端/,
+  '文件占用必须提示先退出桌面端',
+)
+assert.match(
+  pluginCommandError('ERR_PNPM_UNEXPECTED_STORE Unexpected store location').message,
+  /pnpm 仓库不一致/,
+  'store 不一致必须给出明确原因',
+)
+assert.equal(isRestartableInstallError(new Error('无法覆盖正在运行的插件文件。请先完全退出桌面端，再重新打开后更新。')), true)
+
+assert.equal(requestDesktopHotUpdate(undefined), false)
+let sent
+assert.equal(requestDesktopHotUpdate((message) => { sent = message }), true)
+assert.equal(sent, 'apply-plugin-updates')

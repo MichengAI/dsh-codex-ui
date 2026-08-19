@@ -14,8 +14,8 @@ const manager = readFileSync(new URL('../src/dependency-manager.ts', import.meta
 
 assert.match(client, /id: 'about'/, '关于页必须注册为最后的设置分区')
 assert.match(client, /order: 100/, '关于页必须排在管理插件设置之后')
-assert.match(dependencies, /@michengai\/dsh-codex-suite/, '关于页必须提供套件一键安装')
-assert.match(dependencies, /id: 'suite'/, 'about must declare suite dependency id')
+assert.doesNotMatch(dependencies, /@deepseek-ai\/dsh/, '不得再把官方 DSH 放进关于页')
+assert.doesNotMatch(dependencies, /id: 'suite'/, '不得再把套件作为关于页安装入口')
 assert.match(dependencies, /@michengai\/dsh-codex-ui/, 'about must manage this plugin')
 assert.match(dependencies, /id: 'ui'/, 'about must declare ui dependency id')
 assert.match(dependencies, /@michengai\/dsh-agency-agents/, '关于页必须声明专家插件依赖')
@@ -35,7 +35,7 @@ assert.match(manager, /ensureLatestReleaseAllowed/, '安装与更新前必须持
 assert.match(manager, /resolveDshCliEntry/, '必须把当前 CLI 入口收成绝对路径后再启动子进程')
 assert.match(manager, /cwd: process\.cwd\(\)/, '子进程必须沿用当前 DSH 启动目录，而不是 dirname\(entry\)')
 assert.match(manager, /\['add', `\$\{target\}@\$\{targetVersion\}`, '--registry=https:\/\/registry\.npmjs\.org\/'\]/, '安装必须走官方 npm 源，避免镜像未同步导致失败')
-assert.match(manager, /pluginsToRemoveBeforeInstall/, '安装套件前必须卸掉单独安装的子插件')
+assert.match(manager, /pluginsToRemoveBeforeInstall/, '单独更新子插件前必须卸掉套件')
 assert.doesNotMatch(manager, /--config\.minimumReleaseAge=0/, '不得临时关闭整次 pnpm 解析的发布时间保护')
 assert.doesNotMatch(manager, /runPnpm|pnpm\.cmd/, '不得直接启动 Windows 的 pnpm.cmd')
 assert.match(manager, /registry\.npmjs\.org/, '依赖状态必须从 npm registry 查询 latest 版本')
@@ -50,8 +50,8 @@ assert.match(about, /about\.feature\.search/, '关于页必须列出全局搜索
 assert.match(about, /about\.feature\.navigator/, '关于页必须列出会话轮次导航能力')
 assert.match(sidebar, /selectSection\(t\('about\.nav'\)\)/, '缺失依赖的侧栏入口必须跳转关于页面')
 
-assert.match(locales, /about\.dependency\.suite/, '关于页必须提供套件名称')
 assert.match(locales, /about\.dependency\.im/, '关于页必须提供 IM 插件名称')
 assert.match(locales, /about\.dependency\.schedule/, '关于页必须提供定时任务插件名称')
 assert.match(locales, /about\.dependency\.market/, '关于页必须提供插件市场名称')
 assert.match(locales, /sidebar\.marketplace/, '插件入口必须认识市场分区标题')
+
