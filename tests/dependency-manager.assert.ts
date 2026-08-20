@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { applyReleaseExclude, isManagedPackageInstalled, isRestartableInstallError, pluginCommandError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry } from '../src/dependency-manager.ts'
+import { applyReleaseExclude, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, newerVersion, pluginCommandError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 assert.equal(
@@ -121,19 +121,19 @@ assert.equal(
 )
 
 assert.equal(
-  isManagedPackageInstalled({ installedVersion: '0.2.56' }),
+  isManagedPackageInstalled({ installedVersion: '0.2.56', declared: true }),
   true,
-  '套件嵌套安装后，node_modules 里有版本就必须视为已安装',
+  '声明仍在且磁盘有版本，视为已安装',
 )
 assert.equal(
-  isManagedPackageInstalled({ installedVersion: undefined }),
+  isManagedPackageInstalled({ installedVersion: undefined, declared: true }),
   false,
-  'node_modules 没有该包时不得标已安装',
+  '声明在但磁盘没有包，视为未安装',
 )
 assert.equal(
-  isManagedPackageInstalled({ installedVersion: '0.1.20' }),
-  true,
-  '顶层直接安装仍视为已安装',
+  isManagedPackageInstalled({ installedVersion: '0.1.20', declared: false }),
+  false,
+  '卸载后残留的 node_modules 不得标已安装',
 )
 
 assert.deepEqual(
@@ -172,3 +172,9 @@ assert.equal(requestDesktopHotUpdate(undefined), false)
 let sent
 assert.equal(requestDesktopHotUpdate((message) => { sent = message }), true)
 assert.equal(sent, 'apply-plugin-updates')
+
+
+assert.equal(isOfficialRuntimePackage('@deepseek-ai/dsh'), true)
+assert.equal(isOfficialRuntimePackage('@michengai/dsh-codex-ui'), false)
+assert.equal(newerVersion('0.1.0-rc.7', '0.1.0-rc.8'), true, '同号 rc 必须能看出可升级')
+assert.equal(newerVersion('0.1.0-rc.8', '0.1.0-rc.7'), false, '不得把更旧的 rc 当成升级')

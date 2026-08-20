@@ -27,12 +27,16 @@ function profileDirectory(): string {
 type ProfileManifest = {
   dependencies?: Record<string, string>
   devDependencies?: Record<string, string>
+  dsh?: { profile?: { bundles?: string[] } }
 }
 
 async function declaredPluginNames(): Promise<string[]> {
   try {
     const manifest = JSON.parse(await readFile(resolve(profileDirectory(), 'package.json'), 'utf8')) as ProfileManifest
-    return Object.keys({ ...manifest.devDependencies, ...manifest.dependencies })
+    return [...new Set([
+      ...Object.keys({ ...manifest.devDependencies, ...manifest.dependencies }),
+      ...(manifest.dsh?.profile?.bundles ?? []),
+    ])]
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
     throw error
@@ -55,19 +59,32 @@ export function resolveDshPluginTarget(installing: string, _declared: readonly s
   return installing
 }
 
-async function installedPackageVersion(packageName: string): Promise<string | undefined> {
-  try {
-    const manifest = JSON.parse(await readFile(resolve(profileDirectory(), 'node_modules', ...packageName.split('/'), 'package.json'), 'utf8')) as PackageManifest
-    return typeof manifest.version === 'string' ? manifest.version : undefined
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
-    throw error
-  }
+export function isOfficialRuntimePackage(packageName: string): boolean {
+  return packageName === '@deepseek-ai/dsh' || packageName.startsWith('@deepseek-ai/dsh-')
 }
 
-/** 以 node_modules 实际版本为准；套件嵌套安装没有写进顶层 dependencies，也算已安装。 */
-export function isManagedPackageInstalled(input: { installedVersion: string | undefined }): boolean {
-  return input.installedVersion !== undefined && input.installedVersion !== ''
+function packageLookupRoots(packageName: string): string[] {
+  if (isOfficialRuntimePackage(packageName) && process.env.DSH_RUNTIME_DIR !== undefined && process.env.DSH_RUNTIME_DIR !== '') {
+    return [process.env.DSH_RUNTIME_DIR, profileDirectory()]
+  }
+  return [profileDirectory()]
+}
+
+async function installedPackageVersion(packageName: string): Promise<string | undefined> {
+  for (const root of packageLookupRoots(packageName)) {
+    try {
+      const manifest = JSON.parse(await readFile(resolve(root, 'node_modules', ...packageName.split('/'), 'package.json'), 'utf8')) as PackageManifest
+      if (typeof manifest.version === 'string' && manifest.version !== '') return manifest.version
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    }
+  }
+  return undefined
+}
+
+/** 磁盘有包且仍在 profile 声明里，才算已安装。卸载后残留的 node_modules 不算。 */
+export function isManagedPackageInstalled(input: { installedVersion: string | undefined; declared: boolean }): boolean {
+  return input.declared && input.installedVersion !== undefined && input.installedVersion !== ''
 }
 
 /** npm latest 查询缓存有效期：避免每次打开“关于”页都打 7 个 registry 请求。 */
@@ -75,19 +92,31 @@ const LATEST_CACHE_TTL_MS = 5 * 60 * 1000
 
 const latestCache = new Map<string, { version: string; at: number }>()
 
-async function npmLatestVersion(packageName: string): Promise<string | undefined> {
-  const hit = latestCache.get(packageName)
+function cacheKey(packageName: string, tag: string): string {
+  return packageName + '@' + tag
+}
+
+async function npmTaggedVersion(packageName: string, tag: 'latest' | 'next'): Promise<string | undefined> {
+  const key = cacheKey(packageName, tag)
+  const hit = latestCache.get(key)
   if (hit !== undefined && Date.now() - hit.at < LATEST_CACHE_TTL_MS) return hit.version
   try {
-    const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(packageName)}/latest`, { signal: AbortSignal.timeout(5_000) })
+    const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(packageName)}/${tag}`, { signal: AbortSignal.timeout(5_000) })
     if (!response.ok) return undefined
     const manifest = await response.json() as PackageManifest
     if (typeof manifest.version !== 'string') return undefined
-    latestCache.set(packageName, { version: manifest.version, at: Date.now() })
+    latestCache.set(key, { version: manifest.version, at: Date.now() })
     return manifest.version
   } catch {
     return undefined
   }
+}
+
+async function npmLatestVersion(packageName: string): Promise<string | undefined> {
+  if (isOfficialRuntimePackage(packageName)) {
+    return await npmTaggedVersion(packageName, 'next') ?? await npmTaggedVersion(packageName, 'latest')
+  }
+  return npmTaggedVersion(packageName, 'latest')
 }
 
 function escapeRegExp(value: string): string {
@@ -137,20 +166,28 @@ function versionParts(version: string): readonly [number, number, number] | unde
   return match === null ? undefined : [Number(match[1]), Number(match[2]), Number(match[3])]
 }
 
-function newerVersion(installed: string, latest: string): boolean {
+function prereleaseRank(version: string): number {
+  const match = /-rc\.(\d+)/i.exec(version)
+  return match === null ? Number.POSITIVE_INFINITY : Number(match[1])
+}
+
+export function newerVersion(installed: string, latest: string): boolean {
   const current = versionParts(installed)
   const candidate = versionParts(latest)
   if (current === undefined || candidate === undefined) return false
-  return candidate[0] > current[0]
-    || (candidate[0] === current[0] && candidate[1] > current[1])
-    || (candidate[0] === current[0] && candidate[1] === current[1] && candidate[2] > current[2])
+  if (candidate[0] !== current[0]) return candidate[0] > current[0]
+  if (candidate[1] !== current[1]) return candidate[1] > current[1]
+  if (candidate[2] !== current[2]) return candidate[2] > current[2]
+  return prereleaseRank(latest) > prereleaseRank(installed)
 }
 
 /** 返回 Web profile 中固定管理插件的实际安装版本与 npm latest 状态。 */
 export async function dependencyStatuses(): Promise<readonly DependencyStatus[]> {
+  const declaredNames = await declaredPluginNames()
   return Promise.all(MANAGED_DEPENDENCIES.map(async dependency => {
     const version = await installedPackageVersion(dependency.packageName)
-    if (!isManagedPackageInstalled({ installedVersion: version })) return { ...dependency, installed: false, updateAvailable: false }
+    const declared = isOfficialRuntimePackage(dependency.packageName) || declaredNames.includes(dependency.packageName)
+    if (version === undefined || !isManagedPackageInstalled({ installedVersion: version, declared })) return { ...dependency, installed: false, updateAvailable: false }
     const latestVersion = await npmLatestVersion(dependency.packageName)
     return { ...dependency, installed: true, version, latestVersion, updateAvailable: latestVersion !== undefined && newerVersion(version, latestVersion) }
   }))
@@ -269,7 +306,7 @@ async function installDependencyLocked(id: string | null): Promise<readonly Depe
   const remove = pluginsToRemoveBeforeInstall(declared, target)
   if (remove.length > 0) await runDshPlugin(['remove', ...remove])
   await ensureLatestReleaseAllowed(target, targetVersion)
-  await recordDeclaredVersion(target, targetVersion)
+  if (!isOfficialRuntimePackage(target)) await recordDeclaredVersion(target, targetVersion)
   await recordPendingUpdate(target, targetVersion)
   if (requestDesktopHotUpdate()) return dependencyStatuses()
   try {

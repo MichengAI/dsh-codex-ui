@@ -27,25 +27,42 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
   const [installing, setInstalling] = useState<ManagedDependencyId>()
   const [message, setMessage] = useState<{ error: boolean; text: string }>()
   const alive = useRef(true)
+  const root = useRef<HTMLElement>(null)
+  const stateRef = useRef<LoadState>('loading')
+  const requestId = useRef(0)
+  stateRef.current = state
   useEffect(() => () => { alive.current = false }, [])
   const load = useCallback(async (signal?: AbortSignal) => {
-    setState('loading')
+    const currentRequest = ++requestId.current
+    if (stateRef.current !== 'ready') setState('loading')
     try {
       const response = await fetch(endpoint, { cache: 'no-store', signal })
       const payload = await response.json() as { dependencies?: unknown }
-      if (signal?.aborted) return
+      if (signal?.aborted || currentRequest !== requestId.current) return
       if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) throw new Error()
       setDependencies(payload.dependencies)
       setState('ready')
     } catch (error) {
-      if (signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')) return
-      setState('failed')
+      if (signal?.aborted || (error instanceof DOMException && error.name === 'AbortError') || currentRequest !== requestId.current) return
+      if (stateRef.current !== 'ready') setState('failed')
     }
   }, [])
   useEffect(() => {
+    const node = root.current
     const controller = new AbortController()
-    void load(controller.signal)
-    return () => { controller.abort() }
+    const refresh = (): void => { void load(controller.signal) }
+    refresh()
+    if (node === null || typeof IntersectionObserver === 'undefined') {
+      return () => { controller.abort() }
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) refresh()
+    }, { threshold: 0.2 })
+    observer.observe(node)
+    return () => {
+      controller.abort()
+      observer.disconnect()
+    }
   }, [load])
   const install = async (id: ManagedDependencyId): Promise<void> => {
     setInstalling(id)
@@ -66,7 +83,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
     }
   }
   const title = (id: ManagedDependencyId): string => t(`about.dependency.${id}`)
-  return <section className="dcu-about" aria-label={t('about.nav')}>
+  return <section ref={root} className="dcu-about" aria-label={t('about.nav')}>
     <style>{stylesheet}</style>
     <h2>{t('about.title')}</h2>
     <p className="dcu-about-intro">{t('about.description')}</p>

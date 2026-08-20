@@ -10,6 +10,7 @@ export const SUITE_MEMBER_PACKAGES = [
 ] as const
 
 export const MANAGED_DEPENDENCIES = [
+  { id: 'dsh', packageName: '@deepseek-ai/dsh' },
   { id: 'ui', packageName: '@michengai/dsh-codex-ui' },
   { id: 'experts', packageName: '@michengai/dsh-agency-agents' },
   { id: 'skills', packageName: '@michengai/dsh-skills-manager' },

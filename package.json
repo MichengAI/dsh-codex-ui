@@ -1,6 +1,6 @@
 {
   "name": "@michengai/dsh-codex-ui",
-  "version": "0.2.60",
+  "version": "0.2.61",
   "description": "以 Codex 风格重构 DSH Web 侧栏的独立客户端插件",
   "license": "Apache-2.0",
   "publishConfig": {
