@@ -69,6 +69,17 @@ Conversation menu: rename, pin, unread, archive, fork, copy, and delete.
 
 Do not install the suite and the individual plugins in the same profile. The two patch sets conflict.
 
+## DSH product ecosystem
+
+Codex UI can be installed independently or used through the desktop app or Web suite. They share the same DSH core but serve different ways of working:
+
+| Product | Relationship to Codex UI |
+| --- | --- |
+| [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) | The host runtime that provides models, sessions, tools, and the plugin system |
+| [DSH Codex Desktop](https://github.com/MichengAI/dsh-codex-desktop) | A ready-to-install desktop product with Codex UI and the other five feature products built in |
+| [DSH Codex Suite](https://github.com/MichengAI/dsh-codex-ui/tree/main/packages/dsh-codex-suite) | A one-click suite for existing DSH Web environments that installs Codex UI and the other five feature products |
+| Six feature products | [Codex UI](https://github.com/MichengAI/dsh-codex-ui) · [IM Connect](https://github.com/MichengAI/dsh-im-connect) · [Automation](https://github.com/MichengAI/dsh-automation) · [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) · [Archive Manager](https://github.com/MichengAI/dsh-archive-manager) · [Agency Agents](https://github.com/MichengAI/dsh-agency-agents) |
+
 ## Installation
 
 `dsh plugin add` forwards to `pnpm add` in the profile directory. Without a version and official registry, a local mirror or minimum-release-age policy can leave you on an older build.

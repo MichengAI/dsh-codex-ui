@@ -69,6 +69,17 @@
 
 套件安装和单独安装互斥。同一 profile 不要同时安装两者，两套 patch 会冲突。
 
+## DSH 产品生态
+
+Codex UI 既可以独立安装，也可以随桌面端或 Web 套件一起使用。它们共享同一个 DSH 核心，但面向不同的使用方式：
+
+| 产品 | 与 Codex UI 的关系 |
+| --- | --- |
+| [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) | Codex UI 的运行宿主，提供模型、会话、工具和插件系统 |
+| [DSH Codex Desktop](https://github.com/MichengAI/dsh-codex-desktop) | 下载安装即用的桌面产品，已内置 Codex UI 和其他 5 个功能产品 |
+| [DSH Codex Suite](https://github.com/MichengAI/dsh-codex-ui/tree/main/packages/dsh-codex-suite) | 面向已有 DSH Web 环境的一键套件，会安装 Codex UI 和其他 5 个功能产品 |
+| 6 个功能产品 | [Codex UI](https://github.com/MichengAI/dsh-codex-ui) · [IM Connect](https://github.com/MichengAI/dsh-im-connect) · [Automation](https://github.com/MichengAI/dsh-automation) · [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) · [Archive Manager](https://github.com/MichengAI/dsh-archive-manager) · [Agency Agents](https://github.com/MichengAI/dsh-agency-agents) |
+
 ## 安装
 
 `dsh plugin add` 会转发到 profile 目录里的 `pnpm add`。不写版本、不指定官方源时，本机镜像和最短发布间隔可能让你停在旧版。
