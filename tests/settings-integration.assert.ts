@@ -58,6 +58,7 @@ assert.match(workspaceBrowser, /radial-gradient\(circle at 4px 50%/, '插入线�
 assert.match(workspaceBrowser, /dcu-wb-drop-after/, '落在文件夹下半区必须把插入线画在该行底部，避免和下一个文件夹标题重叠成两条')
 assert.match(workspaceBrowser, /zone === 'pinned'/, '拖入置顶必须按最近插入位落点，不能落到最近分区')
 assert.match(workspaceBrowser, /dcu-wb-pin-end/, '置顶末尾必须有独立落点，避免滑到项目或最近')
+assert.match(workspaceBrowser, /\.dcu-wb-pin-start\.dcu-wb-drop::before\{top:0\}/, '置顶首个落点的插入线必须留在折叠容器内，不能被裁切')
 assert.doesNotMatch(workspaceBrowser, /box-shadow:inset 0 2px var\(--dsw-alias-state-business-primary\)/, '置顶拖放不得再使用内阴影蓝条')
 assert.match(workspaceBrowser, /setDragImage/, 'custom drag image')
 assert.match(workspaceBrowser, /\.dcu-wb-drag-ghost\{[^}]*opacity:0/, '拖拽预览不得覆盖置顶插入线')
