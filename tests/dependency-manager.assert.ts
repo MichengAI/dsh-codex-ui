@@ -19,8 +19,8 @@ assert.equal(
 )
 assert.equal(
   resolveDshRuntimeRoot('C:\\Users\\demo\\AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh\\dist\\bin.mjs'),
-  'C:\\Users\\demo\\AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh',
-  '全局 npm 安装的 DSH 必须能从当前 CLI 入口识别运行时目录',
+  'C:\\Users\\demo\\AppData\\Roaming\\npm',
+  '全局 npm 安装的 DSH 必须能从当前 CLI 入口识别包含 node_modules 的运行时目录',
 )
 assert.equal(
   resolveDshRuntimeRoot('D:\\Repository\\deepseek-harness\\apps\\cli\\src\\bin.ts'),

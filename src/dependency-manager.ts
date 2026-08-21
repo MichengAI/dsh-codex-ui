@@ -63,7 +63,7 @@ export function isOfficialRuntimePackage(packageName: string): boolean {
   return packageName === '@deepseek-ai/dsh' || packageName.startsWith('@deepseek-ai/dsh-')
 }
 
-/** 从全局 npm 安装的 dsh CLI 入口反推出包根目录；源码启动不匹配该目录结构。 */
+/** 从全局 npm 安装的 dsh CLI 入口反推出包含 node_modules 的运行时目录；源码启动不匹配该目录结构。 */
 export function resolveDshRuntimeRoot(entry = process.argv[1], cwd = process.cwd()): string | undefined {
   if (entry === undefined || entry === '') return undefined
   const cliEntry = resolveDshCliEntry(entry, cwd)
@@ -71,7 +71,9 @@ export function resolveDshRuntimeRoot(entry = process.argv[1], cwd = process.cwd
   const index = cliEntry.toLowerCase().lastIndexOf(marker.toLowerCase())
   if (index === -1) return undefined
   const end = index + marker.length
-  return end === cliEntry.length || cliEntry[end] === sep ? cliEntry.slice(0, end) : undefined
+  if (end !== cliEntry.length && cliEntry[end] !== sep) return undefined
+  const root = cliEntry.slice(0, index)
+  return root.endsWith(sep) ? root.slice(0, -1) : root
 }
 
 function packageLookupRoots(packageName: string): string[] {
