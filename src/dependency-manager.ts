@@ -296,17 +296,17 @@ function runDshPlugin(args: readonly string[]): Promise<void> {
 let installing = false
 
 /** 仅允许安装固定依赖，避免把浏览器输入转成任意命令。 */
-export async function installDependency(id: string | null): Promise<readonly DependencyStatus[]> {
+export async function installDependency(id: string | null, requestHotUpdate: () => boolean = requestDesktopHotUpdate): Promise<readonly DependencyStatus[]> {
   if (installing) throw new Error('已有依赖安装正在进行，请等待完成后再试。')
   installing = true
   try {
-    return await installDependencyLocked(id)
+    return await installDependencyLocked(id, requestHotUpdate)
   } finally {
     installing = false
   }
 }
 
-async function installDependencyLocked(id: string | null): Promise<readonly DependencyStatus[]> {
+async function installDependencyLocked(id: string | null, requestHotUpdate: () => boolean): Promise<readonly DependencyStatus[]> {
   const dependency = managedDependency(id)
   if (dependency === undefined) throw new Error('不支持安装该依赖。')
   const latestVersion = await npmLatestVersion(dependency.packageName)
@@ -320,7 +320,7 @@ async function installDependencyLocked(id: string | null): Promise<readonly Depe
   await ensureLatestReleaseAllowed(target, targetVersion)
   if (!isOfficialRuntimePackage(target)) await recordDeclaredVersion(target, targetVersion)
   await recordPendingUpdate(target, targetVersion)
-  if (requestDesktopHotUpdate()) return dependencyStatuses()
+  if (requestHotUpdate()) return dependencyStatuses()
   try {
     await runDshPlugin(['add', `${target}@${targetVersion}`, '--registry=https://registry.npmjs.org/'])
   } catch (error) {

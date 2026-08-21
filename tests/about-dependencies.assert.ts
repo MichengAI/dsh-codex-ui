@@ -30,6 +30,8 @@ assert.match(dependencies, /id: 'schedule'/, 'about must declare schedule depend
 assert.match(dependencies, /id: 'market'/, 'about must declare market dependency id')
 assert.match(host, /dependenciesEndpoint/, 'Host 必须提供依赖状态接口')
 assert.match(host, /installDependency/, 'Host 必须提供受限的依赖安装操作')
+assert.match(host, /restartAfterResponse/, '桌面热更新必须在依赖接口响应后再触发，避免浏览器请求被中断')
+assert.match(host, /response\.end\(JSON\.stringify\(\{ dependencies, restartRequired: true \}\)\)[\s\S]*setTimeout\(\(\) => \{ requestDesktopHotUpdate\(\) \}/, '热更新 IPC 必须延后到成功响应之后发送')
 assert.match(manager, /process\.execPath/, '安装必须重新调用当前 DSH CLI，而不是直接启动 pnpm')
 assert.match(manager, /minimumReleaseAgeExclude/, '用户确认更新的精确版本必须写入 Profile 发布时间白名单')
 assert.match(manager, /ensureLatestReleaseAllowed/, '安装与更新前必须持久化本次确认的版本白名单')
