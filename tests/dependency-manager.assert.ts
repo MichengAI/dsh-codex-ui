@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { applyReleaseExclude, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, newerVersion, pluginCommandError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry } from '../src/dependency-manager.ts'
+import { applyReleaseExclude, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, newerVersion, pluginCommandError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 assert.equal(
@@ -16,6 +16,16 @@ assert.equal(
   resolveDshCliEntry('file:///D:/Repository/deepseek-harness/apps/cli/src/bin.ts', 'C:\\elsewhere'),
   'D:\\Repository\\deepseek-harness\\apps\\cli\\src\\bin.ts',
   'file URL 入口必须转成当前机器的文件系统路径',
+)
+assert.equal(
+  resolveDshRuntimeRoot('C:\\Users\\demo\\AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh\\dist\\bin.mjs'),
+  'C:\\Users\\demo\\AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh',
+  '全局 npm 安装的 DSH 必须能从当前 CLI 入口识别运行时目录',
+)
+assert.equal(
+  resolveDshRuntimeRoot('D:\\Repository\\deepseek-harness\\apps\\cli\\src\\bin.ts'),
+  undefined,
+  '源码启动不应误判为全局 DSH 运行时',
 )
 
 const source = [

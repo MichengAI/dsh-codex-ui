@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
 import { readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { resolve } from 'node:path'
+import { resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { MANAGED_DEPENDENCIES, SUITE_MEMBER_PACKAGES, SUITE_PACKAGE, managedDependency, type ManagedDependencyId } from './dependencies.ts'
 
@@ -63,11 +63,21 @@ export function isOfficialRuntimePackage(packageName: string): boolean {
   return packageName === '@deepseek-ai/dsh' || packageName.startsWith('@deepseek-ai/dsh-')
 }
 
+/** 从全局 npm 安装的 dsh CLI 入口反推出包根目录；源码启动不匹配该目录结构。 */
+export function resolveDshRuntimeRoot(entry = process.argv[1], cwd = process.cwd()): string | undefined {
+  if (entry === undefined || entry === '') return undefined
+  const cliEntry = resolveDshCliEntry(entry, cwd)
+  const marker = ['node_modules', '@deepseek-ai', 'dsh'].join(sep)
+  const index = cliEntry.toLowerCase().lastIndexOf(marker.toLowerCase())
+  if (index === -1) return undefined
+  const end = index + marker.length
+  return end === cliEntry.length || cliEntry[end] === sep ? cliEntry.slice(0, end) : undefined
+}
+
 function packageLookupRoots(packageName: string): string[] {
-  if (isOfficialRuntimePackage(packageName) && process.env.DSH_RUNTIME_DIR !== undefined && process.env.DSH_RUNTIME_DIR !== '') {
-    return [process.env.DSH_RUNTIME_DIR, profileDirectory()]
-  }
-  return [profileDirectory()]
+  if (!isOfficialRuntimePackage(packageName)) return [profileDirectory()]
+  const runtimeDir = process.env.DSH_RUNTIME_DIR
+  return [...new Set([runtimeDir, resolveDshRuntimeRoot(), profileDirectory()].filter((root): root is string => root !== undefined && root !== ''))]
 }
 
 async function installedPackageVersion(packageName: string): Promise<string | undefined> {
