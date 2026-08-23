@@ -58,10 +58,8 @@ export function observeSlimSidebar(): () => void {
   const watchFrame = (next: HTMLElement | undefined): void => {
     if (frame === next) return
     frameObserver?.disconnect()
-    frame?.removeAttribute('data-dcu-sidebar-frame')
     frame = next
     if (frame === undefined) return
-    frame.setAttribute('data-dcu-sidebar-frame', '')
     frameObserver = new MutationObserver(schedule)
     frameObserver.observe(frame, { attributes: true, attributeFilter: ['style', 'data-sidebar-collapsed', 'data-dragging'] })
   }
@@ -87,7 +85,6 @@ export function observeSlimSidebar(): () => void {
   return () => {
     observer.disconnect()
     frameObserver?.disconnect()
-    frame?.removeAttribute('data-dcu-sidebar-frame')
     if (pending !== undefined) window.cancelAnimationFrame(pending)
   }
 }

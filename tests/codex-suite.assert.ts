@@ -34,8 +34,8 @@ const expectedVersions: Record<string, string> = {
   '@michengai/dsh-agency-agents': '0.1.20',
   '@michengai/dsh-skills-manager': '0.1.23',
   '@michengai/dsh-archive-manager': '0.1.12',
-  '@michengai/dsh-im-connect': '0.1.18',
-  '@michengai/dsh-automation': '0.1.10',
+  '@michengai/dsh-im-connect': '0.1.19',
+  '@michengai/dsh-automation': '0.1.12',
 }
 
 assert.equal(suite.name, '@michengai/dsh-codex-suite', '聚合包名必须稳定')
