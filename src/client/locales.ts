@@ -48,18 +48,6 @@ export const zh = {
   'workspace.actions': '{name} 的项目操作',
   'workspace.taskCount': '{count} 个任务',
   'workspace.edit': '编辑项目',
-  'permission.read-only.title': '请求批准',
-  'permission.read-only.description': '编辑外部文件和使用互联网时始终询问',
-  'permission.read-only.trigger': '请求批准',
-  'permission.workspace-write.title': '帮我批准',
-  'permission.workspace-write.description': '仅对检测到的风险操作请求批准',
-  'permission.workspace-write.trigger': '帮我批准',
-  'permission.danger-full-access.title': '完全访问权限',
-  'permission.danger-full-access.description': '可不受限制地访问互联网和您电脑上的任何文件',
-  'permission.danger-full-access.trigger': '完全访问',
-  'permission.custom.title': '自定义',
-  'permission.custom.description': '使用当前会话的自定义权限预设',
-  'permission.custom.trigger': '自定义',
   'sessions.close': '关闭',
   'sessions.cancel': '取消',
   'sessions.save': '保存',
@@ -172,18 +160,6 @@ export const en: Record<keyof typeof zh, string> = {
   'workspace.actions': 'Project actions for {name}',
   'workspace.taskCount': '{count} tasks',
   'workspace.edit': 'Edit project',
-  'permission.read-only.title': 'Request approval',
-  'permission.read-only.description': 'Always ask when editing external files or using the internet',
-  'permission.read-only.trigger': 'Request approval',
-  'permission.workspace-write.title': 'Help me approve',
-  'permission.workspace-write.description': 'Only ask for detected risky operations',
-  'permission.workspace-write.trigger': 'Help me approve',
-  'permission.danger-full-access.title': 'Full access',
-  'permission.danger-full-access.description': 'Unrestricted access to the internet and any files on your computer',
-  'permission.danger-full-access.trigger': 'Full access',
-  'permission.custom.title': 'Custom',
-  'permission.custom.description': 'Use the current session custom permission preset',
-  'permission.custom.trigger': 'Custom',
   'sessions.close': 'Close',
   'sessions.cancel': 'Cancel',
   'sessions.save': 'Save',
@@ -258,5 +234,3 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'michengai.codexUi': CodexUiKey
   }
 }
-
-

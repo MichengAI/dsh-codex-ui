@@ -135,8 +135,8 @@ assert.match(client, /companionSlots/, '侧栏必须注入配套插槽占用快�
 
 assert.match(sidebar, /shouldCollapseOnSidebarDrag/, '向左拖动侧栏超过阈值必须自动收缩')
 
-assert.match(client, /observePermissionMenus/, '权限菜单必须按当前语言汉化')
-assert.match(locales, /permission.read-only.title/, '权限文案必须进入插件词典')
+assert.match(client, /observePermissionMenus/, '权限菜单必须保留完全访问风险提示')
+assert.doesNotMatch(locales, /permission.read-only.title/, '官方已提供权限文案，插件不得重复维护')
 
 assert.match(client, /observeSlimSidebar/, '展开侧栏必须收到接近 Codex 的列宽')
 assert.match(client, /observeSettingsNavIcons/, '设置导航必须改用侧栏同款图标')

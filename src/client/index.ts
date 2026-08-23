@@ -69,7 +69,7 @@ function hasDeleteSession(value: unknown): value is ArchiveRegistry {
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'michengai-codex-ui: dictionaries')
   const t = ctx.locale.bind(NS)
-  ctx.effect(() => observePermissionMenus((key) => t(key as keyof typeof zh)), 'michengai-codex-ui: permission i18n')
+  ctx.effect(() => observePermissionMenus(), 'michengai-codex-ui: permission risk highlight')
   ctx.effect(() => observeSlimSidebar(), 'michengai-codex-ui: slim sidebar')
   ctx.effect(() => observeSettingsNavIcons(), 'michengai-codex-ui: settings nav icons')
   ctx.effect(() => observeConversationHeader(), 'michengai-codex-ui: conversation header')
@@ -158,6 +158,3 @@ export function apply(ctx: ClientContext): void {
     name: 'settings.section', id: 'about', order: 100, label: () => t('about.nav'), locale: NS,
   }, AboutSection))
 }
-
-
-
