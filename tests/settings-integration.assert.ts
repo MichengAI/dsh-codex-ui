@@ -63,6 +63,7 @@ assert.match(workspaceBrowser, /\.dcu-wb-project\.dcu-wb-drop::before,\.dcu-wb-s
 assert.match(workspaceBrowser, /dcu-wb-drop-after::before[^}]*bottom:0/, '下方插入线也必须完整留在行内，不能被折叠容器裁切')
 assert.doesNotMatch(workspaceBrowser, /\.dcu-wb-project-head\.dcu-wb-drop/, '项目排序蓝线不得挂在标题行上，否则会伪装成拖入子会话')
 assert.match(workspaceBrowser, /className=\{`dcu-wb-project[^`]*dropsAfterLast/, '项目排序状态必须附着到整个项目组边界')
+assert.match(workspaceBrowser, /const dropsAfterLast = zone === 'projects'/, '置顶末尾只能由 pin-end 画一条线，项目组不得重复绘制')
 assert.match(workspaceBrowser, /pinDragActive && pinnedGroups\.length > 0 && <div className=\{`dcu-wb-pin-end/, '空置顶区只能保留一个语义相同的拖放目标')
 assert.match(workspaceBrowser, /sessionDropTarget\?\.workspaceId === workspaceId && sessionDropTarget\.beforeId/, '会话蓝线必须使用与实际排序一致的 beforeId 锚点')
 assert.doesNotMatch(workspaceBrowser, /box-shadow:inset 0 2px var\(--dsw-alias-state-business-primary\)/, '置顶拖放不得再使用内阴影蓝条')
