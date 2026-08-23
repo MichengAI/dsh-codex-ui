@@ -1,6 +1,13 @@
+import { createRequire } from 'node:module'
+import { act, createElement, type ReactNode } from 'react'
 import { afterEach, expect, test } from 'vitest'
 import { SlotTestRuntime } from '@deepseek-ai/dsh-client-test-runtime'
 import { apply, inject } from '../src/client/index.ts'
+import { CodexSidebar } from '../src/client/CodexSidebar.tsx'
+
+const createRoot = (createRequire(import.meta.url)('react-dom/client') as {
+  createRoot: (container: Element) => { render: (node: ReactNode) => void; unmount: () => void }
+}).createRoot
 
 let runtime: SlotTestRuntime | undefined
 
@@ -43,4 +50,53 @@ test('未安装 IM 和定时插件时配套插槽没有注册项', async () => {
   await runtime.mount({ inject, apply })
   expect(runtime.slots.entries('sidebar.channels')).toHaveLength(0)
   expect(runtime.slots.entries('sidebar.schedule')).toHaveLength(0)
+})
+
+test('搜索和窄轨切换不会重渲染或重新挂载工作区树', async () => {
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  const root = createRoot(container)
+  let workspaceRenders = 0
+  const WorkspaceProbe = (): null => { workspaceRenders += 1; return null }
+  const renderSlot = (name: string) => name === 'sidebar.workspaces'
+    ? createElement(WorkspaceProbe)
+    : name === 'sidebar.settings'
+      ? createElement('button', { 'aria-haspopup': 'dialog' })
+      : null
+  const sessions = { ids: [], byId: {} }
+  const workspaces = { archivedSessionIds: [], items: [] }
+  const useSessions = (selector: (state: typeof sessions) => unknown): unknown => selector(sessions)
+  const useWorkspaces = (selector: (state: typeof workspaces) => unknown): unknown => selector(workspaces)
+  const base = {
+    width: 240,
+    collapsed: false,
+    renderSlot,
+    t: (key: string) => key,
+    useSessions,
+    useWorkspaces,
+    openSession: () => {},
+    startSession: () => {},
+    toggleSidebar: () => {},
+    archiveSession: async () => {},
+    deleteSession: async () => {},
+    forkSession: async () => {},
+    renameSession: async () => {},
+    openPath: () => {},
+  }
+
+  try {
+    await act(async () => { root.render(createElement(CodexSidebar, base as never)) })
+    expect(workspaceRenders).toBe(1)
+    const searchButton = container.querySelector<HTMLButtonElement>('[aria-label="sidebar.search"]')
+    await act(async () => { searchButton?.click() })
+    expect(container.querySelector('.dcu-search-scrim')).not.toBeNull()
+    expect(workspaceRenders).toBe(1)
+
+    await act(async () => { root.render(createElement(CodexSidebar, { ...base, collapsed: true, width: 56 } as never)) })
+    expect(container.querySelector('.dcu-root')?.classList.contains('dcu-compact')).toBe(true)
+    expect(workspaceRenders).toBe(1)
+  } finally {
+    await act(async () => { root.unmount() })
+    container.remove()
+  }
 })

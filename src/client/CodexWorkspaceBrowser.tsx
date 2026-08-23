@@ -17,7 +17,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { NS } from './locales.ts'
 import { PinIcon, SessionRow, pointerMenuRect, sessionMenuItems } from './session-tree.tsx'
-import { insertPinnedWorkspace, readPinnedWorkspaceIds, savePinnedWorkspaceIds, togglePinnedWorkspace } from './pinned-workspaces.ts'
+import { insertPinnedWorkspace, prunePinnedWorkspaceIds, readHostPinnedWorkspaceIds, readPinnedWorkspaceIds, resolvePinnedWorkspaceHydration, savePinnedWorkspaceIds, togglePinnedWorkspace, writeHostPinnedWorkspaceIds } from './pinned-workspaces.ts'
 import {
   readSessionIds,
   SESSION_PINS_STORAGE_KEY,
@@ -58,7 +58,7 @@ const stylesheet = `
 .dcu-wb *{box-sizing:border-box}
 .dcu-wb-tree{flex:1;min-height:0;overflow-y:auto;padding-bottom:16px;scrollbar-gutter:stable;user-select:none;-webkit-user-select:none}
 .dcu-wb-section+.dcu-wb-section{margin-top:12px}
-.dcu-wb-section-head{position:relative;display:flex;align-items:center;min-height:24px;padding:0 4px;border-radius:6px}.dcu-wb-section-head:hover .dcu-wb-actions{display:flex}.dcu-wb-section-label{display:flex;align-items:center;gap:4px;flex:1;min-width:0;min-height:24px;border:0;padding:2px 4px;background:transparent;color:var(--dcu-sidebar-tertiary);font:13px/20px var(--dcu-font,inherit);font-weight:400;letter-spacing:.02em;text-align:left;cursor:pointer}.dcu-wb-section-caret{display:grid;place-items:center;flex:none;width:12px;height:12px;color:currentColor;opacity:0;transform:rotate(0deg);transform-origin:50% 50%;transition:opacity 140ms ease,transform 180ms ease}.dcu-wb-section-caret svg{display:block}.dcu-wb-section-head:hover .dcu-wb-section-caret,.dcu-wb-section-label:focus-visible .dcu-wb-section-caret{opacity:.78}.dcu-wb-section-label[aria-expanded=true] .dcu-wb-section-caret{transform:rotate(90deg)}.dcu-wb-section-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows 220ms ease}.dcu-wb-section-body[data-open=true]{grid-template-rows:1fr}.dcu-wb-section-body>div{overflow:hidden;min-height:0}@media (prefers-reduced-motion:reduce){.dcu-wb-section-caret,.dcu-wb-section-body{transition:none}}
+.dcu-wb-section-head{position:relative;display:flex;align-items:center;min-height:24px;padding:0 4px;border-radius:6px}.dcu-wb-section-head:hover .dcu-wb-actions{display:flex}.dcu-wb-section-label{display:flex;align-items:center;gap:4px;flex:1;min-width:0;min-height:24px;border:0;padding:2px 4px;background:transparent;color:var(--dcu-sidebar-tertiary);font:13px/20px var(--dcu-font,inherit);font-weight:400;letter-spacing:.02em;text-align:left;cursor:pointer}.dcu-wb-section-caret{display:grid;place-items:center;flex:none;width:12px;height:12px;color:currentColor;opacity:0;transform:rotate(0deg);transform-origin:50% 50%;transition:opacity 120ms ease,transform 160ms ease}.dcu-wb-section-caret svg{display:block}.dcu-wb-section-head:hover .dcu-wb-section-caret,.dcu-wb-section-label:focus-visible .dcu-wb-section-caret{opacity:.78}.dcu-wb-section-label[aria-expanded=true] .dcu-wb-section-caret{transform:rotate(90deg)}.dcu-wb-section-body{display:block}.dcu-wb-section-body[data-open=false]{display:none}.dcu-wb-section-body>div{min-height:0}@media (prefers-reduced-motion:reduce){.dcu-wb-section-caret{transition:none}}
 .dcu-wb-project{position:relative}
 .dcu-wb-project-head,.dcu-wb-session{position:relative;display:flex;align-items:center;gap:6px;width:100%;border-radius:8px;padding:0 8px;color:var(--dcu-sidebar-primary);cursor:pointer}
 .dcu-wb-project-head{height:28px;background:transparent;font:inherit;text-align:left}
@@ -99,7 +99,14 @@ const typographyStyles = `.dcu-wb{font:14px/20px var(--dcu-font,var(--dsw-font-f
 
 export const WORKSPACE_TREE_STYLE = stylesheet + runningStyles + typographyStyles
 
-function storage(): Storage | undefined { return typeof window === 'undefined' ? undefined : window.localStorage }
+function storage(): Storage | undefined {
+  if (typeof window === 'undefined') return undefined
+  try { return window.localStorage } catch { return undefined }
+}
+
+function sameIds(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index])
+}
 
 function browserBase(): string {
   return typeof window === 'undefined' || window.location.origin === 'null' ? 'http://dsh.internal/' : `${window.location.origin}/`
@@ -119,7 +126,30 @@ function CodexWorkspaceTree({ wide, useSessions, useWorkspaces, t, archiveSessio
   const sessions = useSessions(state => state)
   const workspaces = useWorkspaces(state => state)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
-  const [pinnedWorkspaceIds, setPinnedWorkspaceIds] = useState(() => readPinnedWorkspaceIds(storage()))
+  const [pinnedWorkspaceIds, setPinnedWorkspaceIdsState] = useState(() => readPinnedWorkspaceIds(storage()))
+  const pinnedWorkspaceIdsRef = useRef(pinnedWorkspaceIds)
+  pinnedWorkspaceIdsRef.current = pinnedWorkspaceIds
+  const pinnedHostHydratedRef = useRef(false)
+  const pinnedHostDirtyRef = useRef(false)
+  const pinnedHostSkipWriteRef = useRef<string[]>()
+  const pinnedHostWriteRef = useRef<Promise<void>>(Promise.resolve())
+  const workspaceBaselineRef = useRef<{ ready: boolean; validIds: string[] }>({ ready: false, validIds: [] })
+  workspaceBaselineRef.current = {
+    ready: workspaces.baselinesReady === true,
+    validIds: workspaces.items.map(workspace => String(workspace.workspaceId)),
+  }
+  const queuePinnedHostWrite = (ids: readonly string[]): void => {
+    const snapshot = [...ids]
+    const pending = pinnedHostWriteRef.current.then(() => writeHostPinnedWorkspaceIds(snapshot))
+    pinnedHostWriteRef.current = pending.catch(() => undefined)
+  }
+  const setPinnedWorkspaceIds = (update: string[] | ((current: string[]) => string[])): void => {
+    pinnedHostDirtyRef.current = true
+    const current = pinnedWorkspaceIdsRef.current
+    const next = typeof update === 'function' ? update(current) : update
+    pinnedWorkspaceIdsRef.current = next
+    setPinnedWorkspaceIdsState(next)
+  }
   const [pinnedSessionIds, setPinnedSessionIds] = useState(() => readSessionIds(storage(), SESSION_PINS_STORAGE_KEY))
   const [unreadSessionIds, setUnreadSessionIds] = useState(() => readSessionIds(storage(), SESSION_UNREAD_STORAGE_KEY))
   const [menu, setMenu] = useState<MenuState>()
@@ -135,7 +165,13 @@ function CodexWorkspaceTree({ wide, useSessions, useWorkspaces, t, archiveSessio
   const busyRef = useRef<string>()
   const [error, setError] = useState<string>()
   const [workspaceDragId, setWorkspaceDragId] = useState<string>()
-  const [workspaceDropTarget, setWorkspaceDropTarget] = useState<WorkspaceDropTarget>()
+  const [workspaceDropTarget, setWorkspaceDropTargetState] = useState<WorkspaceDropTarget>()
+  const workspaceDropTargetRef = useRef<WorkspaceDropTarget>()
+  const setWorkspaceDropTarget = (target: WorkspaceDropTarget | undefined): void => {
+    // dragover 与 drop 可能发生在 React 提交 state 之前；ref 保证松手时读取到最后一个蓝线落点。
+    workspaceDropTargetRef.current = target
+    setWorkspaceDropTargetState(target)
+  }
   const [headerMenu, setHeaderMenu] = useState<{ id: string; getRect: () => DOMRect }>()
   const headerMenuRef = useRef<{ id: string; getRect: () => DOMRect }>()
   headerMenuRef.current = headerMenu
@@ -144,15 +180,50 @@ function CodexWorkspaceTree({ wide, useSessions, useWorkspaces, t, archiveSessio
   const [sessionDrag, setSessionDrag] = useState<{ sessionId: string; workspaceId: string }>()
   const [sessionDropTarget, setSessionDropTarget] = useState<SessionDropTarget>()
 
-  useEffect(() => { savePinnedWorkspaceIds(storage(), pinnedWorkspaceIds) }, [pinnedWorkspaceIds])
+  useEffect(() => {
+    savePinnedWorkspaceIds(storage(), pinnedWorkspaceIds)
+    if (!pinnedHostHydratedRef.current) return
+    const skippedHydration = pinnedHostSkipWriteRef.current
+    pinnedHostSkipWriteRef.current = undefined
+    if (skippedHydration !== undefined && sameIds(skippedHydration, pinnedWorkspaceIds)) {
+      return
+    }
+    queuePinnedHostWrite(pinnedWorkspaceIds)
+  }, [pinnedWorkspaceIds])
+  useEffect(() => {
+    let alive = true
+    const localIds = [...pinnedWorkspaceIdsRef.current]
+    void readHostPinnedWorkspaceIds().then(host => {
+      if (!alive) return
+      const hydration = resolvePinnedWorkspaceHydration(localIds, host, pinnedHostDirtyRef.current ? pinnedWorkspaceIdsRef.current : undefined)
+      const baseline = workspaceBaselineRef.current
+      const ids = baseline.ready ? prunePinnedWorkspaceIds(hydration.ids, baseline.validIds) : hydration.ids
+      const writeHost = hydration.writeHost || !sameIds(ids, hydration.ids)
+      pinnedHostHydratedRef.current = true
+      if (!sameIds(pinnedWorkspaceIdsRef.current, ids)) {
+        // 只跳过这一份 hydration 快照；若用户紧接着操作，新的状态仍必须写回 Host。
+        pinnedHostSkipWriteRef.current = [...ids]
+        pinnedWorkspaceIdsRef.current = ids
+        setPinnedWorkspaceIdsState(ids)
+      }
+      savePinnedWorkspaceIds(storage(), ids)
+      if (writeHost) queuePinnedHostWrite(ids)
+    }).catch(() => {
+      // 旧 Host 或临时不可用时保留当前 origin 的缓存；下次加载再尝试迁移。
+    })
+    return () => { alive = false }
+  }, [])
   useEffect(() => { writeSessionIds(storage(), SESSION_PINS_STORAGE_KEY, pinnedSessionIds) }, [pinnedSessionIds])
   useEffect(() => { writeSessionIds(storage(), SESSION_UNREAD_STORAGE_KEY, unreadSessionIds) }, [unreadSessionIds])
   useEffect(() => {
-    // 工作区列表是异步填充的：列表未就绪时清理会把置顶过滤为空并被上面的持久化 effect 写回存储，造成永久丢失
-    if (workspaces.items.length === 0) return
-    const valid = new Set(workspaces.items.map(workspace => String(workspace.workspaceId)))
-    setPinnedWorkspaceIds(ids => ids.filter(id => valid.has(id)))
-  }, [workspaces.items])
+    // Host 可能在 workspace.list 完成前先送来单条 frame；非空不代表完整，必须等双基线 ready。
+    // 否则临时列表会把已保存的置顶过滤为空，再由持久化 effect 永久写回空数组。
+    if (workspaces.baselinesReady !== true) return
+    const next = prunePinnedWorkspaceIds(pinnedWorkspaceIdsRef.current, workspaces.items.map(workspace => String(workspace.workspaceId)))
+    if (sameIds(pinnedWorkspaceIdsRef.current, next)) return
+    pinnedWorkspaceIdsRef.current = next
+    setPinnedWorkspaceIdsState(next)
+  }, [workspaces.baselinesReady, workspaces.items])
   useEffect(() => {
     const current = sessions.current
     if (current !== undefined) setUnreadSessionIds(ids => ids.filter(id => id !== current))
@@ -314,7 +385,7 @@ function CodexWorkspaceTree({ wide, useSessions, useWorkspaces, t, archiveSessio
     <style>{stylesheet}{runningStyles}{typographyStyles}</style>
     {error !== undefined && <div className="dcu-wb-error" role="alert">{t('sessions.failed', { message: error })}</div>}
     <div className="dcu-wb-tree" role="tree">
-      <section className="dcu-wb-section" aria-label={t('workspace.pinned')} onDragOver={(event) => { if (!pinDragActive) return; event.preventDefault(); event.dataTransfer.dropEffect = 'move'; if (event.target === event.currentTarget || (event.target instanceof Element && event.target.closest('.dcu-wb-section-head') !== null)) { const firstId = pinnedGroupIds[0]; const beforeId = firstId === undefined ? undefined : reorderDropBeforeId(pinnedGroupIds, workspaceDragId, firstId, false); setWorkspaceDropTarget(beforeId === null ? undefined : { zone: 'pinned', beforeId }) } }} onDrop={(event) => { event.preventDefault(); const draggedWorkspace = readWorkspaceDrag(event.dataTransfer, workspaceDragId); const target = workspaceDropTarget; setWorkspaceDragId(undefined); setWorkspaceDropTarget(undefined); if (draggedWorkspace !== undefined && target?.zone === 'pinned') pinWorkspaceAt(draggedWorkspace, target.beforeId) }} onDragLeave={(event) => { if (event.currentTarget.contains(event.relatedTarget as Node)) return; setWorkspaceDropTarget(undefined) }}>
+      <section className="dcu-wb-section" aria-label={t('workspace.pinned')} onDragOver={(event) => { if (!pinDragActive) return; event.preventDefault(); event.dataTransfer.dropEffect = 'move'; if (event.target === event.currentTarget || (event.target instanceof Element && event.target.closest('.dcu-wb-section-head') !== null)) { const firstId = pinnedGroupIds[0]; const beforeId = firstId === undefined ? undefined : reorderDropBeforeId(pinnedGroupIds, workspaceDragId, firstId, false); setWorkspaceDropTarget(beforeId === null ? undefined : { zone: 'pinned', beforeId }) } }} onDrop={(event) => { event.preventDefault(); const draggedWorkspace = readWorkspaceDrag(event.dataTransfer, workspaceDragId); const target = workspaceDropTargetRef.current; setWorkspaceDragId(undefined); setWorkspaceDropTarget(undefined); if (draggedWorkspace !== undefined && target?.zone === 'pinned') pinWorkspaceAt(draggedWorkspace, target.beforeId) }} onDragLeave={(event) => { if (event.currentTarget.contains(event.relatedTarget as Node)) return; setWorkspaceDropTarget(undefined) }}>
         <div className="dcu-wb-section-head"><button type="button" className="dcu-wb-section-label" aria-expanded={sectionOpen('pinned')} onClick={() => { toggleSection('pinned') }}>{t('workspace.pinned')}<span className="dcu-wb-section-caret" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="M6.25 4.25 10.25 8 6.25 11.75" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span></button></div>
         <div className="dcu-wb-section-body" data-open={sectionOpen('pinned')}><div>{pinDragActive && pinnedGroups.length === 0 && <div className={`dcu-wb-pin-start${pinnedHeaderDrop?.kind === 'empty' ? ' dcu-wb-drop' : ''}`} onDragOver={(event) => { event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = 'move'; setWorkspaceDropTarget({ zone: 'pinned', beforeId: undefined }) }} />}{pinnedGroups.length === 0 && !(workspaceDropTarget?.zone === 'pinned' && workspaceDropTarget.beforeId === undefined) && <div className="dcu-wb-empty">{t('workspace.pinnedEmpty')}</div>}{pinnedGroups.map(workspace => renderGroup(workspace, 'pinned'))}{pinDragActive && pinnedGroups.length > 0 && <div className={`dcu-wb-pin-end${workspaceDropTarget?.zone === 'pinned' && workspaceDropTarget.beforeId === undefined ? ' dcu-wb-drop' : ''}`} onDragOver={(event) => { if (!pinDragActive) return; event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = 'move'; const lastId = pinnedGroupIds[pinnedGroupIds.length - 1]; if (lastId === undefined || workspaceDragId === undefined) return; const beforeId = reorderDropBeforeId(pinnedGroupIds, workspaceDragId, lastId, true); setWorkspaceDropTarget(beforeId === null ? undefined : { zone: 'pinned', beforeId }) }} />}</div></div>
       </section>

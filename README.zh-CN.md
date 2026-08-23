@@ -174,7 +174,7 @@ dsh --profile web --dump-config
 
 | 数据 | 存储位置 | 范围 |
 | --- | --- | --- |
-| 置顶项目 | `localStorage` 键 `dsh-codex-ui.pinned-workspace-ids` | 仅当前浏览器 |
+| 置顶项目 | Host Profile 文件，并使用 `localStorage` 缓存 | DSH 重启及 Desktop 托盘重新加载后仍保留 |
 | 置顶会话 | `localStorage` 键 `dsh.session-pins.v1` | 仅当前浏览器 |
 | 未读会话 | `localStorage` 键 `dsh.session-unread.v1` | 仅当前浏览器 |
 | 会话记录 | DSH 宿主服务 | 本插件不改写 |

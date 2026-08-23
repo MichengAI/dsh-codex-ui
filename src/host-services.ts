@@ -7,6 +7,7 @@ type HttpRequest = {
   url?: string
   /** Node 原生请求头（小写键名），用于跨站请求判定。 */
   headers?: Record<string, string | string[] | undefined>
+  [Symbol.asyncIterator]?: () => AsyncIterator<Uint8Array | string>
 }
 type HttpResponse = {
   writeHead: (status: number, headers?: Record<string, string>) => void

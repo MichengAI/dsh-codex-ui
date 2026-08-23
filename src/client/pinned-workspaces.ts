@@ -1,9 +1,63 @@
 /** 浏览器本地持久化键；置顶只影响本插件中的工作区分区。 */
 export const PINNED_WORKSPACES_STORAGE_KEY = 'dsh-codex-ui.pinned-workspace-ids'
+export const WORKSPACE_PREFERENCES_ENDPOINT = '/api/michengai/codex-ui/preferences'
+
+export type HostPinnedWorkspacePreferences = {
+  exists: boolean
+  pinnedWorkspaceIds: string[]
+}
+
+type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
 /** 清理无效或重复的工作区标识。 */
 export function normalizePinnedWorkspaceIds(ids: readonly string[]): string[] {
   return [...new Set(ids.filter(id => id.trim() !== ''))]
+}
+
+/** 仅在宿主完整基线就绪后清理已经不存在的工作区，避免加载中的临时列表抹掉持久化置顶。 */
+export function prunePinnedWorkspaceIds(ids: readonly string[], validIds: readonly string[]): string[] {
+  const valid = new Set(validIds)
+  const next = ids.filter(id => valid.has(id))
+  return next.length === ids.length ? [...ids] : next
+}
+
+/** Host 数据优先；首次升级没有 Host 文件时迁移旧 origin 的 localStorage；读取期间的用户操作永远优先。 */
+export function resolvePinnedWorkspaceHydration(
+  localIds: readonly string[],
+  host: HostPinnedWorkspacePreferences,
+  dirtyIds?: readonly string[],
+): { ids: string[]; writeHost: boolean } {
+  if (dirtyIds !== undefined) return { ids: normalizePinnedWorkspaceIds(dirtyIds), writeHost: true }
+  if (host.exists) return { ids: normalizePinnedWorkspaceIds(host.pinnedWorkspaceIds), writeHost: false }
+  const ids = normalizePinnedWorkspaceIds(localIds)
+  return { ids, writeHost: ids.length > 0 }
+}
+
+export async function readHostPinnedWorkspaceIds(fetcher: Fetcher = fetch): Promise<HostPinnedWorkspacePreferences> {
+  const response = await fetcher(WORKSPACE_PREFERENCES_ENDPOINT, {
+    method: 'GET',
+    cache: 'no-store',
+    signal: AbortSignal.timeout(5_000),
+  })
+  if (!response.ok) throw new Error(`读取置顶偏好失败：HTTP ${response.status}`)
+  const payload: unknown = await response.json()
+  if (payload === null || typeof payload !== 'object') throw new Error('置顶偏好响应格式无效。')
+  const record = payload as Record<string, unknown>
+  if (typeof record.exists !== 'boolean' || !Array.isArray(record.pinnedWorkspaceIds) || !record.pinnedWorkspaceIds.every(id => typeof id === 'string')) {
+    throw new Error('置顶偏好响应格式无效。')
+  }
+  return { exists: record.exists, pinnedWorkspaceIds: normalizePinnedWorkspaceIds(record.pinnedWorkspaceIds as string[]) }
+}
+
+export async function writeHostPinnedWorkspaceIds(ids: readonly string[], fetcher: Fetcher = fetch): Promise<void> {
+  const response = await fetcher(WORKSPACE_PREFERENCES_ENDPOINT, {
+    method: 'PUT',
+    cache: 'no-store',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ pinnedWorkspaceIds: normalizePinnedWorkspaceIds(ids) }),
+    signal: AbortSignal.timeout(5_000),
+  })
+  if (!response.ok) throw new Error(`保存置顶偏好失败：HTTP ${response.status}`)
 }
 
 /** 在置顶列表中切换一个工作区。 */

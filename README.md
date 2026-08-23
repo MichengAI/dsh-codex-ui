@@ -174,7 +174,7 @@ Deleting a workspace registration does not delete its folder or conversation rec
 
 | Data | Storage | Scope |
 | --- | --- | --- |
-| Pinned workspaces | `localStorage` key `dsh-codex-ui.pinned-workspace-ids` | Current browser only |
+| Pinned workspaces | Host profile file with a `localStorage` cache | Survives DSH restarts and Desktop tray reloads |
 | Pinned conversations | `localStorage` key `dsh.session-pins.v1` | Current browser only |
 | Unread conversations | `localStorage` key `dsh.session-unread.v1` | Current browser only |
 | Conversation records | DSH host services | Unchanged by this plugin |

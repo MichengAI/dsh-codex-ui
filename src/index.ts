@@ -2,11 +2,19 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { dependencyStatuses, disposeDependencyInstaller, installDependency, requestDesktopHotUpdate } from './dependency-manager.ts'
 import { hostServices } from './host-services.ts'
+import { parsePinnedWorkspaceIds, readWorkspacePreferences, writeWorkspacePreferences } from './workspace-preferences.ts'
 
 const connectorsEndpoint = '/api/michengai/codex-ui/connectors'
 const dependenciesEndpoint = '/api/michengai/codex-ui/dependencies'
+const preferencesEndpoint = '/api/michengai/codex-ui/preferences'
+const maxPreferencesBodyBytes = 32 * 1024
 
-type HostRequest = { method?: string; url?: string; headers?: Record<string, string | string[] | undefined> }
+type HostRequest = {
+  method?: string
+  url?: string
+  headers?: Record<string, string | string[] | undefined>
+  [Symbol.asyncIterator]?: () => AsyncIterator<Uint8Array | string>
+}
 
 function headerValue(headers: Record<string, string | string[] | undefined>, name: string): string | undefined {
   const value = headers[name]
@@ -43,6 +51,24 @@ export function publicDependencyError(error: unknown): string {
   const message = error instanceof Error ? error.message : '依赖管理暂不可用。'
   if (/[A-Za-z]:[\\/]|\/(?:home|root|Users|var|tmp)\//.test(message)) return '依赖管理暂不可用，请查看服务端日志。'
   return message
+}
+
+export class RequestBodyTooLargeError extends Error {}
+
+/** 有界读取 Node HTTP body；偏好接口只接受很小的 JSON。 */
+export async function readRequestBody(request: HostRequest, maxBytes = maxPreferencesBodyBytes): Promise<string> {
+  const declared = Number(headerValue(request.headers ?? {}, 'content-length'))
+  if (Number.isFinite(declared) && declared > maxBytes) throw new RequestBodyTooLargeError('请求体过大。')
+  if (request[Symbol.asyncIterator] === undefined) return ''
+  const chunks: Buffer[] = []
+  let length = 0
+  for await (const chunk of request as AsyncIterable<Uint8Array | string>) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+    length += buffer.length
+    if (length > maxBytes) throw new RequestBodyTooLargeError('请求体过大。')
+    chunks.push(buffer)
+  }
+  return Buffer.concat(chunks).toString('utf8')
 }
 
 export const inject = ['webServer', 'agents', 'tools']
@@ -114,10 +140,61 @@ export function apply(ctx: Context): void {
         }
       },
     })
+    const disposePreferences = host.webServer.register({
+      kind: 'exact',
+      path: preferencesEndpoint,
+      handler: async (request, response) => {
+        try {
+          if (request.method === 'GET' || request.method === 'HEAD') {
+            const preferences = await readWorkspacePreferences()
+            response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+            response.end(request.method === 'HEAD' ? undefined : JSON.stringify(preferences))
+            return
+          }
+          if (request.method === 'PUT') {
+            if (crossSiteRequest(request)) {
+              response.writeHead(403, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+              response.end(JSON.stringify({ error: '已拒绝跨站请求。' }))
+              return
+            }
+            const body = JSON.parse(await readRequestBody(request)) as unknown
+            const pinnedWorkspaceIds = body !== null && typeof body === 'object'
+              ? parsePinnedWorkspaceIds((body as Record<string, unknown>).pinnedWorkspaceIds)
+              : undefined
+            if (pinnedWorkspaceIds === undefined) {
+              response.writeHead(400, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+              response.end(JSON.stringify({ error: '置顶偏好格式无效。' }))
+              return
+            }
+            await writeWorkspacePreferences(pinnedWorkspaceIds)
+            response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+            response.end(JSON.stringify({ version: 1, pinnedWorkspaceIds, exists: true }))
+            return
+          }
+          response.writeHead(405, { allow: 'GET, HEAD, PUT' })
+          response.end()
+        } catch (error) {
+          if (error instanceof RequestBodyTooLargeError) {
+            response.writeHead(413, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+            response.end(JSON.stringify({ error: '请求体过大。' }))
+            return
+          }
+          if (error instanceof SyntaxError) {
+            response.writeHead(400, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+            response.end(JSON.stringify({ error: '置顶偏好格式无效。' }))
+            return
+          }
+          ctx.logger.warn('preferences endpoint failed: %s', error)
+          response.writeHead(503, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+          response.end(JSON.stringify({ error: '置顶偏好暂不可用。' }))
+        }
+      },
+    })
     return () => {
       disposeDependencyInstaller()
       disposeConnectors()
       disposeDependencies()
+      disposePreferences()
     }
   }, 'michengai-codex-ui: catalogs')
 }

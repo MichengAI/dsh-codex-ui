@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react'
 import {
   BrandWordmark, IconEnhanceOutline16,
   IconLinkOutline16, IconNewChatOutline16, IconPanelLeftOutline16, IconPersonalizationOutline16, IconSearchOutline16, IconSkillOutline16,
@@ -43,13 +43,14 @@ export type CodexSidebarProps =
 
 const stylesheet = `
 .dcu-root{--dcu-font:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei UI",sans-serif;--dcu-sidebar-primary:#393d3e;--dcu-sidebar-secondary:#676b6c;--dcu-sidebar-tertiary:#9a9f9f;--dcu-sidebar-navigation:#4e5253;--dcu-sidebar-icon:#4e5253;--dcu-sidebar-hover:#dfe8e5;--dcu-sidebar-border:rgba(37,46,41,.10);--dcu-tip-bg:#ffffff;--dcu-tip-shadow:0 10px 32px rgba(31,39,36,.22);height:100%;min-width:0;box-sizing:border-box;display:flex;flex-direction:column;background:#eef7f5;color:var(--dcu-sidebar-primary);font:14px/20px var(--dcu-font)}body[data-ds-dark-theme] .dcu-root{background:#1d2120;--dcu-sidebar-primary:#b9bab9;--dcu-sidebar-secondary:#909191;--dcu-sidebar-tertiary:#666867;--dcu-sidebar-navigation:#b9bab9;--dcu-sidebar-icon:#afafaf;--dcu-sidebar-hover:#303432;--dcu-sidebar-border:rgba(255,255,255,.08);--dcu-tip-bg:#2a2e2c;--dcu-tip-shadow:0 10px 30px rgba(0,0,0,.28)}
+[data-dcu-sidebar-frame]{transition:none!important}[data-dcu-sidebar-frame] [data-side=sidebar]{transition:none!important}.dcu-expanded-shell{display:flex;min-height:0;flex:1;flex-direction:column}.dcu-compact-shell{display:none}.dcu-root.dcu-compact .dcu-expanded-shell{display:none}.dcu-root.dcu-compact .dcu-compact-shell{display:flex;min-height:0;flex:1;flex-direction:column;align-items:center}
 .dcu-root *{box-sizing:border-box}.dcu-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:8px;height:60px;padding:8px 8px 8px 12px}.dcu-brand{border:0;background:transparent;color:inherit;padding:0;display:flex;align-items:center;min-width:0;overflow:hidden}.dcu-brand svg{display:block;width:auto;max-width:100%;height:24px;min-width:0}.dcu-head-actions{display:grid;grid-auto-flow:column;grid-auto-columns:28px;align-items:center;column-gap:8px;height:28px}
 .dcu-icon,.dcu-menu button,.dcu-footer-link{appearance:none;border:0;background:transparent;color:inherit;font:inherit;cursor:pointer}.dcu-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:8px;color:var(--dcu-sidebar-icon)}.dcu-head .dcu-icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin:0;padding:0;border-radius:50%;line-height:0}.dcu-head .dcu-icon svg{display:block;width:16px;height:16px}
 .dcu-icon:hover,.dcu-menu button:hover:not(:disabled),.dcu-footer-link:hover{background:var(--dcu-sidebar-hover);color:var(--dcu-sidebar-primary)}
 .dcu-menu{padding:0 6px 8px;display:grid;gap:2px}.dcu-menu button,.dcu-footer-link{display:grid;grid-template-columns:20px minmax(0,1fr);column-gap:8px;align-items:center;width:100%;min-height:36px;padding:0 4px;border-radius:8px;color:var(--dcu-sidebar-navigation);font-size:14px;line-height:20px;text-align:left;font-weight:400}
 .dcu-menu-icon{display:grid;place-items:center start;width:20px;height:20px}.dcu-menu-icon svg,.dcu-footer-link svg{display:block;width:16px;height:16px;color:var(--dcu-sidebar-icon)}.dcu-menu button:disabled{color:var(--dcu-sidebar-secondary);cursor:default;opacity:1}.dcu-menu button:disabled svg{color:var(--dcu-sidebar-secondary)}
 .dcu-extension-items{display:grid;gap:1px;margin:1px 0 4px 28px}.dcu-extension-items button{min-height:32px;color:var(--dcu-sidebar-secondary);font-size:13px;font-weight:400}
-.dcu-workspaces{display:flex;min-height:0;flex:1;flex-direction:column;margin-top:2px;padding-top:8px;border-top:1px solid var(--dcu-sidebar-border)}.dcu-workspaces.dcu-workspaces-tabs{padding-top:0;border-top:0}.dcu-im-tabs{display:flex;gap:16px;margin:0 8px 12px;padding:0;border-bottom:1px solid var(--dcu-sidebar-border)}.dcu-im-tab{appearance:none;border:0;background:transparent;color:var(--dcu-sidebar-secondary);padding:8px 0 7px;font:14px/22px var(--dcu-font);font-weight:500;cursor:pointer}.dcu-im-tab[data-on=true]{color:var(--dcu-sidebar-primary);font-weight:600;box-shadow:inset 0 -2px 0 currentColor}.dcu-native-workspaces{display:flex;min-height:0;flex:1}.dcu-native-workspaces>*{min-width:0;flex:1}.dcu-native-workspaces .ima-tabs,.dcu-native-workspaces [role=tablist]{display:none!important}.dcu-foot{display:grid;gap:4px;padding:8px 6px 12px;border-top:1px solid var(--dcu-sidebar-border)}.dcu-footer-actions:empty,.dcu-settings-seat:empty{display:none}.dcu-settings-seat>button{width:100%;min-height:36px;padding-left:4px!important;color:var(--dcu-sidebar-navigation);font:14px/20px var(--dcu-font);font-weight:400}.dcu-compact{width:100%;align-items:center;overflow:hidden;padding:10px 0 8px}.dcu-compact-nav{display:flex;flex:1;min-height:0;flex-direction:column;align-items:center;gap:2px;overflow:auto;padding:6px 0}.dcu-compact .dcu-icon{width:36px;height:36px;flex:none}.dcu-compact .dcu-head,.dcu-compact .dcu-menu,.dcu-compact .dcu-workspaces,.dcu-compact .dcu-brand,.dcu-compact .dcu-im-tabs{display:none}.dcu-compact .dcu-foot{width:36px;margin-top:auto;padding:8px 0;border-top:0}.dcu-compact .dcu-settings-seat{width:36px;overflow:hidden}.dcu-compact .dcu-settings-seat>button{display:grid;place-items:center;width:36px;min-height:36px;padding:0!important;font-size:0!important;line-height:0}.dcu-compact .dcu-settings-seat>button svg{width:16px;height:16px}.dcu-compact .dcu-footer-link{display:flex;justify-content:center;width:36px;padding:0;font-size:0}.dcu-compact .dcu-footer-link svg{width:16px;height:16px}
+.dcu-workspaces{display:flex;min-height:0;flex:1;flex-direction:column;margin-top:2px;padding-top:8px;border-top:1px solid var(--dcu-sidebar-border)}.dcu-workspaces.dcu-workspaces-tabs{padding-top:0;border-top:0}.dcu-im-tabs{display:flex;gap:16px;margin:0 8px 12px;padding:0;border-bottom:1px solid var(--dcu-sidebar-border)}.dcu-im-tab{appearance:none;border:0;background:transparent;color:var(--dcu-sidebar-secondary);padding:8px 0 7px;font:14px/22px var(--dcu-font);font-weight:500;cursor:pointer}.dcu-im-tab[data-on=true]{color:var(--dcu-sidebar-primary);font-weight:600;box-shadow:inset 0 -2px 0 currentColor}.dcu-native-workspaces{display:flex;min-height:0;flex:1}.dcu-native-workspaces>*{min-width:0;flex:1}.dcu-native-workspaces .ima-tabs,.dcu-native-workspaces [role=tablist]{display:none!important}.dcu-foot{display:grid;gap:4px;padding:8px 6px 12px;border-top:1px solid var(--dcu-sidebar-border)}.dcu-footer-actions:empty,.dcu-settings-seat:empty{display:none}.dcu-settings-seat>button{width:100%;min-height:36px;padding-left:4px!important;color:var(--dcu-sidebar-navigation);font:14px/20px var(--dcu-font);font-weight:400}.dcu-compact{width:100%;align-items:center;overflow:hidden;padding:10px 0 8px}.dcu-compact-nav{display:flex;flex:1;min-height:0;flex-direction:column;align-items:center;gap:2px;overflow:auto;padding:6px 0}.dcu-compact .dcu-icon{width:36px;height:36px;flex:none}.dcu-compact .dcu-foot{width:36px;margin-top:auto;padding:8px 0;border-top:0}.dcu-compact .dcu-settings-seat{width:36px;overflow:hidden}.dcu-compact .dcu-settings-seat>button{display:grid;place-items:center;width:36px;min-height:36px;padding:0!important;font-size:0!important;line-height:0}.dcu-compact .dcu-settings-seat>button svg{width:16px;height:16px}.dcu-compact .dcu-footer-link{display:flex;justify-content:center;width:36px;padding:0;font-size:0}.dcu-compact .dcu-footer-link svg{width:16px;height:16px}
 .dcu-dependency-notice{margin:0 10px 8px;border:1px solid var(--dcu-sidebar-border);border-radius:8px;padding:8px;color:var(--dcu-sidebar-secondary);font-size:12px;line-height:18px}
 [role="dialog"][aria-labelledby]{width:min(1000px,calc(100vw - 48px));max-width:calc(100vw - 48px);height:min(800px,calc(100vh - 48px))}
 .dcu-search-scrim{position:fixed;z-index:10020;inset:0;display:flex;justify-content:center;align-items:flex-start;padding:72px 20px;background:color-mix(in srgb,#000 48%,transparent)}.dcu-search-dialog{width:min(560px,100%);max-height:min(640px,calc(100vh - 120px));overflow:auto;border:1px solid var(--dcu-sidebar-border);border-radius:16px;padding:10px;background:var(--dsw-specific-menu);box-shadow:var(--dsw-shadow-lv4)}.dcu-search-input{margin-bottom:8px}.dcu-search-section{padding:6px 0}.dcu-search-title{padding:0 8px 4px;color:var(--dcu-sidebar-tertiary);font-size:12px;font-weight:600}.dcu-search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;min-height:34px;border:0;border-radius:8px;padding:6px 8px;background:transparent;color:var(--dcu-sidebar-primary);font:inherit;text-align:left;cursor:pointer}.dcu-search-row:hover,.dcu-search-row[data-active=true]{background:var(--dcu-sidebar-hover)}.dcu-search-main{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dcu-search-detail{max-width:160px;overflow:hidden;color:var(--dcu-sidebar-tertiary);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.dcu-search-empty{padding:18px 8px;color:var(--dcu-sidebar-tertiary);font-size:13px}
@@ -70,13 +71,91 @@ type SearchEntry = SidebarSearchItem & {
   readonly run: () => void
 }
 
+type SidebarSearchHandle = { open: () => void }
+
+type SidebarSearchProps = Pick<CodexSidebarProps, 'openSession' | 'startSession' | 't' | 'useSessions' | 'useWorkspaces'> & {
+  settingsSeat: RefObject<HTMLDivElement>
+}
+
+/** 搜索状态与大侧栏隔离：输入、悬停和开关弹窗都不能让工作区树跟着重渲染。 */
+const SidebarSearch = forwardRef<SidebarSearchHandle, SidebarSearchProps>(function SidebarSearch(
+  { openSession, startSession, t, useSessions, useWorkspaces, settingsSeat },
+  ref,
+) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [activeIndex, setActiveIndex] = useState(0)
+  const deferredQuery = useDeferredValue(query)
+  const sessions = useSessions(state => state)
+  const workspaces = useWorkspaces(state => state)
+
+  const close = useCallback((): void => {
+    setOpen(false)
+    setQuery('')
+    setActiveIndex(0)
+  }, [])
+  useImperativeHandle(ref, () => ({ open: () => { setOpen(true) } }), [])
+
+  const selectSection = useCallback((label: string): void => {
+    openSettingsSection(settingsSeat.current, label)
+  }, [settingsSeat])
+  const selectPluginSection = useCallback((): void => {
+    openSettingsSection(settingsSeat.current, [t('sidebar.marketplace'), t('sidebar.plugins')])
+  }, [settingsSeat, t])
+  const selectExternalSection = useCallback((label: string | readonly string[]): void => {
+    openSettingsSection(settingsSeat.current, label, () => { selectSection(t('about.nav')) })
+  }, [selectSection, settingsSeat, t])
+  const openSettings = useCallback((): void => {
+    settingsSeat.current?.querySelector<HTMLButtonElement>('[aria-haspopup="dialog"]')?.click()
+  }, [settingsSeat])
+
+  const entries = useMemo<SearchEntry[]>(() => {
+    const archived = new Set(workspaces.archivedSessionIds)
+    const workspaceTitles = new Map(workspaces.items.flatMap(workspace => workspace.sessionIds.map(sessionId => [String(sessionId), workspace.title])))
+    const sessionEntries = sessions.ids
+      .map(id => sessions.byId[id])
+      .filter((session): session is NonNullable<typeof session> => session !== undefined && !archived.has(session.id) && isTaskSession(session))
+      .sort((left, right) => right.updatedAt - left.updatedAt)
+      .map(session => ({ id: `session:${session.id}`, group: 'sessions' as const, label: session.displayTitle, keywords: `${session.cwd ?? ''} ${session.id}`, detail: workspaceTitles.get(String(session.id)) ?? session.cwd, run: () => { close(); openSession(session.id) } }))
+    const settingEntries: SearchEntry[] = [
+      { id: 'settings:root', group: 'settings', label: t('search.settings'), keywords: t('search.settings'), run: () => { close(); openSettings() } },
+      { id: 'settings:experts', group: 'settings', label: t('sidebar.experts'), keywords: t('search.settings'), run: () => { close(); selectExternalSection(t('sidebar.experts')) } },
+      { id: 'settings:skills', group: 'settings', label: t('sidebar.skills'), keywords: t('search.settings'), run: () => { close(); selectExternalSection(t('sidebar.skills')) } },
+      { id: 'settings:plugins', group: 'settings', label: t('sidebar.plugins'), keywords: t('search.settings'), run: () => { close(); selectPluginSection() } },
+      { id: 'settings:connectors', group: 'settings', label: t('sidebar.connectors'), keywords: t('search.settings'), run: () => { close(); selectSection(t('sidebar.connectors')) } },
+      { id: 'settings:schedule', group: 'settings', label: t('sidebar.schedule'), keywords: t('search.settings'), run: () => { close(); selectExternalSection(t('sidebar.schedule')) } },
+      { id: 'settings:assistant', group: 'settings', label: t('sidebar.assistant'), keywords: t('search.settings'), run: () => { close(); selectExternalSection([t('sidebar.imSettings'), 'IM助理']) } },
+      { id: 'settings:about', group: 'settings', label: t('about.nav'), keywords: t('search.settings'), run: () => { close(); selectSection(t('about.nav')) } },
+    ]
+    return [...sessionEntries, ...settingEntries, { id: 'action:new', group: 'actions', label: t('sidebar.newTask'), keywords: t('search.actions'), run: () => { close(); startSession() } }]
+  }, [close, openSession, openSettings, selectExternalSection, selectPluginSection, selectSection, sessions.byId, sessions.ids, startSession, t, workspaces.archivedSessionIds, workspaces.items])
+  const results = useMemo(() => filterSidebarSearchItems(entries, deferredQuery).slice(0, 12), [deferredQuery, entries])
+
+  useEffect(() => { setActiveIndex(0) }, [query, open])
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') { event.preventDefault(); close(); return }
+      if (event.key === 'ArrowDown') { event.preventDefault(); setActiveIndex(index => Math.min(index + 1, Math.max(0, results.length - 1))); return }
+      if (event.key === 'ArrowUp') { event.preventDefault(); setActiveIndex(index => Math.max(index - 1, 0)); return }
+      if (event.key === 'Enter') { const entry = results[activeIndex]; if (entry !== undefined) { event.preventDefault(); entry.run() } }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => { window.removeEventListener('keydown', onKeyDown) }
+  }, [activeIndex, close, open, results])
+
+  if (!open) return null
+  return <div className="dcu-search-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) close() }}><section className="dcu-search-dialog" role="dialog" aria-modal="true" aria-label={t('sidebar.search')}><div className="dcu-search-input"><Input autoFocus icon={<IconSearchOutline16 size={16} />} value={query} placeholder={t('search.placeholder')} onChange={event => { setQuery(event.target.value) }} /></div>{results.length === 0 ? <div className="dcu-search-empty">{t('search.empty')}</div> : (['sessions', 'settings', 'actions'] as const).map(group => { const grouped = results.filter(entry => entry.group === group); if (grouped.length === 0) return null; return <section className="dcu-search-section" key={group}><div className="dcu-search-title">{t(`search.${group}`)}</div>{grouped.map(entry => { const index = results.indexOf(entry); return <button type="button" className="dcu-search-row" data-active={index === activeIndex} key={entry.id} onMouseEnter={() => { setActiveIndex(index) }} onClick={entry.run}><span className="dcu-search-main">{entry.label}</span>{entry.detail !== undefined && <span className="dcu-search-detail">{entry.detail}</span>}</button> })}</section> })}</section></div>
+})
+
 /** Codex 风格的 DSH 侧栏，只替换导航外观，项目浏览和设置仍由 DSH 官方组件提供。 */
 export function CodexSidebar({ collapsed, width, openSession, startSession, toggleSidebar, archiveSession, deleteSession, forkSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useWorkspaces }: CodexSidebarProps) {
   const settingsSeat = useRef<HTMLDivElement>(null)
+  const search = useRef<SidebarSearchHandle>(null)
+  const toggleSidebarRef = useRef(toggleSidebar)
+  toggleSidebarRef.current = toggleSidebar
+  const expandSidebar = useCallback((): void => { toggleSidebarRef.current() }, [])
   const [extensionsOpen, setExtensionsOpen] = useState(true)
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [activeSearchIndex, setActiveSearchIndex] = useState(0)
   const [imTab, setImTab] = useState<'tasks' | 'channels' | 'schedule'>('tasks')
   const companionTabs = useSyncExternalStore(
     companionSlots?.subscribe ?? subscribeEmptyCompanionTabs,
@@ -86,52 +165,15 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
   const showChannels = companionTabs.channels
   const showSchedule = companionTabs.schedule
   const showCompanionTabs = showChannels || showSchedule
-  const sessions = useSessions(state => state)
-  const workspaces = useWorkspaces(state => state)
   const selectSection = (label: string): void => { openSettingsSection(settingsSeat.current, label) }
   const selectPluginSection = (): void => { openSettingsSection(settingsSeat.current, [t('sidebar.marketplace'), t('sidebar.plugins')]) }
   const selectExternalSection = (label: string | readonly string[]): void => {
     openSettingsSection(settingsSeat.current, label, () => { selectSection(t('about.nav')) })
   }
-  const openSettings = (): void => { settingsSeat.current?.querySelector<HTMLButtonElement>('[aria-haspopup="dialog"]')?.click() }
-  const closeSearch = (): void => { setSearchOpen(false); setSearchQuery(''); setActiveSearchIndex(0) }
-  const searchEntries = useMemo<SearchEntry[]>(() => {
-    const archived = new Set(workspaces.archivedSessionIds)
-    const workspaceTitles = new Map(workspaces.items.flatMap(workspace => workspace.sessionIds.map(sessionId => [String(sessionId), workspace.title])))
-    const sessionEntries = sessions.ids
-      .map(id => sessions.byId[id])
-      .filter((session): session is NonNullable<typeof session> => session !== undefined && !archived.has(session.id) && isTaskSession(session))
-      .sort((left, right) => right.updatedAt - left.updatedAt)
-      .map(session => ({ id: `session:${session.id}`, group: 'sessions' as const, label: session.displayTitle, keywords: `${session.cwd ?? ''} ${session.id}`, detail: workspaceTitles.get(String(session.id)) ?? session.cwd, run: () => { closeSearch(); openSession(session.id) } }))
-    const settingEntries: SearchEntry[] = [
-      { id: 'settings:root', group: 'settings', label: t('search.settings'), keywords: t('search.settings'), run: () => { closeSearch(); openSettings() } },
-      { id: 'settings:experts', group: 'settings', label: t('sidebar.experts'), keywords: t('search.settings'), run: () => { closeSearch(); selectExternalSection(t('sidebar.experts')) } },
-      { id: 'settings:skills', group: 'settings', label: t('sidebar.skills'), keywords: t('search.settings'), run: () => { closeSearch(); selectExternalSection(t('sidebar.skills')) } },
-      { id: 'settings:plugins', group: 'settings', label: t('sidebar.plugins'), keywords: t('search.settings'), run: () => { closeSearch(); selectPluginSection() } },
-      { id: 'settings:connectors', group: 'settings', label: t('sidebar.connectors'), keywords: t('search.settings'), run: () => { closeSearch(); selectSection(t('sidebar.connectors')) } },
-      { id: 'settings:schedule', group: 'settings', label: t('sidebar.schedule'), keywords: t('search.settings'), run: () => { closeSearch(); selectExternalSection(t('sidebar.schedule')) } },
-      { id: 'settings:assistant', group: 'settings', label: t('sidebar.assistant'), keywords: t('search.settings'), run: () => { closeSearch(); selectExternalSection([t('sidebar.imSettings'), 'IM助理']) } },
-      { id: 'settings:about', group: 'settings', label: t('about.nav'), keywords: t('search.settings'), run: () => { closeSearch(); selectSection(t('about.nav')) } },
-    ]
-    return [...sessionEntries, ...settingEntries, { id: 'action:new', group: 'actions', label: t('sidebar.newTask'), keywords: t('search.actions'), run: () => { closeSearch(); startSession() } }]
-  }, [openSession, sessions.byId, sessions.ids, startSession, t, workspaces.archivedSessionIds, workspaces.items])
-  const searchResults = useMemo(() => filterSidebarSearchItems(searchEntries, searchQuery).slice(0, 12), [searchEntries, searchQuery])
-  useEffect(() => { setActiveSearchIndex(0) }, [searchQuery, searchOpen])
   useEffect(() => {
     if (imTab === 'channels' && !showChannels) setImTab('tasks')
     if (imTab === 'schedule' && !showSchedule) setImTab('tasks')
   }, [imTab, showChannels, showSchedule])
-  useEffect(() => {
-    if (!searchOpen) return
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') { event.preventDefault(); closeSearch(); return }
-      if (event.key === 'ArrowDown') { event.preventDefault(); setActiveSearchIndex(index => Math.min(index + 1, Math.max(0, searchResults.length - 1))); return }
-      if (event.key === 'ArrowUp') { event.preventDefault(); setActiveSearchIndex(index => Math.max(index - 1, 0)); return }
-      if (event.key === 'Enter') { const entry = searchResults[activeSearchIndex]; if (entry !== undefined) { event.preventDefault(); entry.run() } }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => { window.removeEventListener('keydown', onKeyDown) }
-  }, [activeSearchIndex, searchOpen, searchResults])
   useEffect(() => {
     let startX = 0
     let dragging = false
@@ -164,11 +206,15 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
     }
   }, [toggleSidebar])
   const compact = collapsed || width < 80
-  if (compact) return <aside className="dcu-root dcu-compact" aria-label={t('sidebar.label')}><style>{stylesheet}</style><button type="button" className="dcu-icon" aria-label={t('sidebar.expand')} onClick={toggleSidebar}><IconPanelLeftOutline16 size={16} /></button><nav className="dcu-compact-nav" aria-label={t('sidebar.mainMenu')}><button type="button" className="dcu-icon" aria-label={t('sidebar.newTask')} onClick={() => { startSession() }}><IconNewChatOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.search')} onClick={() => { setSearchOpen(true) }}><IconSearchOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.experts')} onClick={() => { selectExternalSection(t('sidebar.experts')) }}><IconUserOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.skills')} onClick={() => { selectExternalSection(t('sidebar.skills')) }}><IconSkillOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.plugins')} onClick={() => { selectPluginSection() }}><IconPersonalizationOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.connectors')} onClick={() => { selectSection(t('sidebar.connectors')) }}><IconLinkOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.schedule')} onClick={() => { selectExternalSection(t('sidebar.schedule')) }}><ScheduleIcon /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.assistant')} onClick={() => { selectExternalSection([t('sidebar.imSettings'), 'IM助理']) }}><ImAssistantIcon /></button></nav><footer className="dcu-foot"><div className="dcu-footer-actions">{renderSlot('sidebar.footer.action', { wide: false })}</div><div ref={settingsSeat} className="dcu-settings-seat">{renderSlot('sidebar.settings', { wide: false })}</div></footer>{searchOpen && <div className="dcu-search-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSearch() }}><section className="dcu-search-dialog" role="dialog" aria-modal="true" aria-label={t('sidebar.search')}><div className="dcu-search-input"><Input autoFocus icon={<IconSearchOutline16 size={16} />} value={searchQuery} placeholder={t('search.placeholder')} onChange={event => { setSearchQuery(event.target.value) }} /></div>{searchResults.length === 0 ? <div className="dcu-search-empty">{t('search.empty')}</div> : (['sessions', 'settings', 'actions'] as const).map(group => { const entries = searchResults.filter(entry => entry.group === group); if (entries.length === 0) return null; return <section className="dcu-search-section" key={group}><div className="dcu-search-title">{t(`search.${group}`)}</div>{entries.map(entry => { const index = searchResults.indexOf(entry); return <button type="button" className="dcu-search-row" data-active={index === activeSearchIndex} key={entry.id} onMouseEnter={() => { setActiveSearchIndex(index) }} onClick={entry.run}><span className="dcu-search-main">{entry.label}</span>{entry.detail !== undefined && <span className="dcu-search-detail">{entry.detail}</span>}</button> })}</section> })}</section></div>}</aside>
+  const workspaceSlot = useMemo(
+    () => renderSlot('sidebar.workspaces', { wide: true, expandSidebar }),
+    [expandSidebar, renderSlot],
+  )
 
-  return <aside className="dcu-root" aria-label={t('sidebar.label')}>
+  return <aside className={`dcu-root${compact ? ' dcu-compact' : ''}`} aria-label={t('sidebar.label')}>
     <style>{stylesheet}</style>
-    <header className="dcu-head"><button type="button" className="dcu-brand" aria-label={t('sidebar.newTask')} onClick={() => { startSession() }}><BrandWordmark size={24} /></button><div className="dcu-head-actions"><button type="button" className="dcu-icon" aria-label={t('sidebar.collapse')} onClick={toggleSidebar}><IconPanelLeftOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.search')} onClick={() => { setSearchOpen(true) }}><IconSearchOutline16 size={16} /></button></div></header>
+    <div className="dcu-expanded-shell">
+    <header className="dcu-head"><button type="button" className="dcu-brand" aria-label={t('sidebar.newTask')} onClick={() => { startSession() }}><BrandWordmark size={24} /></button><div className="dcu-head-actions"><button type="button" className="dcu-icon" aria-label={t('sidebar.collapse')} onClick={toggleSidebar}><IconPanelLeftOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.search')} onClick={() => { search.current?.open() }}><IconSearchOutline16 size={16} /></button></div></header>
     <nav className="dcu-menu" aria-label={t('sidebar.mainMenu')}>
       <button type="button" onClick={() => { startSession() }}><MenuIcon><IconNewChatOutline16 size={16} /></MenuIcon>{t('sidebar.newTask')}</button>
       <button type="button" aria-expanded={extensionsOpen} onClick={() => { setExtensionsOpen(open => !open) }}><MenuIcon><IconEnhanceOutline16 size={16} /></MenuIcon>{t('sidebar.extensions')}</button>
@@ -186,10 +232,12 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
         ? <div className="dcu-native-workspaces"><ChannelBrowser openSession={openSession} archiveSession={archiveSession} deleteSession={deleteSession} forkSession={forkSession} renameSession={renameSession} useSessions={useSessions} t={t} /></div>
         : imTab === 'schedule' && showSchedule
           ? <div className="dcu-native-workspaces"><ScheduleBrowser openSession={openSession} archiveSession={archiveSession} deleteSession={deleteSession} forkSession={forkSession} renameSession={renameSession} useSessions={useSessions} useWorkspaces={useWorkspaces} t={t} /></div>
-          : <div className="dcu-native-workspaces">{renderSlot('sidebar.workspaces', { wide: true, expandSidebar: toggleSidebar })}</div>}
+          : <div className="dcu-native-workspaces">{workspaceSlot}</div>}
     </div>
-    <footer className="dcu-foot"><div className="dcu-footer-actions">{renderSlot('sidebar.footer.action', { wide: true })}</div><div ref={settingsSeat} className="dcu-settings-seat">{renderSlot('sidebar.settings', { wide: true })}</div></footer>
-    {searchOpen && <div className="dcu-search-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSearch() }}><section className="dcu-search-dialog" role="dialog" aria-modal="true" aria-label={t('sidebar.search')}><div className="dcu-search-input"><Input autoFocus icon={<IconSearchOutline16 size={16} />} value={searchQuery} placeholder={t('search.placeholder')} onChange={event => { setSearchQuery(event.target.value) }} /></div>{searchResults.length === 0 ? <div className="dcu-search-empty">{t('search.empty')}</div> : (['sessions', 'settings', 'actions'] as const).map(group => { const entries = searchResults.filter(entry => entry.group === group); if (entries.length === 0) return null; return <section className="dcu-search-section" key={group}><div className="dcu-search-title">{t(`search.${group}`)}</div>{entries.map(entry => { const index = searchResults.indexOf(entry); return <button type="button" className="dcu-search-row" data-active={index === activeSearchIndex} key={entry.id} onMouseEnter={() => { setActiveSearchIndex(index) }} onClick={entry.run}><span className="dcu-search-main">{entry.label}</span>{entry.detail !== undefined && <span className="dcu-search-detail">{entry.detail}</span>}</button> })}</section> })}</section></div>}
+    </div>
+    <div className="dcu-compact-shell"><button type="button" className="dcu-icon" aria-label={t('sidebar.expand')} onClick={toggleSidebar}><IconPanelLeftOutline16 size={16} /></button><nav className="dcu-compact-nav" aria-label={t('sidebar.mainMenu')}><button type="button" className="dcu-icon" aria-label={t('sidebar.newTask')} onClick={() => { startSession() }}><IconNewChatOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.search')} onClick={() => { search.current?.open() }}><IconSearchOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.experts')} onClick={() => { selectExternalSection(t('sidebar.experts')) }}><IconUserOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.skills')} onClick={() => { selectExternalSection(t('sidebar.skills')) }}><IconSkillOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.plugins')} onClick={() => { selectPluginSection() }}><IconPersonalizationOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.connectors')} onClick={() => { selectSection(t('sidebar.connectors')) }}><IconLinkOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.schedule')} onClick={() => { selectExternalSection(t('sidebar.schedule')) }}><ScheduleIcon /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.assistant')} onClick={() => { selectExternalSection([t('sidebar.imSettings'), 'IM助理']) }}><ImAssistantIcon /></button></nav></div>
+    <footer className="dcu-foot"><div className="dcu-footer-actions">{renderSlot('sidebar.footer.action', { wide: !compact })}</div><div ref={settingsSeat} className="dcu-settings-seat">{renderSlot('sidebar.settings', { wide: !compact })}</div></footer>
+    <SidebarSearch ref={search} settingsSeat={settingsSeat} openSession={openSession} startSession={startSession} t={t} useSessions={useSessions} useWorkspaces={useWorkspaces} />
   </aside>
 }
 
