@@ -10,7 +10,6 @@ import { CodexWorkspaceBrowser } from './CodexWorkspaceBrowser.tsx'
 import { ConnectorsSection } from './ConnectorsSection.tsx'
 import { en, NS, zh } from './locales.ts'
 import { createCompanionTabSource } from './companion-slots.ts'
-import { observePermissionMenus } from './permission-i18n.ts'
 import { observeSettingsNavIcons } from './settings-nav-icons.ts'
 import { observeSlimSidebar } from './sidebar-width.ts'
 import { observeConversationHeader } from './conversation-header.ts'
@@ -69,7 +68,6 @@ function hasDeleteSession(value: unknown): value is ArchiveRegistry {
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'michengai-codex-ui: dictionaries')
   const t = ctx.locale.bind(NS)
-  ctx.effect(() => observePermissionMenus(), 'michengai-codex-ui: permission risk highlight')
   ctx.effect(() => observeSlimSidebar(), 'michengai-codex-ui: slim sidebar')
   ctx.effect(() => observeSettingsNavIcons(), 'michengai-codex-ui: settings nav icons')
   ctx.effect(() => observeConversationHeader(), 'michengai-codex-ui: conversation header')
