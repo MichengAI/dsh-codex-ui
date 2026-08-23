@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
 import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { conversationAnchor, conversationScrollRoot } from './conversation-dom.ts'
+import { conversationAnchor, conversationAnchors, conversationScrollRoot } from './conversation-dom.ts'
 import { NS } from './locales.ts'
 
 type TurnLink = { key: string; summary: string }
@@ -109,25 +109,37 @@ export function TurnNavigator({ useSession, t }: TurnNavigatorProps) {
   }, [])
 
   useEffect(() => {
-    const host = conversationScrollRoot()
-    if (host === null || turns.length === 0) return
+    if (turns.length === 0) return
+    let host: HTMLElement | null = null
     let frame: number | null = null
     const update = (): void => {
       frame = null
+      if (host === null) return
       const threshold = host.getBoundingClientRect().top + Math.min(180, host.clientHeight * 0.35)
+      const anchors = conversationAnchors(host)
       let next = turns[0]?.key ?? null
       for (const turn of turns) {
-        const anchor = conversationAnchor(host, turn.key)
-        if (anchor !== null && anchor.getBoundingClientRect().top <= threshold) next = turn.key
+        const anchor = anchors.get(turn.key)
+        if (anchor !== undefined && anchor.getBoundingClientRect().top <= threshold) next = turn.key
       }
       setCurrent(previous => previous === next ? previous : next)
     }
     const schedule = (): void => { if (frame === null) frame = window.requestAnimationFrame(update) }
-    host.addEventListener('scroll', schedule, { passive: true })
+    const bindHost = (): void => {
+      const next = conversationScrollRoot()
+      if (next === host) return
+      host?.removeEventListener('scroll', schedule)
+      host = next
+      host?.addEventListener('scroll', schedule, { passive: true })
+      schedule()
+    }
+    const observer = new MutationObserver(() => { if (host === null || !host.isConnected) bindHost() })
+    observer.observe(document.body, { childList: true, subtree: true })
     window.addEventListener('resize', schedule)
-    schedule()
+    bindHost()
     return () => {
-      host.removeEventListener('scroll', schedule)
+      observer.disconnect()
+      host?.removeEventListener('scroll', schedule)
       window.removeEventListener('resize', schedule)
       if (frame !== null) window.cancelAnimationFrame(frame)
     }
@@ -152,7 +164,7 @@ export function TurnNavigator({ useSession, t }: TurnNavigatorProps) {
     const mark = tickMarkSize(index, hoverAt, current === turn.key)
     const active = hoverAt !== null && index === activeIndex
     const tickStyle = hoverAt === null ? undefined : { '--dcu-tick-w': `${mark.width}px`, '--dcu-tick-h': `${mark.height}px` } as CSSProperties
-    return <li key={turn.key}><button type="button" className="dcu-turn-link" data-active={active || undefined} aria-current={current === turn.key || undefined} aria-label={t('turns.jump', { index: index + 1, summary: turn.summary })} title={turn.summary} style={tickStyle} onFocus={() => { setHoverAt(index) }} onBlur={() => { setHoverAt(null) }} onClick={() => {
+    return <li key={turn.key}><button type="button" className="dcu-turn-link" data-active={active || undefined} aria-current={current === turn.key || undefined} aria-label={t('turns.jump', { index: index + 1, summary: turn.summary })} style={tickStyle} onFocus={() => { setHoverAt(index) }} onBlur={() => { setHoverAt(null) }} onClick={() => {
       const host = conversationScrollRoot()
       const anchor = host === null ? null : conversationAnchor(host, turn.key)
       if (host === null || anchor === null) return

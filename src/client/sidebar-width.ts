@@ -54,11 +54,20 @@ export function observeSlimSidebar(): () => void {
   let applying = false
   let frame: HTMLElement | undefined
   let pending: number | undefined
+  let frameObserver: MutationObserver | undefined
+  const watchFrame = (next: HTMLElement | undefined): void => {
+    if (frame === next) return
+    frameObserver?.disconnect()
+    frame = next
+    if (frame === undefined) return
+    frameObserver = new MutationObserver(schedule)
+    frameObserver.observe(frame, { attributes: true, attributeFilter: ['style', 'data-sidebar-collapsed', 'data-dragging'] })
+  }
   const apply = (): void => {
     if (applying) return
     applying = true
     try {
-      if (frame === undefined || !frame.isConnected) frame = findSidebarFrame(document)
+      if (frame === undefined || !frame.isConnected) watchFrame(findSidebarFrame(document))
       if (frame !== undefined) applySlimSidebar(frame)
     } finally {
       applying = false
@@ -69,10 +78,13 @@ export function observeSlimSidebar(): () => void {
     pending = window.requestAnimationFrame(() => { pending = undefined; apply() })
   }
   apply()
-  const observer = new MutationObserver(schedule)
-  observer.observe(document.body, { attributes: true, attributeFilter: ['style', 'data-sidebar-collapsed', 'data-dragging'], childList: true, subtree: true })
+  const observer = new MutationObserver(() => {
+    if (frame === undefined || !frame.isConnected) schedule()
+  })
+  observer.observe(document.body, { childList: true, subtree: true })
   return () => {
     observer.disconnect()
+    frameObserver?.disconnect()
     if (pending !== undefined) window.cancelAnimationFrame(pending)
   }
 }

@@ -72,6 +72,7 @@ export function HoverShell({ blocked = false, children }: { blocked?: boolean; c
     hideTip: () => {
       pendingTip.current = undefined
       if (showTipTimer.current !== undefined) { window.clearTimeout(showTipTimer.current); showTipTimer.current = undefined }
+      if (hideTipTimer.current !== undefined) window.clearTimeout(hideTipTimer.current)
       hideTipTimer.current = window.setTimeout(() => { setHoverTip(undefined) }, HOVER_TIP_HIDE_DELAY_MS)
     },
     dismissTip: () => {

@@ -15,6 +15,8 @@
 
 `dshmarket` is not part of the suite. Install it separately when needed.
 
+Each suite release pins an exact, tested version of every member plugin. Component upgrades are delivered by publishing a new suite version rather than resolving floating `latest` dependencies during installation.
+
 ## Installation
 
 `dsh plugin add` forwards to `pnpm add` in the profile directory. Without a version and official registry, a local mirror or minimum-release-age policy can leave you on an older build.

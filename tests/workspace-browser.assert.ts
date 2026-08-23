@@ -31,7 +31,7 @@ assert.deepEqual(
 )
 {
   const store = new Map<string, string>()
-  const data = { effectAllowed: '', setData: (type: string, value: string) => { store.set(type, value) }, getData: (type: string) => store.get(type) ?? '' } as DataTransfer
+  const data = { effectAllowed: '', setData: (type: string, value: string) => { store.set(type, value) }, getData: (type: string) => store.get(type) ?? '' } as unknown as DataTransfer
   writeSessionDrag(data, 's1', '会话')
   writeWorkspaceDrag(data, 'w1', '项目')
   assert.equal(readSessionDrag(data), 's1', '会话拖拽必须能从 dataTransfer 读回')
@@ -39,7 +39,7 @@ assert.deepEqual(
 }
 {
   const store = new Map<string, string>()
-  const data = { effectAllowed: '', setData: (type: string, value: string) => { store.set(type, value) }, getData: (type: string) => store.get(type) ?? '' } as DataTransfer
+  const data = { effectAllowed: '', setData: (type: string, value: string) => { store.set(type, value) }, getData: (type: string) => store.get(type) ?? '' } as unknown as DataTransfer
   writeWorkspaceDrag(data, 'w1', '项目')
   assert.equal(readWorkspaceDrag(data), 'w1')
   assert.equal(readSessionDrag(data, 'fallback-session'), 'fallback-session')
@@ -50,5 +50,5 @@ assert.deepEqual(
   const data = { effectAllowed: '', types, setData: (type: string, value: string) => { store.set(type, value); if (!types.includes(type)) types.push(type) }, getData: (type: string) => store.get(type) ?? '' } as unknown as DataTransfer
   writeSessionDrag(data, 's1', '会话')
   assert.equal(readWorkspaceDrag(data), undefined, '会话拖拽不得被识别为可置顶项目')
-  assert.equal(readSessionDrag({ getData: (type: string) => type === 'text/plain' ? 'dcu-session:s1' : '' } as DataTransfer), 's1', '自定义类型被剥掉时必须还能从 text/plain 读出会话')
+  assert.equal(readSessionDrag({ getData: (type: string) => type === 'text/plain' ? 'dcu-session:s1' : '' } as unknown as DataTransfer), 's1', '自定义类型被剥掉时必须还能从 text/plain 读出会话')
 }

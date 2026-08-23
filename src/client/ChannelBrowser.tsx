@@ -55,23 +55,35 @@ function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSe
   const dialogs = useSessionDialogs({ archiveSession, deleteSession, forkSession, renameSession }, flags, run, () => { setMenu(undefined); setError(undefined) })
   useEffect(() => {
     let disposed = false
-    let loading = false
+    let active: AbortController | undefined
     const load = (): void => {
-      if (loading) return
-      loading = true
-      void loadChannelGroups()
+      if (active !== undefined || document.visibilityState === 'hidden') return
+      const controller = new AbortController()
+      active = controller
+      const timeout = window.setTimeout(() => { controller.abort() }, 8_000)
+      void loadChannelGroups(controller.signal)
         .then(next => {
           if (!disposed) { setGroups(next); setPollError(undefined) }
         })
         .catch(() => {
           if (!disposed) setPollError(t('channels.loadError'))
         })
-        .finally(() => { loading = false })
+        .finally(() => {
+          window.clearTimeout(timeout)
+          if (active === controller) active = undefined
+        })
     }
     load()
     const timer = window.setInterval(load, 4000)
-    return () => { disposed = true; window.clearInterval(timer) }
-  }, [])
+    const onVisibilityChange = (): void => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      disposed = true
+      active?.abort()
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [t])
   const banner = pollError ?? error
   return <section className="dcu-wb" aria-label={t('sidebar.channelsTab')}>
     <style>{WORKSPACE_TREE_STYLE}</style>

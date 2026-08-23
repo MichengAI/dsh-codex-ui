@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { Button, Modal, writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -42,10 +42,13 @@ export function SessionHoverCardLayer() {
 export function useBusyAction(onSuccess?: () => void) {
   const [busy, setBusy] = useState<string>()
   const [error, setError] = useState<string>()
+  const busyRef = useRef<string>()
   const run = async (key: string, action: () => Promise<unknown>): Promise<void> => {
+    if (busyRef.current !== undefined) return
+    busyRef.current = key
     setBusy(key)
     setError(undefined)
-    try { await action(); onSuccess?.() } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)) } finally { setBusy(undefined) }
+    try { await action(); onSuccess?.() } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)) } finally { busyRef.current = undefined; setBusy(undefined) }
   }
   return { busy, error, setError, run }
 }

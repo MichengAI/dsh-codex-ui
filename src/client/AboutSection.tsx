@@ -30,8 +30,9 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
   const root = useRef<HTMLElement>(null)
   const stateRef = useRef<LoadState>('loading')
   const requestId = useRef(0)
+  const installingRef = useRef<ManagedDependencyId>()
   stateRef.current = state
-  useEffect(() => () => { alive.current = false }, [])
+  useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
   const load = useCallback(async (signal?: AbortSignal) => {
     const currentRequest = ++requestId.current
     if (stateRef.current !== 'ready') setState('loading')
@@ -55,8 +56,13 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
     if (node === null || typeof IntersectionObserver === 'undefined') {
       return () => { controller.abort() }
     }
+    let initialized = false
+    let wasVisible = false
     const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) refresh()
+      const visible = entries.some((entry) => entry.isIntersecting)
+      if (!initialized) { initialized = true; wasVisible = visible; return }
+      if (visible && !wasVisible) refresh()
+      wasVisible = visible
     }, { threshold: 0.2 })
     observer.observe(node)
     return () => {
@@ -65,6 +71,8 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
     }
   }, [load])
   const install = async (id: ManagedDependencyId): Promise<void> => {
+    if (installingRef.current !== undefined) return
+    installingRef.current = id
     setInstalling(id)
     setMessage(undefined)
     try {
@@ -79,6 +87,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
       if (!alive.current) return
       setMessage({ error: true, text: error instanceof Error ? error.message : t('about.installFailed') })
     } finally {
+      installingRef.current = undefined
       if (alive.current) setInstalling(undefined)
     }
   }
@@ -93,7 +102,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
     <p className="dcu-about-intro">{t('about.dependenciesDescription')}</p>
     {state === 'loading' ? <div className="dcu-about-message">{t('about.loading')}</div>
       : state === 'failed' ? <div className="dcu-about-message" data-error="true">{t('about.statusFailed')}</div>
-        : <div className="dcu-about-dependencies">{dependencies.map(dependency => <article className="dcu-about-dependency" key={dependency.id}><div className="dcu-about-copy"><div className="dcu-about-name">{title(dependency.id)}</div><div className="dcu-about-package">{dependency.packageName}{dependency.version === undefined ? '' : ` · ${dependency.version}`}{dependency.updateAvailable && dependency.latestVersion !== undefined ? ` → ${dependency.latestVersion}` : ''}</div></div><div className="dcu-about-status" data-installed={dependency.installed} data-update={dependency.updateAvailable}>{dependency.installed && !dependency.updateAvailable && <IconCheckOutline16 size={14} />}{dependency.updateAvailable ? t('about.updateAvailable') : dependency.installed ? t('about.installed') : t('about.missing')}</div>{(!dependency.installed || dependency.updateAvailable) && <button className="dcu-about-install" type="button" disabled={installing === dependency.id} onClick={() => { void install(dependency.id) }}>{installing === dependency.id ? <IconLoadingOutline16 size={14} /> : <IconDownloadOutline16 size={14} />}{installing === dependency.id ? t('about.installing') : dependency.updateAvailable ? t('about.update') : t('about.install')}</button>}</article>)}</div>}
+        : <div className="dcu-about-dependencies">{dependencies.map(dependency => <article className="dcu-about-dependency" key={dependency.id}><div className="dcu-about-copy"><div className="dcu-about-name">{title(dependency.id)}</div><div className="dcu-about-package">{dependency.packageName}{dependency.version === undefined ? '' : ` · ${dependency.version}`}{dependency.updateAvailable && dependency.latestVersion !== undefined ? ` → ${dependency.latestVersion}` : ''}</div></div><div className="dcu-about-status" data-installed={dependency.installed} data-update={dependency.updateAvailable}>{dependency.installed && !dependency.updateAvailable && <IconCheckOutline16 size={14} />}{dependency.updateAvailable ? t('about.updateAvailable') : dependency.installed ? t('about.installed') : t('about.missing')}</div>{(!dependency.installed || dependency.updateAvailable) && <button className="dcu-about-install" type="button" disabled={installing !== undefined} onClick={() => { void install(dependency.id) }}>{installing === dependency.id ? <IconLoadingOutline16 size={14} /> : <IconDownloadOutline16 size={14} />}{installing === dependency.id ? t('about.installing') : dependency.updateAvailable ? t('about.update') : t('about.install')}</button>}</article>)}</div>}
     {message !== undefined && <div className="dcu-about-message" data-error={message.error}>{message.text}</div>}
   </section>
 }

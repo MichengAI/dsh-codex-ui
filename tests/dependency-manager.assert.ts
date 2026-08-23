@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
-import { applyReleaseExclude, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, newerVersion, pluginCommandError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot } from '../src/dependency-manager.ts'
+import { EventEmitter } from 'node:events'
+import type { ChildProcess } from 'node:child_process'
+import { applyReleaseExclude, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, pluginCommandError, pluginExecArgv, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 assert.equal(
@@ -180,7 +182,7 @@ assert.equal(isRestartableInstallError(new Error('无法覆盖正在运行的插
 
 assert.equal(requestDesktopHotUpdate(undefined), false)
 let sent
-assert.equal(requestDesktopHotUpdate((message) => { sent = message }), true)
+assert.equal(requestDesktopHotUpdate((message) => { sent = message; return true }), true)
 assert.equal(sent, 'apply-plugin-updates')
 
 
@@ -188,3 +190,40 @@ assert.equal(isOfficialRuntimePackage('@deepseek-ai/dsh'), true)
 assert.equal(isOfficialRuntimePackage('@michengai/dsh-codex-ui'), false)
 assert.equal(newerVersion('0.1.0-rc.7', '0.1.0-rc.8'), true, '同号 rc 必须能看出可升级')
 assert.equal(newerVersion('0.1.0-rc.8', '0.1.0-rc.7'), false, '不得把更旧的 rc 当成升级')
+assert.equal(newerVersion('0.1.0-beta.1', '0.1.0-beta.2'), true, '同号 beta 必须能看出可升级')
+assert.equal(newerVersion('0.1.0-alpha.9', '0.1.0-beta.1'), true, '预发布标识必须按 SemVer 比较')
+assert.equal(newerVersion('0.1.0-rc.1', '0.1.0'), true, '正式版必须高于同号预发布版')
+assert.equal(newerVersion('0.1.0', '0.1.0-rc.1'), false, '不得把同号预发布版推荐给正式版用户')
+assert.equal(newerVersion('0.1.0+build.1', '0.1.0+build.2'), false, '构建元数据不得影响版本先后')
+assert.deepEqual(pluginExecArgv(['--inspect=9229', '--trace-warnings', '--inspect-brk']), ['--trace-warnings'], '安装子进程不得继承调试端口参数')
+
+function fakeChild(): ChildProcess & { killedSignal?: NodeJS.Signals | number } {
+  const child = new EventEmitter() as ChildProcess & { killedSignal?: NodeJS.Signals | number }
+  Object.assign(child, {
+    stdout: null,
+    stderr: null,
+    exitCode: null,
+    killed: false,
+    kill(signal: NodeJS.Signals | number = 'SIGTERM') {
+      child.killedSignal = signal
+      ;(child as unknown as { killed: boolean }).killed = true
+      return true
+    },
+  })
+  return child
+}
+
+{
+  const child = fakeChild()
+  const keepAlive = setTimeout(() => {}, 50)
+  await assert.rejects(monitorPluginChild(child, 5), /安装超时/, '安装子进程超时必须拒绝并释放互斥流程')
+  clearTimeout(keepAlive)
+  assert.equal(child.killedSignal, 'SIGTERM', '超时必须终止子进程')
+}
+{
+  const child = fakeChild()
+  const result = monitorPluginChild(child, 1_000)
+  child.emit('error', new Error('spawn failed'))
+  child.emit('exit', 1, null)
+  await assert.rejects(result, /无法启动 DSH/, 'error 与 exit 连续到达时 Promise 只能由首个错误结算')
+}

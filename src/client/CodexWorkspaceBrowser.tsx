@@ -130,6 +130,7 @@ function CodexWorkspaceTree({ wide, useSessions, useWorkspaces, t, archiveSessio
   }
   const [renameDraft, setRenameDraft] = useState('')
   const [busy, setBusy] = useState<string>()
+  const busyRef = useRef<string>()
   const [error, setError] = useState<string>()
   const [workspaceDragId, setWorkspaceDragId] = useState<string>()
   const [workspaceDropId, setWorkspaceDropId] = useState<string>()
@@ -219,9 +220,11 @@ function CodexWorkspaceTree({ wide, useSessions, useWorkspaces, t, archiveSessio
   const assignedIds = workspaces.items.flatMap(workspace => workspace.sessionIds.map(id => String(id)))
   const recentIds = ungroupedSessionIds(sessions.ids ?? Object.keys(sessions.byId), sessions.byId, assignedIds, workspaces.archivedSessionIds).sort((left, right) => (sessions.byId[right as SessionId]?.updatedAt ?? 0) - (sessions.byId[left as SessionId]?.updatedAt ?? 0))
   const run = async (key: string, action: () => Promise<unknown>): Promise<void> => {
+    if (busyRef.current !== undefined) return
+    busyRef.current = key
     setBusy(key)
     setError(undefined)
-    try { await action(); setMenu(undefined) } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)) } finally { setBusy(undefined) }
+    try { await action(); setMenu(undefined) } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)) } finally { busyRef.current = undefined; setBusy(undefined) }
   }
   const beginRename = (kind: NonNullable<RenameTarget>['kind'], id: string, title: string): void => { setRenameTarget({ kind, id, title }); setRenameDraft(title); setMenu(undefined) }
   const submitRename = (): void => {

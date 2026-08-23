@@ -1,6 +1,6 @@
 {
   "name": "@michengai/dsh-codex-ui",
-  "version": "0.2.72",
+  "version": "0.2.73",
   "description": "以 Codex 风格重构 DSH Web 侧栏的独立客户端插件",
   "license": "Apache-2.0",
   "publishConfig": {
@@ -53,7 +53,8 @@
   },
   "scripts": {
     "build": "tsc --noEmit && tsdown",
-    "test": "tsx tests/hover-tip.assert.ts && tsx tests/companion-slots.assert.ts && tsx tests/channel-api.assert.ts && tsx tests/schedule-sessions.assert.ts && tsx tests/session-tree.assert.ts && tsx tests/pinned-sessions.assert.ts && tsx tests/session-manager.assert.ts && tsx tests/workspace-browser.assert.ts && tsx tests/sidebar-search.assert.ts && tsx tests/settings-navigation.assert.ts && tsx tests/settings-nav-icons.assert.ts && tsx tests/locales.assert.ts && vitest run tests/client-runtime.integration.spec.ts && tsx tests/settings-integration.assert.ts && tsx tests/about-dependencies.assert.ts && tsx tests/dependency-manager.assert.ts && tsx tests/conversation-bubbles.assert.ts && tsx tests/conversation-header.assert.ts && tsx tests/conversation-visuals.assert.ts && tsdown && tsx tests/client-bundle.assert.ts && tsx tests/codex-suite.assert.ts"
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm run typecheck && vitest run tests/client-runtime.integration.spec.ts && tsdown && node tests/run-assertions.mjs"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": ">=4.0.1 <5.0.0",

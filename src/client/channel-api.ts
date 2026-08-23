@@ -64,11 +64,16 @@ export function parseChannelGroups(payload: unknown): ChannelGroup[] {
 }
 
 /** 读取 IM 频道分组；失败时交给界面显示空态或错误。 */
-export async function loadChannelGroups(): Promise<ChannelGroup[]> {
-  const response = await fetch(CHANNELS_ENDPOINT, { cache: 'no-store' })
-  const payload = await response.json() as unknown
-  if (!response.ok) throw new Error('无法读取频道会话')
+export async function loadChannelGroups(signal?: AbortSignal): Promise<ChannelGroup[]> {
+  const response = await fetch(CHANNELS_ENDPOINT, { cache: 'no-store', signal })
+  let payload: unknown
+  try {
+    payload = await response.json() as unknown
+  } catch {
+    throw new Error(response.ok ? '频道会话数据格式无效' : '无法读取频道会话')
+  }
   const root = payload !== null && typeof payload === 'object' ? payload as Record<string, unknown> : {}
+  if (!response.ok) throw new Error(text(root.error, '无法读取频道会话'))
   if (root.ok === false) throw new Error(text(root.error, '无法读取频道会话'))
   return parseChannelGroups(payload)
 }

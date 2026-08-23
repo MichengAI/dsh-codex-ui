@@ -119,13 +119,18 @@ export function syncTabSlider(root: ParentNode): void {
   slider.style.transform = `translateX(${Math.max(0, tabBox.left - listBox.left)}px)`
 }
 
-function watchTabSelection(tabs: HTMLElement): void {
-  if (tabs.dataset.dcuTabWatch === '') return
+function watchTabSelection(tabs: HTMLElement): () => void {
   tabs.dataset.dcuTabWatch = ''
   const sync = (): void => { syncTabSlider(tabs) }
+  const onClick = (): void => { window.requestAnimationFrame(sync) }
   const observer = new MutationObserver(sync)
   observer.observe(tabs, { attributes: true, subtree: true, attributeFilter: ['aria-selected', 'data-state'] })
-  tabs.addEventListener('click', () => { window.requestAnimationFrame(sync) })
+  tabs.addEventListener('click', onClick)
+  return () => {
+    observer.disconnect()
+    tabs.removeEventListener('click', onClick)
+    delete tabs.dataset.dcuTabWatch
+  }
 }
 function ensureStyle(doc: Document): void {
   if (doc.getElementById(CONVERSATION_HEADER_STYLE_ID) !== null) return
@@ -142,6 +147,8 @@ export function observeConversationHeader(doc: Document = document): () => void 
   ensureUserBubbleStyle(doc)
   let applying = false
   let frame: number | undefined
+  let watchedTabs: HTMLElement | undefined
+  let stopWatchingTabs: (() => void) | undefined
   const run = (): void => {
     frame = undefined
     if (applying) return
@@ -149,7 +156,11 @@ export function observeConversationHeader(doc: Document = document): () => void 
     try {
       placeConversationTabs(doc)
       const tabs = findConversationTablist(doc)
-      if (tabs !== undefined) watchTabSelection(tabs)
+      if (tabs !== watchedTabs) {
+        stopWatchingTabs?.()
+        watchedTabs = tabs
+        stopWatchingTabs = tabs === undefined ? undefined : watchTabSelection(tabs)
+      }
       syncTabSlider(doc)
       decorateConversationTitle(doc)
       decorateUserBubbles(doc)
@@ -166,6 +177,7 @@ export function observeConversationHeader(doc: Document = document): () => void 
   observer.observe(doc.documentElement, { childList: true, subtree: true })
   return () => {
     observer.disconnect()
+    stopWatchingTabs?.()
     if (frame !== undefined) window.cancelAnimationFrame(frame)
   }
 }

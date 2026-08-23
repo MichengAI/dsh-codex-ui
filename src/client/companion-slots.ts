@@ -17,6 +17,8 @@ export const EMPTY_COMPANION_TABS: CompanionTabAvailability = {
   schedule: false,
 }
 
+const reportedSlotErrors = new WeakSet<object>()
+
 /** 插槽声明本身不算占用；只有其他插件 register 后才视为已安装。 */
 export function readSlotEntries(slots: SlotOccupancySource | undefined, name: CompanionSlotName): readonly unknown[] {
   if (slots === undefined) return []
@@ -24,7 +26,11 @@ export function readSlotEntries(slots: SlotOccupancySource | undefined, name: Co
   if (typeof read !== 'function') return []
   try {
     return read.call(slots, name) ?? []
-  } catch {
+  } catch (error) {
+    if (!reportedSlotErrors.has(slots)) {
+      reportedSlotErrors.add(slots)
+      console.warn('[michengai-codex-ui] 无法读取配套插件插槽。', error)
+    }
     return []
   }
 }

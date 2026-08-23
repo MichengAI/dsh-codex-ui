@@ -1,5 +1,5 @@
-import { spawn } from 'node:child_process'
-import { readFile, writeFile } from 'node:fs/promises'
+import { spawn, type ChildProcess } from 'node:child_process'
+import { readFile, unlink, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -7,6 +7,7 @@ import { MANAGED_DEPENDENCIES, SUITE_MEMBER_PACKAGES, SUITE_PACKAGE, managedDepe
 
 export const PROFILE_PENDING_UPDATES_FILE = '.dsh-pending-updates.json'
 export const APPLY_PLUGIN_UPDATES_IPC = 'apply-plugin-updates'
+export const PLUGIN_INSTALL_TIMEOUT_MS = 10 * 60 * 1000
 
 type PackageManifest = { version?: string }
 
@@ -160,7 +161,7 @@ export function applyReleaseExclude(source: string, packageName: string, version
 
 /** 将用户本次确认的精确版本加入 Profile 的 pnpm 发布时间保护例外。 */
 async function ensureLatestReleaseAllowed(packageName: string, version: string): Promise<void> {
-  if (versionParts(version) === undefined) throw new Error('npm 返回了无法识别的最新版本。')
+  if (parseSemver(version) === undefined) throw new Error('npm 返回了无法识别的最新版本。')
   const path = resolve(profileDirectory(), 'pnpm-workspace.yaml')
   let source: string
   try {
@@ -173,24 +174,45 @@ async function ensureLatestReleaseAllowed(packageName: string, version: string):
   if (next !== source) await writeFile(path, next, 'utf8')
 }
 
-function versionParts(version: string): readonly [number, number, number] | undefined {
-  const match = /^v?(\d+)\.(\d+)\.(\d+)/.exec(version)
-  return match === null ? undefined : [Number(match[1]), Number(match[2]), Number(match[3])]
+type Semver = {
+  core: readonly [number, number, number]
+  prerelease: readonly string[]
 }
 
-function prereleaseRank(version: string): number {
-  const match = /-rc\.(\d+)/i.exec(version)
-  return match === null ? Number.POSITIVE_INFINITY : Number(match[1])
+function parseSemver(version: string): Semver | undefined {
+  const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(version)
+  if (match === null) return undefined
+  return {
+    core: [Number(match[1]), Number(match[2]), Number(match[3])],
+    prerelease: match[4] === undefined ? [] : match[4].split('.'),
+  }
+}
+
+function comparePrerelease(left: readonly string[], right: readonly string[]): number {
+  if (left.length === 0 || right.length === 0) return left.length === right.length ? 0 : left.length === 0 ? 1 : -1
+  const length = Math.max(left.length, right.length)
+  for (let index = 0; index < length; index += 1) {
+    const a = left[index]
+    const b = right[index]
+    if (a === undefined || b === undefined) return a === b ? 0 : a === undefined ? -1 : 1
+    if (a === b) continue
+    const aNumeric = /^\d+$/.test(a)
+    const bNumeric = /^\d+$/.test(b)
+    if (aNumeric && bNumeric) return Number(a) > Number(b) ? 1 : -1
+    if (aNumeric !== bNumeric) return aNumeric ? -1 : 1
+    return a > b ? 1 : -1
+  }
+  return 0
 }
 
 export function newerVersion(installed: string, latest: string): boolean {
-  const current = versionParts(installed)
-  const candidate = versionParts(latest)
+  const current = parseSemver(installed)
+  const candidate = parseSemver(latest)
   if (current === undefined || candidate === undefined) return false
-  if (candidate[0] !== current[0]) return candidate[0] > current[0]
-  if (candidate[1] !== current[1]) return candidate[1] > current[1]
-  if (candidate[2] !== current[2]) return candidate[2] > current[2]
-  return prereleaseRank(latest) > prereleaseRank(installed)
+  for (let index = 0; index < current.core.length; index += 1) {
+    if (candidate.core[index] !== current.core[index]) return candidate.core[index]! > current.core[index]!
+  }
+  return comparePrerelease(candidate.prerelease, current.prerelease) > 0
 }
 
 /** 返回 Web profile 中固定管理插件的实际安装版本与 npm latest 状态。 */
@@ -247,9 +269,32 @@ async function recordPendingUpdate(packageName: string, version: string): Promis
   await writeFile(pendingPath, `${JSON.stringify({ packages }, undefined, 2)}\n`, 'utf8')
 }
 
+async function removePendingUpdate(packageName: string): Promise<void> {
+  const pendingPath = resolve(profileDirectory(), PROFILE_PENDING_UPDATES_FILE)
+  try {
+    const parsed = JSON.parse(await readFile(pendingPath, 'utf8')) as { packages?: unknown }
+    if (!Array.isArray(parsed.packages)) return
+    const packages = parsed.packages.filter((item) => item === null || typeof item !== 'object' || (item as { packageName?: unknown }).packageName !== packageName)
+    if (packages.length === parsed.packages.length) return
+    if (packages.length === 0) {
+      await unlink(pendingPath)
+      return
+    }
+    await writeFile(pendingPath, `${JSON.stringify({ packages }, undefined, 2)}\n`, 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  }
+}
+
 async function recordDeclaredVersion(packageName: string, version: string): Promise<void> {
   const manifestPath = resolve(profileDirectory(), 'package.json')
-  const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as { dependencies?: Record<string, string> }
+  let manifest: { dependencies?: Record<string, string> }
+  try {
+    manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as { dependencies?: Record<string, string> }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    manifest = {}
+  }
   manifest.dependencies = { ...manifest.dependencies, [packageName]: version }
   await writeFile(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`, 'utf8')
 }
@@ -274,22 +319,62 @@ export function pluginCommandError(stderr: string): Error {
  * 复用启动当前服务的 DSH CLI：它会通过 pnpm 从 npm 安装或更新，并自动维护
  * dsh.profile.bundles，避免浏览器端直接管理 profile 文件。
  */
-function runDshPlugin(args: readonly string[]): Promise<void> {
-  const entry = resolveDshCliEntry()
+export function pluginExecArgv(args: readonly string[] = process.execArgv): string[] {
+  return args.filter(arg => !/^--(?:inspect|inspect-brk|debug|debug-brk)(?:=|$)/.test(arg))
+}
+
+const activePluginChildren = new Set<ChildProcess>()
+
+function terminatePluginChild(child: ChildProcess): void {
+  if (child.exitCode !== null || child.killed) return
+  if (process.platform === 'win32' && child.pid !== undefined) {
+    const killer = spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' })
+    killer.once('error', () => { child.kill('SIGTERM') })
+    killer.unref()
+    return
+  }
+  child.kill('SIGTERM')
+}
+
+/** 插件停用时终止仍在运行的安装进程，避免热更新后遗留 pnpm。 */
+export function disposeDependencyInstaller(): void {
+  for (const child of activePluginChildren) terminatePluginChild(child)
+}
+
+export function monitorPluginChild(child: ChildProcess, timeoutMs = PLUGIN_INSTALL_TIMEOUT_MS): Promise<void> {
   return new Promise((resolvePromise, reject) => {
-    const child = spawn(process.execPath, [...process.execArgv, entry, 'plugin', '--profile', 'web', ...args], {
-      cwd: process.cwd(),
-      env: { ...process.env, CI: 'true' },
-      windowsHide: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    })
+    activePluginChildren.add(child)
     let output = ''
-    const collect = (chunk: Buffer): void => { output += String(chunk) }
+    let settled = false
+    const collect = (chunk: Buffer): void => { output = `${output}${String(chunk)}`.slice(-64 * 1024) }
+    const finish = (error?: Error): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeout)
+      activePluginChildren.delete(child)
+      error === undefined ? resolvePromise() : reject(error)
+    }
     child.stdout?.on('data', collect)
     child.stderr?.on('data', collect)
-    child.once('error', () => { reject(new Error('无法启动 DSH 插件安装命令。请确认 Node.js 与 pnpm 可用后重试。')) })
-    child.once('exit', code => { code === 0 ? resolvePromise() : reject(pluginCommandError(output)) })
+    child.once('error', () => { finish(new Error('无法启动 DSH 插件安装命令。请确认 Node.js 与 pnpm 可用后重试。')) })
+    child.once('exit', code => { finish(code === 0 ? undefined : pluginCommandError(output)) })
+    const timeout = setTimeout(() => {
+      terminatePluginChild(child)
+      finish(new Error('插件安装超时，已终止安装进程。请检查网络后重试。'))
+    }, timeoutMs)
+    timeout.unref?.()
   })
+}
+
+function runDshPlugin(args: readonly string[], timeoutMs = PLUGIN_INSTALL_TIMEOUT_MS): Promise<void> {
+  const entry = resolveDshCliEntry()
+  const child = spawn(process.execPath, [...pluginExecArgv(), entry, 'plugin', '--profile', 'web', ...args], {
+    cwd: process.cwd(),
+    env: { ...process.env, CI: 'true' },
+    windowsHide: true,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  return monitorPluginChild(child, timeoutMs)
 }
 
 /** 并发安装互斥：pnpm 锁文件竞争会触发 EPERM/EBUSY，同一时间只允许一个安装进程。 */
@@ -316,10 +401,10 @@ async function installDependencyLocked(id: string | null, requestHotUpdate: () =
   const targetVersion = target === dependency.packageName ? latestVersion : await npmLatestVersion(target)
   if (targetVersion === undefined) throw new Error('无法获取 npm 最新版本，请检查网络或 npm registry 后重试。')
   const remove = pluginsToRemoveBeforeInstall(declared, target)
-  if (remove.length > 0) await runDshPlugin(['remove', ...remove])
   await ensureLatestReleaseAllowed(target, targetVersion)
   if (!isOfficialRuntimePackage(target)) await recordDeclaredVersion(target, targetVersion)
   await recordPendingUpdate(target, targetVersion)
+  if (remove.length > 0) await runDshPlugin(['remove', ...remove])
   if (requestHotUpdate()) return dependencyStatuses()
   try {
     await runDshPlugin(['add', `${target}@${targetVersion}`, '--registry=https://registry.npmjs.org/'])
@@ -329,5 +414,6 @@ async function installDependencyLocked(id: string | null, requestHotUpdate: () =
   }
   const installed = await installedPackageVersion(target)
   if (installed !== targetVersion) return dependencyStatuses()
+  await removePendingUpdate(target)
   return dependencyStatuses()
 }

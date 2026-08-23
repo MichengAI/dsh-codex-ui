@@ -19,6 +19,8 @@ assert.match(header, /\[class\*="headerActions"\]\{order:2/, '操作区必须排
 assert.match(header, /header \[data-dcu-inline-tabs\]\{order:3/, '对话轨迹页签必须排到操作区后面')
 assert.match(header, /\[class\*="headerUtilities"\]\{order:4/, '扩展区必须排到页签后面')
 assert.match(header, /requestAnimationFrame/, '会话顶栏观察必须按帧节流')
+assert.match(header, /tabs\.removeEventListener\('click', onClick\)/, '页签点击监听必须随插件停用清理')
+assert.match(header, /stopWatchingTabs\?\.\(\)/, '页签 MutationObserver 必须随宿主重建或插件停用清理')
 assert.match(header, /data-dcu-inline-tabs/, '内联页签必须带稳定标记')
 assert.match(header, /data-dcu-title-folder/, '会话标题必须加上文件夹图标')
 assert.match(client, /observeConversationHeader/, '会话顶栏观察必须接入客户端')

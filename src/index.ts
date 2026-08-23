@@ -1,6 +1,6 @@
 /** 浏览器客户端插件的 Host 入口；客户端逻辑由 dsh.client 加载。 */
 import type { Context } from '@deepseek-ai/cordis'
-import { dependencyStatuses, installDependency, requestDesktopHotUpdate } from './dependency-manager.ts'
+import { dependencyStatuses, disposeDependencyInstaller, installDependency, requestDesktopHotUpdate } from './dependency-manager.ts'
 import { hostServices } from './host-services.ts'
 
 const connectorsEndpoint = '/api/michengai/codex-ui/connectors'
@@ -41,7 +41,7 @@ export function crossSiteRequest(request: HostRequest): boolean {
 /** 把安装错误收成可给浏览器看的文案：我们自己的中文说明保留，带本地路径的底层错误脱敏。 */
 export function publicDependencyError(error: unknown): string {
   const message = error instanceof Error ? error.message : '依赖管理暂不可用。'
-  if (/[A-Za-z]:[\\/]|\/(?:home|Users|var|tmp)\//.test(message)) return '依赖管理暂不可用，请查看服务端日志。'
+  if (/[A-Za-z]:[\\/]|\/(?:home|root|Users|var|tmp)\//.test(message)) return '依赖管理暂不可用，请查看服务端日志。'
   return message
 }
 
@@ -115,6 +115,7 @@ export function apply(ctx: Context): void {
       },
     })
     return () => {
+      disposeDependencyInstaller()
       disposeConnectors()
       disposeDependencies()
     }

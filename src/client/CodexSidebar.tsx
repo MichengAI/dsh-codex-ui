@@ -20,6 +20,9 @@ type CompanionTabSource = {
   subscribe: (onStoreChange: () => void) => () => void
 }
 
+const subscribeEmptyCompanionTabs = (): (() => void) => () => {}
+const getEmptyCompanionTabs = (): CompanionTabAvailability => EMPTY_COMPANION_TABS
+
 type CodexSidebarInjected = {
   openSession: (sessionId: SessionId) => void
   startSession: (workspaceId?: WorkspaceId) => void
@@ -76,9 +79,9 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
   const [activeSearchIndex, setActiveSearchIndex] = useState(0)
   const [imTab, setImTab] = useState<'tasks' | 'channels' | 'schedule'>('tasks')
   const companionTabs = useSyncExternalStore(
-    companionSlots?.subscribe ?? (() => () => {}),
-    companionSlots?.getSnapshot ?? (() => EMPTY_COMPANION_TABS),
-    companionSlots?.getSnapshot ?? (() => EMPTY_COMPANION_TABS),
+    companionSlots?.subscribe ?? subscribeEmptyCompanionTabs,
+    companionSlots?.getSnapshot ?? getEmptyCompanionTabs,
+    companionSlots?.getSnapshot ?? getEmptyCompanionTabs,
   )
   const showChannels = companionTabs.channels
   const showSchedule = companionTabs.schedule
@@ -132,22 +135,32 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
   useEffect(() => {
     let startX = 0
     let dragging = false
+    let pointerId: number | undefined
     const onDown = (event: PointerEvent): void => {
-      if (!isSidebarDragHandle(event.target)) return
+      if (dragging || !isSidebarDragHandle(event.target)) return
       dragging = true
+      pointerId = event.pointerId
       startX = event.clientX
     }
     const onUp = (event: PointerEvent): void => {
-      if (!dragging) return
+      if (!dragging || event.pointerId !== pointerId) return
       dragging = false
+      pointerId = undefined
       if (!shouldCollapseOnSidebarDrag(startX, event.clientX)) return
       window.requestAnimationFrame(() => { window.requestAnimationFrame(() => { toggleSidebar() }) })
     }
+    const onCancel = (event: PointerEvent): void => {
+      if (event.pointerId !== pointerId) return
+      dragging = false
+      pointerId = undefined
+    }
     window.addEventListener('pointerdown', onDown, true)
     window.addEventListener('pointerup', onUp, true)
+    window.addEventListener('pointercancel', onCancel, true)
     return () => {
       window.removeEventListener('pointerdown', onDown, true)
       window.removeEventListener('pointerup', onUp, true)
+      window.removeEventListener('pointercancel', onCancel, true)
     }
   }, [toggleSidebar])
   const compact = collapsed || width < 80

@@ -70,7 +70,6 @@ export function decorateUserBubbles(root: ParentNode): void {
       card.append(sub)
     }
     card.dataset.dcuUserText = text
-    card.title = text
   }
 }
 
