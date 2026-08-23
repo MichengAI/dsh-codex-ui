@@ -60,6 +60,19 @@ export function dropBeforeId(ids: readonly string[], hoveredId: string, after: b
   return index >= ids.length - 1 ? undefined : ids[index + 1]
 }
 
+export type PinnedHeaderDropIndicator =
+  | { kind: 'workspace', workspaceId: string }
+  | { kind: 'empty' }
+
+/**
+ * 置顶标题区与首项目的上半区都表示“插到第一项之前”，因此必须共用同一条指示线。
+ * 非空列表把指示线贴到首项目顶部；空列表才使用独立的起始占位线。
+ */
+export function pinnedHeaderDropIndicator(ids: readonly string[]): PinnedHeaderDropIndicator {
+  const workspaceId = ids[0]
+  return workspaceId === undefined ? { kind: 'empty' } : { kind: 'workspace', workspaceId }
+}
+
 /** 按指定 id 顺序取出对应项；未出现在 ids 中的项丢弃。 */
 export function orderByIds<T>(items: readonly T[], ids: readonly string[], idOf: (item: T) => string): T[] {
   const byId = new Map(items.map(item => [idOf(item), item]))

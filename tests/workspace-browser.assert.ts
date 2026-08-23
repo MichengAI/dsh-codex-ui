@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { dropBeforeId, isTaskSession, moveBefore, orderByIds, readSessionDrag, readWorkspaceDrag, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag } from '../src/client/workspace-browser.ts'
+import { dropBeforeId, isTaskSession, moveBefore, orderByIds, pinnedHeaderDropIndicator, readSessionDrag, readWorkspaceDrag, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag } from '../src/client/workspace-browser.ts'
 
 const sessions = {
   a: { id: 'a', origin: 'user', blank: false },
@@ -24,6 +24,8 @@ assert.equal(dropBeforeId(['a', 'b', 'c'], 'b', false), 'b', '落在上半区必
 assert.equal(dropBeforeId(['a', 'b', 'c'], 'b', true), 'c', '落在中项下半区必须插到下一项前面')
 assert.equal(dropBeforeId(['a', 'b', 'c'], 'c', true), undefined, '落在末项下半区必须追加到末尾')
 assert.deepEqual(moveBefore(['a', 'b', 'c'], 'a', dropBeforeId(['a', 'b', 'c'], 'b', true)), ['b', 'a', 'c'], '往下拖到下一项下半区必须真正换位')
+assert.deepEqual(pinnedHeaderDropIndicator(['w1', 'w2']), { kind: 'workspace', workspaceId: 'w1' }, '置顶标题区应复用首项目顶部的插入线')
+assert.deepEqual(pinnedHeaderDropIndicator([]), { kind: 'empty' }, '空置顶区才应渲染独立的起始插入线')
 assert.deepEqual(
   orderByIds([{ id: 'a' }, { id: 'b' }, { id: 'c' }], ['c', 'a'], item => item.id),
   [{ id: 'c' }, { id: 'a' }],
