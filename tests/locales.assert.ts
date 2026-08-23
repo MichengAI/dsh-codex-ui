@@ -17,11 +17,17 @@ function collectSource(dir: string): string {
 
 const source = collectSource(srcRoot)
 const locales = readFileSync(join(srcRoot, 'client/locales.ts'), 'utf8')
+const channelBrowser = readFileSync(join(srcRoot, 'client/ChannelBrowser.tsx'), 'utf8')
 const used = source.replace(locales, '')
 
 for (const [key, value] of Object.entries(en)) {
   assert.doesNotMatch(value, CJK, `英文词典 ${key} 不得残留中日韩字符`)
 }
+
+assert.equal(en['channel.weixin'], 'WeChat')
+assert.equal(en['channel.wecom'], 'WeCom')
+assert.match(channelBrowser, /const CHANNEL_LOCALE_KEYS =/)
+assert.match(channelBrowser, /title=\{label\}/, '频道文件夹名必须使用 Codex UI 的 locale 字典')
 
 const dead: string[] = []
 for (const key of Object.keys(zh)) {

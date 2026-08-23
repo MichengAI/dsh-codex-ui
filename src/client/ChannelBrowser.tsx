@@ -28,6 +28,16 @@ type ChannelBrowserProps = {
   t: TranslateNS<typeof NS>
 }
 
+const CHANNEL_LOCALE_KEYS = {
+  dingtalk: 'channel.dingtalk', feishu: 'channel.feishu', lark: 'channel.lark', weixin: 'channel.weixin',
+  wecom: 'channel.wecom', qq: 'channel.qq', telegram: 'channel.telegram',
+} as const
+
+function channelLabel(id: string, fallback: string, t: TranslateNS<typeof NS>): string {
+  const key = CHANNEL_LOCALE_KEYS[id as keyof typeof CHANNEL_LOCALE_KEYS]
+  return key === undefined ? fallback : t(key)
+}
+
 /** 频道树：数据来自 IM，行/菜单/悬停与任务树共用。 */
 export function ChannelBrowser(props: ChannelBrowserProps) {
   const [menu, setMenu] = useState<OpenMenu>()
@@ -53,8 +63,8 @@ function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSe
         .then(next => {
           if (!disposed) { setGroups(next); setPollError(undefined) }
         })
-        .catch(reason => {
-          if (!disposed) setPollError(reason instanceof Error ? reason.message : String(reason))
+        .catch(() => {
+          if (!disposed) setPollError(t('channels.loadError'))
         })
         .finally(() => { loading = false })
     }
@@ -70,8 +80,9 @@ function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSe
       {pollError === undefined && groups.length === 0 && <div className="dcu-wb-empty">{t('channels.empty')}</div>}
       {groups.map(group => {
         const isExpanded = expanded[group.id] ?? true
+        const label = channelLabel(group.id, group.label, t)
         return <div className="dcu-wb-project" key={group.id}>
-          <GroupHead expanded={isExpanded} title={group.label} icon={<ChannelBrandIcon id={group.id} />} onToggle={() => { setExpanded(current => ({ ...current, [group.id]: !isExpanded })) }} />
+          <GroupHead expanded={isExpanded} title={label} icon={<ChannelBrandIcon id={group.id} />} onToggle={() => { setExpanded(current => ({ ...current, [group.id]: !isExpanded })) }} />
           {isExpanded && group.sessions.map(session => {
             const id = session.sessionId
             const title = session.title
@@ -80,7 +91,7 @@ function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSe
             const updatedAt = session.updatedAt ?? sessions.byId[id]?.updatedAt
             const pinned = flags.pinnedSessionIds.includes(id)
             const unread = flags.unreadSessionIds.includes(id)
-            return <SessionRow key={id} id={id} title={title} selected={selected} menuOpen={menu?.id === id} pinned={pinned} unread={unread} running={running} t={t} menuItems={sessionMenuItems(t, { pinned, unread })} menuPoint={menu?.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { flags.setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id } : undefined) }} onPin={() => { flags.setPinnedSessionIds(ids => toggleSessionId(ids, id)) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ title, project: group.label, time: updatedAt === undefined ? undefined : formatHoverTime(updatedAt), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => { if (busy === undefined) dialogs.handleAction(action, id, title) }} />
+            return <SessionRow key={id} id={id} title={title} selected={selected} menuOpen={menu?.id === id} pinned={pinned} unread={unread} running={running} t={t} menuItems={sessionMenuItems(t, { pinned, unread })} menuPoint={menu?.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { flags.setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id } : undefined) }} onPin={() => { flags.setPinnedSessionIds(ids => toggleSessionId(ids, id)) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ title, project: label, time: updatedAt === undefined ? undefined : formatHoverTime(updatedAt), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => { if (busy === undefined) dialogs.handleAction(action, id, title) }} />
           })}
         </div>
       })}
