@@ -34,7 +34,7 @@ const expectedVersions: Record<string, string> = {
   '@michengai/dsh-agency-agents': '0.1.20',
   '@michengai/dsh-skills-manager': '0.1.23',
   '@michengai/dsh-archive-manager': '0.1.12',
-  '@michengai/dsh-im-connect': '0.1.20',
+  '@michengai/dsh-im-connect': '0.1.22',
   '@michengai/dsh-automation': '0.1.13',
 }
 

@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module'
 import { act, createElement, type ReactNode } from 'react'
-import { afterEach, expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 import { SlotTestRuntime } from '@deepseek-ai/dsh-client-test-runtime'
 import { apply, inject } from '../src/client/index.ts'
 import { CodexSidebar } from '../src/client/CodexSidebar.tsx'
@@ -53,6 +53,7 @@ test('未安装 IM 和定时插件时配套插槽没有注册项', async () => {
 })
 
 test('搜索和窄轨切换不会重渲染或重新挂载工作区树', async () => {
+  vi.useFakeTimers()
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
@@ -93,9 +94,18 @@ test('搜索和窄轨切换不会重渲染或重新挂载工作区树', async ()
     expect(workspaceRenders).toBe(1)
 
     await act(async () => { root.render(createElement(CodexSidebar, { ...base, collapsed: true, width: 56 } as never)) })
+    expect(container.querySelector('.dcu-root')?.classList.contains('dcu-collapsing')).toBe(true)
+    expect(container.querySelector('.dcu-root')?.classList.contains('dcu-compact')).toBe(false)
+    await act(async () => { vi.advanceTimersByTime(140) })
     expect(container.querySelector('.dcu-root')?.classList.contains('dcu-compact')).toBe(true)
     expect(workspaceRenders).toBe(1)
+
+    await act(async () => { root.render(createElement(CodexSidebar, base as never)) })
+    expect(container.querySelector('.dcu-root')?.classList.contains('dcu-compact')).toBe(false)
+    expect(container.querySelector('.dcu-root')?.classList.contains('dcu-collapsing')).toBe(false)
+    expect(workspaceRenders).toBe(1)
   } finally {
+    vi.useRealTimers()
     await act(async () => { root.unmount() })
     container.remove()
   }
