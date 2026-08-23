@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { dropBeforeId, isSidebarItemDrag, isTaskSession, moveBefore, orderByIds, readSessionDrag, readWorkspaceDrag, standalonePinnedSessionIds, ungroupedSessionIds, visibleSessionIds, workspaceIdsHiddenByPinnedSessions, writeSessionDrag, writeWorkspaceDrag } from '../src/client/workspace-browser.ts'
+import { dropBeforeId, isTaskSession, moveBefore, orderByIds, readSessionDrag, readWorkspaceDrag, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag } from '../src/client/workspace-browser.ts'
 
 const sessions = {
   a: { id: 'a', origin: 'user', blank: false },
@@ -29,16 +29,6 @@ assert.deepEqual(
   [{ id: 'c' }, { id: 'a' }],
   '置顶展示必须按置顶 id 顺序，而不是宿主列表顺序',
 )
-assert.deepEqual(
-  standalonePinnedSessionIds(['s1', 's2', 's3']),
-  ['s1', 's2', 's3'],
-  '拖入置顶的会话必须按原顺序单独展示，不因父项目已置顶而合并进文件夹',
-)
-assert.deepEqual(
-  standalonePinnedSessionIds(['s1']),
-  ['s1'],
-  '只置顶会话时必须单独出现在置顶区',
-)
 {
   const store = new Map<string, string>()
   const data = { effectAllowed: '', setData: (type: string, value: string) => { store.set(type, value) }, getData: (type: string) => store.get(type) ?? '' } as DataTransfer
@@ -59,14 +49,6 @@ assert.deepEqual(
   const types: string[] = []
   const data = { effectAllowed: '', types, setData: (type: string, value: string) => { store.set(type, value); if (!types.includes(type)) types.push(type) }, getData: (type: string) => store.get(type) ?? '' } as unknown as DataTransfer
   writeSessionDrag(data, 's1', '会话')
-  assert.equal(isSidebarItemDrag(data), true, '会话拖过置顶区必须被识别为可落点')
+  assert.equal(readWorkspaceDrag(data), undefined, '会话拖拽不得被识别为可置顶项目')
   assert.equal(readSessionDrag({ getData: (type: string) => type === 'text/plain' ? 'dcu-session:s1' : '' } as DataTransfer), 's1', '自定义类型被剥掉时必须还能从 text/plain 读出会话')
 }
-assert.deepEqual(
-  workspaceIdsHiddenByPinnedSessions(
-    [{ workspaceId: 'w1', sessionIds: ['s1'] }, { workspaceId: 'w2', sessionIds: ['s2'] }],
-    ['s1'],
-  ),
-  ['w1', 'w2'],
-  '置顶区已有会话时全部项目文件夹都不得再出现',
-)

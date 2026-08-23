@@ -28,5 +28,5 @@ assert.doesNotMatch(tree, /title=\{t\('sessions\.archive'\)\}/, '会话行归档
 assert.doesNotMatch(workspace, /title=\{workspace\.path\}/, '项目标题不得写原生 title，路径已在悬停卡片展示')
 assert.doesNotMatch(workspace, /title=\{t\('sessions\.pinned'\)\}/, '任务树会话行钉选标记不得写原生 title')
 assert.doesNotMatch(workspace, /title=\{t\('sessions\.archive'\)\}/, '任务树会话行归档按钮不得写原生 title')
-assert.match(tree, /draggable\?: boolean/, '共用会话行必须支持拖到置顶区')
-assert.match(workspace, /pinSectionSessions.map/, '置顶区必须单独渲染拖入的会话，不能只展开父项目')
+assert.match(tree, /draggable\?: boolean/, '共用会话行必须支持项目内排序')
+assert.doesNotMatch(workspace, /pinSectionSessions|sectionSessionIds|pinSessionAt/, '置顶区只能接收项目，不能单独渲染会话')

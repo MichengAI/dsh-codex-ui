@@ -69,36 +69,13 @@ export function orderByIds<T>(items: readonly T[], ids: readonly string[], idOf:
   })
 }
 
-/** 置顶区的会话按拖入顺序展示；不因父项目已置顶而隐藏。 */
-export function standalonePinnedSessionIds(pinnedSessionIds: readonly string[]): string[] {
-  return [...pinnedSessionIds]
-}
-
-/** 置顶区已有会话时，不再同时展示任何项目文件夹，避免旧置顶项目叠成两条。 */
-export function workspaceIdsHiddenByPinnedSessions(
-  workspaces: readonly { workspaceId: string; sessionIds: readonly string[] }[],
-  pinnedSessionIds: readonly string[],
-): string[] {
-  if (pinnedSessionIds.length === 0) return []
-  return workspaces.map(workspace => String(workspace.workspaceId))
-}
 export const SESSION_DRAG_TYPE = 'application/x-dcu-session'
 export const WORKSPACE_DRAG_TYPE = 'application/x-dcu-workspace'
 const SESSION_DRAG_PREFIX = 'dcu-session:'
 const WORKSPACE_DRAG_PREFIX = 'dcu-workspace:'
 
-function dragTypes(data: DataTransfer | undefined): string[] {
-  return data === undefined ? [] : Array.from(data.types)
-}
-
 function textPayload(data: DataTransfer | undefined): string {
   try { return data?.getData('text/plain') ?? '' } catch { return '' }
-}
-
-/** 拖过置顶区时用来决定是否 preventDefault；只看 types，不读数据。 */
-export function isSidebarItemDrag(data: DataTransfer | undefined): boolean {
-  const types = dragTypes(data)
-  return types.includes(SESSION_DRAG_TYPE) || types.includes(WORKSPACE_DRAG_TYPE) || types.includes('text/plain')
 }
 
 /** 写入会话拖拽载荷；drop 时以这个为准，不依赖尚未刷新的 React 状态。 */

@@ -1,5 +1,4 @@
 export const SESSION_PINS_STORAGE_KEY = 'dsh.session-pins.v1'
-export const SESSION_SECTION_PINS_STORAGE_KEY = 'dsh-codex-ui.pinned-section-sessions.v1'
 export const SESSION_UNREAD_STORAGE_KEY = 'dsh.session-unread.v1'
 
 export function normalizeSessionIds(ids: readonly string[]): string[] {
