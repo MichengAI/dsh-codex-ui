@@ -1,0 +1,35 @@
+name: 同步 GitHub Release 说明
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-notes:
+    name: 同步版本说明
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v6
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: 生成双语版本说明
+        run: node scripts/extract-release-notes.mjs "$GITHUB_REF_NAME" release-notes.md
+
+      - name: 创建或更新 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release-notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release-notes.md
+          fi
