@@ -82,23 +82,23 @@ importers:
   packages/dsh-codex-suite:
     dependencies:
       '@michengai/dsh-agency-agents':
-        specifier: 0.1.20
-        version: 0.1.20(53e5aa7a4ace86e089b79cea2390c042)
+        specifier: 0.1.21
+        version: 0.1.21(53e5aa7a4ace86e089b79cea2390c042)
       '@michengai/dsh-archive-manager':
-        specifier: 0.1.12
-        version: 0.1.12(7672e92ce7cf99265dc516051f580731)
-      '@michengai/dsh-automation':
         specifier: 0.1.13
-        version: 0.1.13(57f07f77b14b07c327ef5931e1058bae)
+        version: 0.1.13(7672e92ce7cf99265dc516051f580731)
+      '@michengai/dsh-automation':
+        specifier: 0.1.14
+        version: 0.1.14(57f07f77b14b07c327ef5931e1058bae)
       '@michengai/dsh-codex-ui':
         specifier: workspace:*
         version: link:../..
       '@michengai/dsh-im-connect':
-        specifier: 0.1.22
-        version: 0.1.22(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)
-      '@michengai/dsh-skills-manager':
         specifier: 0.1.23
-        version: 0.1.23(6d2dec6ea625d8d6c9bcff49ad39255d)
+        version: 0.1.23(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)
+      '@michengai/dsh-skills-manager':
+        specifier: 0.1.24
+        version: 0.1.24(6d2dec6ea625d8d6c9bcff49ad39255d)
 
 packages:
 
@@ -1099,8 +1099,8 @@ packages:
   '@larksuiteoapi/node-sdk@1.73.0':
     resolution: {integrity: sha512-gs4EiupJ6RdYAEJGtuYrCVsB7wSMBwtUDK+ilpmOHD6RTvbtciW6AWciQO9coOQVuBZfh7hvAi25dPfCsny/nA==}
 
-  '@michengai/dsh-agency-agents@0.1.20':
-    resolution: {integrity: sha512-AS7r2iIRLOaKjipUqrP0cUkXcSRcaNw6oKIt6K0DY/BGjFxazc9wEk4o7nQkmjquMTeWXx481URBS5I7MDiP9g==}
+  '@michengai/dsh-agency-agents@0.1.21':
+    resolution: {integrity: sha512-de9/SfTkvOTbpsw6cLUtHUoPIPcNz06qj1OeYN6AU6l8sPigGb6bQmNypVhR+00XXM2R9PRgi9yroVN87o3Xtw==}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
       '@deepseek-ai/dsh-api-remotes': ^0.1.0-rc.5
@@ -1130,8 +1130,8 @@ packages:
       '@deepseek-ai/dsh-system-prompt': ^0.1.0-rc.5
       '@deepseek-ai/dsh-tools': ^0.1.0-rc.5
 
-  '@michengai/dsh-archive-manager@0.1.12':
-    resolution: {integrity: sha512-++yi4NP0cK9KWPWrcQgnPdR3e2U4CMwvuRMIILMGZabZAb8VJsd44fQfyA/RTA0YUI09Or29BlU9xA5nxA3KMg==}
+  '@michengai/dsh-archive-manager@0.1.13':
+    resolution: {integrity: sha512-2aO1eq8m9Q52b7ZEVRSNKnO4m4z7CQLDvPVNG+6hw3jXbVM6j9Kj02ke99UGem5g3m+gsGFLzsDnK5upcFVn4Q==}
     engines: {node: ^22.19.0 || >=24.0.0}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
@@ -1149,8 +1149,8 @@ packages:
       '@deepseek-ai/dsh-typert-registry': '>=0.1.0-rc.5 <0.2.0'
       '@deepseek-ai/dsh-workspace': '>=0.1.0-rc.5 <0.2.0'
 
-  '@michengai/dsh-automation@0.1.13':
-    resolution: {integrity: sha512-HBpvBSKdsW4qG1b2WZxEuIvwJfCbkDLqK5HY71F19s56E93DwM/1CSqu7ZJvTt4+bM+Z8ieikhjANgZLfgh3wA==}
+  '@michengai/dsh-automation@0.1.14':
+    resolution: {integrity: sha512-iEaZh26Riw9iAwLurJ4OeJCqfPu66yAblQa5JrOTfZEAwxyJCNPwpfFb7LOb99qn9lGUIJs4t+jAK9CLg6t1aQ==}
     engines: {node: ^22.19.0 || >=24.0.0}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
@@ -1175,15 +1175,15 @@ packages:
       react:
         optional: true
 
-  '@michengai/dsh-im-connect@0.1.22':
-    resolution: {integrity: sha512-HdKFlGN6SS5gNnbdhBpjofLSza9JhqRrgwNSrl9/TPeSCJ3cWXrjzpcKYYgdbchoAlRhhMydSgV8ODAR+x7p2A==}
+  '@michengai/dsh-im-connect@0.1.23':
+    resolution: {integrity: sha512-mjhNnjSJmgTMrxO/qVYEHstzvCEXQuI4h6ZT9WMnopulw0gpXBt0W86SZikedLSmwAz+Rl9Lw7KxNukrnLr4mQ==}
     engines: {node: '>=22.19'}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
       '@deepseek-ai/schemastery': ^3.18.1
 
-  '@michengai/dsh-skills-manager@0.1.23':
-    resolution: {integrity: sha512-XLKS9y/p/cFgtAXhrdetgT+Yrv8dBhvN+tMJAtY0jo6vxPYtY43bk7bJVBugIZH55hxQfcdEsZKcmCnImHvlmg==}
+  '@michengai/dsh-skills-manager@0.1.24':
+    resolution: {integrity: sha512-89nI2PrnoMcffuXhNTnst30SDP8g0NtOROoFfmunqutSXazxzUgv6iC1tL6KYzWVH4heNtXCk6GYoMe7dDiwtg==}
     engines: {node: '>=20'}
     peerDependencies:
       '@deepseek-ai/cordis': '>=4.0.1 <5.0.0'
@@ -4043,7 +4043,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@michengai/dsh-agency-agents@0.1.20(53e5aa7a4ace86e089b79cea2390c042)':
+  '@michengai/dsh-agency-agents@0.1.21(53e5aa7a4ace86e089b79cea2390c042)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-api-remotes': 0.1.0-rc.6(b72b6ce942c9829b523ef77a29aac597)
@@ -4074,7 +4074,7 @@ snapshots:
       '@deepseek-ai/dsh-tools': 0.1.0-rc.6(236e827ae6fe39da32525b89845f982f)
       '@deepseek-ai/schemastery': 3.18.1
 
-  '@michengai/dsh-archive-manager@0.1.12(7672e92ce7cf99265dc516051f580731)':
+  '@michengai/dsh-archive-manager@0.1.13(7672e92ce7cf99265dc516051f580731)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-client-connection': 0.1.0-rc.6(641b9ea50d39216c4ab6bd371211c4c5)
@@ -4091,7 +4091,7 @@ snapshots:
       '@deepseek-ai/dsh-typert-registry': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-workspace': 0.1.0-rc.6(3d4cd86206823dd8868f55f334dead65)
 
-  '@michengai/dsh-automation@0.1.13(57f07f77b14b07c327ef5931e1058bae)':
+  '@michengai/dsh-automation@0.1.14(57f07f77b14b07c327ef5931e1058bae)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-agent': 0.1.0-rc.6(ca448e9811f10631b4c6492e799861a4)
@@ -4115,7 +4115,7 @@ snapshots:
     optionalDependencies:
       react: 18.3.1
 
-  '@michengai/dsh-im-connect@0.1.22(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)':
+  '@michengai/dsh-im-connect@0.1.23(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/schemastery': 3.18.1
@@ -4130,7 +4130,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@michengai/dsh-skills-manager@0.1.23(6d2dec6ea625d8d6c9bcff49ad39255d)':
+  '@michengai/dsh-skills-manager@0.1.24(6d2dec6ea625d8d6c9bcff49ad39255d)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-client-locale': 0.1.0-rc.6(95508b6b13ea37dc2516e7b3a8357e69)
