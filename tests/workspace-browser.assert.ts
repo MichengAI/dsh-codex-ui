@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { dropBeforeId, isTaskSession, moveBefore, orderByIds, pinnedHeaderDropIndicator, readSessionDrag, readWorkspaceDrag, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag } from '../src/client/workspace-browser.ts'
+import { isTaskSession, moveBefore, orderByIds, pinnedHeaderDropIndicator, readSessionDrag, readWorkspaceDrag, reorderDropBeforeId, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag } from '../src/client/workspace-browser.ts'
 
 const sessions = {
   a: { id: 'a', origin: 'user', blank: false },
@@ -20,10 +20,11 @@ assert.equal(isTaskSession(sessions.a), true)
 assert.deepEqual(moveBefore(['a', 'b', 'c'], 'c', 'a'), ['c', 'a', 'b'])
 assert.deepEqual(moveBefore(['a', 'b', 'c'], 'a', undefined), ['b', 'c', 'a'])
 assert.deepEqual(moveBefore(['a', 'b'], 'a', 'a'), ['a', 'b'])
-assert.equal(dropBeforeId(['a', 'b', 'c'], 'b', false), 'b', '落在上半区必须插到该项前面')
-assert.equal(dropBeforeId(['a', 'b', 'c'], 'b', true), 'c', '落在中项下半区必须插到下一项前面')
-assert.equal(dropBeforeId(['a', 'b', 'c'], 'c', true), undefined, '落在末项下半区必须追加到末尾')
-assert.deepEqual(moveBefore(['a', 'b', 'c'], 'a', dropBeforeId(['a', 'b', 'c'], 'b', true)), ['b', 'a', 'c'], '往下拖到下一项下半区必须真正换位')
+assert.equal(reorderDropBeforeId(['a', 'b', 'c'], 'a', 'a', false), null, '悬停被拖项自身时不得显示落点')
+assert.equal(reorderDropBeforeId(['a', 'b', 'c'], 'a', 'b', false), null, '最终顺序不变时不得显示落点')
+assert.equal(reorderDropBeforeId(['a', 'b', 'c'], 'a', 'b', true), 'c', '向下换位时应使用移除被拖项后的下一锚点')
+assert.equal(reorderDropBeforeId(['a', 'b', 'c'], 'c', 'b', true), null, '末项落回原末位时不得显示落点')
+assert.equal(reorderDropBeforeId(['a', 'b', 'c'], 'external', 'b', true), 'c', '跨分区项目应按目标列表计算插入锚点')
 assert.deepEqual(pinnedHeaderDropIndicator(['w1', 'w2']), { kind: 'workspace', workspaceId: 'w1' }, '置顶标题区应复用首项目顶部的插入线')
 assert.deepEqual(pinnedHeaderDropIndicator([]), { kind: 'empty' }, '空置顶区才应渲染独立的起始插入线')
 assert.deepEqual(

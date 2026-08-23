@@ -50,14 +50,23 @@ export function moveBefore(ids: readonly string[], id: string, beforeId?: string
 }
 
 /**
- * 按指针落在目标项上/下半区，算出应插入到哪一项之前。
- * 落在最后一项下半区时返回 undefined，表示追加到末尾。
+ * 复刻 Codex 的排序落点：先从当前列表移除被拖项，再把落点表示成“插到谁之前”。
+ * null 表示悬停自身或最终顺序不变，此时不显示蓝线，也不执行排序。
  */
-export function dropBeforeId(ids: readonly string[], hoveredId: string, after: boolean): string | undefined {
-  const index = ids.indexOf(hoveredId)
-  if (index < 0) return hoveredId
-  if (!after) return hoveredId
-  return index >= ids.length - 1 ? undefined : ids[index + 1]
+export function reorderDropBeforeId(
+  ids: readonly string[],
+  draggedId: string,
+  hoveredId: string,
+  after: boolean,
+): string | undefined | null {
+  if (draggedId === hoveredId || !ids.includes(hoveredId)) return null
+  const remaining = ids.filter(id => id !== draggedId)
+  const hoveredIndex = remaining.indexOf(hoveredId)
+  if (hoveredIndex < 0) return null
+  const beforeId = after ? remaining[hoveredIndex + 1] : hoveredId
+  if (!ids.includes(draggedId)) return beforeId
+  const reordered = moveBefore(ids, draggedId, beforeId)
+  return reordered.every((id, index) => id === ids[index]) ? null : beforeId
 }
 
 export type PinnedHeaderDropIndicator =
