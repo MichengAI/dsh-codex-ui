@@ -1,14 +1,22 @@
 {
   "name": "@michengai/dsh-codex-suite",
-  "version": "0.1.13",
-  "description": "DSH Codex UI 聚合包：一键安装侧栏、专家、技能、归档、IM 助理和定时任务",
+  "version": "0.1.14",
+  "description": "DSH Codex UI 一键安装器：将侧栏、专家、技能、归档、IM 助理和定时任务装为直接插件",
   "license": "Apache-2.0",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "files": [
+    "bin.mjs",
+    "installer.mjs",
     "cordis.patch.yml",
     "README.md",
     "README.zh-CN.md"
   ],
+  "bin": {
+    "dsh-codex-suite": "./bin.mjs"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"

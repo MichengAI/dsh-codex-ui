@@ -4,6 +4,23 @@
 
 This changelog records the five most recent published releases of DSH Codex UI and its one-click Suite. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.82 — 2026-08-24
+
+Companion release: `@michengai/dsh-codex-suite@0.1.14`.
+
+### Fixed
+
+- Replaced the Suite's recommended aggregate install with an installer that records all six members as direct profile dependencies, allowing **Settings → About** to detect and update each plugin independently.
+- Made clean custom Web profiles reuse the same `DSH_HOME` while placing DSH's built-in `dsh-web-app` before the member bundles.
+- When About encounters a legacy aggregate Suite, it now promotes all six members before removing the aggregate package instead of retaining only the clicked plugin.
+
+### Suite 0.1.14
+
+- Added the cross-platform `dsh-codex-suite` command, legacy migration, config-dump validation, and dry-run support.
+- Preserved exact member version coordination without modifying upstream DSH or creating a separate DSH Home.
+
+Published packages: [`@michengai/dsh-codex-ui@0.2.82`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.82) and [`@michengai/dsh-codex-suite@0.1.14`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.14).
+
 ## 0.2.81 — 2026-08-24
 
 Companion release: `@michengai/dsh-codex-suite@0.1.13`.

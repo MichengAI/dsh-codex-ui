@@ -4,6 +4,23 @@
 
 本日志记录 DSH Codex UI 及其一键 Suite 最近发布的五个版本；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.82 — 2026-08-24
+
+配套版本：`@michengai/dsh-codex-suite@0.1.14`。
+
+### 修复
+
+- Suite 一键入口改为安装器，将六个成员写成 profile 的直接依赖，使「设置 → 关于」可以分别检测和升级每个插件。
+- 新建自定义 Web profile 时自动复用同一 `DSH_HOME`，并把 DSH 内置 `dsh-web-app` 放在成员 bundle 之前。
+- “关于”页遇到旧版聚合 Suite 时，先把全部六个成员提升为直接依赖，再移除聚合包，避免只保留本次点击的一个插件。
+
+### Suite 0.1.14
+
+- 新增跨平台 `dsh-codex-suite` 命令、旧 Suite 自动迁移、配置 dump 验证和 dry-run。
+- 保留精确成员版本组合，不修改上游 DSH，也不创建独立 DSH Home。
+
+发布包：[`@michengai/dsh-codex-ui@0.2.82`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.82) 与 [`@michengai/dsh-codex-suite@0.1.14`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.14)。
+
 ## 0.2.81 — 2026-08-24
 
 配套版本：`@michengai/dsh-codex-suite@0.1.13`。

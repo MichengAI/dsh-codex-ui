@@ -1,10 +1,10 @@
 export const SUITE_PACKAGE = '@michengai/dsh-codex-suite'
 
 export const SUITE_MEMBER_PACKAGES = [
-  '@michengai/dsh-codex-ui',
-  '@michengai/dsh-agency-agents',
-  '@michengai/dsh-skills-manager',
   '@michengai/dsh-archive-manager',
+  '@michengai/dsh-codex-ui',
+  '@michengai/dsh-skills-manager',
+  '@michengai/dsh-agency-agents',
   '@michengai/dsh-im-connect',
   '@michengai/dsh-automation',
 ] as const

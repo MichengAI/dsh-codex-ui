@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
 import type { ChildProcess } from 'node:child_process'
-import { applyReleaseExclude, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, pluginCommandError, pluginExecArgv, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, updatableDependencyIds } from '../src/dependency-manager.ts'
+import { applyReleaseExclude, directPackagesForInstall, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, pluginCommandError, pluginExecArgv, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, updatableDependencyIds } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 assert.equal(
@@ -167,6 +167,33 @@ assert.deepEqual(
   resolveDshPluginTarget('dshmarket', ['@michengai/dsh-codex-suite']),
   'dshmarket',
   '插件市场不在套件内，仍单独安装',
+)
+assert.equal(
+  isManagedPackageDeclared('@michengai/dsh-skills-manager', ['@michengai/dsh-codex-suite']),
+  true,
+  '旧 Suite 声明存在时，其成员必须显示真实安装状态以便迁移',
+)
+assert.equal(
+  isManagedPackageDeclared('@michengai/dsh-skills-manager', []),
+  false,
+  '无直接声明也无 Suite 所有权时不得把残留包算作已声明',
+)
+assert.deepEqual(
+  directPackagesForInstall(['@michengai/dsh-codex-ui'], ['@michengai/dsh-codex-suite']),
+  [
+    '@michengai/dsh-archive-manager',
+    '@michengai/dsh-codex-ui',
+    '@michengai/dsh-skills-manager',
+    '@michengai/dsh-agency-agents',
+    '@michengai/dsh-im-connect',
+    '@michengai/dsh-automation',
+  ],
+  '更新旧 Suite 中任一成员时必须把整套成员提升为直接依赖',
+)
+assert.deepEqual(
+  directPackagesForInstall(['@michengai/dsh-codex-ui'], []),
+  ['@michengai/dsh-codex-ui'],
+  '普通独立安装不得隐式安装其他成员',
 )
 assert.deepEqual(
   updatableDependencyIds([

@@ -55,7 +55,7 @@
 
 ## 插件组合
 
-`@michengai/dsh-codex-suite` 是一键套件，会把下面 6 个插件装进同一个 profile：
+`@michengai/dsh-codex-suite` 提供一键安装器，会把下面 6 个插件作为**直接依赖**装进同一个 profile：
 
 | 插件 | npm 包 | 作用 |
 | --- | --- | --- |
@@ -68,7 +68,7 @@
 
 `dshmarket` 仍是可选项。已安装时，「插件」入口会优先进入市场。
 
-套件安装和单独安装互斥。同一 profile 不要同时安装两者，两套 patch 会冲突。
+直接依赖让「设置 → 关于」能够分别检测和升级每个插件。安装器也会自动迁移旧版聚合 Suite，避免聚合 patch 与独立 patch 冲突。
 
 ## DSH 产品生态
 
@@ -92,7 +92,7 @@ Codex UI 既可以独立安装，也可以随桌面端或 Web 套件一起使用
 从 npm 安装完整套件：
 
 ```text
-请把 DSH 套件 @michengai/dsh-codex-suite 最新版装进本机 web profile，使用官方 npm 源执行：dsh plugin --profile web add @michengai/dsh-codex-suite@latest --registry=https://registry.npmjs.org/。装完执行 dsh --profile web --dump-config，确认已挂载 codex-ui、agency-agents、skills-manager、archive-manager、im-connect 和 dsh-automation，并提醒我重启 DSH Web 后硬刷新浏览器。
+请用一键安装器把 DSH Codex Suite 的六个成员作为直接依赖装进本机 web profile，执行：npx --yes @michengai/dsh-codex-suite@latest --profile web。确认安装器完成配置检查，并提醒我重启 DSH Web 后硬刷新浏览器。
 ```
 
 只安装 Codex UI：
@@ -107,7 +107,7 @@ Codex UI 既可以独立安装，也可以随桌面端或 Web 套件一起使用
 | Codex | 把上面其中一句发给 Codex，让它在本机执行安装。 |
 | WorkBuddy | 把上面其中一句发给 WorkBuddy。 |
 
-未把 `dsh` 装进 PATH 时，把开头的 `dsh` 换成 `npx --yes @deepseek-ai/dsh`。
+一键安装器需要能从 PATH 找到当前 DSH；也可以用 `DSH_BIN` 指定 `dsh` 可执行文件。
 
 ### 安装完整套件
 
@@ -116,13 +116,20 @@ Codex UI 既可以独立安装，也可以随桌面端或 Web 套件一起使用
 ```powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
-dsh plugin --profile web add @michengai/dsh-codex-suite@latest --registry=https://registry.npmjs.org/
-dsh --profile web --dump-config
+npx --yes @michengai/dsh-codex-suite@latest --profile web
 ```
 
-需要钉死某一版时，把 `@latest` 换成具体版本，例如 `@0.1.0`。
+安装器会读取该 Suite 版本验证过的精确成员版本，用一次 `dsh plugin add` 将六个成员写成 profile 的直接依赖，并在最后运行 `dsh --profile web --dump-config`。需要钉死一组版本时，把 `@latest` 换成具体 Suite 版本。
 
-安装后重启 DSH Web 并硬刷新浏览器。若该 profile 已单独安装上述任一插件，先卸载这些独立插件，再装套件。
+安装后重启 DSH Web 并硬刷新浏览器。已有成员会原地对齐版本；旧版 `@michengai/dsh-codex-suite` 聚合依赖会在六个成员提升完成后自动移除。
+
+新建自定义 Web profile 也使用同一命令，只需改 profile 名：
+
+```powershell
+npx --yes @michengai/dsh-codex-suite@latest --profile codex
+```
+
+安装器会复用当前 `DSH_HOME`，并把 DSH 自带的 `@deepseek-ai/dsh-web-app` 放到成员 bundle 之前；不会创建独立 Home，也不会重新安装官方 Web 包。
 
 ### 只安装 Codex UI
 

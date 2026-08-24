@@ -14,6 +14,9 @@ assert.equal(existsSync(readmePath), true, '聚合包必须说明独立安装方
 
 const suite = JSON.parse(readFileSync(packagePath, 'utf8')) as {
   name?: string
+  version?: string
+  bin?: Record<string, string>
+  files?: string[]
   dsh?: { bundle?: { patch?: string } }
   dependencies?: Record<string, string>
 }
@@ -39,18 +42,22 @@ const expectedVersions: Record<string, string> = {
 }
 
 assert.equal(suite.name, '@michengai/dsh-codex-suite', '聚合包名必须稳定')
+assert.equal(suite.version, '0.1.14', '直接成员安装器必须发布新的 Suite 修复版本')
+assert.equal(suite.bin?.['dsh-codex-suite'], './bin.mjs', 'Suite 必须暴露跨平台的一键安装命令')
+assert.equal(suite.files?.includes('installer.mjs'), true, 'npm 包必须包含安装器实现')
 assert.equal(suite.dsh?.bundle?.patch, './cordis.patch.yml', 'DSH 必须读取聚合 patch')
 for (const packageName of packages) {
   assert.notEqual(suite.dependencies?.[packageName], undefined, `聚合包必须安装 ${packageName}`)
   assert.equal(suite.dependencies?.[packageName], expectedVersions[packageName], `聚合包必须固定 ${packageName} 的已验证版本`)
   assert.match(patch, new RegExp(`name: '${packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), `聚合 patch 必须加载 ${packageName}`)
 }
-assert.match(readme, /dsh plugin --profile web add @michengai\/dsh-codex-suite@latest --registry=https:\/\/registry\.npmjs\.org\//, '聚合包必须提供官方源一键安装命令')
-assert.match(readme, /互斥/, '聚合包必须说明不能与独立安装并存')
+assert.match(readme, /npx --yes @michengai\/dsh-codex-suite@latest --profile web/, '聚合包必须提供直接成员安装器命令')
+assert.match(readme, /直接依赖/, '聚合包必须说明成员以直接依赖安装')
+assert.match(readme, /先提升全部成员，再移除旧聚合依赖/, '安装器必须说明旧聚合 Suite 的安全迁移顺序')
 assert.match(readme, /@michengai\/dsh-im-connect/, '聚合包说明必须列出 IM 助理')
 assert.match(readme, /@michengai\/dsh-automation/, '聚合包说明必须列出定时任务')
-assert.match(rootReadme, /dsh plugin --profile web add @michengai\/dsh-codex-suite@latest --registry=https:\/\/registry\.npmjs\.org\//, '英文 README 必须提供套件一键安装命令')
-assert.match(rootReadmeZh, /dsh plugin --profile web add @michengai\/dsh-codex-suite@latest --registry=https:\/\/registry\.npmjs\.org\//, '中文 README 必须提供套件一键安装命令')
+assert.match(rootReadme, /npx --yes @michengai\/dsh-codex-suite@latest --profile web/, '英文 README 必须提供直接成员安装器命令')
+assert.match(rootReadmeZh, /npx --yes @michengai\/dsh-codex-suite@latest --profile web/, '中文 README 必须提供直接成员安装器命令')
 assert.match(rootReadmeZh, /@michengai\/dsh-im-connect/, '中文 README 必须描述 IM 插件')
 assert.match(rootReadmeZh, /@michengai\/dsh-automation/, '中文 README 必须描述定时任务插件')
 assert.match(rootReadmeZh, /assets\/branding\/dsh-banner\.png/, '中文 README 必须使用全宽横幅')

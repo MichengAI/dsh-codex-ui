@@ -100,6 +100,19 @@ export function isManagedPackageInstalled(input: { installedVersion: string | un
   return input.declared && input.installedVersion !== undefined && input.installedVersion !== ''
 }
 
+/** 旧 Suite 对其六个成员拥有声明权；迁移成直接依赖前也应显示真实安装版本。 */
+export function isManagedPackageDeclared(packageName: string, declared: readonly string[]): boolean {
+  return declared.includes(packageName)
+    || (declared.includes(SUITE_PACKAGE) && (SUITE_MEMBER_PACKAGES as readonly string[]).includes(packageName))
+}
+
+/** 更新旧 Suite 中任一成员时，必须一次提升全部成员，避免移除 Suite 后只剩一个插件。 */
+export function directPackagesForInstall(requested: readonly string[], declared: readonly string[]): string[] {
+  const migrateSuite = declared.includes(SUITE_PACKAGE)
+    && requested.some(packageName => (SUITE_MEMBER_PACKAGES as readonly string[]).includes(packageName))
+  return [...new Set(migrateSuite ? [...SUITE_MEMBER_PACKAGES, ...requested] : requested)]
+}
+
 /** npm latest 查询缓存有效期：避免每次打开“关于”页都打 7 个 registry 请求。 */
 const LATEST_CACHE_TTL_MS = 5 * 60 * 1000
 
@@ -220,7 +233,7 @@ export async function dependencyStatuses(): Promise<readonly DependencyStatus[]>
   const declaredNames = await declaredPluginNames()
   return Promise.all(MANAGED_DEPENDENCIES.map(async dependency => {
     const version = await installedPackageVersion(dependency.packageName)
-    const declared = isOfficialRuntimePackage(dependency.packageName) || declaredNames.includes(dependency.packageName)
+    const declared = isOfficialRuntimePackage(dependency.packageName) || isManagedPackageDeclared(dependency.packageName, declaredNames)
     if (version === undefined || !isManagedPackageInstalled({ installedVersion: version, declared })) return { ...dependency, installed: false, updateAvailable: false }
     const latestVersion = await npmLatestVersion(dependency.packageName)
     return { ...dependency, installed: true, version, latestVersion, updateAvailable: latestVersion !== undefined && newerVersion(version, latestVersion) }
@@ -423,12 +436,21 @@ async function installDependenciesLocked(ids: readonly (string | null)[], reques
     return dependency
   })
   const declared = await declaredPluginNames()
-  const targets = await Promise.all(dependencies.map(async (dependency) => {
+  const requestedTargets = await Promise.all(dependencies.map(async (dependency) => {
     const latestVersion = await npmLatestVersion(dependency.packageName)
     if (latestVersion === undefined) throw new Error('无法获取 npm 最新版本，请检查网络或 npm registry 后重试。')
     const packageName = resolveDshPluginTarget(dependency.packageName, declared)
     const version = packageName === dependency.packageName ? latestVersion : await npmLatestVersion(packageName)
     if (version === undefined) throw new Error('无法获取 npm 最新版本，请检查网络或 npm registry 后重试。')
+    return { packageName, version }
+  }))
+  const requestedVersions = new Map(requestedTargets.map(target => [target.packageName, target.version]))
+  const targetPackages = directPackagesForInstall(requestedTargets.map(target => target.packageName), declared)
+  const targets = await Promise.all(targetPackages.map(async (packageName) => {
+    const requestedVersion = requestedVersions.get(packageName)
+    if (requestedVersion !== undefined) return { packageName, version: requestedVersion }
+    const version = await installedPackageVersion(packageName) ?? await npmLatestVersion(packageName)
+    if (version === undefined) throw new Error('无法读取 Suite 成员版本，请检查 npm 安装后重试。')
     return { packageName, version }
   }))
   const remove = [...new Set(targets.flatMap(target => pluginsToRemoveBeforeInstall(declared, target.packageName)))]

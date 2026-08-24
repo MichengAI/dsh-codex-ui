@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const directory = dirname(fileURLToPath(import.meta.url))
-const files = readdirSync(directory).filter(name => name.endsWith('.assert.ts')).sort()
+const files = readdirSync(directory).filter(name => /\.assert\.(?:mjs|ts)$/.test(name)).sort()
 
 for (const name of files) {
   const result = spawnSync(process.execPath, ['--import', 'tsx', resolve(directory, name)], {

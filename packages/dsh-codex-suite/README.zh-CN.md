@@ -1,6 +1,6 @@
 # DSH Codex Suite
 
-`@michengai/dsh-codex-suite` 是一键套件：一次安装 Codex UI、专家、技能、归档、IM 助理和定时任务。
+`@michengai/dsh-codex-suite` 是一键安装器：把 Codex UI、专家、技能、归档、IM 助理和定时任务作为目标 profile 的六个**直接依赖**安装。
 
 ## 插件组合
 
@@ -13,49 +13,49 @@
 | IM 助理 | `@michengai/dsh-im-connect` |
 | 定时任务 | `@michengai/dsh-automation` |
 
-`dshmarket` 不在套件内，需要时单独安装。
+每个 Suite 版本锁定一组经过验证的成员精确版本。成员成为直接依赖后，「设置 → 关于」可以分别检测、安装和升级它们。`dshmarket` 不在套件内，需要时单独安装。
 
-每个套件版本都会锁定一组经过验证的子插件精确版本。子插件升级通过发布新的套件版本统一交付，不在用户安装时动态解析浮动的 `latest`。
+## 一键安装
 
-## 安装
-
-`dsh plugin add` 会转发到 profile 目录里的 `pnpm add`。不写版本、不指定官方源时，本机镜像和最短发布间隔可能让你停在旧版。
-
-在任意 PowerShell 目录执行：
+需要 Node.js 22+，并确保当前 DSH 的 `dsh` 命令在 PATH 中。在任意目录执行：
 
 ```powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
-dsh plugin --profile web add @michengai/dsh-codex-suite@latest --registry=https://registry.npmjs.org/
-dsh --profile web --dump-config
+npx --yes @michengai/dsh-codex-suite@latest --profile web
 ```
 
-未把 `dsh` 装进 PATH 时，把开头的 `dsh` 换成 `npx --yes @deepseek-ai/dsh`。
+安装器会：
 
-重启 DSH Web 并在浏览器硬刷新。配置输出中应包含 `codex-ui`、`agency-agents`、`skills-manager`、`archive-manager`、`im-connect` 和 `dsh-automation`。
+1. 用官方 npm 源和一次 `dsh plugin add` 安装六个精确版本成员；
+2. 将成员写成 profile 的直接 dependencies 与 bundles；
+3. 若存在旧版聚合 Suite，先提升全部成员，再移除旧聚合依赖；
+4. 运行 `dsh --profile web --dump-config` 验证最终配置。
 
-独立安装与聚合安装互斥。同一 profile 已单独安装任一子插件时，先卸载全部六个子插件，再安装本聚合包；不要让两套 patch 同时生效。
+完成后重启 DSH Web 并在浏览器硬刷新。若 `dsh` 不在 PATH，可通过 `DSH_BIN` 指定其可执行文件。
 
-## 独立安装
+## 新建自定义 Web profile
 
-不需要完整套件时，仍可独立安装 Codex UI：
+保持同一个 `DSH_HOME`，只需换一个 profile 名：
 
 ```powershell
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
+npx --yes @michengai/dsh-codex-suite@latest --profile codex
+```
+
+DSH 创建自定义 profile 时会提供 `@deepseek-ai/dsh-base`。安装器会再把 DSH 自带的 `@deepseek-ai/dsh-web-app` 放到六个成员 bundle 之前，不会创建独立 Home，也不会通过 npm 重装官方 Web 包。
+
+## 只安装 Codex UI
+
+```powershell
 dsh plugin --profile web add @michengai/dsh-codex-ui@latest --registry=https://registry.npmjs.org/
 ```
 
 ## 本地验证
 
-在仓库根目录执行：
+仓库检出状态下可先查看安装计划：
 
 ```powershell
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
-dsh plugin --profile web add .\packages\dsh-codex-suite
+node .\packages\dsh-codex-suite\bin.mjs --profile codex --dry-run
 ```
 
-## pnpm 布局
-
-DSH 从 profile 顶层解析本包 patch 中的子插件。若 profile 使用 pnpm 严格隔离布局，请在 profile 的 `pnpm-workspace.yaml` 设置 `nodeLinker: hoisted` 后重新安装；否则子包可能安装成功但启动时无法解析。
+正式执行时去掉 `--dry-run`。安装器会读取工作区根包版本替换本地的 `workspace:*`。
