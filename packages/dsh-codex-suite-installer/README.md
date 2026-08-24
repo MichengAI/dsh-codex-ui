@@ -1,6 +1,6 @@
-# DSH Codex Suite
+# DSH Codex Suite Installer
 
-`@michengai/dsh-codex-suite` remains the compatibility aggregate for profiles installed with the old `dsh plugin add` command. For new installs and migration, use the lightweight `@michengai/dsh-codex-suite-installer`; it adds the six members as **direct dependencies**.
+`@michengai/dsh-codex-suite-installer` is a lightweight one-click installer that adds Codex UI, expert management, skill management, archive management, IM Assistant, and scheduled tasks to one profile as six **direct dependencies**.
 
 ## Plugin combo
 
@@ -13,7 +13,7 @@
 | IM Assistant | `@michengai/dsh-im-connect` |
 | Scheduled tasks | `@michengai/dsh-automation` |
 
-Each Suite release pins one exact, verified member set. The separate installer has no member runtime dependency tree of its own, so `npx` can start immediately and let DSH install the members directly. `dshmarket` remains optional.
+The installer carries only the exact version manifest, not the six plugins' runtime dependency trees. This keeps `npx` startup small while allowing **Settings → About** to detect and update every installed member independently. `dshmarket` remains optional.
 
 ## One-click installation
 

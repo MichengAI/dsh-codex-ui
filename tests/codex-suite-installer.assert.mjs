@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   BASE_BUNDLE,
@@ -11,10 +12,19 @@ import {
   normalizeBundles,
   parseArgs,
   profileDirectory,
-} from '../packages/dsh-codex-suite/installer.mjs'
+} from '../packages/dsh-codex-suite-installer/installer.mjs'
+
+const installerManifest = JSON.parse(readFileSync(new URL('../packages/dsh-codex-suite-installer/package.json', import.meta.url), 'utf8'))
+assert.equal(installerManifest.name, '@michengai/dsh-codex-suite-installer')
+assert.equal(installerManifest.version, '0.1.0')
+assert.equal(installerManifest.bin?.['dsh-codex-suite-installer'], './bin.mjs')
+assert.equal(installerManifest.dependencies, undefined, '轻量 npx 安装器不能安装六个成员的传递依赖树')
+assert.deepEqual(Object.keys(installerManifest.dshCodexSuite?.members ?? {}), MEMBER_PACKAGES)
 
 const manifest = {
-  dependencies: Object.fromEntries(MEMBER_PACKAGES.map((packageName, index) => [packageName, `0.1.${index + 1}`])),
+  dshCodexSuite: {
+    members: Object.fromEntries(MEMBER_PACKAGES.map((packageName, index) => [packageName, `0.1.${index + 1}`])),
+  },
 }
 
 assert.deepEqual(

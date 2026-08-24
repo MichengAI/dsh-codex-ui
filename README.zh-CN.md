@@ -55,7 +55,7 @@
 
 ## 插件组合
 
-`@michengai/dsh-codex-suite` 提供一键安装器，会把下面 6 个插件作为**直接依赖**装进同一个 profile：
+`@michengai/dsh-codex-suite-installer` 是 `@michengai/dsh-codex-suite` 成员组合的轻量一键安装器，会把下面 6 个插件作为**直接依赖**装进同一个 profile：
 
 | 插件 | npm 包 | 作用 |
 | --- | --- | --- |
@@ -68,7 +68,7 @@
 
 `dshmarket` 仍是可选项。已安装时，「插件」入口会优先进入市场。
 
-直接依赖让「设置 → 关于」能够分别检测和升级每个插件。安装器也会自动迁移旧版聚合 Suite，避免聚合 patch 与独立 patch 冲突。
+直接依赖让「设置 → 关于」能够分别检测和升级每个插件。轻量安装器只携带版本清单，也会自动迁移旧版聚合 Suite，避免聚合 patch 与独立 patch 冲突。
 
 ## DSH 产品生态
 
@@ -92,7 +92,7 @@ Codex UI 既可以独立安装，也可以随桌面端或 Web 套件一起使用
 从 npm 安装完整套件：
 
 ```text
-请用一键安装器把 DSH Codex Suite 的六个成员作为直接依赖装进本机 web profile，执行：npx --yes @michengai/dsh-codex-suite@latest --profile web。确认安装器完成配置检查，并提醒我重启 DSH Web 后硬刷新浏览器。
+请用一键安装器把 DSH Codex Suite 的六个成员作为直接依赖装进本机 web profile，执行：npx --yes @michengai/dsh-codex-suite-installer@latest --profile web。确认安装器完成配置检查，并提醒我重启 DSH Web 后硬刷新浏览器。
 ```
 
 只安装 Codex UI：
@@ -116,17 +116,17 @@ Codex UI 既可以独立安装，也可以随桌面端或 Web 套件一起使用
 ```powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
-npx --yes @michengai/dsh-codex-suite@latest --profile web
+npx --yes @michengai/dsh-codex-suite-installer@latest --profile web
 ```
 
-安装器会读取该 Suite 版本验证过的精确成员版本，用一次 `dsh plugin add` 将六个成员写成 profile 的直接依赖，并在最后运行 `dsh --profile web --dump-config`。需要钉死一组版本时，把 `@latest` 换成具体 Suite 版本。
+安装器会读取自身锁定的精确成员版本，用一次 `dsh plugin add` 将六个成员写成 profile 的直接依赖，并在最后运行 `dsh --profile web --dump-config`。需要钉死一组版本时，把 `@latest` 换成具体安装器版本。
 
 安装后重启 DSH Web 并硬刷新浏览器。已有成员会原地对齐版本；旧版 `@michengai/dsh-codex-suite` 聚合依赖会在六个成员提升完成后自动移除。
 
 新建自定义 Web profile 也使用同一命令，只需改 profile 名：
 
 ```powershell
-npx --yes @michengai/dsh-codex-suite@latest --profile codex
+npx --yes @michengai/dsh-codex-suite-installer@latest --profile codex
 ```
 
 安装器会复用当前 `DSH_HOME`，并把 DSH 自带的 `@deepseek-ai/dsh-web-app` 放到成员 bundle 之前；不会创建独立 Home，也不会重新安装官方 Web 包。

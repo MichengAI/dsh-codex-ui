@@ -21,7 +21,7 @@ export const MEMBER_PACKAGES = [
 
 export function memberSpecs(manifest = suiteManifest) {
   return MEMBER_PACKAGES.map((packageName) => {
-    let version = manifest.dependencies?.[packageName]
+    let version = manifest.dshCodexSuite?.members?.[packageName] ?? manifest.dependencies?.[packageName]
     if (version?.startsWith('workspace:') === true && packageName === '@michengai/dsh-codex-ui') {
       version = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version
     }

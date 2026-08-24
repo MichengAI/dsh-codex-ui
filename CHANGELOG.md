@@ -4,6 +4,17 @@
 
 This changelog records the five most recent published releases of DSH Codex UI and its one-click Suite. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.83 — 2026-08-24
+
+Companion releases: `@michengai/dsh-codex-suite@0.1.15` and `@michengai/dsh-codex-suite-installer@0.1.0`.
+
+### Fixed
+
+- Split the direct-member CLI into a dependency-free installer package so `npx` does not resolve the aggregate Suite's full DSH runtime tree before it can start.
+- Kept `@michengai/dsh-codex-suite` as the compatibility package for the old `dsh plugin add` path, while all recommended commands now use `@michengai/dsh-codex-suite-installer`.
+
+Published packages: [`@michengai/dsh-codex-ui@0.2.83`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.83), [`@michengai/dsh-codex-suite@0.1.15`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.15), and [`@michengai/dsh-codex-suite-installer@0.1.0`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.0).
+
 ## 0.2.82 — 2026-08-24
 
 Companion release: `@michengai/dsh-codex-suite@0.1.14`.

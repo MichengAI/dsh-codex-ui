@@ -4,6 +4,17 @@
 
 本日志记录 DSH Codex UI 及其一键 Suite 最近发布的五个版本；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.83 — 2026-08-24
+
+配套版本：`@michengai/dsh-codex-suite@0.1.15` 与 `@michengai/dsh-codex-suite-installer@0.1.0`。
+
+### 修复
+
+- 将直接成员 CLI 拆成无运行时依赖的轻量安装器包，避免 `npx` 启动前解析聚合 Suite 的整棵 DSH 依赖树。
+- `@michengai/dsh-codex-suite` 继续兼容旧版 `dsh plugin add`，所有推荐安装命令改用 `@michengai/dsh-codex-suite-installer`。
+
+发布包：[`@michengai/dsh-codex-ui@0.2.83`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.83)、[`@michengai/dsh-codex-suite@0.1.15`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.15) 与 [`@michengai/dsh-codex-suite-installer@0.1.0`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.0)。
+
 ## 0.2.82 — 2026-08-24
 
 配套版本：`@michengai/dsh-codex-suite@0.1.14`。

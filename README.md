@@ -55,7 +55,7 @@ Conversation menu: rename, pin, unread, archive, fork, copy, and delete.
 
 ## Plugin combo
 
-`@michengai/dsh-codex-suite` provides a one-click installer that adds these six plugins to the same profile as **direct dependencies**:
+`@michengai/dsh-codex-suite-installer` is the lightweight one-click installer for the `@michengai/dsh-codex-suite` member set. It adds these six plugins to the same profile as **direct dependencies**:
 
 | Plugin | npm package | Role |
 | --- | --- | --- |
@@ -68,7 +68,7 @@ Conversation menu: rename, pin, unread, archive, fork, copy, and delete.
 
 `dshmarket` stays optional. When it is installed, **Plugins** opens the market first.
 
-Direct dependencies let **Settings → About** detect and update every plugin independently. The installer also migrates the legacy aggregate Suite without leaving duplicate patches behind.
+Direct dependencies let **Settings → About** detect and update every plugin independently. The lightweight installer carries only the version manifest, and it migrates the legacy aggregate Suite without leaving duplicate patches behind.
 
 ## DSH product ecosystem
 
@@ -92,7 +92,7 @@ Copy one of the sentences below into DSH, Codex, or WorkBuddy and let that agent
 From npm:
 
 ```text
-Use the one-click installer to add all six DSH Codex Suite members as direct dependencies of my local web profile: npx --yes @michengai/dsh-codex-suite@latest --profile web. Confirm its configuration check succeeds, then remind me to restart DSH Web and hard-refresh the browser.
+Use the one-click installer to add all six DSH Codex Suite members as direct dependencies of my local web profile: npx --yes @michengai/dsh-codex-suite-installer@latest --profile web. Confirm its configuration check succeeds, then remind me to restart DSH Web and hard-refresh the browser.
 ```
 
 UI only:
@@ -116,17 +116,17 @@ This is the one-click combo. Run it from any PowerShell directory:
 ```powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
-npx --yes @michengai/dsh-codex-suite@latest --profile web
+npx --yes @michengai/dsh-codex-suite-installer@latest --profile web
 ```
 
-The installer reads the exact member versions verified by that Suite release, adds all six members as direct profile dependencies in one `dsh plugin add`, and finishes with `dsh --profile web --dump-config`. Replace `@latest` with a Suite version to pin the whole set.
+The installer reads its exact verified member versions, adds all six members as direct profile dependencies in one `dsh plugin add`, and finishes with `dsh --profile web --dump-config`. Replace `@latest` with an installer version to pin the whole set.
 
 Restart DSH Web and hard-refresh the browser. Existing members are aligned in place; a legacy `@michengai/dsh-codex-suite` aggregate dependency is removed only after all six direct members have been staged.
 
 Use the same command with another profile name for a clean custom Web profile:
 
 ```powershell
-npx --yes @michengai/dsh-codex-suite@latest --profile codex
+npx --yes @michengai/dsh-codex-suite-installer@latest --profile codex
 ```
 
 The installer stays in the current `DSH_HOME` and places DSH's built-in `@deepseek-ai/dsh-web-app` before the member bundles. It neither creates a separate Home nor reinstalls the official Web package.

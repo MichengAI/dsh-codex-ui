@@ -1,0 +1,33 @@
+{
+  "name": "@michengai/dsh-codex-suite-installer",
+  "version": "0.1.0",
+  "description": "轻量 DSH Codex Suite 安装器：将六个成员装为同一 profile 的直接插件",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "bin.mjs",
+    "installer.mjs",
+    "README.md",
+    "README.zh-CN.md"
+  ],
+  "bin": {
+    "dsh-codex-suite-installer": "./bin.mjs"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dshCodexSuite": {
+    "members": {
+      "@michengai/dsh-archive-manager": "0.1.13",
+      "@michengai/dsh-codex-ui": "0.2.83",
+      "@michengai/dsh-skills-manager": "0.1.24",
+      "@michengai/dsh-agency-agents": "0.1.21",
+      "@michengai/dsh-im-connect": "0.1.23",
+      "@michengai/dsh-automation": "0.1.14"
+    }
+  }
+}
