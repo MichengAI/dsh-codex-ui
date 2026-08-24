@@ -4,6 +4,27 @@
 
 This changelog records the five most recent published releases of DSH Codex UI and its one-click Suite. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.81 — 2026-08-24
+
+Companion release: `@michengai/dsh-codex-suite@0.1.13`.
+
+### Added
+
+- Added an **Update all** action beside Companion management plugins whenever installed plugins have updates available.
+- Kept missing plugins on their existing per-row install path instead of installing them implicitly during a bulk update.
+
+### Reliability and accessibility
+
+- Staged every selected package in one Host request and sent a single Desktop hot-update signal after the complete batch, so updating several plugins now reloads the window only once.
+- Preserved individual install and update actions while preventing overlapping requests.
+- Added visible loading feedback, keyboard focus treatment, accessible busy/status announcements, bilingual copy, and regression coverage for the batch selection and endpoint contract.
+
+### Suite 0.1.13
+
+- Pinned `@michengai/dsh-codex-ui` to `0.2.81`; all other Suite member pins remain on their currently verified releases.
+
+Published packages: [`@michengai/dsh-codex-ui@0.2.81`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.81) and [`@michengai/dsh-codex-suite@0.1.13`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.13).
+
 ## 0.2.80 — 2026-08-23
 
 Companion release: `@michengai/dsh-codex-suite@0.1.12`.
@@ -77,13 +98,3 @@ Companion release: `@michengai/dsh-codex-suite@0.1.8`.
 - Kept the workspace slot mounted across compact and expanded sidebar modes.
 
 Release commit: [`b96d5a8`](https://github.com/MichengAI/dsh-codex-ui/commit/b96d5a8).
-
-## 0.2.76 — 2026-08-23
-
-Companion release: `@michengai/dsh-codex-suite@0.1.7`.
-
-### Fixed
-
-- Removed the duplicate drop indicator that could appear while reordering pinned workspaces.
-
-Release commit: [`e2a38d1`](https://github.com/MichengAI/dsh-codex-ui/commit/e2a38d1).

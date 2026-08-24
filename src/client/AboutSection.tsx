@@ -6,11 +6,12 @@ import { NS } from './locales.ts'
 
 type DependencyStatus = { id: ManagedDependencyId; packageName: string; installed: boolean; version?: string; latestVersion?: string; updateAvailable: boolean }
 type LoadState = 'loading' | 'ready' | 'failed'
+type InstallTarget = ManagedDependencyId | 'all'
 
 const endpoint = '/api/michengai/codex-ui/dependencies'
 
 const stylesheet = `
-.dcu-about{color:var(--dsw-alias-label-primary)}.dcu-about h2{margin:0;font-size:20px;line-height:28px}.dcu-about-intro{margin:6px 0 22px;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:20px}.dcu-about h3{margin:24px 0 8px;font-size:14px;line-height:20px}.dcu-about-features{margin:0;padding-left:20px;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:24px}.dcu-about-dependencies{overflow:hidden;border:1px solid var(--dsw-alias-border-l2);border-radius:10px}.dcu-about-dependency{display:flex;align-items:center;gap:12px;min-height:64px;padding:12px;border-bottom:1px solid var(--dsw-alias-border-l2)}.dcu-about-dependency:last-child{border-bottom:0}.dcu-about-copy{min-width:0;flex:1}.dcu-about-name{font-size:13px;font-weight:600}.dcu-about-package{overflow:hidden;margin-top:2px;color:var(--dsw-alias-label-tertiary);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.dcu-about-status{display:flex;align-items:center;gap:5px;font-size:12px}.dcu-about-status[data-installed=true]{color:var(--dsw-alias-state-success-primary)}.dcu-about-status[data-installed=false]{color:var(--dsw-alias-state-error-primary)}.dcu-about-status[data-update=true]{color:var(--dsw-alias-state-warning-primary)}.dcu-about-install{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;padding:6px 9px;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;cursor:pointer}.dcu-about-install:hover:not(:disabled){background:var(--dsw-specific-menu-item-hover)}.dcu-about-install:disabled{cursor:wait;opacity:.65}.dcu-about-message{margin:10px 0 0;border-radius:8px;padding:9px 10px;background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 12%,transparent);color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px}.dcu-about-message[data-error=true]{background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 12%,transparent);color:var(--dsw-alias-state-error-primary)}
+.dcu-about{color:var(--dsw-alias-label-primary)}.dcu-about h2{margin:0;font-size:20px;line-height:28px}.dcu-about-intro{margin:6px 0 22px;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:20px}.dcu-about h3{margin:24px 0 8px;font-size:14px;line-height:20px}.dcu-about-features{margin:0;padding-left:20px;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:24px}.dcu-about-dependencies-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:24px}.dcu-about-dependencies-heading h3{margin:0}.dcu-about-dependencies-heading+.dcu-about-intro{margin-bottom:14px}.dcu-about-dependencies{overflow:hidden;border:1px solid var(--dsw-alias-border-l2);border-radius:10px}.dcu-about-dependency{display:flex;align-items:center;gap:12px;min-height:64px;padding:12px;border-bottom:1px solid var(--dsw-alias-border-l2)}.dcu-about-dependency:last-child{border-bottom:0}.dcu-about-copy{min-width:0;flex:1}.dcu-about-name{font-size:13px;font-weight:600}.dcu-about-package{overflow:hidden;margin-top:2px;color:var(--dsw-alias-label-tertiary);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.dcu-about-status{display:flex;align-items:center;gap:5px;font-size:12px}.dcu-about-status[data-installed=true]{color:var(--dsw-alias-state-success-primary)}.dcu-about-status[data-installed=false]{color:var(--dsw-alias-state-error-primary)}.dcu-about-status[data-update=true]{color:var(--dsw-alias-state-warning-primary)}.dcu-about-install{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:32px;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;padding:6px 9px;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;cursor:pointer}.dcu-about-install:hover:not(:disabled){background:var(--dsw-specific-menu-item-hover)}.dcu-about-install:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}.dcu-about-install:disabled{cursor:wait;opacity:.65}.dcu-about-update-all{min-width:92px}.dcu-about-message{margin:10px 0 0;border-radius:8px;padding:9px 10px;background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 12%,transparent);color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px}.dcu-about-message[data-error=true]{background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 12%,transparent);color:var(--dsw-alias-state-error-primary)}
 `
 
 function isDependencyStatus(value: unknown): value is DependencyStatus {
@@ -24,13 +25,13 @@ function isDependencyStatus(value: unknown): value is DependencyStatus {
 export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
   const [dependencies, setDependencies] = useState<readonly DependencyStatus[]>([])
   const [state, setState] = useState<LoadState>('loading')
-  const [installing, setInstalling] = useState<ManagedDependencyId>()
+  const [installing, setInstalling] = useState<InstallTarget>()
   const [message, setMessage] = useState<{ error: boolean; text: string }>()
   const alive = useRef(true)
   const root = useRef<HTMLElement>(null)
   const stateRef = useRef<LoadState>('loading')
   const requestId = useRef(0)
-  const installingRef = useRef<ManagedDependencyId>()
+  const installingRef = useRef<InstallTarget>()
   stateRef.current = state
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
   const load = useCallback(async (signal?: AbortSignal) => {
@@ -91,6 +92,28 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
       if (alive.current) setInstalling(undefined)
     }
   }
+  const updateAll = async (): Promise<void> => {
+    if (installingRef.current !== undefined) return
+    installingRef.current = 'all'
+    setInstalling('all')
+    setMessage(undefined)
+    try {
+      const response = await fetch(`${endpoint}?action=update-all`, { method: 'POST' })
+      const payload = await response.json() as { dependencies?: unknown; error?: unknown; restartRequired?: unknown }
+      if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) throw new Error(typeof payload.error === 'string' ? payload.error : t('about.installFailed'))
+      if (!alive.current) return
+      setDependencies(payload.dependencies)
+      setState('ready')
+      setMessage({ error: false, text: payload.restartRequired === false ? t('about.upToDate') : t('about.restartRequired') })
+    } catch (error) {
+      if (!alive.current) return
+      setMessage({ error: true, text: error instanceof Error ? error.message : t('about.installFailed') })
+    } finally {
+      installingRef.current = undefined
+      if (alive.current) setInstalling(undefined)
+    }
+  }
+  const updateCount = dependencies.filter(dependency => dependency.installed && dependency.updateAvailable).length
   const title = (id: ManagedDependencyId): string => t(`about.dependency.${id}`)
   return <section ref={root} className="dcu-about" aria-label={t('about.nav')}>
     <style>{stylesheet}</style>
@@ -98,11 +121,11 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
     <p className="dcu-about-intro">{t('about.description')}</p>
     <h3>{t('about.features')}</h3>
     <ul className="dcu-about-features"><li>{t('about.feature.sidebar')}</li><li>{t('about.feature.search')}</li><li>{t('about.feature.workspace')}</li><li>{t('about.feature.sessions')}</li><li>{t('about.feature.conversation')}</li><li>{t('about.feature.navigator')}</li></ul>
-    <h3>{t('about.dependencies')}</h3>
+    <div className="dcu-about-dependencies-heading"><h3>{t('about.dependencies')}</h3>{state === 'ready' && updateCount > 0 && <button className="dcu-about-install dcu-about-update-all" type="button" aria-busy={installing === 'all'} disabled={installing !== undefined} onClick={() => { void updateAll() }}>{installing === 'all' ? <IconLoadingOutline16 size={14} /> : <IconDownloadOutline16 size={14} />}{installing === 'all' ? t('about.updatingAll') : t('about.updateAll')}</button>}</div>
     <p className="dcu-about-intro">{t('about.dependenciesDescription')}</p>
-    {state === 'loading' ? <div className="dcu-about-message">{t('about.loading')}</div>
-      : state === 'failed' ? <div className="dcu-about-message" data-error="true">{t('about.statusFailed')}</div>
-        : <div className="dcu-about-dependencies">{dependencies.map(dependency => <article className="dcu-about-dependency" key={dependency.id}><div className="dcu-about-copy"><div className="dcu-about-name">{title(dependency.id)}</div><div className="dcu-about-package">{dependency.packageName}{dependency.version === undefined ? '' : ` · ${dependency.version}`}{dependency.updateAvailable && dependency.latestVersion !== undefined ? ` → ${dependency.latestVersion}` : ''}</div></div><div className="dcu-about-status" data-installed={dependency.installed} data-update={dependency.updateAvailable}>{dependency.installed && !dependency.updateAvailable && <IconCheckOutline16 size={14} />}{dependency.updateAvailable ? t('about.updateAvailable') : dependency.installed ? t('about.installed') : t('about.missing')}</div>{(!dependency.installed || dependency.updateAvailable) && <button className="dcu-about-install" type="button" disabled={installing !== undefined} onClick={() => { void install(dependency.id) }}>{installing === dependency.id ? <IconLoadingOutline16 size={14} /> : <IconDownloadOutline16 size={14} />}{installing === dependency.id ? t('about.installing') : dependency.updateAvailable ? t('about.update') : t('about.install')}</button>}</article>)}</div>}
-    {message !== undefined && <div className="dcu-about-message" data-error={message.error}>{message.text}</div>}
+    {state === 'loading' ? <div className="dcu-about-message" role="status">{t('about.loading')}</div>
+      : state === 'failed' ? <div className="dcu-about-message" data-error="true" role="alert">{t('about.statusFailed')}</div>
+        : <div className="dcu-about-dependencies" aria-busy={installing !== undefined}>{dependencies.map(dependency => <article className="dcu-about-dependency" key={dependency.id}><div className="dcu-about-copy"><div className="dcu-about-name">{title(dependency.id)}</div><div className="dcu-about-package">{dependency.packageName}{dependency.version === undefined ? '' : ` · ${dependency.version}`}{dependency.updateAvailable && dependency.latestVersion !== undefined ? ` → ${dependency.latestVersion}` : ''}</div></div><div className="dcu-about-status" data-installed={dependency.installed} data-update={dependency.updateAvailable}>{dependency.installed && !dependency.updateAvailable && <IconCheckOutline16 size={14} />}{dependency.updateAvailable ? t('about.updateAvailable') : dependency.installed ? t('about.installed') : t('about.missing')}</div>{(!dependency.installed || dependency.updateAvailable) && <button className="dcu-about-install" type="button" disabled={installing !== undefined} onClick={() => { void install(dependency.id) }}>{installing === dependency.id ? <IconLoadingOutline16 size={14} /> : <IconDownloadOutline16 size={14} />}{installing === dependency.id ? t('about.installing') : dependency.updateAvailable ? t('about.update') : t('about.install')}</button>}</article>)}</div>}
+    {message !== undefined && <div className="dcu-about-message" data-error={message.error} role={message.error ? 'alert' : 'status'}>{message.text}</div>}
   </section>
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
 import type { ChildProcess } from 'node:child_process'
-import { applyReleaseExclude, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, pluginCommandError, pluginExecArgv, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot } from '../src/dependency-manager.ts'
+import { applyReleaseExclude, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, pluginCommandError, pluginExecArgv, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, updatableDependencyIds } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 assert.equal(
@@ -167,6 +167,15 @@ assert.deepEqual(
   resolveDshPluginTarget('dshmarket', ['@michengai/dsh-codex-suite']),
   'dshmarket',
   '插件市场不在套件内，仍单独安装',
+)
+assert.deepEqual(
+  updatableDependencyIds([
+    { id: 'ui', packageName: '@michengai/dsh-codex-ui', installed: true, version: '0.2.79', latestVersion: '0.2.80', updateAvailable: true },
+    { id: 'skills', packageName: '@michengai/dsh-skills-manager', installed: true, version: '0.1.24', latestVersion: '0.1.24', updateAvailable: false },
+    { id: 'archive', packageName: '@michengai/dsh-archive-manager', installed: false, latestVersion: '0.1.14', updateAvailable: true },
+  ]),
+  ['ui'],
+  '一键更新只应包含已安装且存在新版本的插件，不得顺带安装缺失插件',
 )
 assert.match(
   pluginCommandError('EPERM: unlink failed').message,

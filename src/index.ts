@@ -1,6 +1,6 @@
 /** 浏览器客户端插件的 Host 入口；客户端逻辑由 dsh.client 加载。 */
 import type { Context } from '@deepseek-ai/cordis'
-import { dependencyStatuses, disposeDependencyInstaller, installDependency, requestDesktopHotUpdate } from './dependency-manager.ts'
+import { dependencyStatuses, disposeDependencyInstaller, installDependency, requestDesktopHotUpdate, updateAllDependencies } from './dependency-manager.ts'
 import { hostServices } from './host-services.ts'
 import { parsePinnedWorkspaceIds, readWorkspacePreferences, writeWorkspacePreferences } from './workspace-preferences.ts'
 
@@ -119,6 +119,17 @@ export function apply(ctx: Context): void {
             if (crossSiteRequest(request)) {
               response.writeHead(403, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
               response.end(JSON.stringify({ error: '已拒绝跨站请求。' }))
+              return
+            }
+            if (url.searchParams.get('action') === 'update-all') {
+              let restartAfterResponse = false
+              const { dependencies, updatedCount } = await updateAllDependencies(() => {
+                restartAfterResponse = typeof process.send === 'function'
+                return restartAfterResponse
+              })
+              response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+              response.end(JSON.stringify({ dependencies, restartRequired: updatedCount > 0 }))
+              if (restartAfterResponse) setTimeout(() => { requestDesktopHotUpdate() }, 150).unref?.()
               return
             }
             let restartAfterResponse = false

@@ -385,35 +385,70 @@ export async function installDependency(id: string | null, requestHotUpdate: () 
   if (installing) throw new Error('已有依赖安装正在进行，请等待完成后再试。')
   installing = true
   try {
-    return await installDependencyLocked(id, requestHotUpdate)
+    return await installDependenciesLocked([id], requestHotUpdate)
   } finally {
     installing = false
   }
 }
 
-async function installDependencyLocked(id: string | null, requestHotUpdate: () => boolean): Promise<readonly DependencyStatus[]> {
-  const dependency = managedDependency(id)
-  if (dependency === undefined) throw new Error('不支持安装该依赖。')
-  const latestVersion = await npmLatestVersion(dependency.packageName)
-  if (latestVersion === undefined) throw new Error('无法获取 npm 最新版本，请检查网络或 npm registry 后重试。')
+export type UpdateAllDependenciesResult = {
+  dependencies: readonly DependencyStatus[]
+  updatedCount: number
+}
+
+/** 只挑选已安装且确有新版本的插件，缺失插件仍交给各行的“安装”按钮。 */
+export function updatableDependencyIds(statuses: readonly DependencyStatus[]): ManagedDependencyId[] {
+  return statuses.filter(status => status.installed && status.updateAvailable).map(status => status.id)
+}
+
+/** 把所有待更新版本一次写入清单，最后只请求一次桌面热更新。 */
+export async function updateAllDependencies(requestHotUpdate: () => boolean = requestDesktopHotUpdate): Promise<UpdateAllDependenciesResult> {
+  if (installing) throw new Error('已有依赖安装正在进行，请等待完成后再试。')
+  installing = true
+  try {
+    const current = await dependencyStatuses()
+    const ids = updatableDependencyIds(current)
+    if (ids.length === 0) return { dependencies: current, updatedCount: 0 }
+    const dependencies = await installDependenciesLocked(ids, requestHotUpdate)
+    return { dependencies, updatedCount: ids.length }
+  } finally {
+    installing = false
+  }
+}
+
+async function installDependenciesLocked(ids: readonly (string | null)[], requestHotUpdate: () => boolean): Promise<readonly DependencyStatus[]> {
+  const dependencies = [...new Set(ids)].map((id) => {
+    const dependency = managedDependency(id)
+    if (dependency === undefined) throw new Error('不支持安装该依赖。')
+    return dependency
+  })
   const declared = await declaredPluginNames()
-  const target = resolveDshPluginTarget(dependency.packageName, declared)
-  const targetVersion = target === dependency.packageName ? latestVersion : await npmLatestVersion(target)
-  if (targetVersion === undefined) throw new Error('无法获取 npm 最新版本，请检查网络或 npm registry 后重试。')
-  const remove = pluginsToRemoveBeforeInstall(declared, target)
-  await ensureLatestReleaseAllowed(target, targetVersion)
-  if (!isOfficialRuntimePackage(target)) await recordDeclaredVersion(target, targetVersion)
-  await recordPendingUpdate(target, targetVersion)
+  const targets = await Promise.all(dependencies.map(async (dependency) => {
+    const latestVersion = await npmLatestVersion(dependency.packageName)
+    if (latestVersion === undefined) throw new Error('无法获取 npm 最新版本，请检查网络或 npm registry 后重试。')
+    const packageName = resolveDshPluginTarget(dependency.packageName, declared)
+    const version = packageName === dependency.packageName ? latestVersion : await npmLatestVersion(packageName)
+    if (version === undefined) throw new Error('无法获取 npm 最新版本，请检查网络或 npm registry 后重试。')
+    return { packageName, version }
+  }))
+  const remove = [...new Set(targets.flatMap(target => pluginsToRemoveBeforeInstall(declared, target.packageName)))]
+  for (const target of targets) {
+    await ensureLatestReleaseAllowed(target.packageName, target.version)
+    if (!isOfficialRuntimePackage(target.packageName)) await recordDeclaredVersion(target.packageName, target.version)
+    await recordPendingUpdate(target.packageName, target.version)
+  }
   if (remove.length > 0) await runDshPlugin(['remove', ...remove])
   if (requestHotUpdate()) return dependencyStatuses()
-  try {
-    await runDshPlugin(['add', `${target}@${targetVersion}`, '--registry=https://registry.npmjs.org/'])
-  } catch (error) {
-    if (isRestartableInstallError(error)) return dependencyStatuses()
-    throw error
+  for (const target of targets) {
+    try {
+      await runDshPlugin(['add', `${target.packageName}@${target.version}`, '--registry=https://registry.npmjs.org/'])
+    } catch (error) {
+      if (isRestartableInstallError(error)) return dependencyStatuses()
+      throw error
+    }
+    const installed = await installedPackageVersion(target.packageName)
+    if (installed !== target.version) return dependencyStatuses()
+    await removePendingUpdate(target.packageName)
   }
-  const installed = await installedPackageVersion(target)
-  if (installed !== targetVersion) return dependencyStatuses()
-  await removePendingUpdate(target)
   return dependencyStatuses()
 }

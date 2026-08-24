@@ -4,6 +4,27 @@
 
 本日志记录 DSH Codex UI 及其一键 Suite 最近发布的五个版本；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.81 — 2026-08-24
+
+配套版本：`@michengai/dsh-codex-suite@0.1.13`。
+
+### 新增
+
+- 当已安装插件存在新版本时，在“配套管理插件”标题右侧显示 **全部更新** 操作。
+- 缺失插件继续使用各自的行内安装入口，不会被批量更新隐式安装。
+
+### 可靠性与无障碍
+
+- 通过一次 Host 请求登记全部选中版本，并在批次完整写入后只发送一次 Desktop 热更新信号；多个插件更新现在只会重载一次窗口。
+- 保留单插件安装和更新入口，同时阻止重叠请求。
+- 增加可见加载反馈、键盘焦点样式、可访问的忙碌/状态提示、中英文文案，以及批量筛选和接口约束的回归测试。
+
+### Suite 0.1.13
+
+- 将 `@michengai/dsh-codex-ui` 固定为 `0.2.81`；其他 Suite 成员继续使用当前已验证版本。
+
+发布包：[`@michengai/dsh-codex-ui@0.2.81`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.81) 与 [`@michengai/dsh-codex-suite@0.1.13`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.13)。
+
 ## 0.2.80 — 2026-08-23
 
 配套版本：`@michengai/dsh-codex-suite@0.1.12`。
@@ -77,13 +98,3 @@
 - 在窄轨态和展开态之间切换时保持工作区插槽挂载。
 
 发布提交：[`b96d5a8`](https://github.com/MichengAI/dsh-codex-ui/commit/b96d5a8)。
-
-## 0.2.76 — 2026-08-23
-
-配套版本：`@michengai/dsh-codex-suite@0.1.7`。
-
-### 修复
-
-- 移除置顶工作区排序时可能重复出现的落点指示线。
-
-发布提交：[`e2a38d1`](https://github.com/MichengAI/dsh-codex-ui/commit/e2a38d1)。
