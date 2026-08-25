@@ -18,7 +18,6 @@ export const MANAGED_DEPENDENCIES = [
   { id: 'im', packageName: '@michengai/dsh-im-connect' },
   { id: 'schedule', packageName: '@michengai/dsh-automation' },
   { id: 'market', packageName: 'dshmarket' },
-  { id: 'finder', packageName: 'dsh-find-plugin' },
 ] as const
 
 export type ManagedDependencyId = typeof MANAGED_DEPENDENCIES[number]['id']

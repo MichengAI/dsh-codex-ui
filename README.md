@@ -66,7 +66,7 @@ Conversation menu: rename, pin, unread, archive, fork, copy, and delete.
 | IM Assistant | `@michengai/dsh-im-connect` | IM settings and the **Channels** tab |
 | Scheduled tasks | `@michengai/dsh-automation` | Scheduled-task settings and the **Schedule** tab |
 
-`dshmarket` and `dsh-find-plugin` remain optional and can be installed or updated separately from **Settings → About**. When `dshmarket` is installed, **Plugins** opens the market first.
+`dshmarket` stays optional. When it is installed, **Plugins** opens the market first.
 
 Direct dependencies let **Settings → About** detect and update every plugin independently. The lightweight installer carries only the version manifest, and it migrates the legacy aggregate Suite without leaving duplicate patches behind.
 

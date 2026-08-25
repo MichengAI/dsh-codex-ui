@@ -25,11 +25,9 @@ assert.match(dependencies, /@michengai\/dsh-archive-manager/, '关于页必须�
 assert.match(dependencies, /@michengai\/dsh-im-connect/, '关于页必须声明 IM 插件依赖')
 assert.match(dependencies, /@michengai\/dsh-automation/, '关于页必须声明定时任务插件依赖')
 assert.match(dependencies, /packageName: 'dshmarket'/, '关于页必须声明第三方插件市场依赖')
-assert.match(dependencies, /packageName: 'dsh-find-plugin'/, '关于页必须声明插件发现依赖')
 assert.match(dependencies, /id: 'im'/, 'about must declare im dependency id')
 assert.match(dependencies, /id: 'schedule'/, 'about must declare schedule dependency id')
 assert.match(dependencies, /id: 'market'/, 'about must declare market dependency id')
-assert.match(dependencies, /id: 'finder'/, 'about must declare plugin finder dependency id')
 assert.match(host, /dependenciesEndpoint/, 'Host 必须提供依赖状态接口')
 assert.match(host, /installDependency/, 'Host 必须提供受限的依赖安装操作')
 assert.match(host, /updateAllDependencies/, 'Host 必须提供一次登记全部待更新插件的批量操作')
@@ -77,6 +75,5 @@ assert.match(sidebar, /selectSection\(t\('about\.nav'\)\)/, '缺失依赖的侧�
 assert.match(locales, /about\.dependency\.im/, '关于页必须提供 IM 插件名称')
 assert.match(locales, /about\.dependency\.schedule/, '关于页必须提供定时任务插件名称')
 assert.match(locales, /about\.dependency\.market/, '关于页必须提供插件市场名称')
-assert.match(locales, /about\.dependency\.finder/, '关于页必须提供插件发现名称')
 assert.match(locales, /sidebar\.marketplace/, '插件入口必须认识市场分区标题')
 

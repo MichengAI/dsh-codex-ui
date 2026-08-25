@@ -8,13 +8,14 @@ const readmePath = new URL('README.zh-CN.md', suitePath)
 const rootReadmePath = new URL('../README.md', import.meta.url)
 const rootReadmeZhPath = new URL('../README.zh-CN.md', import.meta.url)
 
-assert.equal(existsSync(packagePath), true, '必须提供可独立发布的聚合包')
+assert.equal(existsSync(packagePath), true, '必须保留旧聚合包源码以支持存量迁移')
 assert.equal(existsSync(patchPath), true, '聚合包必须提供 DSH patch')
 assert.equal(existsSync(readmePath), true, '聚合包必须说明独立安装方式')
 
 const suite = JSON.parse(readFileSync(packagePath, 'utf8')) as {
   name?: string
   version?: string
+  private?: boolean
   files?: string[]
   dsh?: { bundle?: { patch?: string } }
   dependencies?: Record<string, string>
@@ -41,7 +42,7 @@ const expectedVersions: Record<string, string> = {
 }
 
 assert.equal(suite.name, '@michengai/dsh-codex-suite', '聚合包名必须稳定')
-assert.equal(suite.version, '0.1.16', '兼容聚合包必须跟随 UI 功能版本更新')
+assert.equal(suite.private, true, '旧聚合包必须阻止后续误发布')
 assert.equal(suite.files?.includes('installer.mjs'), false, '兼容聚合包不应携带会触发整棵依赖解析的 npx 安装器')
 assert.equal(suite.dsh?.bundle?.patch, './cordis.patch.yml', 'DSH 必须读取聚合 patch')
 for (const packageName of packages) {

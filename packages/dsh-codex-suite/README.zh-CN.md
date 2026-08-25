@@ -1,6 +1,6 @@
 # DSH Codex Suite
 
-`@michengai/dsh-codex-suite` 保留为兼容旧版 `dsh plugin add` 的聚合包。新安装和旧版迁移请使用轻量的 `@michengai/dsh-codex-suite-installer`，它会把六个成员写成目标 profile 的**直接依赖**。
+`@michengai/dsh-codex-suite` 仅保留源码用于兼容和迁移旧版 `dsh plugin add` 安装，不再发布新版本。新安装和旧版迁移请使用轻量的 `@michengai/dsh-codex-suite-installer`，它会把六个成员写成目标 profile 的**直接依赖**。
 
 ## 插件组合
 
@@ -13,7 +13,7 @@
 | IM 助理 | `@michengai/dsh-im-connect` |
 | 定时任务 | `@michengai/dsh-automation` |
 
-每个 Suite 版本锁定一组经过验证的成员精确版本。独立安装器自身不携带成员运行时依赖树，因此 `npx` 可以立即启动，再交给 DSH 直接安装成员。`dshmarket` 和 `dsh-find-plugin` 不在套件内，需要时可在「设置 → 关于」中单独安装。
+当前经过验证的成员精确版本由独立安装器清单维护。安装器自身不携带成员运行时依赖树，因此 `npx` 可以立即启动，再交给 DSH 直接安装成员。`dshmarket` 不在套件内，需要时单独安装。
 
 ## 一键安装
 
