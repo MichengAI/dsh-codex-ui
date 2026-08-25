@@ -16,10 +16,11 @@ import {
 
 const installerManifest = JSON.parse(readFileSync(new URL('../packages/dsh-codex-suite-installer/package.json', import.meta.url), 'utf8'))
 assert.equal(installerManifest.name, '@michengai/dsh-codex-suite-installer')
-assert.equal(installerManifest.version, '0.1.0')
+assert.equal(installerManifest.version, '0.1.1')
 assert.equal(installerManifest.bin?.['dsh-codex-suite-installer'], './bin.mjs')
 assert.equal(installerManifest.dependencies, undefined, '轻量 npx 安装器不能安装六个成员的传递依赖树')
 assert.deepEqual(Object.keys(installerManifest.dshCodexSuite?.members ?? {}), MEMBER_PACKAGES)
+assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-codex-ui'], '0.2.84', '安装器必须锁定本次发布的 UI 版本')
 
 const manifest = {
   dshCodexSuite: {

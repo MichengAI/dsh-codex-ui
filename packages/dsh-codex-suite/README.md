@@ -13,7 +13,7 @@
 | IM Assistant | `@michengai/dsh-im-connect` |
 | Scheduled tasks | `@michengai/dsh-automation` |
 
-Each Suite release pins one exact, verified member set. The separate installer has no member runtime dependency tree of its own, so `npx` can start immediately and let DSH install the members directly. `dshmarket` remains optional.
+Each Suite release pins one exact, verified member set. The separate installer has no member runtime dependency tree of its own, so `npx` can start immediately and let DSH install the members directly. `dshmarket` and `dsh-find-plugin` remain optional and can be installed separately from About.
 
 ## One-click installation
 

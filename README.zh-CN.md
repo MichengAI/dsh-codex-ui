@@ -66,7 +66,7 @@
 | IM 助理 | `@michengai/dsh-im-connect` | IM 设置页和「频道」页签 |
 | 定时任务 | `@michengai/dsh-automation` | 定时任务设置页和「定时」页签 |
 
-`dshmarket` 仍是可选项。已安装时，「插件」入口会优先进入市场。
+`dshmarket` 和 `dsh-find-plugin` 仍是可选项，可在「设置 → 关于」中分别安装和更新。已安装 `dshmarket` 时，「插件」入口会优先进入市场。
 
 直接依赖让「设置 → 关于」能够分别检测和升级每个插件。轻量安装器只携带版本清单，也会自动迁移旧版聚合 Suite，避免聚合 patch 与独立 patch 冲突。
 

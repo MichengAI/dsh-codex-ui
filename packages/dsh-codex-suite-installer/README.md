@@ -13,7 +13,7 @@
 | IM Assistant | `@michengai/dsh-im-connect` |
 | Scheduled tasks | `@michengai/dsh-automation` |
 
-The installer carries only the exact version manifest, not the six plugins' runtime dependency trees. This keeps `npx` startup small while allowing **Settings → About** to detect and update every installed member independently. `dshmarket` remains optional.
+The installer carries only the exact version manifest, not the six plugins' runtime dependency trees. This keeps `npx` startup small while allowing **Settings → About** to detect and update every installed member independently. `dshmarket` and `dsh-find-plugin` remain optional and can be installed separately from About.
 
 ## One-click installation
 

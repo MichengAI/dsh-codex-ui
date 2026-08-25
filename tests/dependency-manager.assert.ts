@@ -168,6 +168,11 @@ assert.deepEqual(
   'dshmarket',
   '插件市场不在套件内，仍单独安装',
 )
+assert.deepEqual(
+  resolveDshPluginTarget('dsh-find-plugin', ['@michengai/dsh-codex-suite']),
+  'dsh-find-plugin',
+  '插件发现不在套件内，仍单独安装',
+)
 assert.equal(
   isManagedPackageDeclared('@michengai/dsh-skills-manager', ['@michengai/dsh-codex-suite']),
   true,

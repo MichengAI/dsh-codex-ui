@@ -1,6 +1,6 @@
 {
   "name": "@michengai/dsh-codex-suite",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "DSH Codex UI 兼容聚合包：保留旧版 dsh plugin add 安装方式",
   "license": "Apache-2.0",
   "type": "module",

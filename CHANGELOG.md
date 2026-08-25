@@ -4,6 +4,20 @@
 
 This changelog records the five most recent published releases of DSH Codex UI and its one-click Suite. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.84 — 2026-08-25
+
+Companion releases: `@michengai/dsh-codex-suite@0.1.16` and `@michengai/dsh-codex-suite-installer@0.1.1`.
+
+### Added
+
+- Added `dsh-find-plugin` to **Settings → About → Companion management plugins** as **Plugin Discovery**, with independent status checks, installation, updates, and **Update all** support.
+
+### Documentation
+
+- Clarified that `dshmarket` and `dsh-find-plugin` are optional standalone plugins outside the Suite and can be installed or updated separately from About.
+
+Published packages: [`@michengai/dsh-codex-ui@0.2.84`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.84), [`@michengai/dsh-codex-suite@0.1.16`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.16), and [`@michengai/dsh-codex-suite-installer@0.1.1`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.1).
+
 ## 0.2.83 — 2026-08-24
 
 Companion releases: `@michengai/dsh-codex-suite@0.1.15` and `@michengai/dsh-codex-suite-installer@0.1.0`.

@@ -4,6 +4,20 @@
 
 本日志记录 DSH Codex UI 及其一键 Suite 最近发布的五个版本；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.84 — 2026-08-25
+
+配套版本：`@michengai/dsh-codex-suite@0.1.16` 与 `@michengai/dsh-codex-suite-installer@0.1.1`。
+
+### 新增
+
+- 将 `dsh-find-plugin` 作为“插件发现”加入“设置 → 关于 → 配套管理插件”，可单独检测、安装和更新，也支持“全部更新”。
+
+### 文档
+
+- 明确 `dshmarket` 与 `dsh-find-plugin` 均为 Suite 外的可选独立插件，需要时可在“关于”页分别安装和更新。
+
+发布包：[`@michengai/dsh-codex-ui@0.2.84`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.84)、[`@michengai/dsh-codex-suite@0.1.16`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.16) 与 [`@michengai/dsh-codex-suite-installer@0.1.1`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.1)。
+
 ## 0.2.83 — 2026-08-24
 
 配套版本：`@michengai/dsh-codex-suite@0.1.15` 与 `@michengai/dsh-codex-suite-installer@0.1.0`。

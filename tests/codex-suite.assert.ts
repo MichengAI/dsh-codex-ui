@@ -41,7 +41,7 @@ const expectedVersions: Record<string, string> = {
 }
 
 assert.equal(suite.name, '@michengai/dsh-codex-suite', '聚合包名必须稳定')
-assert.equal(suite.version, '0.1.15', '兼容聚合包必须跟随 UI 修复版本更新')
+assert.equal(suite.version, '0.1.16', '兼容聚合包必须跟随 UI 功能版本更新')
 assert.equal(suite.files?.includes('installer.mjs'), false, '兼容聚合包不应携带会触发整棵依赖解析的 npx 安装器')
 assert.equal(suite.dsh?.bundle?.patch, './cordis.patch.yml', 'DSH 必须读取聚合 patch')
 for (const packageName of packages) {

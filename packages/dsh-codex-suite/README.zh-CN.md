@@ -13,7 +13,7 @@
 | IM 助理 | `@michengai/dsh-im-connect` |
 | 定时任务 | `@michengai/dsh-automation` |
 
-每个 Suite 版本锁定一组经过验证的成员精确版本。独立安装器自身不携带成员运行时依赖树，因此 `npx` 可以立即启动，再交给 DSH 直接安装成员。`dshmarket` 不在套件内，需要时单独安装。
+每个 Suite 版本锁定一组经过验证的成员精确版本。独立安装器自身不携带成员运行时依赖树，因此 `npx` 可以立即启动，再交给 DSH 直接安装成员。`dshmarket` 和 `dsh-find-plugin` 不在套件内，需要时可在「设置 → 关于」中单独安装。
 
 ## 一键安装
 
