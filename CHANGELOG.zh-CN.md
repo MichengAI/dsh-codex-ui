@@ -4,6 +4,24 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.86 — 2026-08-25
+
+配套版本：`@michengai/dsh-codex-suite-installer@0.1.3`。
+
+### 调整
+
+- 将“对话 / 轨迹 / 上下文”改为紧凑的三段式控件，同时保持宿主管理的页签 DOM 和原有交互不变。
+- 将宽版 **Session log** 胶囊改为 28px 下载图标，并保留原始文本供辅助技术读取。
+- 移除会话顶栏分割线，将全部控件放入上下各留 3px 的紧凑 34px 控件带。
+
+### 兼容性
+
+- 在展开与收缩布局中与 `DSH-better-sidebar` 的 28px 控件保持同一中心线，不移动外部插件的常驻按钮。
+- 增加宿主 DOM 归属、精确盒模型尺寸、无障碍名称和顶栏间距的回归测试。
+- 轻量安装器同步固定 Codex UI `0.2.86`；旧聚合 Suite 继续保持私有，不参与发布。
+
+发布包：[`@michengai/dsh-codex-ui@0.2.86`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.86) 与 [`@michengai/dsh-codex-suite-installer@0.1.3`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.3)。
+
 ## 0.2.85 — 2026-08-25
 
 配套版本：`@michengai/dsh-codex-suite-installer@0.1.2`。

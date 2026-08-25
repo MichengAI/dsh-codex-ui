@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { JSDOM } from 'jsdom'
 import {
   decorateConversationTitle,
+  decorateSessionLogDownload,
   HEADER_PROJECT_TIP_EVENT,
   HEADER_SESSION_MENU_EVENT,
   placeConversationTabs,
@@ -16,7 +17,7 @@ assert.doesNotMatch(header, /actions\.after\(tabs\)/, '不得物理搬移宿主�
 assert.doesNotMatch(header, /\.append\(title\)/, '不得把宿主标题节点搬进插件容器')
 assert.match(header, /display:contents/, '必须用 CSS 展开标题行，而不是搬移 DOM')
 assert.match(header, /\[class\*="headerActions"\]\{order:2/, '操作区必须排在面包屑后')
-assert.match(header, /header \[data-dcu-inline-tabs\]\{order:3/, '对话轨迹页签必须排到操作区后面')
+assert.match(header, /header \[data-dcu-inline-tabs\]\{[^}]*order:3/, '对话轨迹页签必须排到操作区后面')
 assert.match(header, /\[class\*="headerUtilities"\]\{order:4/, '扩展区必须排到页签后面')
 assert.match(header, /requestAnimationFrame/, '会话顶栏观察必须按帧节流')
 assert.match(header, /tabs\.removeEventListener\('click', onClick\)/, '页签点击监听必须随插件停用清理')
@@ -31,7 +32,18 @@ assert.match(header, /\[role=tab\]:after/, '对话轨迹页签必须去掉下划
 assert.match(header, /aria-selected=true/, '选中页签必须能识别当前项')
 assert.match(header, /data-dcu-tab-slider/, '对话轨迹必须使用滑动选中块')
 assert.match(header, /button-info-fill/, '选中页签必须使用原来的蓝色')
-assert.match(header, /padding-bottom:12px/, '顶栏分割线必须和页签拉开距离')
+assert.match(header, /min-height:34px[^}]*padding-top:3px;padding-bottom:3px/, '紧凑顶栏必须给 28px 控件保留上下各 3px 空间')
+assert.match(header, /header:has\(\[data-dcu-inline-tabs\]\):after\{display:none;content:none\}/, '紧凑顶栏必须移除宿主分割线')
+assert.doesNotMatch(header, /padding-top:0/, '顶栏控件不得再次贴到窗口上边缘')
+assert.match(header, /header:has\(\[data-dcu-inline-tabs\]\)\{[^}]*border-bottom:0/, '紧凑顶栏必须彻底移除宿主底部分割线')
+assert.match(header, /\[data-dcu-inline-tabs\]\{box-sizing:border-box;[^}]*gap:0[^}]*height:28px[^}]*border:1px[^}]*border-radius:8px/, '方案 1 外框必须是包含边框在内的 28px 分段控件')
+assert.match(header, /\[data-dcu-tab-slider\]\{[^}]*height:26px/, '分段滑块必须适配 28px 外框的内部高度')
+assert.match(header, /\[role=tab\]\{[^}]*height:26px[^}]*padding:3px 10px/, '分段页签必须适配 28px 外框的内部高度')
+assert.match(header, /\[role=tab\]\+\[role=tab\]\{border-left:1px/, '分段控件内部必须保留轻量分隔')
+assert.match(header, /slider\.style\.width = `\$\{Math\.max\(0, tabBox\.width\)\}px`/, '选中背景必须覆盖当前文字分段')
+assert.doesNotMatch(header, /data-dsh-toggle-cluster/, '不得移动外部插件按钮，避免展开与收起时跳动')
+assert.match(header, /data-dcu-session-log-download/, 'Session log 必须改成紧凑下载按钮')
+assert.match(header, /clip:rect\(0 0 0 0\)/, 'Session log 文本必须仅视觉隐藏并保留无障碍名称')
 assert.match(header, /width="16" height="16"/, '顶栏文件夹必须和侧栏一样是 16px')
 assert.match(header, /getRect/, '三点菜单必须按按钮位置取锚点')
 assert.match(header, /toggle: true/, '再次点击顶栏文件夹必须关闭卡片')
@@ -49,9 +61,9 @@ const HOST_HEADER_HTML = `
       </nav>
       <div class="wSkVaW_headerActions"></div>
     </div>
-    <div class="wSkVaW_headerUtilities"></div>
+    <div class="wSkVaW_headerUtilities"><button type="button" class="nL4_yW_sessionLogButton"><span>Session log</span><svg aria-hidden="true"></svg></button></div>
   </div>
-  <div class="wSkVaW_tabs" role="tablist"><button type="button" role="tab" aria-selected="true">对话</button><button type="button" role="tab">轨迹</button></div>
+  <div class="wSkVaW_tabs" role="tablist"><button type="button" role="tab" aria-selected="true">对话</button><button type="button" role="tab">轨迹</button><button type="button" role="tab">上下文</button></div>
 </header>`
 
 // 全文件共用一个 JSDOM（每个实例的元素类属于不同 realm），并让源码里的 instanceof 与 CustomEvent 对齐
@@ -63,6 +75,18 @@ const doc = dom.window.document
 const mount = (): HTMLElement => {
   doc.body.innerHTML = HOST_HEADER_HTML
   return doc.body.firstElementChild as HTMLElement
+}
+
+// 行为验证：Session log 仅改成图标外观，原文本仍留在 DOM 并补齐无障碍名称与提示。
+{
+  mount()
+  const button = doc.querySelector('.nL4_yW_sessionLogButton') as HTMLButtonElement
+  assert.equal(decorateSessionLogDownload(doc), true, 'Session log 按钮必须被标记')
+  assert.equal(button.dataset.dcuSessionLogDownload, '', '下载按钮必须带稳定样式标记')
+  assert.equal(button.getAttribute('aria-label'), 'Session log', '图标按钮必须有无障碍名称')
+  assert.equal(button.getAttribute('title'), 'Session log', '图标按钮必须保留悬停提示')
+  assert.equal(button.querySelector('span')?.textContent, 'Session log', '不得删除宿主文本节点')
+  assert.equal(decorateSessionLogDownload(doc), false, '重复标记必须幂等')
 }
 
 // 行为验证：页签只打标记，不离开宿主父节点

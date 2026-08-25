@@ -4,6 +4,24 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.86 — 2026-08-25
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.3`.
+
+### Changed
+
+- Reworked **Conversation / Trajectory / Context** into a compact three-part segmented control while preserving the Host-managed tab DOM and behavior.
+- Replaced the wide **Session log** capsule with an accessible 28 px download icon that retains its original text for assistive technology.
+- Removed the conversation-header divider and placed all controls in a compact 34 px band with symmetric 3 px spacing.
+
+### Compatibility
+
+- Aligned the 28 px mode and utility controls with `DSH-better-sidebar` in both expanded and collapsed layouts without moving the external plugin's persistent buttons.
+- Added regression coverage for stable DOM ownership, exact border-box sizing, accessible labels, and header spacing.
+- Updated the lightweight installer to pin Codex UI `0.2.86`; the legacy aggregate Suite remains private and is not released.
+
+Published packages: [`@michengai/dsh-codex-ui@0.2.86`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.86) and [`@michengai/dsh-codex-suite-installer@0.1.3`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.3).
+
 ## 0.2.85 — 2026-08-25
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.2`.

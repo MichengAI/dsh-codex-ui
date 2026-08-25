@@ -9,16 +9,26 @@ export const HEADER_SESSION_MENU_EVENT = 'dcu-header-session-menu'
 // 再用 order 重排为 [面包屑][操作区][页签][扩展区]，绝不物理搬移 React 管理的节点，
 // 否则宿主重渲染时会因节点父级脱钩抛 NotFoundError 导致整个界面白屏。
 export const CONVERSATION_HEADER_STYLE = `
-header:has([data-dcu-inline-tabs]){display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding-bottom:12px}
+header:has([data-dcu-inline-tabs]){box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-height:34px;padding-top:3px;padding-bottom:3px;border-bottom:0}
+header:has([data-dcu-inline-tabs]):after{display:none;content:none}
 header:has([data-dcu-inline-tabs]) [class*="titleRow"],header:has([data-dcu-inline-tabs]) [class*="titleCluster"]{display:contents}
 header:has([data-dcu-inline-tabs]) [class*="crumbs"]{order:1;flex:1;min-width:0}
 header:has([data-dcu-inline-tabs]) [class*="headerActions"]{order:2;flex:none}
-header [data-dcu-inline-tabs]{order:3;flex:none;display:flex;align-items:center;gap:4px;margin:0;padding:0;position:relative;z-index:1}
+header [data-dcu-inline-tabs]{box-sizing:border-box;order:3;flex:none;display:flex;align-items:center;gap:0;margin:0;padding:0;height:28px;position:relative;z-index:1;overflow:hidden;border:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.12));border-radius:8px;background:var(--dsw-alias-background-secondary,rgba(255,255,255,.025))}
 header:has([data-dcu-inline-tabs]) [class*="headerUtilities"]{order:4;flex:none}
-header [data-dcu-tab-slider]{position:absolute;left:0;top:50%;height:28px;margin-top:-14px;border-radius:8px;background:color-mix(in srgb,var(--dsw-alias-button-info-fill,#4c8dff) 18%,transparent);pointer-events:none;z-index:0;opacity:0;transform:translateX(0);width:0;transition:transform 280ms cubic-bezier(.16,1,.3,1),width 280ms cubic-bezier(.16,1,.3,1),opacity 160ms ease}
-header [data-dcu-inline-tabs] [role=tab]{position:relative;z-index:1;padding:8px 10px 10px;margin:0;line-height:20px;color:var(--dsw-alias-label-tertiary);border:0;box-shadow:none;background:transparent}
+header [data-dcu-tab-slider]{position:absolute;left:0;top:0;height:26px;border-radius:7px;background:color-mix(in srgb,var(--dsw-alias-button-info-fill,#4c8dff) 18%,transparent);pointer-events:none;z-index:0;opacity:0;transform:translateX(0);width:0;transition:transform 240ms cubic-bezier(.16,1,.3,1),width 240ms cubic-bezier(.16,1,.3,1),opacity 160ms ease}
+/* 顶栏统一使用 34px 控件带：与宿主扩展常用的 top:3px + 28px 图标按钮同心，
+   外部插件按钮无需在展开/收起时改变位置。 */
+header [data-dcu-inline-tabs] [role=tab]{box-sizing:border-box;position:relative;z-index:1;height:26px;padding:3px 10px;margin:0;line-height:20px;color:var(--dsw-alias-label-tertiary);border:0;box-shadow:none;background:transparent;font-size:13px;white-space:nowrap}
 header [data-dcu-inline-tabs] [role=tab][aria-selected=true],header [data-dcu-inline-tabs] [role=tab][data-state=active]{color:var(--dsw-alias-button-info-fill,#4c8dff);font-weight:500}
+header [data-dcu-inline-tabs] [role=tab]+[role=tab]{border-left:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.08))}
 header [data-dcu-inline-tabs] [role=tab]:after,header [data-dcu-inline-tabs] [role=tab]:before{display:none!important;content:none!important;background:transparent!important;height:0!important}
+header [data-dcu-inline-tabs] [role=tab]:focus-visible,header [data-dcu-session-log-download]:focus-visible{outline:2px solid var(--dsw-alias-button-info-fill,#4c8dff);outline-offset:-2px}
+header [data-dcu-session-log-download]{appearance:none;min-width:28px;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--dsw-alias-label-secondary,currentColor);display:inline-grid;place-items:center;cursor:pointer}
+header [data-dcu-session-log-download]:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.08));color:var(--dsw-alias-label-primary,currentColor)}
+header [data-dcu-session-log-download]:disabled{color:var(--dsw-alias-label-dimmed,currentColor);cursor:wait}
+header [data-dcu-session-log-download] > span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+header [data-dcu-session-log-download] svg{width:16px;height:16px;flex:none}
 header [data-dcu-title-folder],header [data-dcu-title-more]{appearance:none;border:0;background:transparent;color:var(--dsw-alias-label-tertiary,currentColor);display:inline-grid;place-items:center;padding:0;cursor:pointer;border-radius:4px}
 header [data-dcu-title-folder]{width:16px;height:20px}
 header [data-dcu-title-more]{width:20px;height:20px}
@@ -38,6 +48,19 @@ export function placeConversationTabs(root: ParentNode): boolean {
   const tabs = findConversationTablist(root)
   if (tabs === undefined || tabs.dataset.dcuInlineTabs === '') return false
   tabs.dataset.dcuInlineTabs = ''
+  return true
+}
+
+/** 把宿主的 Session log 胶囊标记成紧凑下载按钮；保留文本供无障碍名称使用。 */
+export function decorateSessionLogDownload(root: ParentNode): boolean {
+  const button = root.querySelector<HTMLButtonElement>('header [class*="headerUtilities"] button[class*="sessionLogButton"]')
+  if (button === null || button.dataset.dcuSessionLogDownload === '') return false
+  button.dataset.dcuSessionLogDownload = ''
+  const label = button.querySelector('span')?.textContent?.trim()
+  if (label !== undefined && label !== '') {
+    if (!button.hasAttribute('aria-label')) button.setAttribute('aria-label', label)
+    if (!button.hasAttribute('title')) button.setAttribute('title', label)
+  }
   return true
 }
 
@@ -163,6 +186,7 @@ export function observeConversationHeader(doc: Document = document): () => void 
       }
       syncTabSlider(doc)
       decorateConversationTitle(doc)
+      decorateSessionLogDownload(doc)
       decorateUserBubbles(doc)
     } finally {
       applying = false
