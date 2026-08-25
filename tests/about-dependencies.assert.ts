@@ -13,7 +13,7 @@ const locales = readFileSync(new URL('../src/client/locales.ts', import.meta.url
 const manager = readFileSync(new URL('../src/dependency-manager.ts', import.meta.url), 'utf8')
 
 assert.match(client, /id: 'about'/, '关于页必须注册为最后的设置分区')
-assert.match(client, /order: 100/, '关于页必须排在管理插件设置之后')
+assert.match(client, /order: Number\.MAX_SAFE_INTEGER/, '关于页必须在注册排序中保持最后')
 assert.match(dependencies, /@deepseek-ai\/dsh/, '关于页必须提供官方运行时手动升级')
 assert.match(dependencies, /id: 'dsh'/, '关于页必须声明官方运行时依赖')
 assert.doesNotMatch(dependencies, /id: 'suite'/, '不得再把套件作为关于页安装入口')

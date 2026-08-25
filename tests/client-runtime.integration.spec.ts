@@ -15,6 +15,7 @@ afterEach(async () => { await runtime?.dispose() })
 
 test('侧栏替换以更低优先级接管工作区树，并保留 footer action 子插槽', async () => {
   runtime = await SlotTestRuntime.create()
+  runtime.provide('connection', { api: { host: { openPath: async () => ({ result: { ok: true, value: undefined } }) } } })
   runtime.provide('layout', { toggleSidebar: () => {} })
   runtime.provide('locale', {
     register: () => () => {},
@@ -38,6 +39,7 @@ test('侧栏替换以更低优先级接管工作区树，并保留 footer action
 
 test('未安装 IM 和定时插件时配套插槽没有注册项', async () => {
   runtime = await SlotTestRuntime.create()
+  runtime.provide('connection', { api: { host: { openPath: async () => ({ result: { ok: true, value: undefined } }) } } })
   runtime.provide('layout', { toggleSidebar: () => {} })
   runtime.provide('locale', {
     register: () => () => {},

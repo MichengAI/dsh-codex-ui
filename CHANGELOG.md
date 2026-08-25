@@ -4,6 +4,23 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.87 — 2026-08-26
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.4`.
+
+### Fixed
+
+- Restored Chinese labels for the built-in permission presets in Settings and Chat with an exact-match compatibility adapter that leaves custom presets, prose, icons, and Host menu layout untouched.
+- Made **Open in File Explorer** bypass in-app file previews, close its menu immediately, and open Windows Explorer in the foreground and maximized.
+- Restyled conversation and workspace rename fields to match the native settings form, including helper copy, accessible labels, and a visible focus state.
+- Kept the Codex UI **About** section at the bottom of Settings even when third-party plugins add later sections.
+
+### Compatibility
+
+- Updated the lightweight installer to pin Codex UI `0.2.87`, IM Connect `0.1.24`, and Automation `0.1.15`; the legacy aggregate Suite remains private and unpublished.
+
+Published packages: [`@michengai/dsh-codex-ui@0.2.87`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.87) and [`@michengai/dsh-codex-suite-installer@0.1.4`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.4).
+
 ## 0.2.86 — 2026-08-25
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.3`.

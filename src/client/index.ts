@@ -10,7 +10,9 @@ import { CodexWorkspaceBrowser } from './CodexWorkspaceBrowser.tsx'
 import { ConnectorsSection } from './ConnectorsSection.tsx'
 import { en, NS, zh } from './locales.ts'
 import { createCompanionTabSource } from './companion-slots.ts'
+import { openPathInHost, type HostOpenPathConnection } from './host-open-path.ts'
 import { observeSettingsNavIcons } from './settings-nav-icons.ts'
+import { observePermissionLabels } from './permission-labels.ts'
 import { observeSlimSidebar } from './sidebar-width.ts'
 import { observeConversationHeader } from './conversation-header.ts'
 import { TurnNavigator } from './TurnNavigator.tsx'
@@ -54,7 +56,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 
-export const inject = ['slots', 'sessions', 'workspaces', 'layout', 'locale']
+export const inject = ['slots', 'sessions', 'workspaces', 'layout', 'locale', 'connection']
 
 type ArchiveRegistry = {
   deleteSession: (sessionId: SessionId) => Promise<{ ok: boolean; error?: { message: string } }>
@@ -68,8 +70,11 @@ function hasDeleteSession(value: unknown): value is ArchiveRegistry {
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'michengai-codex-ui: dictionaries')
   const t = ctx.locale.bind(NS)
+  const connection = ctx.get('connection') as HostOpenPathConnection
+  const openPath = (path: string): Promise<void> => openPathInHost(connection, path)
   ctx.effect(() => observeSlimSidebar(), 'michengai-codex-ui: slim sidebar')
   ctx.effect(() => observeSettingsNavIcons(), 'michengai-codex-ui: settings nav icons')
+  ctx.effect(() => observePermissionLabels(ctx.locale), 'michengai-codex-ui: permission labels')
   ctx.effect(() => observeConversationHeader(), 'michengai-codex-ui: conversation header')
   const companionSlots = createCompanionTabSource(ctx.slots)
   ctx.slots.inject('sidebar', () => ctx.slots.register({
@@ -91,7 +96,7 @@ export function apply(ctx: ClientContext): void {
       deleteSession,
       forkSession,
       renameSession,
-      openPath: (path: string) => ctx.workspaces.openPath(path),
+      openPath,
       companionSlots,
     }),
   }, CodexSidebar))
@@ -123,7 +128,7 @@ export function apply(ctx: ClientContext): void {
       deleteSession,
       deleteWorkspace: (workspaceId: WorkspaceId) => ctx.workspaces.delete(workspaceId),
       forkSession,
-      openPath: (path: string) => ctx.workspaces.openPath(path),
+      openPath,
       openSession: (sessionId: SessionId) => { ctx.sessions.open(sessionId) },
       renameSession,
       renameWorkspace: (workspaceId: WorkspaceId, title: string) => ctx.workspaces.rename(workspaceId, title),
@@ -153,6 +158,6 @@ export function apply(ctx: ClientContext): void {
     inject: () => ({ sessionStore: ctx.sessions.list, t }),
   }, ConnectorsSection))
   ctx.slots.inject('settings.section', () => ctx.slots.register({
-    name: 'settings.section', id: 'about', order: 100, label: () => t('about.nav'), locale: NS,
+    name: 'settings.section', id: 'about', order: Number.MAX_SAFE_INTEGER, label: () => t('about.nav'), locale: NS,
   }, AboutSection))
 }

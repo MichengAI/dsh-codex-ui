@@ -4,6 +4,23 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.87 — 2026-08-26
+
+配套版本：`@michengai/dsh-codex-suite-installer@0.1.4`。
+
+### 修复
+
+- 恢复设置与 Chat 中三个内置权限预设的中文显示；兼容逻辑只精确替换权限控件文案，不改动自定义预设、正文、图标或宿主菜单布局。
+- “在资源管理器中打开”不再被应用内文件预览拦截；点击后立即收起菜单，并在前台最大化打开 Windows 资源管理器。
+- 将会话和工作区重命名输入框调整为原生设置表单样式，补充辅助说明、无障碍名称和清晰的焦点状态。
+- 即使第三方插件继续注册设置分区，也保证 Codex UI 自带的“关于”入口始终位于最底部。
+
+### 兼容性
+
+- 轻量安装器同步固定 Codex UI `0.2.87`、IM Connect `0.1.24` 和 Automation `0.1.15`；旧聚合 Suite 继续保持私有且不发布。
+
+发布包：[`@michengai/dsh-codex-ui@0.2.87`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.87) 与 [`@michengai/dsh-codex-suite-installer@0.1.4`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.4)。
+
 ## 0.2.86 — 2026-08-25
 
 配套版本：`@michengai/dsh-codex-suite-installer@0.1.3`。

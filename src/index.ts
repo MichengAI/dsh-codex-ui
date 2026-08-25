@@ -2,10 +2,12 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { dependencyStatuses, disposeDependencyInstaller, installDependency, requestDesktopHotUpdate, updateAllDependencies } from './dependency-manager.ts'
 import { hostServices } from './host-services.ts'
+import { ForegroundExplorer } from './native-explorer.ts'
 import { parsePinnedWorkspaceIds, readWorkspacePreferences, writeWorkspacePreferences } from './workspace-preferences.ts'
 
 const connectorsEndpoint = '/api/michengai/codex-ui/connectors'
 const dependenciesEndpoint = '/api/michengai/codex-ui/dependencies'
+const explorerEndpoint = '/api/michengai/codex-ui/open-in-explorer'
 const preferencesEndpoint = '/api/michengai/codex-ui/preferences'
 const maxPreferencesBodyBytes = 32 * 1024
 
@@ -77,6 +79,8 @@ export const inject = ['webServer', 'agents', 'tools']
 export function apply(ctx: Context): void {
   const host = hostServices(ctx)
   ctx.effect(() => {
+    const foregroundExplorer = new ForegroundExplorer()
+    void foregroundExplorer.warmup().catch(error => ctx.logger.warn('foreground explorer warmup failed: %s', error))
     const disposeConnectors = host.webServer.register({
       kind: 'exact',
       path: connectorsEndpoint,
@@ -201,10 +205,44 @@ export function apply(ctx: Context): void {
         }
       },
     })
+    const disposeExplorer = host.webServer.register({
+      kind: 'exact',
+      path: explorerEndpoint,
+      handler: async (request, response) => {
+        if (request.method !== 'POST') { response.writeHead(405, { allow: 'POST' }); response.end(); return }
+        if (crossSiteRequest(request)) {
+          response.writeHead(403, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+          response.end(JSON.stringify({ error: '已拒绝跨站请求。' }))
+          return
+        }
+        if (process.platform !== 'win32') {
+          response.writeHead(501, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+          response.end(JSON.stringify({ error: '当前平台使用系统默认打开方式。' }))
+          return
+        }
+        try {
+          const body = JSON.parse(await readRequestBody(request)) as { path?: unknown }
+          if (typeof body.path !== 'string' || body.path.trim() === '') {
+            response.writeHead(400, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+            response.end(JSON.stringify({ error: '目录路径无效。' }))
+            return
+          }
+          await foregroundExplorer.open(body.path)
+          response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+          response.end(JSON.stringify({ opened: true, foreground: true }))
+        } catch (error) {
+          ctx.logger.warn('foreground explorer open failed: %s', error)
+          response.writeHead(error instanceof SyntaxError ? 400 : 503, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+          response.end(JSON.stringify({ error: error instanceof SyntaxError ? '目录路径格式无效。' : '无法在前台打开资源管理器。' }))
+        }
+      },
+    })
     return () => {
       disposeDependencyInstaller()
+      foregroundExplorer.dispose()
       disposeConnectors()
       disposeDependencies()
+      disposeExplorer()
       disposePreferences()
     }
   }, 'michengai-codex-ui: catalogs')
