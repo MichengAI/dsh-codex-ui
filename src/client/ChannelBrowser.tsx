@@ -10,6 +10,7 @@ import { toggleSessionId } from './session-manager.ts'
 import { SessionHoverCardLayer, SessionModals, useBusyAction, useSessionDialogs, useSessionFlags } from './session-row-actions.tsx'
 import { HoverShell, useHoverDispatch } from './hover-shell.tsx'
 import { GroupHead, SessionRow, sessionMenuItems } from './session-tree.tsx'
+import { browserStorage, CHANNEL_EXPANSION_STORAGE_KEY, readTreeExpansionState, writeTreeExpansionState } from './tree-expansion.ts'
 
 type OpenMenu = { id: string; x?: number; y?: number }
 
@@ -48,11 +49,12 @@ function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSe
   const sessions = useSessions(state => state)
   const [groups, setGroups] = useState<ChannelGroup[]>([])
   const [pollError, setPollError] = useState<string>()
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => readTreeExpansionState(browserStorage(), CHANNEL_EXPANSION_STORAGE_KEY))
   const flags = useSessionFlags(sessions.current)
   const { showTip, hideTip, dismissTip } = useHoverDispatch()
   const { busy, error, setError, run } = useBusyAction(() => { setMenu(undefined) })
   const dialogs = useSessionDialogs({ archiveSession, deleteSession, forkSession, renameSession }, flags, run, () => { setMenu(undefined); setError(undefined) })
+  useEffect(() => { writeTreeExpansionState(browserStorage(), CHANNEL_EXPANSION_STORAGE_KEY, expanded) }, [expanded])
   useEffect(() => {
     let disposed = false
     let active: AbortController | undefined

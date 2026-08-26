@@ -31,6 +31,7 @@ import { HEADER_PROJECT_TIP_EVENT, HEADER_SESSION_MENU_EVENT, type HeaderAnchorD
 import { HoverShell, useHoverDispatch, type HoverCardTip } from './hover-shell.tsx'
 import { WorkspaceHoverCard } from './workspace-hover-card.tsx'
 import { moveBefore, orderByIds, pinnedHeaderDropIndicator, readWorkspaceDrag, reorderDropBeforeId, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag } from './workspace-browser.ts'
+import { browserStorage, readTreeExpansionState, WORKSPACE_EXPANSION_STORAGE_KEY, writeTreeExpansionState } from './tree-expansion.ts'
 
 type BrowserInjected = {
   archiveSession: (sessionId: SessionId) => Promise<void>
@@ -101,8 +102,7 @@ const typographyStyles = `.dcu-wb{font:14px/20px var(--dcu-font,var(--dsw-font-f
 export const WORKSPACE_TREE_STYLE = stylesheet + runningStyles + typographyStyles
 
 function storage(): Storage | undefined {
-  if (typeof window === 'undefined') return undefined
-  try { return window.localStorage } catch { return undefined }
+  return browserStorage()
 }
 
 function sameIds(left: readonly string[], right: readonly string[]): boolean {
@@ -126,7 +126,7 @@ export function CodexWorkspaceBrowser(props: CodexWorkspaceBrowserProps) {
 function CodexWorkspaceTree({ wide, useSessions, useWorkspaces, t, archiveSession, deleteSession, deleteWorkspace, forkSession, insertSessionBefore, insertWorkspaceBefore, openPath, openSession, renameSession, renameWorkspace, startSession }: CodexWorkspaceBrowserProps) {
   const sessions = useSessions(state => state)
   const workspaces = useWorkspaces(state => state)
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => readTreeExpansionState(storage(), WORKSPACE_EXPANSION_STORAGE_KEY))
   const [pinnedWorkspaceIds, setPinnedWorkspaceIdsState] = useState(() => readPinnedWorkspaceIds(storage()))
   const pinnedWorkspaceIdsRef = useRef(pinnedWorkspaceIds)
   pinnedWorkspaceIdsRef.current = pinnedWorkspaceIds
@@ -180,6 +180,8 @@ function CodexWorkspaceTree({ wide, useSessions, useWorkspaces, t, archiveSessio
   const headerMenuPointerAt = useRef(0)
   const [sessionDrag, setSessionDrag] = useState<{ sessionId: string; workspaceId: string }>()
   const [sessionDropTarget, setSessionDropTarget] = useState<SessionDropTarget>()
+
+  useEffect(() => { writeTreeExpansionState(storage(), WORKSPACE_EXPANSION_STORAGE_KEY, expanded) }, [expanded])
 
   useEffect(() => {
     savePinnedWorkspaceIds(storage(), pinnedWorkspaceIds)

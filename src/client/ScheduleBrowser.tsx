@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { NS } from './locales.ts'
@@ -10,6 +10,7 @@ import { toggleSessionId } from './session-manager.ts'
 import { SessionHoverCardLayer, SessionModals, useBusyAction, useSessionDialogs, useSessionFlags } from './session-row-actions.tsx'
 import { HoverShell, useHoverDispatch } from './hover-shell.tsx'
 import { GroupHead, SessionRow, sessionMenuItems } from './session-tree.tsx'
+import { browserStorage, readTreeExpansionState, SCHEDULE_EXPANSION_STORAGE_KEY, writeTreeExpansionState } from './tree-expansion.ts'
 
 type OpenMenu = { id: string; x?: number; y?: number }
 
@@ -56,11 +57,12 @@ export function ScheduleBrowser(props: ScheduleBrowserProps) {
 function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkSession, renameSession, useSessions, useWorkspaces, t, menu, setMenu }: ScheduleBrowserProps & { menu?: OpenMenu; setMenu: (menu?: OpenMenu) => void }) {
   const sessions = useSessions(state => state)
   const workspaces = useWorkspaces(state => state)
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => readTreeExpansionState(browserStorage(), SCHEDULE_EXPANSION_STORAGE_KEY))
   const flags = useSessionFlags(sessions.current)
   const { showTip, hideTip, dismissTip } = useHoverDispatch()
   const { busy, error, setError, run } = useBusyAction(() => { setMenu(undefined) })
   const dialogs = useSessionDialogs({ archiveSession, deleteSession, forkSession, renameSession }, flags, run, () => { setMenu(undefined); setError(undefined) })
+  useEffect(() => { writeTreeExpansionState(browserStorage(), SCHEDULE_EXPANSION_STORAGE_KEY, expanded) }, [expanded])
   const groups = useMemo(() => {
     const archived = new Set(workspaces.archivedSessionIds ?? [])
     const items: ScheduleSession[] = (sessions.ids ?? Object.keys(sessions.byId)).flatMap(id => {
