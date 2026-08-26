@@ -4,6 +4,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { SlotTestRuntime } from '@deepseek-ai/dsh-client-test-runtime'
 import { apply, inject } from '../src/client/index.ts'
 import { CodexSidebar } from '../src/client/CodexSidebar.tsx'
+import { ConnectorsSection } from '../src/client/ConnectorsSection.tsx'
 
 const createRoot = (createRequire(import.meta.url)('react-dom/client') as {
   createRoot: (container: Element) => { render: (node: ReactNode) => void; unmount: () => void }
@@ -16,6 +17,7 @@ afterEach(async () => { await runtime?.dispose() })
 test('侧栏替换以更低优先级接管工作区树，并保留 footer action 子插槽', async () => {
   runtime = await SlotTestRuntime.create()
   runtime.provide('connection', { api: { host: { openPath: async () => ({ result: { ok: true, value: undefined } }) } } })
+  runtime.provide('conversation', {})
   runtime.provide('layout', { toggleSidebar: () => {} })
   runtime.provide('locale', {
     register: () => () => {},
@@ -40,6 +42,7 @@ test('侧栏替换以更低优先级接管工作区树，并保留 footer action
 test('未安装 IM 和定时插件时配套插槽没有注册项', async () => {
   runtime = await SlotTestRuntime.create()
   runtime.provide('connection', { api: { host: { openPath: async () => ({ result: { ok: true, value: undefined } }) } } })
+  runtime.provide('conversation', {})
   runtime.provide('layout', { toggleSidebar: () => {} })
   runtime.provide('locale', {
     register: () => () => {},
@@ -108,6 +111,53 @@ test('搜索和窄轨切换不会重渲染或重新挂载工作区树', async ()
     expect(workspaceRenders).toBe(1)
   } finally {
     vi.useRealTimers()
+    await act(async () => { root.unmount() })
+    container.remove()
+  }
+})
+
+test('连接器设置页嵌入可用的市场并只接受该 iframe 的 Prompt 消息', async () => {
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  const root = createRoot(container)
+  const startPromptSession = vi.fn(async () => {})
+  const fetchMock = vi.fn(async () => new Response(null, { status: 200 }))
+  vi.stubGlobal('fetch', fetchMock)
+  const sessionStore = {
+    getSnapshot: () => ({ current: undefined }),
+    subscribe: () => () => {},
+  }
+  try {
+    await act(async () => {
+      root.render(createElement(ConnectorsSection, {
+        sessionStore,
+        startPromptSession,
+        t: ((key: string) => key) as never,
+      } as never))
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    const frame = container.querySelector<HTMLIFrameElement>('.dcu-connector-frame')
+    expect(frame).not.toBeNull()
+    expect(fetchMock).toHaveBeenCalledWith('/mcp-connector/ui/', expect.objectContaining({ method: 'HEAD', cache: 'no-store' }))
+
+    window.dispatchEvent(new MessageEvent('message', {
+      origin: 'https://untrusted.example',
+      source: frame?.contentWindow,
+      data: { type: 'mcp-connector:start-session', requestId: 'bad', prompt: 'ignore me' },
+    }))
+    await act(async () => {
+      window.dispatchEvent(new MessageEvent('message', {
+        origin: window.location.origin,
+        source: frame?.contentWindow,
+        data: { type: 'mcp-connector:start-session', requestId: 'good', prompt: 'Hello MCP' },
+      }))
+      await Promise.resolve()
+    })
+    expect(startPromptSession).toHaveBeenCalledTimes(1)
+    expect(startPromptSession).toHaveBeenCalledWith('Hello MCP')
+  } finally {
+    vi.unstubAllGlobals()
     await act(async () => { root.unmount() })
     container.remove()
   }

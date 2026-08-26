@@ -4,6 +4,24 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.88 — 2026-08-26
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.5`.
+
+### Changed
+
+- Replaced the lightweight **Settings → Connectors** tool list with the complete `dsh-mcp-connector` marketplace and connection manager whenever that optional external plugin is installed.
+- Kept the existing **Connectors** home/sidebar action as the single entry point and suppressed the external plugin's separate launcher in both expanded and compact Codex sidebar layouts.
+- Preserved the original current-session MCP tool directory as an automatic fallback when `dsh-mcp-connector` is absent or its Web UI is unavailable.
+
+### Compatibility
+
+- Added a same-origin, source-validated Prompt bridge that creates or reuses a workspace session and places the selected marketplace Prompt into its draft.
+- Synchronized the embedded marketplace with the DSH-selected light or dark theme without modifying the externally maintained plugin or making it a required dependency.
+- Updated the lightweight installer to pin Codex UI `0.2.88`; the legacy aggregate Suite remains private and unpublished.
+
+Published packages: [`@michengai/dsh-codex-ui@0.2.88`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.88) and [`@michengai/dsh-codex-suite-installer@0.1.5`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.5).
+
 ## 0.2.87 — 2026-08-26
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.4`.

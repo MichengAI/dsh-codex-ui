@@ -56,7 +56,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 
-export const inject = ['slots', 'sessions', 'workspaces', 'layout', 'locale', 'connection']
+export const inject = ['slots', 'sessions', 'workspaces', 'layout', 'locale', 'connection', 'conversation']
 
 type ArchiveRegistry = {
   deleteSession: (sessionId: SessionId) => Promise<{ ok: boolean; error?: { message: string } }>
@@ -121,6 +121,24 @@ export function apply(ctx: ClientContext): void {
     const result = await registry.deleteSession(sessionId)
     if (!result.ok) throw new Error(result.error?.message ?? t('sessions.deleteUnavailable'))
   }
+  const startConnectorPromptSession = async (promptText: string): Promise<void> => {
+    const prompt = promptText.trim()
+    if (prompt === '') throw new Error('Prompt 不能为空')
+    const workspaces = ctx.workspaces.list.getSnapshot()
+    const currentSessionId = ctx.sessions.list.getSnapshot().current
+    const currentWorkspaceId = currentSessionId === undefined
+      ? undefined
+      : workspaces.items.find(workspace => workspace.sessionIds.includes(currentSessionId))?.workspaceId
+    const targetWorkspaceId = currentWorkspaceId ?? workspaces.recentWorkspaceId
+    if (targetWorkspaceId === undefined) throw new Error('请先选择一个工作空间，再使用示例 Prompt')
+    const sessionId = await ctx.workspaces.connectWorkspace(targetWorkspaceId)
+    const conversation = ctx.get('conversation')
+    if (conversation === undefined) throw new Error('DSH 对话服务尚未就绪，请稍后重试')
+    const binding = ctx.sessions.binding(sessionId)
+    if (binding === undefined) throw new Error('新会话尚未就绪，请稍后重试')
+    conversation.input.for(binding.ctx).setDraft(prompt)
+    ctx.sessions.open(sessionId)
+  }
   ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({
     name: 'sidebar.workspaces', priority: -1, locale: NS,
     inject: () => ({
@@ -155,7 +173,7 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section', id: 'connectors', order: 17, label: () => t('sidebar.connectors'),
     ...({ icon: 'connector' } as Record<string, unknown>),
-    inject: () => ({ sessionStore: ctx.sessions.list, t }),
+    inject: () => ({ sessionStore: ctx.sessions.list, startPromptSession: startConnectorPromptSession, t }),
   }, ConnectorsSection))
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section', id: 'about', order: Number.MAX_SAFE_INTEGER, label: () => t('about.nav'), locale: NS,

@@ -4,6 +4,24 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.88 — 2026-08-26
+
+配套版本：`@michengai/dsh-codex-suite-installer@0.1.5`。
+
+### 调整
+
+- 安装外部可选插件 `dsh-mcp-connector` 时，用其完整的市场与连接管理界面替换轻量的“设置 → 连接器”工具列表。
+- 首页/侧边栏继续以“连接器”作为唯一入口，展开与收缩状态下均不再显示外部插件单独注入的启动入口。
+- 未安装 `dsh-mcp-connector` 或其 Web UI 不可用时，自动回退到原有的当前会话 MCP 工具目录。
+
+### 兼容性
+
+- 增加同源且校验消息来源的 Prompt 桥接，可创建或复用工作区会话，并把市场中的 Prompt 写入新会话草稿。
+- 让内嵌市场跟随 DSH 当前选择的明暗主题；不修改外部插件，也不将其变为强制依赖。
+- 轻量安装器同步固定 Codex UI `0.2.88`；旧聚合 Suite 继续保持私有且不发布。
+
+发布包：[`@michengai/dsh-codex-ui@0.2.88`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.88) 与 [`@michengai/dsh-codex-suite-installer@0.1.5`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.5)。
+
 ## 0.2.87 — 2026-08-26
 
 配套版本：`@michengai/dsh-codex-suite-installer@0.1.4`。

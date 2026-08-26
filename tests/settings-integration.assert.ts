@@ -9,10 +9,11 @@ const sessionRowActions = readFileSync(new URL('../src/client/session-row-action
 const hoverCard = readFileSync(new URL('../src/client/workspace-hover-card.tsx', import.meta.url), 'utf8')
 const sessionTree = readFileSync(new URL('../src/client/session-tree.tsx', import.meta.url), 'utf8')
 const settingsNavigation = readFileSync(new URL('../src/client/settings-navigation.ts', import.meta.url), 'utf8')
+const connectors = readFileSync(new URL('../src/client/ConnectorsSection.tsx', import.meta.url), 'utf8')
 const visualSources = [
   sidebar,
   workspaceBrowser,
-  readFileSync(new URL('../src/client/ConnectorsSection.tsx', import.meta.url), 'utf8'),
+  connectors,
 ].join('\n')
 
 assert.doesNotMatch(client, /SkillsSettingsSection|id: 'skills'/, '技能页必须由独立技能管理插件提供')
@@ -43,6 +44,14 @@ assert.match(settingsNavigation, /pickSettingsSectionButton/, '设置跳转必�
 assert.match(sidebar, /selectPluginSection\(\)/, '插件菜单必须按市场优先再回退原生插件管理')
 assert.match(sidebar, /\[t\('sidebar.marketplace'\), t\('sidebar.plugins'\)\]/, '已安装第三方市场时优先打开插件市场')
 assert.match(sidebar, /selectSection\(t\('sidebar\.connectors'\)\)/, '连接器菜单必须直达设置内的连接器页')
+assert.match(sidebar, /\.dcu-root \.mcpConnectorLauncher,[^}]*display:none!important/, '第三方 MCP 连接器不得再保留独立侧栏入口')
+assert.match(connectors, /const MCP_CONNECTOR_UI = '\/mcp-connector\/ui\/'/, '设置连接器页必须探测第三方插件的同源 UI')
+assert.match(connectors, /fetch\(MCP_CONNECTOR_UI, \{ method: 'HEAD', cache: 'no-store'/, '第三方插件必须运行时探测，不能成为硬依赖')
+assert.match(connectors, /marketAvailable[^]*ConnectorMarket[^]*NativeConnectorList/, '安装插件时必须显示市场，缺失时必须回退原生工具目录')
+assert.match(connectors, /event\.origin !== window\.location\.origin[^]*event\.source !== frameWindow/, 'Prompt 消息桥接必须同时校验来源和 iframe 窗口')
+assert.match(connectors, /mcp-connector:start-session-result/, 'Prompt 消息桥接必须向插件页面返回处理结果')
+assert.match(client, /conversation\.input\.for\(binding\.ctx\)\.setDraft\(prompt\)/, '插件 Prompt 必须通过会话作用域输入机写入新会话草稿')
+assert.match(client, /'conversation'\]/, '连接器 Prompt 桥接必须声明对话服务依赖')
 assert.doesNotMatch(sidebar, /settings:archives|archives\.title/, '全局搜索不得提供本插件的归档设置入口')
 assert.doesNotMatch(sidebar, />归档会话<\/button>/, '底部不得保留独立归档会话按钮')
 assert.match(sidebar, /openSettingsSection/, '设置跳转必须经过集中兼容层')
@@ -157,6 +166,8 @@ assert.match(sidebar, /showCompanionTabs/, '未安装配套插件时不得显示
 assert.match(sidebar, /showChannels && <button type="button" className="dcu-im-tab"/, '频道页签必须在 IM 插槽有注册后才显示')
 assert.match(sidebar, /showSchedule && <button type="button" className="dcu-im-tab"/, '定时页签必须在定时插槽有注册后才显示')
 assert.match(client, /companionSlots/, '侧栏必须注入配套插槽占用快照')
+assert.match(sidebar, /\.dcu-native-workspaces\{flex-direction:column\}/, '工作区槽位必须纵向排列，避免第三方 Portal 入口把会话树挤成左右两列')
+assert.match(sidebar, /\.dcu-native-workspaces>\[data-mcp-connector-top-mount=true\]\{flex:none\}/, 'MCP 连接器入口必须保持独立整行，不能占用会话树的弹性空间')
 
 assert.match(sidebar, /shouldCollapseOnSidebarDrag/, '向左拖动侧栏超过阈值必须自动收缩')
 
