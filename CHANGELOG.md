@@ -24,7 +24,8 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.6`.
 
 ### Release process
 
-- Aligned the root package, lightweight installer, member pins, and version-contract assertions; the legacy aggregate Suite remains private and retired.
+- Aligned the root package, lightweight installer, private legacy Suite snapshot, member pins, and version-contract assertions; the aggregate Suite remains retired.
+- Corrected the installer command and executable name in local-verification help and READMEs, and added a build contract for the client bundle's static runtime modules.
 - Tracked and refreshed the current handoff documentation under `docs/00-交接入口/` while leaving historical documentation ignored.
 - Hardened the Windows installer against shell metacharacters in `DSH_BIN`.
 

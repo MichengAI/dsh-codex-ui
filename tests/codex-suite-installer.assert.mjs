@@ -8,6 +8,7 @@ import {
   WEB_BUNDLE,
   allowRequiredBuilds,
   directInstallArgs,
+  helpText,
   memberSpecs,
   normalizeBundles,
   parseArgs,
@@ -78,6 +79,7 @@ assert.equal(validateWindowsDshCommand('dsh'), 'dsh')
 assert.equal(validateWindowsDshCommand('C:\\Program Files\\nodejs\\dsh.cmd'), 'C:\\Program Files\\nodejs\\dsh.cmd')
 assert.throws(() => validateWindowsDshCommand('dsh & calc.exe'), /unsupported shell characters/)
 assert.throws(() => validateWindowsDshCommand('\\\\server\\share\\dsh.cmd'), /absolute local Windows path/)
+assert.match(helpText(), /^Usage: dsh-codex-suite-installer \[options\]/, '帮助文案必须使用实际发布的 bin 名称')
 assert.equal(
   profileDirectory('codex', { DSH_HOME: '/srv/dsh-home' }, '/home/demo'),
   resolve('/srv/dsh-home', 'profiles', 'codex'),

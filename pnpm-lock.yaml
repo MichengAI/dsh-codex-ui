@@ -85,20 +85,20 @@ importers:
         specifier: 0.1.21
         version: 0.1.21(53e5aa7a4ace86e089b79cea2390c042)
       '@michengai/dsh-archive-manager':
-        specifier: 0.1.13
-        version: 0.1.13(7672e92ce7cf99265dc516051f580731)
+        specifier: 0.1.16
+        version: 0.1.16(7672e92ce7cf99265dc516051f580731)
       '@michengai/dsh-automation':
-        specifier: 0.1.14
-        version: 0.1.14(57f07f77b14b07c327ef5931e1058bae)
+        specifier: 0.1.21
+        version: 0.1.21(57f07f77b14b07c327ef5931e1058bae)
       '@michengai/dsh-codex-ui':
         specifier: workspace:*
         version: link:../..
       '@michengai/dsh-im-connect':
-        specifier: 0.1.23
-        version: 0.1.23(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)
-      '@michengai/dsh-skills-manager':
         specifier: 0.1.24
-        version: 0.1.24(6d2dec6ea625d8d6c9bcff49ad39255d)
+        version: 0.1.24(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)
+      '@michengai/dsh-skills-manager':
+        specifier: 0.1.25
+        version: 0.1.25(b0594e640b77f7c4b51ffc39317da866)
 
   packages/dsh-codex-suite-installer: {}
 
@@ -1132,8 +1132,8 @@ packages:
       '@deepseek-ai/dsh-system-prompt': ^0.1.0-rc.5
       '@deepseek-ai/dsh-tools': ^0.1.0-rc.5
 
-  '@michengai/dsh-archive-manager@0.1.13':
-    resolution: {integrity: sha512-2aO1eq8m9Q52b7ZEVRSNKnO4m4z7CQLDvPVNG+6hw3jXbVM6j9Kj02ke99UGem5g3m+gsGFLzsDnK5upcFVn4Q==}
+  '@michengai/dsh-archive-manager@0.1.16':
+    resolution: {integrity: sha512-U48DeBPueizLvC0HkheJKODAUwpHn4HUSwVVhxcYuvCkZfWHUcj7yT0U0b6vkHtqNecNCnx+Urh3wW+EeyTR+w==}
     engines: {node: ^22.19.0 || >=24.0.0}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
@@ -1151,8 +1151,8 @@ packages:
       '@deepseek-ai/dsh-typert-registry': '>=0.1.0-rc.5 <0.2.0'
       '@deepseek-ai/dsh-workspace': '>=0.1.0-rc.5 <0.2.0'
 
-  '@michengai/dsh-automation@0.1.14':
-    resolution: {integrity: sha512-iEaZh26Riw9iAwLurJ4OeJCqfPu66yAblQa5JrOTfZEAwxyJCNPwpfFb7LOb99qn9lGUIJs4t+jAK9CLg6t1aQ==}
+  '@michengai/dsh-automation@0.1.21':
+    resolution: {integrity: sha512-ua4Af+CoCQlQrpUv3hNLg5e0sFzQylJAUdtM12uAlHcGguFCD+r+V0OmbutyFHPzD3VNOfm7hXh6rNzjV39h7A==}
     engines: {node: ^22.19.0 || >=24.0.0}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
@@ -1177,24 +1177,24 @@ packages:
       react:
         optional: true
 
-  '@michengai/dsh-im-connect@0.1.23':
-    resolution: {integrity: sha512-mjhNnjSJmgTMrxO/qVYEHstzvCEXQuI4h6ZT9WMnopulw0gpXBt0W86SZikedLSmwAz+Rl9Lw7KxNukrnLr4mQ==}
+  '@michengai/dsh-im-connect@0.1.24':
+    resolution: {integrity: sha512-SX2acYYy+xaGtNLEt1RJozF7n2CkBjn2/5UHuN7KWJ2wlcX1pno2Yhd71Q8YYLHDHqj2ygUefHV3rCqz1zjdPw==}
     engines: {node: '>=22.19'}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
       '@deepseek-ai/schemastery': ^3.18.1
 
-  '@michengai/dsh-skills-manager@0.1.24':
-    resolution: {integrity: sha512-89nI2PrnoMcffuXhNTnst30SDP8g0NtOROoFfmunqutSXazxzUgv6iC1tL6KYzWVH4heNtXCk6GYoMe7dDiwtg==}
+  '@michengai/dsh-skills-manager@0.1.25':
+    resolution: {integrity: sha512-X0aLmXERh7CFOU6Og7WzdJcNtQzOL8eTZ/Tgj+S+v3s6HDNsi/vAyOAra9DGZRxwSO/XGO6o6/ANHw4LeJ1RwA==}
     engines: {node: '>=20'}
     peerDependencies:
       '@deepseek-ai/cordis': '>=4.0.1 <5.0.0'
       '@deepseek-ai/dsh-client-locale': '>=0.1.0-rc.0 <0.2.0'
       '@deepseek-ai/dsh-client-runtime': '>=0.1.0-rc.0 <0.2.0'
       '@deepseek-ai/dsh-client-ui-slots': '>=0.1.0-rc.0 <0.2.0'
-      '@deepseek-ai/dsh-client-ui-workspace': '>=0.1.0-rc.5 <0.2.0'
       '@deepseek-ai/dsh-host-webserver': '>=0.1.0-rc.5 <0.2.0'
       '@deepseek-ai/dsh-skill': '>=0.1.0-rc.5 <0.2.0'
+      '@deepseek-ai/dsh-tools': '>=0.1.0-rc.5 <0.2.0'
       react: ^18.2.0
 
   '@michengai/dsh-skills-manager@0.1.7':
@@ -4076,7 +4076,7 @@ snapshots:
       '@deepseek-ai/dsh-tools': 0.1.0-rc.6(236e827ae6fe39da32525b89845f982f)
       '@deepseek-ai/schemastery': 3.18.1
 
-  '@michengai/dsh-archive-manager@0.1.13(7672e92ce7cf99265dc516051f580731)':
+  '@michengai/dsh-archive-manager@0.1.16(7672e92ce7cf99265dc516051f580731)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-client-connection': 0.1.0-rc.6(641b9ea50d39216c4ab6bd371211c4c5)
@@ -4093,7 +4093,7 @@ snapshots:
       '@deepseek-ai/dsh-typert-registry': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-workspace': 0.1.0-rc.6(3d4cd86206823dd8868f55f334dead65)
 
-  '@michengai/dsh-automation@0.1.14(57f07f77b14b07c327ef5931e1058bae)':
+  '@michengai/dsh-automation@0.1.21(57f07f77b14b07c327ef5931e1058bae)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-agent': 0.1.0-rc.6(ca448e9811f10631b4c6492e799861a4)
@@ -4117,7 +4117,7 @@ snapshots:
     optionalDependencies:
       react: 18.3.1
 
-  '@michengai/dsh-im-connect@0.1.23(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)':
+  '@michengai/dsh-im-connect@0.1.24(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/schemastery': 3.18.1
@@ -4132,15 +4132,16 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@michengai/dsh-skills-manager@0.1.24(6d2dec6ea625d8d6c9bcff49ad39255d)':
+  '@michengai/dsh-skills-manager@0.1.25(b0594e640b77f7c4b51ffc39317da866)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-client-locale': 0.1.0-rc.6(95508b6b13ea37dc2516e7b3a8357e69)
       '@deepseek-ai/dsh-client-runtime': 0.1.0-rc.6(f876b77825b573ec3dede27add258ea6)
       '@deepseek-ai/dsh-client-ui-slots': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
-      '@deepseek-ai/dsh-client-ui-workspace': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-client-locale@0.1.0-rc.6(95508b6b13ea37dc2516e7b3a8357e69))(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(f876b77825b573ec3dede27add258ea6))(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))(supports-color@7.1.0))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))(react@18.3.1)
       '@deepseek-ai/dsh-host-webserver': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-skill': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-llm@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-brand@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))))(@deepseek-ai/dsh-scope@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))
+      '@deepseek-ai/dsh-tools': 0.1.0-rc.6(236e827ae6fe39da32525b89845f982f)
+      fflate: 0.8.3
       react: 18.3.1
 
   '@michengai/dsh-skills-manager@0.1.7(befc717f46647e8f7936b058c439bf83)':

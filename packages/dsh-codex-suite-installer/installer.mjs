@@ -94,7 +94,7 @@ export function directInstallArgs(profile, registry, manifest = suiteManifest) {
 }
 
 export function helpText() {
-  return `Usage: dsh-codex-suite [options]\n\nInstall every Codex Suite member as a direct dependency of one DSH profile.\n\nOptions:\n  --profile <name>    target profile (default: web)\n  --registry <url>    npm registry (default: https://registry.npmjs.org/)\n  --dry-run           print commands without changing the profile\n  -h, --help          show this help\n`
+  return `Usage: dsh-codex-suite-installer [options]\n\nInstall every Codex Suite member as a direct dependency of one DSH profile.\n\nOptions:\n  --profile <name>    target profile (default: web)\n  --registry <url>    npm registry (default: https://registry.npmjs.org/)\n  --dry-run           print commands without changing the profile\n  -h, --help          show this help\n`
 }
 
 function quote(argument) {

@@ -55,7 +55,7 @@ dsh plugin --profile web add @michengai/dsh-codex-ui@latest --registry=https://r
 Preview the installation plan from a repository checkout:
 
 ```powershell
-node .\packages\dsh-codex-suite\bin.mjs --profile codex --dry-run
+node .\packages\dsh-codex-suite-installer\bin.mjs --profile codex --dry-run
 ```
 
 Remove `--dry-run` to apply it. The checkout path resolves the local `workspace:*` entry to the root package version.

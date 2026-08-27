@@ -55,7 +55,7 @@ dsh plugin --profile web add @michengai/dsh-codex-ui@latest --registry=https://r
 仓库检出状态下可先查看安装计划：
 
 ```powershell
-node .\packages\dsh-codex-suite\bin.mjs --profile codex --dry-run
+node .\packages\dsh-codex-suite-installer\bin.mjs --profile codex --dry-run
 ```
 
 正式执行时去掉 `--dry-run`。安装器会读取工作区根包版本替换本地的 `workspace:*`。

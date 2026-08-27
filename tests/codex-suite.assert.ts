@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 
 const suitePath = new URL('../packages/dsh-codex-suite/', import.meta.url)
 const packagePath = new URL('package.json', suitePath)
+const installerPackagePath = new URL('../packages/dsh-codex-suite-installer/package.json', import.meta.url)
 const patchPath = new URL('cordis.patch.yml', suitePath)
 const readmePath = new URL('README.zh-CN.md', suitePath)
 const rootReadmePath = new URL('../README.md', import.meta.url)
@@ -20,6 +21,9 @@ const suite = JSON.parse(readFileSync(packagePath, 'utf8')) as {
   dsh?: { bundle?: { patch?: string } }
   dependencies?: Record<string, string>
 }
+const installer = JSON.parse(readFileSync(installerPackagePath, 'utf8')) as {
+  dshCodexSuite?: { members?: Record<string, string> }
+}
 const patch = readFileSync(patchPath, 'utf8')
 const readme = readFileSync(readmePath, 'utf8')
 const rootReadme = readFileSync(rootReadmePath, 'utf8')
@@ -33,12 +37,8 @@ const packages = [
   '@michengai/dsh-automation',
 ]
 const expectedVersions: Record<string, string> = {
+  ...installer.dshCodexSuite?.members,
   '@michengai/dsh-codex-ui': 'workspace:*',
-  '@michengai/dsh-agency-agents': '0.1.21',
-  '@michengai/dsh-skills-manager': '0.1.24',
-  '@michengai/dsh-archive-manager': '0.1.13',
-  '@michengai/dsh-im-connect': '0.1.23',
-  '@michengai/dsh-automation': '0.1.14',
 }
 
 assert.equal(suite.name, '@michengai/dsh-codex-suite', '聚合包名必须稳定')
@@ -51,6 +51,7 @@ for (const packageName of packages) {
   assert.match(patch, new RegExp(`name: '${packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), `聚合 patch 必须加载 ${packageName}`)
 }
 assert.match(readme, /npx --yes @michengai\/dsh-codex-suite-installer@latest --profile web/, '聚合包必须指向轻量直接成员安装器')
+assert.match(readme, /packages\\dsh-codex-suite-installer\\bin\.mjs --profile codex --dry-run/, '本地验证必须调用实际存在的轻量安装器入口')
 assert.match(readme, /直接依赖/, '聚合包必须说明成员以直接依赖安装')
 assert.match(readme, /先提升全部成员，再移除旧聚合依赖/, '安装器必须说明旧聚合 Suite 的安全迁移顺序')
 assert.match(readme, /@michengai\/dsh-im-connect/, '聚合包说明必须列出 IM 助理')
