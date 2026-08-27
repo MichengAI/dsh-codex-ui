@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
 import { PassThrough } from 'node:stream'
+import { resolve } from 'node:path'
 import { ForegroundExplorer, type ExplorerHelperProcess, type ExplorerSpawn } from '../src/native-explorer.ts'
 import { readFileSync } from 'node:fs'
 
@@ -41,11 +42,12 @@ await warming
 
 let requestLine = ''
 child.stdin.once('data', chunk => { requestLine = String(chunk) })
-const opening = explorer.open('D:\\Repository\\project with spaces')
+const projectPath = resolve('fixtures', 'project with spaces')
+const opening = explorer.open(projectPath)
 await new Promise(resolve => setImmediate(resolve))
 assert.equal(spawnCount, 1, '点击打开时必须复用预热进程，不能再次启动 PowerShell')
 const [requestId, encodedPath] = requestLine.trim().split('\t')
-assert.equal(Buffer.from(encodedPath, 'base64').toString('utf8'), 'D:\\Repository\\project with spaces', '目录路径应使用 Base64 数据通道传递')
+assert.equal(Buffer.from(encodedPath, 'base64').toString('utf8'), projectPath, '目录路径应使用 Base64 数据通道传递')
 child.stdout.write(`OK\t${requestId}\r\n`)
 await opening
 
