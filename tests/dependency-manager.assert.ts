@@ -1,31 +1,38 @@
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
 import type { ChildProcess } from 'node:child_process'
+import { join, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { applyReleaseExclude, directPackagesForInstall, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, pluginCommandError, pluginExecArgv, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, updatableDependencyIds } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
+const sourceRoot = resolve('fixtures', 'deepseek-harness')
+const sourceEntry = join(sourceRoot, 'apps', 'cli', 'src', 'bin.ts')
+const installedRoot = resolve('fixtures', 'npm')
+const installedEntry = join(installedRoot, 'node_modules', '@deepseek-ai', 'dsh', 'dist', 'bin.mjs')
+
 assert.equal(
-  resolveDshCliEntry('apps/cli/src/bin.ts', 'D:\\Repository\\deepseek-harness'),
-  'D:\\Repository\\deepseek-harness\\apps\\cli\\src\\bin.ts',
+  resolveDshCliEntry(join('apps', 'cli', 'src', 'bin.ts'), sourceRoot),
+  sourceEntry,
   '源码启动的相对 CLI 入口必须按当前工作目录收成绝对路径',
 )
 assert.equal(
-  resolveDshCliEntry('D:\\Tools\\nodejs\\node_modules\\dsh\\bin.js', 'C:\\Users\\demo'),
-  'D:\\Tools\\nodejs\\node_modules\\dsh\\bin.js',
+  resolveDshCliEntry(installedEntry, resolve('fixtures', 'elsewhere')),
+  installedEntry,
   '已经是绝对路径的已安装 CLI 不得再拼接他人目录',
 )
 assert.equal(
-  resolveDshCliEntry('file:///D:/Repository/deepseek-harness/apps/cli/src/bin.ts', 'C:\\elsewhere'),
-  'D:\\Repository\\deepseek-harness\\apps\\cli\\src\\bin.ts',
+  resolveDshCliEntry(pathToFileURL(sourceEntry).href, resolve('fixtures', 'elsewhere')),
+  sourceEntry,
   'file URL 入口必须转成当前机器的文件系统路径',
 )
 assert.equal(
-  resolveDshRuntimeRoot('C:\\Users\\demo\\AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh\\dist\\bin.mjs'),
-  'C:\\Users\\demo\\AppData\\Roaming\\npm',
+  resolveDshRuntimeRoot(installedEntry),
+  installedRoot,
   '全局 npm 安装的 DSH 必须能从当前 CLI 入口识别包含 node_modules 的运行时目录',
 )
 assert.equal(
-  resolveDshRuntimeRoot('D:\\Repository\\deepseek-harness\\apps\\cli\\src\\bin.ts'),
+  resolveDshRuntimeRoot(sourceEntry),
   undefined,
   '源码启动不应误判为全局 DSH 运行时',
 )
