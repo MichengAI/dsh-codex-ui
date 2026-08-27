@@ -36,8 +36,12 @@ export function groupScheduleSessions(items: readonly ScheduleSession[]): Schedu
     current.sessions.push(item)
     groups.set(label, current)
   }
-  return [...groups.values()].map(group => ({
-    ...group,
-    sessions: [...group.sessions].sort((left, right) => (right.updatedAt ?? 0) - (left.updatedAt ?? 0)),
-  }))
+  return [...groups.values()]
+    .map(group => ({
+      ...group,
+      sessions: [...group.sessions].sort((left, right) => (right.updatedAt ?? 0) - (left.updatedAt ?? 0)),
+    }))
+    // 会话投影在归档后会重排 ids；若沿用首次出现顺序，移除某个会话会让整组文件夹换位。
+    // 文件夹按任务名固定排序，组内仍按最近执行时间倒序，避免连续归档时界面跳动。
+    .sort((left, right) => left.label.localeCompare(right.label, 'zh-CN', { numeric: true, sensitivity: 'base' }))
 }

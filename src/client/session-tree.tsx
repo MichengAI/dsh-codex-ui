@@ -125,9 +125,10 @@ export function SessionRow({
   </div>
 }
 
-export function GroupHead({ expanded, title, icon, onToggle }: { expanded: boolean; title: string; icon: ReactNode; onToggle: () => void }) {
-  return <div className="dcu-wb-project-head" role="treeitem" aria-expanded={expanded} tabIndex={0} onClick={onToggle} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onToggle() } }}>
+export function GroupHead({ expanded, title, icon, onToggle, actions, menuOpen }: { expanded: boolean; title: string; icon: ReactNode; onToggle: () => void; actions?: ReactNode; menuOpen?: boolean }) {
+  return <div className={`dcu-wb-project-head${menuOpen === true ? ' dcu-wb-menu-open' : ''}`} role="treeitem" aria-expanded={expanded} tabIndex={0} onClick={onToggle} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onToggle() } }}>
     <span className="dcu-wb-folder">{icon}</span>
     <span className="dcu-wb-project-title">{title}</span>
+    {actions !== undefined && <span className="dcu-wb-actions">{actions}</span>}
   </div>
 }

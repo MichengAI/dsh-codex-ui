@@ -32,6 +32,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
         forkSession: (sessionId: SessionId) => Promise<void>
         openPath: (path: string) => Promise<void> | void
         skin?: 'codex' | 'native'
+        view?: 'runs' | 'overview'
+        showViewSwitch?: boolean
         useSessions: unknown
         useWorkspaces: unknown
       }

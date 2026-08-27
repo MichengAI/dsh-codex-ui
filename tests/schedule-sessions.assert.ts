@@ -16,3 +16,15 @@ const groups = groupScheduleSessions([
 assert.equal(groups.length, 1)
 assert.equal(groups[0].label, '天气预报')
 assert.equal(groups[0].sessions[0].id, 'dsh-automation-session-1')
+
+const stableGroupsBeforeArchive = groupScheduleSessions([
+  { id: 'dsh-automation-session-weather-new', title: '2026-08-18 20:00 - 天气', updatedAt: 4, running: false },
+  { id: 'dsh-automation-session-weekly', title: '2026-08-18 19:55 - 每周巡检', updatedAt: 3, running: false },
+  { id: 'dsh-automation-session-weather-old', title: '2026-08-18 19:50 - 天气', updatedAt: 2, running: false },
+])
+const stableGroupsAfterArchive = groupScheduleSessions([
+  { id: 'dsh-automation-session-weekly', title: '2026-08-18 19:55 - 每周巡检', updatedAt: 3, running: false },
+  { id: 'dsh-automation-session-weather-old', title: '2026-08-18 19:50 - 天气', updatedAt: 2, running: false },
+])
+assert.deepEqual(stableGroupsBeforeArchive.map(group => group.label), ['每周巡检', '天气'])
+assert.deepEqual(stableGroupsAfterArchive.map(group => group.label), ['每周巡检', '天气'])

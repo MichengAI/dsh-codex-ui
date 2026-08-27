@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import { Button, IconArchiveOutline20, IconEllipsisOutline16, IconSettingsOutline16, Menu, Modal, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
 import { NS } from './locales.ts'
 import { WORKSPACE_TREE_STYLE } from './CodexWorkspaceBrowser.tsx'
 import { formatHoverTime, hoverCardAnchor } from './hover-tip.ts'
@@ -42,6 +43,8 @@ type ScheduleBrowserProps = {
   useSessions: (selector: (state: SessionStore) => SessionStore) => SessionStore
   useWorkspaces: (selector: (state: WorkspaceStore) => WorkspaceStore) => WorkspaceStore
   t: TranslateNS<typeof NS>
+  overviewContent?: ReactNode
+  openTaskSettings?: (request: { name: string; sessionIds: string[] }) => void
 }
 
 function ScheduleClock() {
@@ -51,17 +54,36 @@ function ScheduleClock() {
 /** 定时树：数据来自会话快照，行/菜单/悬停与任务树共用。 */
 export function ScheduleBrowser(props: ScheduleBrowserProps) {
   const [menu, setMenu] = useState<OpenMenu>()
-  return <HoverShell blocked={menu !== undefined}><ScheduleBrowserTree {...props} menu={menu} setMenu={setMenu} /></HoverShell>
+  const [view, setView] = useState<'runs' | 'overview'>('runs')
+  if (props.overviewContent === undefined) return <HoverShell blocked={menu !== undefined}><ScheduleBrowserTree {...props} menu={menu} setMenu={setMenu} /></HoverShell>
+  return <div className="dcu-schedule-browser">
+    <div className="dcu-schedule-views" role="tablist" aria-label={props.t('sidebar.scheduleTab')}>
+      <button type="button" role="tab" aria-selected={view === 'runs'} onClick={() => { setMenu(undefined); setView('runs') }}>{props.t('sidebar.runsTab')}</button>
+      <button type="button" role="tab" aria-selected={view === 'overview'} onClick={() => { setMenu(undefined); setView('overview') }}>{props.t('sidebar.overviewTab')}</button>
+    </div>
+    <div className="dcu-schedule-pane">
+      {view === 'runs'
+        ? <HoverShell blocked={menu !== undefined}><ScheduleBrowserTree {...props} menu={menu} setMenu={setMenu} /></HoverShell>
+        : props.overviewContent}
+    </div>
+  </div>
 }
 
-function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkSession, renameSession, useSessions, useWorkspaces, t, menu, setMenu }: ScheduleBrowserProps & { menu?: OpenMenu; setMenu: (menu?: OpenMenu) => void }) {
+function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkSession, renameSession, useSessions, useWorkspaces, t, openTaskSettings, menu, setMenu }: ScheduleBrowserProps & { menu?: OpenMenu; setMenu: (menu?: OpenMenu) => void }) {
   const sessions = useSessions(state => state)
   const workspaces = useWorkspaces(state => state)
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => readTreeExpansionState(browserStorage(), SCHEDULE_EXPANSION_STORAGE_KEY))
+  const [groupMenu, setGroupMenu] = useState<string>()
+  const [archiveGroupTarget, setArchiveGroupTarget] = useState<{ id: string; label: string; sessionIds: string[] }>()
   const flags = useSessionFlags(sessions.current)
   const { showTip, hideTip, dismissTip } = useHoverDispatch()
   const { busy, error, setError, run } = useBusyAction(() => { setMenu(undefined) })
   const dialogs = useSessionDialogs({ archiveSession, deleteSession, forkSession, renameSession }, flags, run, () => { setMenu(undefined); setError(undefined) })
+  const groupMenuItems: MenuEntry[] = [
+    { id: 'task-settings', label: t('schedule.taskSettings'), icon: <IconSettingsOutline16 size={16} /> },
+    { type: 'separator', id: 'group-separator' },
+    { id: 'archive-group', label: t('schedule.archiveGroup'), icon: <IconArchiveOutline20 size={16} />, danger: true },
+  ]
   useEffect(() => { writeTreeExpansionState(browserStorage(), SCHEDULE_EXPANSION_STORAGE_KEY, expanded) }, [expanded])
   const groups = useMemo(() => {
     const archived = new Set(workspaces.archivedSessionIds ?? [])
@@ -80,7 +102,33 @@ function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkS
       {groups.map(group => {
         const isExpanded = expanded[group.id] ?? true
         return <div className="dcu-wb-project" key={group.id}>
-          <GroupHead expanded={isExpanded} title={group.label} icon={<ScheduleClock />} onToggle={() => { setExpanded(current => ({ ...current, [group.id]: !isExpanded })) }} />
+          <GroupHead
+            expanded={isExpanded}
+            title={group.label}
+            icon={<ScheduleClock />}
+            menuOpen={groupMenu === group.id}
+            onToggle={() => { setExpanded(current => ({ ...current, [group.id]: !isExpanded })) }}
+            actions={<Menu
+              open={groupMenu === group.id}
+              onClose={() => { setGroupMenu(undefined) }}
+              items={groupMenuItems}
+              onSelect={(action) => {
+                setGroupMenu(undefined)
+                if (action === 'task-settings') {
+                  setMenu(undefined)
+                  openTaskSettings?.({ name: group.label, sessionIds: group.sessions.map(session => session.id) })
+                }
+                if (action === 'archive-group') {
+                  setError(undefined)
+                  setArchiveGroupTarget({ id: group.id, label: group.label, sessionIds: group.sessions.map(session => session.id) })
+                }
+              }}
+              portal
+              dense
+              compact
+              anchor={<button type="button" className="dcu-wb-more" aria-label={t('schedule.groupActions', { name: group.label })} onClick={(event) => { event.stopPropagation(); setMenu(undefined); setGroupMenu(current => current === group.id ? undefined : group.id) }}><IconEllipsisOutline16 size={16} /></button>}
+            />}
+          />
           {isExpanded && group.sessions.map(session => {
             const id = session.id
             const title = session.title
@@ -93,5 +141,28 @@ function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkS
     </div>
     <SessionHoverCardLayer />
     <SessionModals t={t} busy={busy} error={error} {...dialogs} setError={setError} />
+    <Modal
+      open={archiveGroupTarget !== undefined}
+      onClose={() => { if (busy !== 'archive-group') { setArchiveGroupTarget(undefined); setError(undefined) } }}
+      closeLabel={t('sessions.close')}
+      title={t('schedule.archiveGroup')}
+      footer={<div className="dcu-wb-rename-actions">
+        <Button variant="outline" disabled={busy === 'archive-group'} onClick={() => { setArchiveGroupTarget(undefined); setError(undefined) }}>{t('sessions.cancel')}</Button>
+        <Button variant="outline" className="dcu-wb-delete-button" disabled={busy === 'archive-group'} onClick={() => {
+          if (archiveGroupTarget === undefined) return
+          const target = archiveGroupTarget
+          void run('archive-group', async () => {
+            for (const id of target.sessionIds) await archiveSession(id as SessionId)
+            flags.setPinnedSessionIds(ids => ids.filter(id => !target.sessionIds.includes(id)))
+            flags.setUnreadSessionIds(ids => ids.filter(id => !target.sessionIds.includes(id)))
+            setArchiveGroupTarget(undefined)
+          })
+        }}>{t('schedule.archiveGroupConfirm')}</Button>
+      </div>}
+    >
+      <p className="dcu-wb-delete-copy">{archiveGroupTarget === undefined ? '' : t('schedule.archiveGroupDescription', { name: archiveGroupTarget.label, count: archiveGroupTarget.sessionIds.length })}</p>
+      {busy === 'archive-group' && <div className="dcu-wb-error" role="status">{t('schedule.archiveGroupPending')}</div>}
+      {error !== undefined && <div className="dcu-wb-error" role="alert">{t('sessions.failed', { message: error })}</div>}
+    </Modal>
   </section>
 }

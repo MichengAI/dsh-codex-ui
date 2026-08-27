@@ -15,7 +15,7 @@ export function pickSettingsSectionButton<T extends { textContent: string | null
 
 let cancelPendingNavigation: (() => void) | undefined
 
-export function openSettingsSection(root: HTMLElement | null, label: string | readonly string[], onMissing?: () => void): void {
+export function openSettingsSection(root: HTMLElement | null, label: string | readonly string[], onMissing?: () => void, onSelected?: () => void): void {
   const labels = typeof label === 'string' ? [label] : label
   const trigger = root?.querySelector<HTMLButtonElement>('[aria-haspopup="dialog"]')
   if (trigger === null || trigger === undefined) {
@@ -42,6 +42,7 @@ export function openSettingsSection(root: HTMLElement | null, label: string | re
     if (target === undefined) return false
     cleanup()
     target.click()
+    onSelected?.()
     return true
   }
   const schedule = (): void => {
