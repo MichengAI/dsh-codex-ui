@@ -1,10 +1,8 @@
-/** 必须明显拖过宿主最小宽度，才自动收缩；拖到 264 最小值不应触发。 */
-export const SIDEBAR_COLLAPSE_EDGE = 180
-export const SIDEBAR_COLLAPSE_PULL = 100
+import { CODEX_SIDEBAR_MIN_PX } from './sidebar-width.ts'
 
-/** 侧栏拖动手柄持续向左拉过阈值后，松手才收缩。 */
-export function shouldCollapseOnSidebarDrag(startX: number, endX: number): boolean {
-  return startX - endX >= SIDEBAR_COLLAPSE_PULL && endX <= SIDEBAR_COLLAPSE_EDGE
+/** Codex collapses the sidebar when a resize drag would make it narrower than 240px. */
+export function shouldCollapseOnSidebarDrag(startWidth: number, startX: number, endX: number): boolean {
+  return startWidth + endX - startX < CODEX_SIDEBAR_MIN_PX
 }
 
 export function isSidebarDragHandle(target: EventTarget | null): boolean {

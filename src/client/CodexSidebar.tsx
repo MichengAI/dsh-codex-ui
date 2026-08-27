@@ -13,7 +13,7 @@ import { EMPTY_COMPANION_TABS, type CompanionTabAvailability } from './companion
 import { ChannelBrowser } from './ChannelBrowser.tsx'
 import { ScheduleBrowser } from './ScheduleBrowser.tsx'
 import { isSidebarDragHandle, shouldCollapseOnSidebarDrag } from './sidebar-drag.ts'
-import { SLIM_SIDEBAR_PX } from './sidebar-width.ts'
+import { SLIM_SIDEBAR_PX, slimedSidebarWidth } from './sidebar-width.ts'
 import { isTaskSession } from './workspace-browser.ts'
 import { clearAutomationTaskSettingsRequest, requestAutomationTaskSettings } from './automation-task-settings.ts'
 
@@ -185,6 +185,7 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
   }, [imTab, showChannels, showSchedule])
   useEffect(() => {
     let startX = 0
+    let startWidth = SLIM_SIDEBAR_PX
     let dragging = false
     let pointerId: number | undefined
     const onDown = (event: PointerEvent): void => {
@@ -192,12 +193,16 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
       dragging = true
       pointerId = event.pointerId
       startX = event.clientX
+      const frame = document.querySelector<HTMLElement>('[data-sidebar-collapsed]')
+        ?? [...document.querySelectorAll<HTMLElement>('div')].find(node => node.style.gridTemplateColumns.includes('minmax(0, 1fr)'))
+      const match = frame?.style.gridTemplateColumns.match(/^(\d+(?:\.\d+)?)px\s/)
+      startWidth = match === null || match === undefined ? SLIM_SIDEBAR_PX : Number(match[1])
     }
     const onUp = (event: PointerEvent): void => {
       if (!dragging || event.pointerId !== pointerId) return
       dragging = false
       pointerId = undefined
-      if (!shouldCollapseOnSidebarDrag(startX, event.clientX)) return
+      if (!shouldCollapseOnSidebarDrag(startWidth, startX, event.clientX)) return
       window.requestAnimationFrame(() => { window.requestAnimationFrame(() => { toggleSidebar() }) })
     }
     const onCancel = (event: PointerEvent): void => {
@@ -258,7 +263,7 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
     [archiveSession, companionTabs.schedule, deleteSession, expandSidebar, forkSession, openPath, openSession, renameSession, renderSlot, useSessions, useWorkspaces],
   )
 
-  const sidebarStyle = { '--dcu-sidebar-wide-width': `${lastWideWidth.current}px` } as CSSProperties
+  const sidebarStyle = { '--dcu-sidebar-wide-width': `${slimedSidebarWidth(lastWideWidth.current, false, window.innerWidth)}px` } as CSSProperties
 
   return <aside className={`dcu-root${visualCompact ? ' dcu-compact' : ''}${collapsing ? ' dcu-collapsing' : ''}`} style={sidebarStyle} aria-label={t('sidebar.label')}>
     <style>{stylesheet}</style>

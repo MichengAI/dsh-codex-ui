@@ -1,6 +1,15 @@
-/** Codex 展开侧栏目标宽度。宿主默认 280、最小 264，这里压到更接近 Codex。 */
-export const SLIM_SIDEBAR_PX = 240
-export const HOST_DEFAULT_SIDEBAR_PX = 280
+/** OpenAI Codex desktop sidebar geometry, measured from the installed client bundle. */
+export const CODEX_SIDEBAR_MIN_PX = 240
+export const CODEX_SIDEBAR_DEFAULT_PX = 275
+export const CODEX_SIDEBAR_MAX_PX = 520
+
+/** DSH 0.1.1-rc.2 clamps its layout-owned sidebar store to this narrower range. */
+export const HOST_SIDEBAR_MIN_PX = 264
+export const HOST_SIDEBAR_DEFAULT_PX = 280
+export const HOST_SIDEBAR_MAX_PX = 420
+
+/** Backward-compatible name for the width used while a collapsed rail expands. */
+export const SLIM_SIDEBAR_PX = CODEX_SIDEBAR_DEFAULT_PX
 
 export type SidebarGridTracks = {
   sidebar: number
@@ -15,15 +24,24 @@ export function parseSidebarGrid(value: string): SidebarGridTracks | undefined {
   return { sidebar: Number(match[1]), middle: match[2], details: Number(match[3]) }
 }
 
-/** 折叠列保持原值；默认展开列收到 Codex 宽度，用户再拉宽时只减去默认多出来的部分。 */
-export function slimedSidebarWidth(hostWidth: number, collapsed: boolean): number {
+/**
+ * Translate the DSH host's 264–420px drag range to Codex's measured
+ * 240–520px range, preserving the 280px-host / 275px-Codex default anchor.
+ */
+export function slimedSidebarWidth(hostWidth: number, collapsed: boolean, viewportWidth = Number.POSITIVE_INFINITY): number {
   if (collapsed || hostWidth <= 80) return hostWidth
-  if (hostWidth <= HOST_DEFAULT_SIDEBAR_PX) return SLIM_SIDEBAR_PX
-  return hostWidth - (HOST_DEFAULT_SIDEBAR_PX - SLIM_SIDEBAR_PX)
+  const maximum = Math.max(CODEX_SIDEBAR_MIN_PX, Math.min(CODEX_SIDEBAR_MAX_PX, viewportWidth - CODEX_SIDEBAR_MIN_PX))
+  const source = Math.max(HOST_SIDEBAR_MIN_PX, Math.min(HOST_SIDEBAR_MAX_PX, hostWidth))
+  if (source <= HOST_SIDEBAR_DEFAULT_PX) {
+    return CODEX_SIDEBAR_MIN_PX + (source - HOST_SIDEBAR_MIN_PX)
+      * (CODEX_SIDEBAR_DEFAULT_PX - CODEX_SIDEBAR_MIN_PX) / (HOST_SIDEBAR_DEFAULT_PX - HOST_SIDEBAR_MIN_PX)
+  }
+  return CODEX_SIDEBAR_DEFAULT_PX + (source - HOST_SIDEBAR_DEFAULT_PX)
+    * (maximum - CODEX_SIDEBAR_DEFAULT_PX) / (HOST_SIDEBAR_MAX_PX - HOST_SIDEBAR_DEFAULT_PX)
 }
 
-export function slimedGridTemplate(tracks: SidebarGridTracks, collapsed: boolean): string {
-  const sidebar = slimedSidebarWidth(tracks.sidebar, collapsed)
+export function slimedGridTemplate(tracks: SidebarGridTracks, collapsed: boolean, viewportWidth = Number.POSITIVE_INFINITY): string {
+  const sidebar = slimedSidebarWidth(tracks.sidebar, collapsed, viewportWidth)
   return `${sidebar}px ${tracks.middle} ${tracks.details}px`
 }
 
@@ -37,15 +55,20 @@ export function findSidebarFrame(root: ParentNode): HTMLElement | undefined {
 }
 
 export function applySlimSidebar(frame: HTMLElement): boolean {
-  if (frame.hasAttribute('data-dragging')) return false
+  if (frame.hasAttribute('data-dragging')) {
+    frame.removeAttribute('data-dcu-codex-sidebar-grid')
+    return false
+  }
   const tracks = parseSidebarGrid(frame.style.gridTemplateColumns)
   if (tracks === undefined) return false
   const collapsed = frame.hasAttribute('data-sidebar-collapsed')
-  const next = slimedGridTemplate(tracks, collapsed)
+  const next = slimedGridTemplate(tracks, collapsed, frame.getBoundingClientRect().width)
+  if (frame.getAttribute('data-dcu-codex-sidebar-grid') === frame.style.gridTemplateColumns) return false
   if (frame.style.gridTemplateColumns === next) return false
   frame.style.gridTemplateColumns = next
+  frame.setAttribute('data-dcu-codex-sidebar-grid', next)
   const handle = frame.querySelector<HTMLElement>('[data-side="sidebar"]')
-  if (handle !== null && !collapsed) handle.style.left = `${slimedSidebarWidth(tracks.sidebar, collapsed)}px`
+  if (handle !== null && !collapsed) handle.style.left = `${slimedSidebarWidth(tracks.sidebar, collapsed, frame.getBoundingClientRect().width)}px`
   return true
 }
 

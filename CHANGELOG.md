@@ -4,6 +4,20 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.90 — 2026-08-27
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.7`.
+
+### Changed
+
+- Matched the expandable sidebar to the installed Codex desktop client: 275px default width, 240px minimum, and 520px maximum, capped by available viewport width.
+- Mapped the DSH host's narrower persisted drag range to the Codex visual range while preserving the 275px default anchor.
+
+### Fixed
+
+- Replaced the previous coordinate-based collapse gesture with Codex behavior: dragging below 240px collapses the sidebar.
+- Prevented the DOM width adapter from reapplying its own mapped output during host drag and rerender cycles.
+
 ## 0.2.89 — 2026-08-27
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.6`.

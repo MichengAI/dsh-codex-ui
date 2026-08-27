@@ -4,6 +4,20 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.90 — 2026-08-27
+
+配套版本：`@michengai/dsh-codex-suite-installer@0.1.7`。
+
+### 调整
+
+- 侧边栏展开宽度按本机 Codex 桌面客户端对齐：默认 275px、最小 240px、最大 520px，并受可用视口宽度限制。
+- 将 DSH 宿主较窄的持久化拖拽范围映射到 Codex 的视觉范围，同时保留 275px 默认锚点。
+
+### 修复
+
+- 收缩手势改为 Codex 行为：拖到小于 240px 时收缩，不再使用固定屏幕坐标阈值。
+- 防止 DOM 宽度适配器在宿主拖动和重渲染期间重复换算自身已映射的输出。
+
 ## 0.2.89 — 2026-08-27
 
 配套版本：`@michengai/dsh-codex-suite-installer@0.1.6`。
