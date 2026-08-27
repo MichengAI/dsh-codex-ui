@@ -1,7 +1,4 @@
 export const AUTOMATION_SESSION_PREFIX = 'dsh-automation-session-'
-// 自动化运行的标题恒为 “YYYY-MM-DD HH:mm - 任务名”（见 dsh-automation 的 automationSessionTitle）；
-// 必须带 “ - ” 分隔符，避免用户手动改名为时间开头的普通会话被误判成定时任务。
-export const AUTOMATION_TITLE_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}\s+-\s+/
 
 export type ScheduleSession = {
   id: string
@@ -16,8 +13,10 @@ export type ScheduleGroup = {
   sessions: ScheduleSession[]
 }
 
-export function isScheduleSession(id: string, title: string): boolean {
-  return id.startsWith(AUTOMATION_SESSION_PREFIX) || AUTOMATION_TITLE_RE.test(title.trim())
+export function isScheduleSession(id: string, _title?: string): boolean {
+  // Automation 从首个版本起就用稳定前缀创建运行会话。标题是用户可编辑数据，
+  // 不能作为所有权依据，否则普通会话改成时间格式后会从任务树消失。
+  return id.startsWith(AUTOMATION_SESSION_PREFIX)
 }
 
 export function scheduleGroupName(title: string): string {

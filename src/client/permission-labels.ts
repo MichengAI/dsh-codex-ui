@@ -64,6 +64,7 @@ export function observePermissionLabels(locale: PermissionLabelLocale): () => vo
   if (typeof document === 'undefined' || document.body === null) return () => {}
   let applying = false
   let frame: number | undefined
+  const pendingRoots = new Set<ParentNode>([document])
   const apply = (): void => {
     if (applying) return
     applying = true
@@ -71,7 +72,9 @@ export function observePermissionLabels(locale: PermissionLabelLocale): () => vo
       ?? document.documentElement.lang
       ?? window.navigator.language
       ?? 'zh'
-    try { localizePermissionLabels(document, active) }
+    const roots = [...pendingRoots]
+    pendingRoots.clear()
+    try { for (const root of roots) localizePermissionLabels(root, active) }
     finally { applying = false }
   }
   const schedule = (): void => {
@@ -79,9 +82,20 @@ export function observePermissionLabels(locale: PermissionLabelLocale): () => vo
     frame = window.requestAnimationFrame(() => { frame = undefined; apply() })
   }
   apply()
-  const observer = new MutationObserver(schedule)
+  const observer = new MutationObserver(records => {
+    for (const record of records) {
+      const target = record.target.nodeType === 1 ? record.target as Element : record.target.parentElement
+      const control = target?.closest(INTERACTIVE_SELECTOR)
+      if (control !== null && control !== undefined) pendingRoots.add(control)
+      for (const node of record.addedNodes) {
+        if (!(node instanceof Element)) continue
+        if (node.matches(INTERACTIVE_SELECTOR) || node.querySelector(INTERACTIVE_SELECTOR) !== null) pendingRoots.add(node)
+      }
+    }
+    if (pendingRoots.size > 0) schedule()
+  })
   observer.observe(document.body, { childList: true, characterData: true, subtree: true })
-  const unsubscribe = locale.subscribe?.(schedule) ?? (() => {})
+  const unsubscribe = locale.subscribe?.(() => { pendingRoots.add(document); schedule() }) ?? (() => {})
   return () => {
     observer.disconnect()
     unsubscribe()

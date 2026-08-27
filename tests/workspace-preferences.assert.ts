@@ -51,10 +51,12 @@ type Route = { path: string; handler: (req: ReturnType<typeof request> & { metho
 type ResponseRecorder = { status?: number; headers?: Record<string, string>; body?: string; writeHead: (status: number, headers?: Record<string, string>) => void; end: (body?: string) => void }
 
 let preferencesRoute: Route | undefined
+let explorerRoute: Route | undefined
 let disposeEffect: (() => void) | undefined
 const webServer = {
   register: (route: Route) => {
     if (route.path === '/api/michengai/codex-ui/preferences') preferencesRoute = route
+    if (route.path === '/api/michengai/codex-ui/open-in-explorer') explorerRoute = route
     return () => {}
   },
 }
@@ -62,6 +64,7 @@ const services: Record<string, unknown> = {
   webServer,
   agents: { get: () => undefined },
   tools: { schemas: () => [] },
+  workspaceRegistry: { list: () => [{ path: 'D:\\Repository\\known-workspace' }] },
 }
 const context = {
   get: (key: string) => services[key],
@@ -96,6 +99,13 @@ try {
   assert.equal((await invoke('PUT', ['{}'], { 'sec-fetch-site': 'cross-site' })).status, 403)
   assert.equal((await invoke('PUT', [], { 'content-length': String(33 * 1024) })).status, 413)
   assert.equal((await invoke('POST')).status, 405)
+
+  const explorerResponse: ResponseRecorder = {
+    writeHead: (status, responseHeaders) => { explorerResponse.status = status; explorerResponse.headers = responseHeaders },
+    end: body => { explorerResponse.body = body },
+  }
+  await explorerRoute?.handler({ ...request([JSON.stringify({ path: 'D:\\Repository\\unregistered' })], { 'sec-fetch-site': 'same-origin' }), method: 'POST', url: explorerRoute.path }, explorerResponse)
+  assert.equal(explorerResponse.status, 403, 'Explorer Host 路由必须拒绝未注册的绝对路径')
 } finally {
   disposeEffect?.()
   if (previousProfileDir === undefined) delete process.env.DSH_PROFILE_DIR

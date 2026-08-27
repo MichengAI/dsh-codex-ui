@@ -1,0 +1,37 @@
+name: 测试
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Node.js ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v6
+
+      - name: 配置 pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 运行完整测试
+        run: pnpm test

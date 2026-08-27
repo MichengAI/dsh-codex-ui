@@ -2,9 +2,9 @@ import assert from 'node:assert/strict'
 import { groupScheduleSessions, isScheduleSession, scheduleGroupName } from '../src/client/schedule-sessions.ts'
 
 assert.equal(isScheduleSession('dsh-automation-session-1', '普通标题'), true)
-assert.equal(isScheduleSession('abc', '2026-08-18 19:05 - 天气预报'), true)
+assert.equal(isScheduleSession('abc', '2026-08-18 19:05 - 天气预报'), false)
 assert.equal(isScheduleSession('abc', '你好'), false)
-// 用户手动把普通会话改名为时间开头（没有 “ - 任务名” 分隔符）时不得误判为定时任务
+// 标题属于用户可编辑数据，即使完全仿照自动化标题也不得改变会话归属。
 assert.equal(isScheduleSession('abc', '2026-08-18 20:00 站会'), false)
 assert.equal(isScheduleSession('abc', '2026-08-18 20:00'), false)
 assert.equal(scheduleGroupName('2026-08-18 19:05 - 天气预报'), '天气预报')

@@ -1,6 +1,7 @@
 /** 浏览器客户端插件的 Host 入口；客户端逻辑由 dsh.client 加载。 */
 import type { Context } from '@deepseek-ai/cordis'
 import { dependencyStatuses, disposeDependencyInstaller, installDependency, requestDesktopHotUpdate, updateAllDependencies } from './dependency-manager.ts'
+import { authorizedExplorerWorkspacePath } from './explorer-path-policy.ts'
 import { hostServices } from './host-services.ts'
 import { ForegroundExplorer } from './native-explorer.ts'
 import { parsePinnedWorkspaceIds, readWorkspacePreferences, writeWorkspacePreferences } from './workspace-preferences.ts'
@@ -73,7 +74,7 @@ export async function readRequestBody(request: HostRequest, maxBytes = maxPrefer
   return Buffer.concat(chunks).toString('utf8')
 }
 
-export const inject = ['webServer', 'agents', 'tools']
+export const inject = ['webServer', 'agents', 'tools', 'workspaceRegistry']
 
 /** 提供不泄露地址、命令和凭证的连接器目录。 */
 export function apply(ctx: Context): void {
@@ -227,7 +228,13 @@ export function apply(ctx: Context): void {
             response.end(JSON.stringify({ error: '目录路径无效。' }))
             return
           }
-          await foregroundExplorer.open(body.path)
+          const authorizedPath = authorizedExplorerWorkspacePath(body.path, host.workspaceRegistry.list().map(workspace => workspace.path))
+          if (authorizedPath === undefined) {
+            response.writeHead(403, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+            response.end(JSON.stringify({ error: '仅允许打开已注册的工作区目录。' }))
+            return
+          }
+          await foregroundExplorer.open(authorizedPath)
           response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
           response.end(JSON.stringify({ opened: true, foreground: true }))
         } catch (error) {

@@ -163,9 +163,22 @@ function ensureStyle(doc: Document): void {
   doc.head.append(style)
 }
 
-/** 观察会话顶栏与用户气泡；所有变更按帧合并，避免流式输出时每个 token 都全文档扫描。 */
+const CONVERSATION_DECORATION_SELECTOR = 'header, [data-conversation-scroll], [data-chat-flow-kind="user"], [data-pending-steering]'
+
+function conversationDecorationMutation(records: readonly MutationRecord[]): boolean {
+  const relevant = (node: Node): boolean => node instanceof Element && (
+    node.matches(CONVERSATION_DECORATION_SELECTOR)
+    || node.closest('header, [data-chat-flow-kind="user"], [data-pending-steering]') !== null
+    || node.querySelector(CONVERSATION_DECORATION_SELECTOR) !== null
+  )
+  return records.some(record => relevant(record.target)
+    || [...record.addedNodes].some(relevant)
+    || [...record.removedNodes].some(relevant))
+}
+
+/** 观察会话顶栏与用户气泡；只对相关子树变更按帧合并，流式回答不会触发全文档扫描。 */
 export function observeConversationHeader(doc: Document = document): () => void {
-  if (doc.head === null) return () => {}
+  if (doc.head === null || doc.body === null) return () => {}
   ensureStyle(doc)
   ensureUserBubbleStyle(doc)
   let applying = false
@@ -197,8 +210,8 @@ export function observeConversationHeader(doc: Document = document): () => void 
     frame = window.requestAnimationFrame(run)
   }
   sync()
-  const observer = new MutationObserver(sync)
-  observer.observe(doc.documentElement, { childList: true, subtree: true })
+  const observer = new MutationObserver(records => { if (conversationDecorationMutation(records)) sync() })
+  observer.observe(doc.body, { childList: true, subtree: true })
   return () => {
     observer.disconnect()
     stopWatchingTabs?.()

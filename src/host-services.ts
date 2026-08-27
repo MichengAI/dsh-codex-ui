@@ -18,6 +18,7 @@ type HostServices = {
   webServer: { register: (route: { kind: 'exact'; path: string; handler: (request: HttpRequest, response: HttpResponse) => Promise<void> }) => () => void }
   agents: { get: (sessionId: string) => unknown }
   tools: { schemas: (scope?: unknown) => readonly HostTool[] }
+  workspaceRegistry: { list: () => readonly { path: string }[] }
 }
 
 function requireService<T extends object>(ctx: Context, key: string, method: keyof T): T {
@@ -34,5 +35,6 @@ export function hostServices(ctx: Context): HostServices {
     webServer: requireService<HostServices['webServer']>(ctx, 'webServer', 'register'),
     agents: requireService<HostServices['agents']>(ctx, 'agents', 'get'),
     tools: requireService<HostServices['tools']>(ctx, 'tools', 'schemas'),
+    workspaceRegistry: requireService<HostServices['workspaceRegistry']>(ctx, 'workspaceRegistry', 'list'),
   }
 }

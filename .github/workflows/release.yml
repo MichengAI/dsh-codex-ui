@@ -16,10 +16,20 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v6
 
+      - name: 配置 pnpm
+        uses: pnpm/action-setup@v4
+
       - name: 配置 Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 运行完整测试
+        run: pnpm test
 
       - name: 生成双语版本说明
         run: node scripts/extract-release-notes.mjs "$GITHUB_REF_NAME" release-notes.md

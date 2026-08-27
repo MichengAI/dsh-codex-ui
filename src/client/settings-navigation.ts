@@ -14,6 +14,7 @@ export function pickSettingsSectionButton<T extends { textContent: string | null
 }
 
 let cancelPendingNavigation: (() => void) | undefined
+export const SETTINGS_NAVIGATION_TIMEOUT_MS = 4_000
 
 export function openSettingsSection(root: HTMLElement | null, label: string | readonly string[], onMissing?: () => void, onSelected?: () => void): void {
   const labels = typeof label === 'string' ? [label] : label
@@ -54,7 +55,7 @@ export function openSettingsSection(root: HTMLElement | null, label: string | re
     cleanup()
     console.warn(`[michengai-codex-ui] 未找到设置分区：${labels.join(' / ')}`)
     onMissing?.()
-  }, 1_500)
+  }, SETTINGS_NAVIGATION_TIMEOUT_MS)
   observer.observe(document.body, { childList: true, subtree: true })
   cancelPendingNavigation = cleanup
   schedule()

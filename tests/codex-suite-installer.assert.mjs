@@ -12,17 +12,22 @@ import {
   normalizeBundles,
   parseArgs,
   profileDirectory,
+  validateWindowsDshCommand,
 } from '../packages/dsh-codex-suite-installer/installer.mjs'
 
 const installerManifest = JSON.parse(readFileSync(new URL('../packages/dsh-codex-suite-installer/package.json', import.meta.url), 'utf8'))
+const rootManifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 assert.equal(installerManifest.name, '@michengai/dsh-codex-suite-installer')
-assert.equal(installerManifest.version, '0.1.5')
+assert.equal(installerManifest.version, '0.1.6')
 assert.equal(installerManifest.bin?.['dsh-codex-suite-installer'], './bin.mjs')
 assert.equal(installerManifest.dependencies, undefined, '轻量 npx 安装器不能安装六个成员的传递依赖树')
 assert.deepEqual(Object.keys(installerManifest.dshCodexSuite?.members ?? {}), MEMBER_PACKAGES)
-assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-codex-ui'], '0.2.88', '安装器必须锁定本次发布的 UI 版本')
+assert.equal(rootManifest.version, '0.2.89', '根包必须使用本次发布版本')
+assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-codex-ui'], rootManifest.version, '安装器必须锁定与根包相同的 UI 版本')
+assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-archive-manager'], '0.1.16', '安装器必须锁定已验证的归档管理器版本')
+assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-skills-manager'], '0.1.25', '安装器必须锁定已验证的技能管理器版本')
 assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-im-connect'], '0.1.24', '安装器必须锁定本次发布的 IM 版本')
-assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-automation'], '0.1.15', '安装器必须锁定本次发布的定时任务版本')
+assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-automation'], '0.1.21', '安装器必须锁定支持任务设置桥接的定时任务版本')
 
 const manifest = {
   dshCodexSuite: {
@@ -69,6 +74,10 @@ assert.deepEqual(
 )
 assert.throws(() => parseArgs(['--profile', '../web']), /Invalid DSH profile name/)
 assert.throws(() => parseArgs(['--registry', 'file:///tmp/registry']), /HTTP or HTTPS/)
+assert.equal(validateWindowsDshCommand('dsh'), 'dsh')
+assert.equal(validateWindowsDshCommand('C:\\Program Files\\nodejs\\dsh.cmd'), 'C:\\Program Files\\nodejs\\dsh.cmd')
+assert.throws(() => validateWindowsDshCommand('dsh & calc.exe'), /unsupported shell characters/)
+assert.throws(() => validateWindowsDshCommand('\\\\server\\share\\dsh.cmd'), /absolute local Windows path/)
 assert.equal(
   profileDirectory('codex', { DSH_HOME: '/srv/dsh-home' }, '/home/demo'),
   resolve('/srv/dsh-home', 'profiles', 'codex'),

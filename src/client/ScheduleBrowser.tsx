@@ -12,6 +12,7 @@ import { SessionHoverCardLayer, SessionModals, useBusyAction, useSessionDialogs,
 import { HoverShell, useHoverDispatch } from './hover-shell.tsx'
 import { GroupHead, SessionRow, sessionMenuItems } from './session-tree.tsx'
 import { browserStorage, readTreeExpansionState, SCHEDULE_EXPANSION_STORAGE_KEY, writeTreeExpansionState } from './tree-expansion.ts'
+import { archiveScheduleGroup } from './schedule-group-actions.ts'
 
 type OpenMenu = { id: string; x?: number; y?: number }
 
@@ -152,9 +153,13 @@ function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkS
           if (archiveGroupTarget === undefined) return
           const target = archiveGroupTarget
           void run('archive-group', async () => {
-            for (const id of target.sessionIds) await archiveSession(id as SessionId)
-            flags.setPinnedSessionIds(ids => ids.filter(id => !target.sessionIds.includes(id)))
-            flags.setUnreadSessionIds(ids => ids.filter(id => !target.sessionIds.includes(id)))
+            const result = await archiveScheduleGroup(target.sessionIds, id => archiveSession(id as SessionId))
+            flags.setPinnedSessionIds(ids => ids.filter(id => !result.archivedIds.includes(id)))
+            flags.setUnreadSessionIds(ids => ids.filter(id => !result.archivedIds.includes(id)))
+            if (result.failedIds.length > 0) {
+              setArchiveGroupTarget({ ...target, sessionIds: result.failedIds })
+              throw new Error(t('schedule.archiveGroupPartial', { archived: result.archivedIds.length, failed: result.failedIds.length }))
+            }
             setArchiveGroupTarget(undefined)
           })
         }}>{t('schedule.archiveGroupConfirm')}</Button>

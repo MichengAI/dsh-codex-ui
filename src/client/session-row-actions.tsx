@@ -6,6 +6,7 @@ import { NS } from './locales.ts'
 import { readSessionIds, SESSION_PINS_STORAGE_KEY, SESSION_UNREAD_STORAGE_KEY, toggleSessionId, writeSessionIds } from './session-manager.ts'
 import { copySessionLink, SessionHoverCard } from './session-tree.tsx'
 import { useHoverDispatch, useHoverValue } from './hover-shell.tsx'
+import { browserStorage } from './tree-expansion.ts'
 
 export type DialogTarget = { id: string; title: string }
 
@@ -17,7 +18,7 @@ type SessionActions = {
 }
 
 function storage(): Storage | undefined {
-  return typeof window === 'undefined' ? undefined : window.localStorage
+  return browserStorage()
 }
 
 /** 频道/定时共用的本地置顶与未读标记。 */

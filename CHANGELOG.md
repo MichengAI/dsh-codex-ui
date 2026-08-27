@@ -4,6 +4,30 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.89 — 2026-08-27
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.6`.
+
+### Added
+
+- Persisted workspace, channel, and scheduled-task folder expansion independently across refreshes with versioned, failure-safe browser storage.
+- Added scheduled-task list/overview switching, direct task-settings navigation, and group archive actions.
+- Added Node.js 22/24 CI for pushes and pull requests, and made the tag Release workflow run the full test suite before creating a release.
+
+### Fixed
+
+- Stopped classifying ordinary conversations as scheduled tasks from an editable timestamp-shaped title; automation ownership now requires the stable session ID prefix.
+- Made group archive continue after individual failures, clean local pin/unread state only for successful items, and leave failures selected for retry.
+- Validated scheduled-task settings requests at runtime, guarded browser storage access, and extended lazy Settings navigation to four seconds.
+- Restricted the Windows Explorer Host endpoint to exact registered workspace roots, rejecting drive roots, UNC paths, relative paths, children, and unrelated absolute paths.
+- Reduced compatibility observer work by filtering unrelated conversation, permission, and Settings DOM mutations before scheduling scans.
+
+### Release process
+
+- Aligned the root package, lightweight installer, member pins, and version-contract assertions; the legacy aggregate Suite remains private and retired.
+- Tracked and refreshed the current handoff documentation under `docs/00-交接入口/` while leaving historical documentation ignored.
+- Hardened the Windows installer against shell metacharacters in `DSH_BIN`.
+
 ## 0.2.88 — 2026-08-26
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.5`.

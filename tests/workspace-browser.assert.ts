@@ -12,8 +12,8 @@ const sessions = {
   h: { id: 'h', origin: 'user', blank: false, displayTitle: '未归组会话' },
 }
 
-assert.deepEqual(visibleSessionIds(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], sessions, ['d']), ['a', 'h'])
-assert.deepEqual(ungroupedSessionIds(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], sessions, ['a'], ['d']), ['h'])
+assert.deepEqual(visibleSessionIds(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], sessions, ['d']), ['a', 'f', 'h'])
+assert.deepEqual(ungroupedSessionIds(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], sessions, ['a'], ['d']), ['f', 'h'])
 assert.equal(isTaskSession(sessions.e), false)
 assert.equal(isTaskSession(sessions.g), false)
 assert.equal(isTaskSession(sessions.a), true)

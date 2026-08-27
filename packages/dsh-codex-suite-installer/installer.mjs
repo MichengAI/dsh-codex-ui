@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { resolve } from 'node:path'
+import { resolve, win32 } from 'node:path'
 
 export const SUITE_PACKAGE = '@michengai/dsh-codex-suite'
 export const BASE_BUNDLE = '@deepseek-ai/dsh-base'
@@ -101,11 +101,25 @@ function quote(argument) {
   return /[\s"']/u.test(argument) ? JSON.stringify(argument) : argument
 }
 
+export function validateWindowsDshCommand(command) {
+  if (typeof command !== 'string' || command === '' || command.trim() !== command || /["&|<>^%\r\n]/u.test(command)) {
+    throw new Error('DSH_BIN contains unsupported shell characters.')
+  }
+  if (/^[0-9A-Za-z._-]+$/u.test(command)) return command
+  if (/^[A-Za-z]:\\/u.test(command) && win32.isAbsolute(command)) return command
+  throw new Error('DSH_BIN must be a command name or an absolute local Windows path.')
+}
+
+function quoteWindowsCommandArgument(argument) {
+  if (/["\r\n]/u.test(argument)) throw new Error('dsh argument contains unsupported shell characters.')
+  return `"${argument}"`
+}
+
 function runDsh(args, { dryRun = false, command = process.env.DSH_BIN || 'dsh' } = {}) {
   process.stdout.write(`> dsh ${args.map(quote).join(' ')}\n`)
   if (dryRun) return
   const result = process.platform === 'win32'
-    ? spawnSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', `call ${/\s/.test(command) ? `"${command.replaceAll('"', '""')}"` : command} ${args.join(' ')}`], { encoding: 'utf8', stdio: 'inherit', windowsHide: true })
+    ? spawnSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', `call ${quoteWindowsCommandArgument(validateWindowsDshCommand(command))} ${args.map(quoteWindowsCommandArgument).join(' ')}`], { encoding: 'utf8', stdio: 'inherit', windowsHide: true })
     : spawnSync(command, args, { encoding: 'utf8', stdio: 'inherit' })
   if (result.error !== undefined) throw new Error(`Unable to run dsh: ${result.error.message}`)
   if (result.status !== 0) throw new Error(`dsh exited with code ${result.status ?? 1}.`)

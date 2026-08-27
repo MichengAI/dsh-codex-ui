@@ -83,10 +83,13 @@ export function observeSettingsNavIcons(): () => void {
   if (typeof document === 'undefined' || document.body === null) return () => {}
   let applying = false
   let frame: number | undefined
+  const pendingRoots = new Set<ParentNode>([document])
   const apply = (): void => {
     if (applying) return
     applying = true
-    try { applySettingsNavIcons(document) }
+    const roots = [...pendingRoots]
+    pendingRoots.clear()
+    try { for (const root of roots) applySettingsNavIcons(root) }
     finally { applying = false }
   }
   const schedule = (): void => {
@@ -94,7 +97,19 @@ export function observeSettingsNavIcons(): () => void {
     frame = window.requestAnimationFrame(() => { frame = undefined; apply() })
   }
   apply()
-  const observer = new MutationObserver(schedule)
+  const observer = new MutationObserver(records => {
+    for (const record of records) {
+      const target = record.target.nodeType === 1 ? record.target as Element : record.target.parentElement
+      const button = target?.closest('[role="dialog"] nav button')
+      if (button !== null && button !== undefined) pendingRoots.add(button.closest('[role="dialog"]') ?? document)
+      for (const node of record.addedNodes) {
+        if (!(node instanceof Element)) continue
+        if (node.matches('[role="dialog"] nav button')) pendingRoots.add(node.closest('[role="dialog"]') ?? document)
+        else if (node.querySelector('[role="dialog"] nav button') !== null) pendingRoots.add(node)
+      }
+    }
+    if (pendingRoots.size > 0) schedule()
+  })
   observer.observe(document.body, { childList: true, subtree: true })
   return () => {
     observer.disconnect()
