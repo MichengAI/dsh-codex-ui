@@ -14,7 +14,7 @@
     "README.zh-CN.md"
   ],
   "bin": {
-    "dsh-codex-suite-installer": "./bin.mjs"
+    "dsh-codex-suite-installer": "bin.mjs"
   },
   "publishConfig": {
     "access": "public",

@@ -20,7 +20,7 @@ const installerManifest = JSON.parse(readFileSync(new URL('../packages/dsh-codex
 const rootManifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 assert.equal(installerManifest.name, '@michengai/dsh-codex-suite-installer')
 assert.equal(installerManifest.version, '0.1.6')
-assert.equal(installerManifest.bin?.['dsh-codex-suite-installer'], './bin.mjs')
+assert.equal(installerManifest.bin?.['dsh-codex-suite-installer'], 'bin.mjs', '安装器清单必须使用 npm 发布后保留的规范 bin 路径')
 assert.equal(installerManifest.dependencies, undefined, '轻量 npx 安装器不能安装六个成员的传递依赖树')
 assert.deepEqual(Object.keys(installerManifest.dshCodexSuite?.members ?? {}), MEMBER_PACKAGES)
 assert.equal(rootManifest.version, '0.2.89', '根包必须使用本次发布版本')
