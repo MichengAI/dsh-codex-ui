@@ -105,7 +105,7 @@ try {
     end: body => { explorerResponse.body = body },
   }
   await explorerRoute?.handler({ ...request([JSON.stringify({ path: 'D:\\Repository\\unregistered' })], { 'sec-fetch-site': 'same-origin' }), method: 'POST', url: explorerRoute.path }, explorerResponse)
-  assert.equal(explorerResponse.status, 403, 'Explorer Host 路由必须拒绝未注册的绝对路径')
+  assert.equal(explorerResponse.status, process.platform === 'win32' ? 403 : 501, 'Explorer Host 路由必须在 Windows 拒绝未注册路径，并在其他平台明确回退')
 } finally {
   disposeEffect?.()
   if (previousProfileDir === undefined) delete process.env.DSH_PROFILE_DIR
