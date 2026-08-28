@@ -1,0 +1,46 @@
+name: 发布 npm 包
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: 测试并发布
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v6
+
+      - name: 配置 pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 运行完整测试
+        run: pnpm test
+
+      - name: 校验版本标签
+        run: |
+          node <<'NODE'
+          const version = require('./package.json').version
+          const expected = `v${version}`
+          if (process.env.GITHUB_REF_NAME !== expected) {
+            throw new Error(`版本标签 ${process.env.GITHUB_REF_NAME} 必须与 package.json 的 ${expected} 一致`)
+          }
+          NODE
+
+      - name: 发布到 npm
+        run: npm publish

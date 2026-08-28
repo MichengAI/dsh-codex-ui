@@ -4,6 +4,13 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.91 — 2026-08-28
+
+### 发布流程
+
+- npm 发布从本机手动执行改为由版本标签触发 GitHub Actions npm Trusted Publishing（OIDC）。
+- `npm publish` 前新增完整测试和标签/package.json 版本一致性门禁；不再在仓库或 Actions Secrets 中保存 npm 凭据。
+
 ## 0.2.90 — 2026-08-27
 
 配套版本：`@michengai/dsh-codex-suite-installer@0.1.7`。

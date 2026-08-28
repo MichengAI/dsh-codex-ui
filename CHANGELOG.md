@@ -4,6 +4,13 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.91 — 2026-08-28
+
+### Release process
+
+- Replaced manual npm publication with tag-triggered GitHub Actions npm Trusted Publishing (OIDC).
+- Added a full-test and tag/package-version gate before `npm publish`; npm credentials are no longer stored in the repository or Actions secrets.
+
 ## 0.2.90 — 2026-08-27
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.7`.
