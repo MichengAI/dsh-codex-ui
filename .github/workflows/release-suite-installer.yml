@@ -1,0 +1,89 @@
+name: 发布 Suite Installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 可选，Installer 版本号；留空时自动递增 patch。
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-suite-installer
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: 解析成员并发布
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出 main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: 配置 pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 解析最新成员版本
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          args=(--release-notes "$RUNNER_TEMP/release-notes.md")
+          if [[ -n "$VERSION" ]]; then
+            args=(--version "$VERSION" "${args[@]}")
+          fi
+          node scripts/prepare-suite-installer-release.mjs "${args[@]}"
+
+      - name: 运行完整测试
+        run: pnpm test
+
+      - name: 校验改动
+        run: git diff --check
+
+      - name: 提交精确版本清单
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/dsh-codex-suite-installer/package.json
+          if git diff --cached --quiet; then
+            echo "No installer manifest changes to commit."
+          else
+            version=$(node -p "require('./packages/dsh-codex-suite-installer/package.json').version")
+            git commit -m "chore: release suite installer $version"
+            git push origin HEAD:main
+          fi
+
+      - name: 发布到 npm
+        working-directory: packages/dsh-codex-suite-installer
+        run: npm publish
+
+      - name: 创建版本标签和 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./packages/dsh-codex-suite-installer/package.json').version")
+          tag="suite-installer-v$version"
+          if ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            git tag -a "$tag" -m "$tag"
+            git push origin "$tag"
+          fi
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --title "$tag" --notes-file "$RUNNER_TEMP/release-notes.md"
+          else
+            gh release create "$tag" --title "$tag" --notes-file "$RUNNER_TEMP/release-notes.md"
+          fi

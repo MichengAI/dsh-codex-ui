@@ -19,16 +19,15 @@ import {
 const installerManifest = JSON.parse(readFileSync(new URL('../packages/dsh-codex-suite-installer/package.json', import.meta.url), 'utf8'))
 const rootManifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 assert.equal(installerManifest.name, '@michengai/dsh-codex-suite-installer')
-assert.equal(installerManifest.version, '0.1.7')
+assert.match(installerManifest.version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/, '安装器版本必须是发布版 semver')
 assert.equal(installerManifest.bin?.['dsh-codex-suite-installer'], 'bin.mjs', '安装器清单必须使用 npm 发布后保留的规范 bin 路径')
 assert.equal(installerManifest.dependencies, undefined, '轻量 npx 安装器不能安装六个成员的传递依赖树')
 assert.deepEqual(Object.keys(installerManifest.dshCodexSuite?.members ?? {}), MEMBER_PACKAGES)
-assert.equal(rootManifest.version, '0.2.91', '根包必须使用本次发布版本')
+assert.match(rootManifest.version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/, '根包必须使用发布版 semver')
 assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-codex-ui'], rootManifest.version, '安装器必须锁定与根包相同的 UI 版本')
-assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-archive-manager'], '0.1.16', '安装器必须锁定已验证的归档管理器版本')
-assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-skills-manager'], '0.1.25', '安装器必须锁定已验证的技能管理器版本')
-assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-im-connect'], '0.1.24', '安装器必须锁定本次发布的 IM 版本')
-assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-automation'], '0.1.21', '安装器必须锁定支持任务设置桥接的定时任务版本')
+for (const packageName of MEMBER_PACKAGES) {
+  assert.match(installerManifest.dshCodexSuite.members[packageName], /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/, `安装器必须锁定 ${packageName} 的精确发布版 semver`)
+}
 
 const manifest = {
   dshCodexSuite: {
