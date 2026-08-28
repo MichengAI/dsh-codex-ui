@@ -53,49 +53,23 @@ Conversation menu: rename, pin, unread, archive, fork, copy, and delete.
 - Examples use the `web` profile; replace it with the target profile.
 - Source installation and development require Node.js 22+ and pnpm. Installing from npm does not require running `pnpm install` in an arbitrary directory.
 
-## Plugin combo
-
-`@michengai/dsh-codex-suite-installer` is the lightweight one-click installer for the `@michengai/dsh-codex-suite` member set. It adds these six plugins to the same profile as **direct dependencies**:
-
-| Plugin | npm package | Role |
-| --- | --- | --- |
-| Codex UI | `@michengai/dsh-codex-ui` | Codex-style sidebar, workspace tree, search, and turn navigation |
-| Expert management | `@michengai/dsh-agency-agents` | Settings page opened from **Experts** |
-| Skill management | `@michengai/dsh-skills-manager` | Settings page opened from **Skills** |
-| Archive management | `@michengai/dsh-archive-manager` | Permanent deletion and archived-session management |
-| IM Assistant | `@michengai/dsh-im-connect` | IM settings and the **Channels** tab |
-| Scheduled tasks | `@michengai/dsh-automation` | Scheduled-task settings and the **Schedule** tab |
-
-`dshmarket` stays optional. When it is installed, **Plugins** opens the market first.
-
-Direct dependencies let **Settings → About** detect and update every plugin independently. The lightweight installer carries only the version manifest, and it migrates the legacy aggregate Suite without leaving duplicate patches behind.
-
 ## DSH product ecosystem
 
-Codex UI can be installed independently or used through the desktop app or Web suite. They share the same DSH core but serve different ways of working:
+Codex UI can be installed independently or used through the desktop app. They share the same DSH core but serve different ways of working:
 
 | Product | Relationship to Codex UI |
 | --- | --- |
 | [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) | The host runtime that provides models, sessions, tools, and the plugin system |
 | [DSH Codex Desktop](https://github.com/MichengAI/dsh-codex-desktop) | A ready-to-install desktop product with Codex UI and the other five feature products built in |
-| [DSH Codex Suite](https://github.com/MichengAI/dsh-codex-ui/tree/main/packages/dsh-codex-suite) | A one-click suite for existing DSH Web environments that installs Codex UI and the other five feature products |
 | Six feature products | [Codex UI](https://github.com/MichengAI/dsh-codex-ui) · [IM Connect](https://github.com/MichengAI/dsh-im-connect) · [Automation](https://github.com/MichengAI/dsh-automation) · [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) · [Archive Manager](https://github.com/MichengAI/dsh-archive-manager) · [Agency Agents](https://github.com/MichengAI/dsh-agency-agents) |
 
 ## Installation
 
 `dsh plugin add` forwards to `pnpm add` in the profile directory. Without a version and official registry, a local mirror or minimum-release-age policy can leave you on an older build.
 
-### Ask another agent to install the suite
+### Ask another agent to install Codex UI
 
-Copy one of the sentences below into DSH, Codex, or WorkBuddy and let that agent install the combo into your local `web` profile.
-
-From npm:
-
-```text
-Use the one-click installer to add all six DSH Codex Suite members as direct dependencies of my local web profile: npx --yes @michengai/dsh-codex-suite-installer@latest --profile web. Confirm its configuration check succeeds, then remind me to restart DSH Web and hard-refresh the browser.
-```
-
-UI only:
+Copy the sentence below into DSH, Codex, or WorkBuddy and let that agent install Codex UI into your local `web` profile.
 
 ```text
 Install the latest DSH plugin @michengai/dsh-codex-ui into my local web profile using the official npm registry: dsh plugin --profile web add @michengai/dsh-codex-ui@latest --registry=https://registry.npmjs.org/. Then run dsh --profile web --dump-config, confirm codex-ui is mounted, and remind me to restart DSH Web and hard-refresh the browser.
@@ -103,33 +77,9 @@ Install the latest DSH plugin @michengai/dsh-codex-ui into my local web profile 
 
 | Product | How to use it |
 | --- | --- |
-| DSH | Send one of the sentences above to the current session. |
-| Codex | Send one of the sentences above to Codex and let it install locally. |
-| WorkBuddy | Send one of the sentences above to WorkBuddy. |
-
-The installer needs the current `dsh` on PATH. Set `DSH_BIN` when the executable lives elsewhere.
-
-### Install the complete suite
-
-This is the one-click combo. Run it from any PowerShell directory:
-
-```powershell
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
-npx --yes @michengai/dsh-codex-suite-installer@latest --profile web
-```
-
-The installer reads its exact verified member versions, adds all six members as direct profile dependencies in one `dsh plugin add`, and finishes with `dsh --profile web --dump-config`. Replace `@latest` with an installer version to pin the whole set.
-
-Restart DSH Web and hard-refresh the browser. Existing members are aligned in place; a legacy `@michengai/dsh-codex-suite` aggregate dependency is removed only after all six direct members have been staged.
-
-Use the same command with another profile name for a clean custom Web profile:
-
-```powershell
-npx --yes @michengai/dsh-codex-suite-installer@latest --profile codex
-```
-
-The installer stays in the current `DSH_HOME` and places DSH's built-in `@deepseek-ai/dsh-web-app` before the member bundles. It neither creates a separate Home nor reinstalls the official Web package.
+| DSH | Send the sentence above to the current session. |
+| Codex | Send the sentence above to Codex and let it install locally. |
+| WorkBuddy | Send the sentence above to WorkBuddy. |
 
 ### Install Codex UI only
 
@@ -173,7 +123,7 @@ Open DSH Web. The left navigation is rendered by this plugin.
 | Manage a conversation | Open the conversation menu to rename, pin, mark unread, archive, fork, copy, or delete. |
 | Jump between turns | Use the turn marks on the left of the current conversation. |
 | Inspect connectors | Open **Settings → Connectors**. Addresses, commands, and credentials are never shown. |
-| Check companion plugins | Open **Settings → About** to install or update the combo plugins. |
+| Check companion plugins | Open **Settings → About** to install or update individual companion plugins. |
 
 Deleting a workspace registration does not delete its folder or conversation records. Pinned and unread state is stored only in the current browser.
 
