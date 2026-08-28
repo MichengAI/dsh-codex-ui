@@ -1,6 +1,4 @@
 node_modules
 dist
 *.tgz
-docs/*
-!docs/00-交接入口/
-!docs/00-交接入口/**
+docs/
