@@ -4,6 +4,15 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.92 — 2026-08-28
+
+配套版本：`@michengai/dsh-codex-suite-installer@0.1.9`。
+
+### 安全修复
+
+- 旧版 Suite 及其安装器清单更新为 `@michengai/dsh-im-connect@0.1.26`。
+- 工作区依赖图固定使用兼容的修复版 `ansi-regex@5.0.1`，消除 Suite 与测试依赖路径中的 CVE-2021-3807。
+
 ## 0.2.91 — 2026-08-28
 
 ### 发布流程

@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  ansi-regex: 5.0.1
+
 importers:
 
   .:
@@ -94,8 +97,8 @@ importers:
         specifier: workspace:*
         version: link:../..
       '@michengai/dsh-im-connect':
-        specifier: 0.1.25
-        version: 0.1.25(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)
+        specifier: 0.1.26
+        version: 0.1.26(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)
       '@michengai/dsh-skills-manager':
         specifier: 0.1.29
         version: 0.1.29(b0594e640b77f7c4b51ffc39317da866)
@@ -1177,8 +1180,8 @@ packages:
       react:
         optional: true
 
-  '@michengai/dsh-im-connect@0.1.25':
-    resolution: {integrity: sha512-Tuw5MU/GxiIVyTLG5Ipu292fC/JEZR+lB9O3uNpDLUiq1bppVrYjseJuQ5jVIFmQd6Dks7UZlgX3UXlyB6+wjw==}
+  '@michengai/dsh-im-connect@0.1.26':
+    resolution: {integrity: sha512-o9Xh39L85UvphHWb0TEAMaYRJnmAtqdifWApCzXjS4AjqM7Qd87tOE8S7KiCQMKHSKAFGhVfMX58Ab3KouKgZw==}
     engines: {node: '>=22.19'}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
@@ -1630,8 +1633,8 @@ packages:
   anser@2.3.5:
     resolution: {integrity: sha512-vcZjxvvVoxTeR5XBNJB38oTu/7eDCZlwdz32N1eNgpyPF7j/Z7Idf+CUwQOkKKpJ7RJyjxgLHCM7vdIK0iCNMQ==}
 
-  ansi-regex@5.0.0:
-    resolution: {integrity: sha512-bY6fj56OUQ0hU1KjFNDQuJFezqKdrAyFdIevADiqrWHwSlbmBNMHp5ak2f40Pm8JTFyM2mqxkG6ngkHO11f/lg==}
+  ansi-regex@5.0.1:
+    resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
     engines: {node: '>=8'}
 
   ansi-styles@4.1.0:
@@ -4117,7 +4120,7 @@ snapshots:
     optionalDependencies:
       react: 18.3.1
 
-  '@michengai/dsh-im-connect@0.1.25(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)':
+  '@michengai/dsh-im-connect@0.1.26(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/schemastery': 3.18.1
@@ -4492,7 +4495,7 @@ snapshots:
 
   anser@2.3.5: {}
 
-  ansi-regex@5.0.0: {}
+  ansi-regex@5.0.1: {}
 
   ansi-styles@4.1.0:
     dependencies:
@@ -5325,7 +5328,7 @@ snapshots:
   pretty-format@27.0.2:
     dependencies:
       '@jest/types': 27.0.2
-      ansi-regex: 5.0.0
+      ansi-regex: 5.0.1
       ansi-styles: 5.0.0
       react-is: 17.0.1
 
@@ -5500,7 +5503,7 @@ snapshots:
 
   strip-ansi@6.0.0:
     dependencies:
-      ansi-regex: 5.0.0
+      ansi-regex: 5.0.1
 
   supports-color@7.1.0:
     dependencies:

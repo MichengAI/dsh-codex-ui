@@ -4,6 +4,15 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.92 — 2026-08-28
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.9`.
+
+### Security
+
+- Updated the legacy Suite and its installer manifest to `@michengai/dsh-im-connect@0.1.26`.
+- Pinned the workspace dependency graph to the compatible patched `ansi-regex@5.0.1`, resolving CVE-2021-3807 in both the Suite and test dependency paths.
+
 ## 0.2.91 — 2026-08-28
 
 ### Release process

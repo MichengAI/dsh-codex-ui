@@ -27,10 +27,10 @@
   "dshCodexSuite": {
     "members": {
       "@michengai/dsh-archive-manager": "0.1.16",
-      "@michengai/dsh-codex-ui": "0.2.91",
+      "@michengai/dsh-codex-ui": "0.2.92",
       "@michengai/dsh-skills-manager": "0.1.29",
       "@michengai/dsh-agency-agents": "0.1.22",
-      "@michengai/dsh-im-connect": "0.1.25",
+      "@michengai/dsh-im-connect": "0.1.26",
       "@michengai/dsh-automation": "0.1.21"
     }
   }
