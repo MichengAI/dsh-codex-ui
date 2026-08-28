@@ -44,3 +44,11 @@ jobs:
 
       - name: 发布到 npm
         run: npm publish
+
+  release-suite-installer:
+    name: 发布 Suite Installer
+    needs: publish
+    uses: ./.github/workflows/release-suite-installer.yml
+    permissions:
+      contents: write
+      id-token: write

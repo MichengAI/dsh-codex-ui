@@ -7,6 +7,12 @@ on:
         description: 可选，Installer 版本号；留空时自动递增 patch。
         required: false
         type: string
+  workflow_call:
+    inputs:
+      version:
+        description: 可选，Installer 版本号；留空时自动递增 patch。
+        required: false
+        type: string
 
 permissions:
   contents: write
