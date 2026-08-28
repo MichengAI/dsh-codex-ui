@@ -3,7 +3,9 @@ import { resolve } from 'node:path'
 import { MEMBER_PACKAGES } from '../packages/dsh-codex-suite-installer/installer.mjs'
 
 const installerPath = new URL('../packages/dsh-codex-suite-installer/package.json', import.meta.url)
+const compatibilitySuitePath = new URL('../packages/dsh-codex-suite/package.json', import.meta.url)
 const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
+const UI_PACKAGE = '@michengai/dsh-codex-ui'
 
 function parseArgs(argv) {
   const options = { version: undefined, dryRun: false, releaseNotes: undefined }
@@ -62,8 +64,12 @@ function renderReleaseNotes(version, members) {
 
 const options = parseArgs(process.argv.slice(2))
 const manifest = JSON.parse(readFileSync(installerPath, 'utf8'))
+const compatibilitySuite = JSON.parse(readFileSync(compatibilitySuitePath, 'utf8'))
 const currentVersion = manifest.version
 if (typeof currentVersion !== 'string' || !SEMVER.test(currentVersion)) throw new Error('Installer manifest has no valid version.')
+if (typeof compatibilitySuite.dependencies !== 'object' || compatibilitySuite.dependencies === null) {
+  throw new Error('Compatibility suite manifest has no dependency map.')
+}
 
 const version = options.version ?? nextPatch(currentVersion)
 if (compareVersions(version, currentVersion) < 0) throw new Error(`Installer version ${version} cannot be lower than current ${currentVersion}.`)
@@ -71,10 +77,20 @@ if (compareVersions(version, currentVersion) < 0) throw new Error(`Installer ver
 const members = Object.fromEntries(await Promise.all(MEMBER_PACKAGES.map(async (packageName) => [packageName, await resolveLatest(packageName)])))
 manifest.version = version
 manifest.dshCodexSuite = { ...manifest.dshCodexSuite, members }
+for (const packageName of MEMBER_PACKAGES) {
+  if (packageName === UI_PACKAGE) continue
+  if (!(packageName in compatibilitySuite.dependencies)) {
+    throw new Error(`Compatibility suite is missing ${packageName}.`)
+  }
+  compatibilitySuite.dependencies[packageName] = members[packageName]
+}
 
 const releaseNotes = renderReleaseNotes(version, members)
 if (options.releaseNotes !== undefined) writeFileSync(resolve(options.releaseNotes), releaseNotes, 'utf8')
-if (!options.dryRun) writeFileSync(installerPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+if (!options.dryRun) {
+  writeFileSync(installerPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+  writeFileSync(compatibilitySuitePath, `${JSON.stringify(compatibilitySuite, null, 2)}\n`, 'utf8')
+}
 
 console.log(`${options.dryRun ? 'Prepared' : 'Updated'} @michengai/dsh-codex-suite-installer@${version}`)
 for (const packageName of MEMBER_PACKAGES) console.log(`- ${packageName}@${members[packageName]}`)

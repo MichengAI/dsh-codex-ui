@@ -49,6 +49,9 @@ jobs:
           fi
           node scripts/prepare-suite-installer-release.mjs "${args[@]}"
 
+      - name: 更新锁定文件
+        run: pnpm install --lockfile-only
+
       - name: 运行完整测试
         run: pnpm test
 
@@ -59,7 +62,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add packages/dsh-codex-suite-installer/package.json
+          git add packages/dsh-codex-suite-installer/package.json packages/dsh-codex-suite/package.json pnpm-lock.yaml pnpm-workspace.yaml
           if git diff --cached --quiet; then
             echo "No installer manifest changes to commit."
           else
