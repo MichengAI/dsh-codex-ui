@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { readFile, unlink, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { basename, dirname, isAbsolute, resolve, sep } from 'node:path'
+import { basename, isAbsolute, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { MANAGED_DEPENDENCIES, SUITE_MEMBER_PACKAGES, SUITE_PACKAGE, managedDependency, type ManagedDependencyId } from './dependencies.ts'
 
@@ -39,12 +39,6 @@ type DesktopPnpmService = {
   runPlugin(args: readonly string[], invokingDir: string, signal?: AbortSignal): DesktopPnpmHandle
 }
 
-type DesktopPnpmBootstrap = {
-  activeProfileName?: unknown
-  activeProfileDir?: unknown
-  dshBootstrapPath?: unknown
-}
-
 export type DependencyRuntime = {
   environmentKind: 'desktop' | 'cli'
   profileName: string
@@ -79,20 +73,6 @@ function profileNameFromArgv(argv: readonly string[]): string | undefined {
   return argv[2] === 'web' ? 'web' : undefined
 }
 
-/** 从 Desktop CLI bootstrap 向上查找应用内置的 node_modules 根目录。 */
-export function desktopRuntimeRoots(bootstrapPath: string): string[] {
-  if (!isAbsolute(bootstrapPath)) return []
-  const roots: string[] = []
-  let current = dirname(resolve(bootstrapPath))
-  for (let depth = 0; depth < 8; depth += 1) {
-    roots.push(current)
-    const parent = dirname(current)
-    if (parent === current) break
-    current = parent
-  }
-  return roots
-}
-
 /**
  * Desktop 通过可选 Host service 暴露当前 profile；普通 Web/CLI 继续使用
  * DSH_PROFILE_DIR、命令行 profile 与默认 web profile。
@@ -104,22 +84,26 @@ export function resolveDependencyRuntime(ctx?: OptionalServiceContext, options: 
   const home = options.homeDir ?? homedir()
   const profiles = optionalService<DesktopProfilesService>(ctx, 'desktopProfiles')
   const desktopPnpm = optionalService<DesktopPnpmService>(ctx, 'desktopPnpm')
-  const bootstrap = optionalService<DesktopPnpmBootstrap>(ctx, 'desktopPnpmBootstrap')
-  const current = profiles?.current
-  if (validProfileName(current?.name) && typeof current.dir === 'string' && isAbsolute(current.dir)) {
+  if (profiles !== undefined) {
+    const current = profiles.current
+    if (!validProfileName(current?.name) || typeof current.dir !== 'string' || !isAbsolute(current.dir)) {
+      throw new Error('DSH Desktop 当前 Profile 信息无效，请重启 Desktop 后重试。')
+    }
+    if (typeof desktopPnpm?.runPlugin !== 'function') {
+      throw new Error('DSH Desktop 包管理服务尚未就绪，请重启 Desktop 后重试。')
+    }
     const profileDir = resolve(current.dir)
-    const bootstrapMatches = bootstrap?.activeProfileName === current.name
-      && typeof bootstrap.activeProfileDir === 'string'
-      && resolve(bootstrap.activeProfileDir) === profileDir
-    const runtimeRoots = typeof bootstrap?.dshBootstrapPath === 'string'
-      ? desktopRuntimeRoots(bootstrap.dshBootstrapPath)
+    // 只接受公开 Host contract 与旧 Desktop 明确提供的运行目录；
+    // launcher-private bootstrap 路径不属于第三方插件兼容边界。
+    const runtimeRoots = typeof env.DSH_RUNTIME_DIR === 'string' && isAbsolute(env.DSH_RUNTIME_DIR)
+      ? [resolve(env.DSH_RUNTIME_DIR)]
       : []
     return {
       environmentKind: 'desktop',
       profileName: current.name,
       profileDir,
       runtimeRoots,
-      ...(bootstrapMatches && typeof desktopPnpm?.runPlugin === 'function' ? { desktopPnpm } : {}),
+      desktopPnpm,
     }
   }
   const profileDir = resolve(env.DSH_PROFILE_DIR ?? resolve(home, '.dsh', 'profiles', 'web'))
@@ -342,6 +326,11 @@ export async function dependencyStatuses(runtime: DependencyRuntime = resolveDep
   const declaredNames = await declaredPluginNames(runtime)
   return Promise.all(MANAGED_DEPENDENCIES.map(async dependency => {
     const version = await installedPackageVersion(dependency.packageName, runtime)
+    // Desktop 本身已由 DSH runtime 启动。若宿主没有通过公开兼容路径暴露
+    // runtime 目录，仍应显示为已安装，但不能伪造版本或提供升级操作。
+    if (version === undefined && runtime.environmentKind === 'desktop' && isOfficialRuntimePackage(dependency.packageName)) {
+      return { ...dependency, installed: true, updateAvailable: false }
+    }
     const declared = isOfficialRuntimePackage(dependency.packageName) || isManagedPackageDeclared(dependency.packageName, declaredNames)
     if (version === undefined || !isManagedPackageInstalled({ installedVersion: version, declared })) return { ...dependency, installed: false, updateAvailable: false }
     const latestVersion = await npmLatestVersion(dependency.packageName)

@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { PassThrough } from 'node:stream'
 import { pathToFileURL } from 'node:url'
-import { applyReleaseExclude, dependencyStatuses, desktopRuntimeRoots, directPackagesForInstall, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, pluginCommandError, pluginExecArgv, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, updatableDependencyIds } from '../src/dependency-manager.ts'
+import { applyReleaseExclude, dependencyStatuses, directPackagesForInstall, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, pluginCommandError, pluginExecArgv, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, updatableDependencyIds } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 const sourceRoot = resolve('fixtures', 'deepseek-harness')
@@ -41,7 +41,7 @@ assert.equal(
 )
 
 const desktopProfileDir = resolve('fixtures', 'desktop-profile')
-const desktopBootstrapPath = resolve('fixtures', 'DSH Desktop.app', 'Contents', 'Resources', 'app.asar.unpacked', 'lib', 'desktop-cli.js')
+const desktopRuntimeDir = resolve('fixtures', 'desktop-runtime')
 let desktopPluginArgs: readonly string[] | undefined
 let desktopPluginCwd: string | undefined
 const desktopPnpm = {
@@ -59,14 +59,22 @@ const desktopPnpm = {
 const desktopServices = new Map<string, unknown>([
   ['desktopProfiles', { current: { name: 'desktop', dir: desktopProfileDir } }],
   ['desktopPnpm', desktopPnpm],
-  ['desktopPnpmBootstrap', { activeProfileName: 'desktop', activeProfileDir: desktopProfileDir, dshBootstrapPath: desktopBootstrapPath }],
 ])
-const desktopRuntime = resolveDependencyRuntime({ get: name => desktopServices.get(name) }, { env: {}, argv: ['/app'], homeDir: resolve('fixtures', 'home') })
+const desktopRuntime = resolveDependencyRuntime({ get: name => desktopServices.get(name) }, {
+  env: { DSH_RUNTIME_DIR: desktopRuntimeDir },
+  argv: ['/app'],
+  homeDir: resolve('fixtures', 'home'),
+})
 assert.equal(desktopRuntime.environmentKind, 'desktop')
 assert.equal(desktopRuntime.profileName, 'desktop')
 assert.equal(desktopRuntime.profileDir, desktopProfileDir, 'Desktop 必须读取 Host 当前 profile，而不是回退到 web')
-assert.ok(desktopRuntime.runtimeRoots.includes(resolve(desktopBootstrapPath, '..', '..')), 'Desktop runtime roots 必须包含 app.asar.unpacked')
+assert.deepEqual(desktopRuntime.runtimeRoots, [desktopRuntimeDir], '旧 Desktop 明确提供的 DSH_RUNTIME_DIR 必须继续用于运行时版本检测')
 assert.equal(desktopRuntime.desktopPnpm, desktopPnpm, 'Desktop 安装必须复用 Host 提供的包管理服务')
+assert.throws(
+  () => resolveDependencyRuntime({ get: name => name === 'desktopProfiles' ? { current: { name: 'desktop', dir: desktopProfileDir } } : undefined }, { env: {} }),
+  /包管理服务尚未就绪/,
+  '检测到 Desktop 后若公开包管理服务缺失，必须失败而不是回退 ambient CLI',
+)
 
 const customRuntime = resolveDependencyRuntime(undefined, {
   env: { DSH_PROFILE_DIR: resolve('fixtures', 'profiles', 'custom') },
@@ -76,7 +84,6 @@ const customRuntime = resolveDependencyRuntime(undefined, {
 assert.equal(customRuntime.environmentKind, 'cli')
 assert.equal(customRuntime.profileName, 'custom')
 assert.equal(customRuntime.profileDir, resolve('fixtures', 'profiles', 'custom'), '普通 Web/CLI 必须继续尊重 DSH_PROFILE_DIR')
-assert.deepEqual(desktopRuntimeRoots('relative/desktop-cli.js'), [], 'Desktop bootstrap 必须是可信绝对路径')
 
 await runDshPlugin(['add', '@michengai/dsh-codex-ui@0.2.92'], desktopRuntime, 1_000)
 assert.deepEqual(desktopPluginArgs, ['add', '@michengai/dsh-codex-ui@0.2.92'])
@@ -106,6 +113,19 @@ try {
   assert.equal(statuses.find(status => status.id === 'ui')?.installed, true, 'Desktop profile 中已声明且存在的 Codex UI 必须显示已安装')
   assert.equal(statuses.find(status => status.id === 'dsh')?.installed, true, 'Desktop 应用内置的 DSH runtime 必须显示已安装')
   assert.equal(statuses.find(status => status.id === 'skills')?.installed, false, '当前 profile 未安装的精确包仍应显示缺失')
+
+  const statusesWithoutRuntimePath = await dependencyStatuses({
+    environmentKind: 'desktop',
+    profileName: 'desktop',
+    profileDir: statusProfile,
+    runtimeRoots: [],
+    desktopPnpm,
+  })
+  assert.deepEqual(
+    statusesWithoutRuntimePath.find(status => status.id === 'dsh'),
+    { id: 'dsh', packageName: '@deepseek-ai/dsh', installed: true, updateAvailable: false },
+    'Desktop 未公开 runtime 路径时必须确认宿主 DSH 已安装，但不得伪造版本或升级状态',
+  )
 } finally {
   globalThis.fetch = previousFetch
   await rm(statusRoot, { recursive: true, force: true })

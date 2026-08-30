@@ -45,6 +45,8 @@ assert.match(manager, /resolveDshCliEntry/, '必须把当前 CLI 入口收成绝
 assert.match(manager, /cwd: process\.cwd\(\)/, '子进程必须沿用当前 DSH 启动目录，而不是 dirname\(entry\)')
 assert.match(manager, /desktopProfiles/, 'Desktop 必须通过 Host service 读取当前 profile')
 assert.match(manager, /desktopPnpm/, 'Desktop 安装必须复用 Host 提供的包管理能力')
+assert.doesNotMatch(manager, /desktopPnpmBootstrap/, '第三方插件不得读取 Desktop launcher 私有 bootstrap service')
+assert.match(manager, /包管理服务尚未就绪/, 'Desktop 公开包管理服务缺失时必须失败，不得回退 ambient CLI')
 assert.doesNotMatch(manager, /'--profile', 'web'/, '安装命令不得把目标 profile 硬编码为 web')
 assert.match(manager, /\['add', `\$\{target\.packageName\}@\$\{target\.version\}`, '--registry=https:\/\/registry\.npmjs\.org\/'\]/, '安装必须走官方 npm 源，避免镜像未同步导致失败')
 assert.match(manager, /pluginsToRemoveBeforeInstall/, '单独更新子插件前必须卸掉套件')
