@@ -4,6 +4,20 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.93 — 2026-08-30
+
+### 兼容性
+
+- 通过公开的 `desktopProfiles` service 读取 DSH Desktop 当前 Profile，并把安装与更新交给公开的 `desktopPnpm` 包管理服务，不再硬编码 `web` Profile。
+- 保留普通 Web/CLI 的 Profile 回退，同时在 Desktop 重启前后正确识别宿主 Runtime 与配套插件状态。
+- 新建会话优先调用 Archive Manager 可选提供的 `uiWorkspace.startSession()` service，缺失时继续使用标准工作区服务。
+
+### 安全性
+
+- 移除对 Launcher 私有实现细节 `desktopPnpmBootstrap` 的依赖。
+- Desktop generation 的公开服务不完整时安全失败，不再回退到可能修改其他 Profile 的环境 CLI。
+- 宿主没有通过受支持路径暴露 Runtime 目录时，只确认正在运行的 Desktop DSH Runtime 已安装，不伪造版本或升级状态。
+
 ## 0.2.92 — 2026-08-28
 
 配套版本：`@michengai/dsh-codex-suite-installer@0.1.9`。

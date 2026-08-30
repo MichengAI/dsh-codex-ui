@@ -4,6 +4,20 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.93 — 2026-08-30
+
+### Compatibility
+
+- Resolved the active DSH Desktop profile through the public `desktopProfiles` service and delegated installs and updates to the public `desktopPnpm` package manager instead of hard-coding the `web` profile.
+- Preserved the ordinary Web/CLI profile fallback while recognizing Desktop-provided runtime and companion-package state across restarts.
+- Routed new-session actions through Archive Manager's optional `uiWorkspace.startSession()` service, with the standard workspace service retained as the fallback.
+
+### Safety
+
+- Removed the dependency on the launcher-private `desktopPnpmBootstrap` implementation detail.
+- Failed safely when a Desktop generation exposes incomplete public services instead of falling back to an ambient CLI that could mutate another profile.
+- Reported the running Desktop DSH runtime as installed without fabricating a version or update when the Host exposes no supported runtime path.
+
 ## 0.2.92 — 2026-08-28
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.9`.
