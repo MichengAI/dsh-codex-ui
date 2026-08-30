@@ -75,6 +75,11 @@ assert.throws(
   /包管理服务尚未就绪/,
   '检测到 Desktop 后若公开包管理服务缺失，必须失败而不是回退 ambient CLI',
 )
+assert.throws(
+  () => resolveDependencyRuntime({ get: name => name === 'desktopPnpm' ? desktopPnpm : undefined }, { env: {} }),
+  /Profile 服务尚未就绪/,
+  '检测到 Desktop 包管理服务后若 Profile 服务缺失，必须失败而不是回退 ambient CLI',
+)
 
 const customRuntime = resolveDependencyRuntime(undefined, {
   env: { DSH_PROFILE_DIR: resolve('fixtures', 'profiles', 'custom') },

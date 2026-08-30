@@ -84,6 +84,9 @@ export function resolveDependencyRuntime(ctx?: OptionalServiceContext, options: 
   const home = options.homeDir ?? homedir()
   const profiles = optionalService<DesktopProfilesService>(ctx, 'desktopProfiles')
   const desktopPnpm = optionalService<DesktopPnpmService>(ctx, 'desktopPnpm')
+  if (profiles === undefined && desktopPnpm !== undefined) {
+    throw new Error('DSH Desktop Profile 服务尚未就绪，请重启 Desktop 后重试。')
+  }
   if (profiles !== undefined) {
     const current = profiles.current
     if (!validProfileName(current?.name) || typeof current.dir !== 'string' || !isAbsolute(current.dir)) {
