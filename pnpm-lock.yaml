@@ -100,8 +100,8 @@ importers:
         specifier: 0.1.26
         version: 0.1.26(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)
       '@michengai/dsh-skills-manager':
-        specifier: 0.1.30
-        version: 0.1.30(b0594e640b77f7c4b51ffc39317da866)
+        specifier: 0.1.31
+        version: 0.1.31(b0594e640b77f7c4b51ffc39317da866)
 
   packages/dsh-codex-suite-installer: {}
 
@@ -1190,8 +1190,8 @@ packages:
       '@deepseek-ai/cordis': ^4.0.1
       '@deepseek-ai/schemastery': ^3.18.1
 
-  '@michengai/dsh-skills-manager@0.1.30':
-    resolution: {integrity: sha512-4Bm2pDVmTcKBti4YfRs7C1lMdJ4S2ibxeYZJTcE+5KVBAtXCIjMYGZRHUruft4r4I8s4YIf8R7ftk+ahJH57sQ==}
+  '@michengai/dsh-skills-manager@0.1.31':
+    resolution: {integrity: sha512-kjqZZi3CKlKPgsFfWXJn5XhtF6YPiwnCRKXlWA1zb2VIekqWsh6+546Yrwl4ktPwlw6uxL69wT3ArC7wMRjqnA==}
     engines: {node: '>=20'}
     peerDependencies:
       '@deepseek-ai/cordis': '>=4.0.1 <5.0.0'
@@ -4139,7 +4139,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@michengai/dsh-skills-manager@0.1.30(b0594e640b77f7c4b51ffc39317da866)':
+  '@michengai/dsh-skills-manager@0.1.31(b0594e640b77f7c4b51ffc39317da866)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-client-locale': 0.1.0-rc.6(95508b6b13ea37dc2516e7b3a8357e69)
