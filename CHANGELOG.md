@@ -4,6 +4,14 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.94 — 2026-08-30
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.11`.
+
+### Safety
+
+- Completed symmetric validation of the public Desktop services: if either `desktopProfiles` or `desktopPnpm` is exposed without the other, dependency management now fails safely instead of falling back to an ambient CLI that could mutate another profile.
+
 ## 0.2.93 — 2026-08-30
 
 ### Compatibility

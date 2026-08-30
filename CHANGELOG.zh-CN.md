@@ -4,6 +4,14 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.94 — 2026-08-30
+
+配套版本：`@michengai/dsh-codex-suite-installer@0.1.11`。
+
+### 安全性
+
+- 完成 Desktop 公开服务的双向完整性校验：`desktopProfiles` 与 `desktopPnpm` 任意一项单独存在时，依赖管理都会安全失败，不再回退到可能修改其他 Profile 的环境 CLI。
+
 ## 0.2.93 — 2026-08-30
 
 ### 兼容性
