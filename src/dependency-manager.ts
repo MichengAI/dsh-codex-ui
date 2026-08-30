@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { readFile, unlink, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { resolve, sep } from 'node:path'
+import { basename, dirname, isAbsolute, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { MANAGED_DEPENDENCIES, SUITE_MEMBER_PACKAGES, SUITE_PACKAGE, managedDependency, type ManagedDependencyId } from './dependencies.ts'
 
@@ -20,9 +20,119 @@ export type DependencyStatus = {
   updateAvailable: boolean
 }
 
-function profileDirectory(): string {
-  if (process.env.DSH_PROFILE_DIR !== undefined) return process.env.DSH_PROFILE_DIR
-  return resolve(homedir(), '.dsh', 'profiles', 'web')
+type OptionalServiceContext = {
+  get?: (name: string) => unknown
+}
+
+type DesktopProfilesService = {
+  current?: { name?: unknown; dir?: unknown }
+}
+
+type DesktopPnpmHandle = {
+  stdout?: NodeJS.ReadableStream
+  stderr?: NodeJS.ReadableStream
+  done: Promise<{ exitCode: number | null; signal: NodeJS.Signals | null }>
+  cancel(): void
+}
+
+type DesktopPnpmService = {
+  runPlugin(args: readonly string[], invokingDir: string, signal?: AbortSignal): DesktopPnpmHandle
+}
+
+type DesktopPnpmBootstrap = {
+  activeProfileName?: unknown
+  activeProfileDir?: unknown
+  dshBootstrapPath?: unknown
+}
+
+export type DependencyRuntime = {
+  environmentKind: 'desktop' | 'cli'
+  profileName: string
+  profileDir: string
+  runtimeRoots: readonly string[]
+  desktopPnpm?: DesktopPnpmService
+}
+
+export type DependencyRuntimeOptions = {
+  env?: NodeJS.ProcessEnv
+  argv?: readonly string[]
+  cwd?: string
+  homeDir?: string
+}
+
+function optionalService<T>(ctx: OptionalServiceContext | undefined, name: string): T | undefined {
+  if (ctx === undefined) return undefined
+  return (typeof ctx.get === 'function' ? ctx.get(name) : (ctx as Record<string, unknown>)[name]) as T | undefined
+}
+
+function validProfileName(value: unknown): value is string {
+  return typeof value === 'string' && value !== '' && value !== '.' && value !== '..'
+    && value !== 'node_modules' && !value.includes('/') && !value.includes('\\') && !/[\0-\x1f\x7f]/.test(value)
+}
+
+function profileNameFromArgv(argv: readonly string[]): string | undefined {
+  for (let index = 2; index < argv.length; index += 1) {
+    const argument = argv[index]
+    if (argument === '--profile') return argv[index + 1]
+    if (argument?.startsWith('--profile=')) return argument.slice('--profile='.length)
+  }
+  return argv[2] === 'web' ? 'web' : undefined
+}
+
+/** 从 Desktop CLI bootstrap 向上查找应用内置的 node_modules 根目录。 */
+export function desktopRuntimeRoots(bootstrapPath: string): string[] {
+  if (!isAbsolute(bootstrapPath)) return []
+  const roots: string[] = []
+  let current = dirname(resolve(bootstrapPath))
+  for (let depth = 0; depth < 8; depth += 1) {
+    roots.push(current)
+    const parent = dirname(current)
+    if (parent === current) break
+    current = parent
+  }
+  return roots
+}
+
+/**
+ * Desktop 通过可选 Host service 暴露当前 profile；普通 Web/CLI 继续使用
+ * DSH_PROFILE_DIR、命令行 profile 与默认 web profile。
+ */
+export function resolveDependencyRuntime(ctx?: OptionalServiceContext, options: DependencyRuntimeOptions = {}): DependencyRuntime {
+  const env = options.env ?? process.env
+  const argv = options.argv ?? process.argv
+  const cwd = options.cwd ?? process.cwd()
+  const home = options.homeDir ?? homedir()
+  const profiles = optionalService<DesktopProfilesService>(ctx, 'desktopProfiles')
+  const desktopPnpm = optionalService<DesktopPnpmService>(ctx, 'desktopPnpm')
+  const bootstrap = optionalService<DesktopPnpmBootstrap>(ctx, 'desktopPnpmBootstrap')
+  const current = profiles?.current
+  if (validProfileName(current?.name) && typeof current.dir === 'string' && isAbsolute(current.dir)) {
+    const profileDir = resolve(current.dir)
+    const bootstrapMatches = bootstrap?.activeProfileName === current.name
+      && typeof bootstrap.activeProfileDir === 'string'
+      && resolve(bootstrap.activeProfileDir) === profileDir
+    const runtimeRoots = typeof bootstrap?.dshBootstrapPath === 'string'
+      ? desktopRuntimeRoots(bootstrap.dshBootstrapPath)
+      : []
+    return {
+      environmentKind: 'desktop',
+      profileName: current.name,
+      profileDir,
+      runtimeRoots,
+      ...(bootstrapMatches && typeof desktopPnpm?.runPlugin === 'function' ? { desktopPnpm } : {}),
+    }
+  }
+  const profileDir = resolve(env.DSH_PROFILE_DIR ?? resolve(home, '.dsh', 'profiles', 'web'))
+  const selected = profileNameFromArgv(argv)
+  const profileName = validProfileName(selected) ? selected : validProfileName(basename(profileDir)) ? basename(profileDir) : 'web'
+  const cliRuntimeRoot = argv[1] === undefined ? undefined : resolveDshRuntimeRoot(argv[1], cwd)
+  const runtimeRoots = [env.DSH_RUNTIME_DIR, cliRuntimeRoot]
+    .filter((root): root is string => root !== undefined && root !== '')
+  return { environmentKind: 'cli', profileName, profileDir, runtimeRoots }
+}
+
+function profileDirectory(runtime: DependencyRuntime): string {
+  return runtime.profileDir
 }
 
 type ProfileManifest = {
@@ -31,9 +141,9 @@ type ProfileManifest = {
   dsh?: { profile?: { bundles?: string[] } }
 }
 
-async function declaredPluginNames(): Promise<string[]> {
+async function declaredPluginNames(runtime: DependencyRuntime): Promise<string[]> {
   try {
-    const manifest = JSON.parse(await readFile(resolve(profileDirectory(), 'package.json'), 'utf8')) as ProfileManifest
+    const manifest = JSON.parse(await readFile(resolve(profileDirectory(runtime), 'package.json'), 'utf8')) as ProfileManifest
     return [...new Set([
       ...Object.keys({ ...manifest.devDependencies, ...manifest.dependencies }),
       ...(manifest.dsh?.profile?.bundles ?? []),
@@ -77,14 +187,13 @@ export function resolveDshRuntimeRoot(entry = process.argv[1], cwd = process.cwd
   return root.endsWith(sep) ? root.slice(0, -1) : root
 }
 
-function packageLookupRoots(packageName: string): string[] {
-  if (!isOfficialRuntimePackage(packageName)) return [profileDirectory()]
-  const runtimeDir = process.env.DSH_RUNTIME_DIR
-  return [...new Set([runtimeDir, resolveDshRuntimeRoot(), profileDirectory()].filter((root): root is string => root !== undefined && root !== ''))]
+function packageLookupRoots(packageName: string, runtime: DependencyRuntime): string[] {
+  if (!isOfficialRuntimePackage(packageName)) return [profileDirectory(runtime)]
+  return [...new Set([...runtime.runtimeRoots, profileDirectory(runtime)])]
 }
 
-async function installedPackageVersion(packageName: string): Promise<string | undefined> {
-  for (const root of packageLookupRoots(packageName)) {
+async function installedPackageVersion(packageName: string, runtime: DependencyRuntime): Promise<string | undefined> {
+  for (const root of packageLookupRoots(packageName, runtime)) {
     try {
       const manifest = JSON.parse(await readFile(resolve(root, 'node_modules', ...packageName.split('/'), 'package.json'), 'utf8')) as PackageManifest
       if (typeof manifest.version === 'string' && manifest.version !== '') return manifest.version
@@ -173,9 +282,9 @@ export function applyReleaseExclude(source: string, packageName: string, version
 }
 
 /** 将用户本次确认的精确版本加入 Profile 的 pnpm 发布时间保护例外。 */
-async function ensureLatestReleaseAllowed(packageName: string, version: string): Promise<void> {
+async function ensureLatestReleaseAllowed(packageName: string, version: string, runtime: DependencyRuntime): Promise<void> {
   if (parseSemver(version) === undefined) throw new Error('npm 返回了无法识别的最新版本。')
-  const path = resolve(profileDirectory(), 'pnpm-workspace.yaml')
+  const path = resolve(profileDirectory(runtime), 'pnpm-workspace.yaml')
   let source: string
   try {
     source = await readFile(path, 'utf8')
@@ -228,11 +337,11 @@ export function newerVersion(installed: string, latest: string): boolean {
   return comparePrerelease(candidate.prerelease, current.prerelease) > 0
 }
 
-/** 返回 Web profile 中固定管理插件的实际安装版本与 npm latest 状态。 */
-export async function dependencyStatuses(): Promise<readonly DependencyStatus[]> {
-  const declaredNames = await declaredPluginNames()
+/** 返回当前 profile 中固定管理插件的实际安装版本与 npm latest 状态。 */
+export async function dependencyStatuses(runtime: DependencyRuntime = resolveDependencyRuntime()): Promise<readonly DependencyStatus[]> {
+  const declaredNames = await declaredPluginNames(runtime)
   return Promise.all(MANAGED_DEPENDENCIES.map(async dependency => {
-    const version = await installedPackageVersion(dependency.packageName)
+    const version = await installedPackageVersion(dependency.packageName, runtime)
     const declared = isOfficialRuntimePackage(dependency.packageName) || isManagedPackageDeclared(dependency.packageName, declaredNames)
     if (version === undefined || !isManagedPackageInstalled({ installedVersion: version, declared })) return { ...dependency, installed: false, updateAvailable: false }
     const latestVersion = await npmLatestVersion(dependency.packageName)
@@ -261,8 +370,8 @@ export function isRestartableInstallError(error: unknown): boolean {
   return /完全退出桌面端|正在运行的插件|pnpm 仓库不一致/.test(message)
 }
 
-async function recordPendingUpdate(packageName: string, version: string): Promise<void> {
-  const pendingPath = resolve(profileDirectory(), PROFILE_PENDING_UPDATES_FILE)
+async function recordPendingUpdate(packageName: string, version: string, runtime: DependencyRuntime): Promise<void> {
+  const pendingPath = resolve(profileDirectory(runtime), PROFILE_PENDING_UPDATES_FILE)
   let packages: Array<{ packageName: string; version: string }> = []
   try {
     const parsed = JSON.parse(await readFile(pendingPath, 'utf8')) as { packages?: unknown }
@@ -282,8 +391,8 @@ async function recordPendingUpdate(packageName: string, version: string): Promis
   await writeFile(pendingPath, `${JSON.stringify({ packages }, undefined, 2)}\n`, 'utf8')
 }
 
-async function removePendingUpdate(packageName: string): Promise<void> {
-  const pendingPath = resolve(profileDirectory(), PROFILE_PENDING_UPDATES_FILE)
+async function removePendingUpdate(packageName: string, runtime: DependencyRuntime): Promise<void> {
+  const pendingPath = resolve(profileDirectory(runtime), PROFILE_PENDING_UPDATES_FILE)
   try {
     const parsed = JSON.parse(await readFile(pendingPath, 'utf8')) as { packages?: unknown }
     if (!Array.isArray(parsed.packages)) return
@@ -299,8 +408,8 @@ async function removePendingUpdate(packageName: string): Promise<void> {
   }
 }
 
-async function recordDeclaredVersion(packageName: string, version: string): Promise<void> {
-  const manifestPath = resolve(profileDirectory(), 'package.json')
+async function recordDeclaredVersion(packageName: string, version: string, runtime: DependencyRuntime): Promise<void> {
+  const manifestPath = resolve(profileDirectory(runtime), 'package.json')
   let manifest: { dependencies?: Record<string, string> }
   try {
     manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as { dependencies?: Record<string, string> }
@@ -337,6 +446,7 @@ export function pluginExecArgv(args: readonly string[] = process.execArgv): stri
 }
 
 const activePluginChildren = new Set<ChildProcess>()
+const activeDesktopPluginHandles = new Set<DesktopPnpmHandle>()
 
 function terminatePluginChild(child: ChildProcess): void {
   if (child.exitCode !== null || child.killed) return
@@ -352,6 +462,7 @@ function terminatePluginChild(child: ChildProcess): void {
 /** 插件停用时终止仍在运行的安装进程，避免热更新后遗留 pnpm。 */
 export function disposeDependencyInstaller(): void {
   for (const child of activePluginChildren) terminatePluginChild(child)
+  for (const handle of activeDesktopPluginHandles) handle.cancel()
 }
 
 export function monitorPluginChild(child: ChildProcess, timeoutMs = PLUGIN_INSTALL_TIMEOUT_MS): Promise<void> {
@@ -379,9 +490,41 @@ export function monitorPluginChild(child: ChildProcess, timeoutMs = PLUGIN_INSTA
   })
 }
 
-function runDshPlugin(args: readonly string[], timeoutMs = PLUGIN_INSTALL_TIMEOUT_MS): Promise<void> {
+function monitorDesktopPlugin(handle: DesktopPnpmHandle, timeoutMs = PLUGIN_INSTALL_TIMEOUT_MS): Promise<void> {
+  return new Promise((resolvePromise, reject) => {
+    activeDesktopPluginHandles.add(handle)
+    let output = ''
+    let settled = false
+    const collect = (chunk: Buffer | string): void => { output = `${output}${String(chunk)}`.slice(-64 * 1024) }
+    const finish = (error?: Error): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeout)
+      activeDesktopPluginHandles.delete(handle)
+      error === undefined ? resolvePromise() : reject(error)
+    }
+    handle.stdout?.on('data', collect)
+    handle.stderr?.on('data', collect)
+    handle.stdout?.once('error', () => { handle.cancel(); finish(new Error('无法读取 DSH Desktop 插件安装输出。')) })
+    handle.stderr?.once('error', () => { handle.cancel(); finish(new Error('无法读取 DSH Desktop 插件安装输出。')) })
+    void handle.done.then(
+      outcome => { finish(outcome.exitCode === 0 && outcome.signal === null ? undefined : pluginCommandError(output)) },
+      () => { finish(pluginCommandError(output)) },
+    )
+    const timeout = setTimeout(() => {
+      handle.cancel()
+      finish(new Error('插件安装超时，已终止安装进程。请检查网络后重试。'))
+    }, timeoutMs)
+    timeout.unref?.()
+  })
+}
+
+export function runDshPlugin(args: readonly string[], runtime: DependencyRuntime = resolveDependencyRuntime(), timeoutMs = PLUGIN_INSTALL_TIMEOUT_MS): Promise<void> {
+  if (runtime.desktopPnpm !== undefined) {
+    return monitorDesktopPlugin(runtime.desktopPnpm.runPlugin(args, runtime.profileDir), timeoutMs)
+  }
   const entry = resolveDshCliEntry()
-  const child = spawn(process.execPath, [...pluginExecArgv(), entry, 'plugin', '--profile', 'web', ...args], {
+  const child = spawn(process.execPath, [...pluginExecArgv(), entry, 'plugin', '--profile', runtime.profileName, ...args], {
     cwd: process.cwd(),
     env: { ...process.env, CI: 'true' },
     windowsHide: true,
@@ -394,11 +537,15 @@ function runDshPlugin(args: readonly string[], timeoutMs = PLUGIN_INSTALL_TIMEOU
 let installing = false
 
 /** 仅允许安装固定依赖，避免把浏览器输入转成任意命令。 */
-export async function installDependency(id: string | null, requestHotUpdate: () => boolean = requestDesktopHotUpdate): Promise<readonly DependencyStatus[]> {
+export async function installDependency(
+  id: string | null,
+  requestHotUpdate: () => boolean = requestDesktopHotUpdate,
+  runtime: DependencyRuntime = resolveDependencyRuntime(),
+): Promise<readonly DependencyStatus[]> {
   if (installing) throw new Error('已有依赖安装正在进行，请等待完成后再试。')
   installing = true
   try {
-    return await installDependenciesLocked([id], requestHotUpdate)
+    return await installDependenciesLocked([id], requestHotUpdate, runtime)
   } finally {
     installing = false
   }
@@ -415,27 +562,34 @@ export function updatableDependencyIds(statuses: readonly DependencyStatus[]): M
 }
 
 /** 把所有待更新版本一次写入清单，最后只请求一次桌面热更新。 */
-export async function updateAllDependencies(requestHotUpdate: () => boolean = requestDesktopHotUpdate): Promise<UpdateAllDependenciesResult> {
+export async function updateAllDependencies(
+  requestHotUpdate: () => boolean = requestDesktopHotUpdate,
+  runtime: DependencyRuntime = resolveDependencyRuntime(),
+): Promise<UpdateAllDependenciesResult> {
   if (installing) throw new Error('已有依赖安装正在进行，请等待完成后再试。')
   installing = true
   try {
-    const current = await dependencyStatuses()
+    const current = await dependencyStatuses(runtime)
     const ids = updatableDependencyIds(current)
     if (ids.length === 0) return { dependencies: current, updatedCount: 0 }
-    const dependencies = await installDependenciesLocked(ids, requestHotUpdate)
+    const dependencies = await installDependenciesLocked(ids, requestHotUpdate, runtime)
     return { dependencies, updatedCount: ids.length }
   } finally {
     installing = false
   }
 }
 
-async function installDependenciesLocked(ids: readonly (string | null)[], requestHotUpdate: () => boolean): Promise<readonly DependencyStatus[]> {
+async function installDependenciesLocked(
+  ids: readonly (string | null)[],
+  requestHotUpdate: () => boolean,
+  runtime: DependencyRuntime,
+): Promise<readonly DependencyStatus[]> {
   const dependencies = [...new Set(ids)].map((id) => {
     const dependency = managedDependency(id)
     if (dependency === undefined) throw new Error('不支持安装该依赖。')
     return dependency
   })
-  const declared = await declaredPluginNames()
+  const declared = await declaredPluginNames(runtime)
   const requestedTargets = await Promise.all(dependencies.map(async (dependency) => {
     const latestVersion = await npmLatestVersion(dependency.packageName)
     if (latestVersion === undefined) throw new Error('无法获取 npm 最新版本，请检查网络或 npm registry 后重试。')
@@ -449,28 +603,28 @@ async function installDependenciesLocked(ids: readonly (string | null)[], reques
   const targets = await Promise.all(targetPackages.map(async (packageName) => {
     const requestedVersion = requestedVersions.get(packageName)
     if (requestedVersion !== undefined) return { packageName, version: requestedVersion }
-    const version = await installedPackageVersion(packageName) ?? await npmLatestVersion(packageName)
+    const version = await installedPackageVersion(packageName, runtime) ?? await npmLatestVersion(packageName)
     if (version === undefined) throw new Error('无法读取 Suite 成员版本，请检查 npm 安装后重试。')
     return { packageName, version }
   }))
   const remove = [...new Set(targets.flatMap(target => pluginsToRemoveBeforeInstall(declared, target.packageName)))]
   for (const target of targets) {
-    await ensureLatestReleaseAllowed(target.packageName, target.version)
-    if (!isOfficialRuntimePackage(target.packageName)) await recordDeclaredVersion(target.packageName, target.version)
-    await recordPendingUpdate(target.packageName, target.version)
+    await ensureLatestReleaseAllowed(target.packageName, target.version, runtime)
+    if (!isOfficialRuntimePackage(target.packageName)) await recordDeclaredVersion(target.packageName, target.version, runtime)
+    await recordPendingUpdate(target.packageName, target.version, runtime)
   }
-  if (remove.length > 0) await runDshPlugin(['remove', ...remove])
-  if (requestHotUpdate()) return dependencyStatuses()
+  if (remove.length > 0) await runDshPlugin(['remove', ...remove], runtime)
+  if (runtime.desktopPnpm === undefined && requestHotUpdate()) return dependencyStatuses(runtime)
   for (const target of targets) {
     try {
-      await runDshPlugin(['add', `${target.packageName}@${target.version}`, '--registry=https://registry.npmjs.org/'])
+      await runDshPlugin(['add', `${target.packageName}@${target.version}`, '--registry=https://registry.npmjs.org/'], runtime)
     } catch (error) {
-      if (isRestartableInstallError(error)) return dependencyStatuses()
+      if (isRestartableInstallError(error)) return dependencyStatuses(runtime)
       throw error
     }
-    const installed = await installedPackageVersion(target.packageName)
-    if (installed !== target.version) return dependencyStatuses()
-    await removePendingUpdate(target.packageName)
+    const installed = await installedPackageVersion(target.packageName, runtime)
+    if (installed !== target.version) return dependencyStatuses(runtime)
+    await removePendingUpdate(target.packageName, runtime)
   }
-  return dependencyStatuses()
+  return dependencyStatuses(runtime)
 }

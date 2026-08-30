@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import type { ChildProcess } from 'node:child_process'
 import { join, resolve } from 'node:path'
+import { tmpdir } from 'node:os'
+import { PassThrough } from 'node:stream'
 import { pathToFileURL } from 'node:url'
-import { applyReleaseExclude, directPackagesForInstall, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, pluginCommandError, pluginExecArgv, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, updatableDependencyIds } from '../src/dependency-manager.ts'
+import { applyReleaseExclude, dependencyStatuses, desktopRuntimeRoots, directPackagesForInstall, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, pluginCommandError, pluginExecArgv, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, updatableDependencyIds } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 const sourceRoot = resolve('fixtures', 'deepseek-harness')
@@ -36,6 +39,77 @@ assert.equal(
   undefined,
   '源码启动不应误判为全局 DSH 运行时',
 )
+
+const desktopProfileDir = resolve('fixtures', 'desktop-profile')
+const desktopBootstrapPath = resolve('fixtures', 'DSH Desktop.app', 'Contents', 'Resources', 'app.asar.unpacked', 'lib', 'desktop-cli.js')
+let desktopPluginArgs: readonly string[] | undefined
+let desktopPluginCwd: string | undefined
+const desktopPnpm = {
+  runPlugin(args: readonly string[], invokingDir: string) {
+    desktopPluginArgs = args
+    desktopPluginCwd = invokingDir
+    return {
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+      done: Promise.resolve({ exitCode: 0, signal: null }),
+      cancel() {},
+    }
+  },
+}
+const desktopServices = new Map<string, unknown>([
+  ['desktopProfiles', { current: { name: 'desktop', dir: desktopProfileDir } }],
+  ['desktopPnpm', desktopPnpm],
+  ['desktopPnpmBootstrap', { activeProfileName: 'desktop', activeProfileDir: desktopProfileDir, dshBootstrapPath: desktopBootstrapPath }],
+])
+const desktopRuntime = resolveDependencyRuntime({ get: name => desktopServices.get(name) }, { env: {}, argv: ['/app'], homeDir: resolve('fixtures', 'home') })
+assert.equal(desktopRuntime.environmentKind, 'desktop')
+assert.equal(desktopRuntime.profileName, 'desktop')
+assert.equal(desktopRuntime.profileDir, desktopProfileDir, 'Desktop 必须读取 Host 当前 profile，而不是回退到 web')
+assert.ok(desktopRuntime.runtimeRoots.includes(resolve(desktopBootstrapPath, '..', '..')), 'Desktop runtime roots 必须包含 app.asar.unpacked')
+assert.equal(desktopRuntime.desktopPnpm, desktopPnpm, 'Desktop 安装必须复用 Host 提供的包管理服务')
+
+const customRuntime = resolveDependencyRuntime(undefined, {
+  env: { DSH_PROFILE_DIR: resolve('fixtures', 'profiles', 'custom') },
+  argv: ['/node', installedEntry, '--profile', 'custom'],
+  homeDir: resolve('fixtures', 'home'),
+})
+assert.equal(customRuntime.environmentKind, 'cli')
+assert.equal(customRuntime.profileName, 'custom')
+assert.equal(customRuntime.profileDir, resolve('fixtures', 'profiles', 'custom'), '普通 Web/CLI 必须继续尊重 DSH_PROFILE_DIR')
+assert.deepEqual(desktopRuntimeRoots('relative/desktop-cli.js'), [], 'Desktop bootstrap 必须是可信绝对路径')
+
+await runDshPlugin(['add', '@michengai/dsh-codex-ui@0.2.92'], desktopRuntime, 1_000)
+assert.deepEqual(desktopPluginArgs, ['add', '@michengai/dsh-codex-ui@0.2.92'])
+assert.equal(desktopPluginCwd, desktopProfileDir, 'Desktop 安装必须以当前 profile 作为调用目录')
+
+const statusRoot = await mkdtemp(join(tmpdir(), 'dcu-desktop-status-'))
+const statusProfile = join(statusRoot, 'profiles', 'desktop')
+const statusRuntimeRoot = join(statusRoot, 'app.asar.unpacked')
+const writeManifest = async (root: string, packageName: string, version: string): Promise<void> => {
+  const directory = join(root, 'node_modules', ...packageName.split('/'))
+  await mkdir(directory, { recursive: true })
+  await writeFile(join(directory, 'package.json'), JSON.stringify({ name: packageName, version }), 'utf8')
+}
+await mkdir(statusProfile, { recursive: true })
+await writeFile(join(statusProfile, 'package.json'), JSON.stringify({ dependencies: { '@michengai/dsh-codex-ui': '0.2.92' } }), 'utf8')
+await writeManifest(statusProfile, '@michengai/dsh-codex-ui', '0.2.92')
+await writeManifest(statusRuntimeRoot, '@deepseek-ai/dsh', '0.1.2-alpha.1')
+const previousFetch = globalThis.fetch
+globalThis.fetch = async input => new Response(JSON.stringify({ version: String(input).includes('@deepseek-ai') ? '0.1.2-alpha.1' : '0.2.92' }))
+try {
+  const statuses = await dependencyStatuses({
+    environmentKind: 'desktop',
+    profileName: 'desktop',
+    profileDir: statusProfile,
+    runtimeRoots: [statusRuntimeRoot],
+  })
+  assert.equal(statuses.find(status => status.id === 'ui')?.installed, true, 'Desktop profile 中已声明且存在的 Codex UI 必须显示已安装')
+  assert.equal(statuses.find(status => status.id === 'dsh')?.installed, true, 'Desktop 应用内置的 DSH runtime 必须显示已安装')
+  assert.equal(statuses.find(status => status.id === 'skills')?.installed, false, '当前 profile 未安装的精确包仍应显示缺失')
+} finally {
+  globalThis.fetch = previousFetch
+  await rm(statusRoot, { recursive: true, force: true })
+}
 
 const source = [
   'packages:',
