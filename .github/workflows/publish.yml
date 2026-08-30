@@ -55,4 +55,4 @@ jobs:
       - name: 启动受信任的 Installer 发布工作流
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run release-suite-installer.yml --ref main
+        run: gh workflow run release-suite-installer.yml --repo "$GITHUB_REPOSITORY" --ref main
