@@ -64,8 +64,26 @@ type ArchiveRegistry = {
   deleteSession: (sessionId: SessionId) => Promise<{ ok: boolean; error?: { message: string } }>
 }
 
+type UiWorkspaceService = {
+  startSession: (workspaceId?: WorkspaceId) => void
+}
+
 function hasDeleteSession(value: unknown): value is ArchiveRegistry {
   return value !== null && typeof value === 'object' && 'deleteSession' in value && typeof value.deleteSession === 'function'
+}
+
+function hasStartSession(value: unknown): value is UiWorkspaceService {
+  return value !== null && typeof value === 'object' && 'startSession' in value && typeof value.startSession === 'function'
+}
+
+/** Archive Manager replaces the official ui-workspace row with this optional service. */
+export function startWorkspaceSession(ctx: ClientContext, workspaceId?: WorkspaceId): void {
+  const uiWorkspace = (ctx.get as (name: string) => unknown)('uiWorkspace')
+  if (hasStartSession(uiWorkspace)) {
+    uiWorkspace.startSession(workspaceId)
+    return
+  }
+  ctx.workspaces.startSession(workspaceId)
 }
 
 /** 替换 DSH 的官方 sidebar 插槽，不修改 DSH 源码或会话数据。 */
@@ -92,7 +110,7 @@ export function apply(ctx: ClientContext): void {
     },
     inject: () => ({
       openSession: (sessionId: SessionId) => { ctx.sessions.open(sessionId) },
-      startSession: (workspaceId?: WorkspaceId) => { ctx.workspaces.startSession(workspaceId) },
+      startSession: (workspaceId?: WorkspaceId) => { startWorkspaceSession(ctx, workspaceId) },
       toggleSidebar: () => { ctx.layout.toggleSidebar() },
       archiveSession: (sessionId: SessionId) => ctx.workspaces.archiveSession(sessionId),
       deleteSession,
@@ -154,7 +172,7 @@ export function apply(ctx: ClientContext): void {
       renameWorkspace: (workspaceId: WorkspaceId, title: string) => ctx.workspaces.rename(workspaceId, title),
       insertWorkspaceBefore: (workspaceId: WorkspaceId, beforeWorkspaceId?: WorkspaceId) => ctx.workspaces.insertBefore(workspaceId, beforeWorkspaceId),
       insertSessionBefore: (workspaceId: WorkspaceId, sessionId: SessionId, beforeSessionId?: SessionId) => ctx.workspaces.insertSessionBefore(workspaceId, sessionId, beforeSessionId),
-      startSession: (workspaceId?: WorkspaceId) => { ctx.workspaces.startSession(workspaceId) },
+      startSession: (workspaceId?: WorkspaceId) => { startWorkspaceSession(ctx, workspaceId) },
     }),
   }, CodexWorkspaceBrowser))
 
