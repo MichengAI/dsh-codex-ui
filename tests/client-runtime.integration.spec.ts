@@ -2,7 +2,7 @@ import { createRequire } from 'node:module'
 import { act, createElement, type ReactNode } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { SlotTestRuntime } from '@deepseek-ai/dsh-client-test-runtime'
-import { apply, inject } from '../src/client/index.ts'
+import { apply, inject, startWorkspaceSession } from '../src/client/index.ts'
 import { CodexSidebar } from '../src/client/CodexSidebar.tsx'
 import { ConnectorsSection } from '../src/client/ConnectorsSection.tsx'
 
@@ -13,6 +13,24 @@ const createRoot = (createRequire(import.meta.url)('react-dom/client') as {
 let runtime: SlotTestRuntime | undefined
 
 afterEach(async () => { await runtime?.dispose() })
+
+test('新建任务优先使用 Archive Manager 提供的 uiWorkspace，并保留官方回退', () => {
+  const archiveStart = vi.fn()
+  const coreStart = vi.fn()
+  const workspaceId = 'workspace-1'
+  startWorkspaceSession({
+    get: (name: string) => name === 'uiWorkspace' ? { startSession: archiveStart } : undefined,
+    workspaces: { startSession: coreStart },
+  } as never, workspaceId as never)
+  expect(archiveStart).toHaveBeenCalledWith(workspaceId)
+  expect(coreStart).not.toHaveBeenCalled()
+
+  startWorkspaceSession({
+    get: () => undefined,
+    workspaces: { startSession: coreStart },
+  } as never, workspaceId as never)
+  expect(coreStart).toHaveBeenCalledWith(workspaceId)
+})
 
 test('侧栏替换以更低优先级接管工作区树，并保留 footer action 子插槽', async () => {
   runtime = await SlotTestRuntime.create()

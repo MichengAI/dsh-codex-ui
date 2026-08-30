@@ -43,6 +43,9 @@ assert.match(manager, /minimumReleaseAgeExclude/, '用户确认更新的精确�
 assert.match(manager, /ensureLatestReleaseAllowed/, '安装与更新前必须持久化本次确认的版本白名单')
 assert.match(manager, /resolveDshCliEntry/, '必须把当前 CLI 入口收成绝对路径后再启动子进程')
 assert.match(manager, /cwd: process\.cwd\(\)/, '子进程必须沿用当前 DSH 启动目录，而不是 dirname\(entry\)')
+assert.match(manager, /desktopProfiles/, 'Desktop 必须通过 Host service 读取当前 profile')
+assert.match(manager, /desktopPnpm/, 'Desktop 安装必须复用 Host 提供的包管理能力')
+assert.doesNotMatch(manager, /'--profile', 'web'/, '安装命令不得把目标 profile 硬编码为 web')
 assert.match(manager, /\['add', `\$\{target\.packageName\}@\$\{target\.version\}`, '--registry=https:\/\/registry\.npmjs\.org\/'\]/, '安装必须走官方 npm 源，避免镜像未同步导致失败')
 assert.match(manager, /pluginsToRemoveBeforeInstall/, '单独更新子插件前必须卸掉套件')
 assert.doesNotMatch(manager, /--config\.minimumReleaseAge=0/, '不得临时关闭整次 pnpm 解析的发布时间保护')
@@ -67,7 +70,7 @@ assert.match(about, /about\.updateAll/, '关于页必须提供全部更新按钮
 assert.match(about, /action=update-all/, '全部更新必须调用批量接口，不能在浏览器逐项请求')
 assert.match(about, /aria-busy/, '批量更新必须提供可访问的忙碌状态')
 assert.match(manager, /updatableDependencyIds/, '批量更新必须只选择已安装且可更新的插件')
-assert.match(manager, /if \(requestHotUpdate\(\)\)/, '批量更新登记完全部版本后只请求一次热更新')
+assert.match(manager, /runtime\.desktopPnpm === undefined && requestHotUpdate\(\)/, '仅旧 Host 在登记完全部版本后请求一次热更新，Desktop 必须先执行宿主安装')
 assert.match(about, /about\.feature\.search/, '关于页必须列出全局搜索能力')
 assert.match(about, /about\.feature\.navigator/, '关于页必须列出会话轮次导航能力')
 assert.match(sidebar, /selectSection\(t\('about\.nav'\)\)/, '缺失依赖的侧栏入口必须跳转关于页面')
@@ -76,4 +79,3 @@ assert.match(locales, /about\.dependency\.im/, '关于页必须提供 IM 插件�
 assert.match(locales, /about\.dependency\.schedule/, '关于页必须提供定时任务插件名称')
 assert.match(locales, /about\.dependency\.market/, '关于页必须提供插件市场名称')
 assert.match(locales, /sidebar\.marketplace/, '插件入口必须认识市场分区标题')
-
