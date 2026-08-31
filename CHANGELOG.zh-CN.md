@@ -4,6 +4,15 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.95 — 2026-09-01
+
+配套版本：`@michengai/dsh-codex-suite-installer@0.1.12`。
+
+### 修复
+
+- 浅色与暗色主题下，侧边栏背景现在与宿主工作区背景保持一致。
+- 将企业微信频道中被裁切的白底图标替换为紧凑的多色品牌标记，在侧边栏尺寸下仍能清晰识别。
+
 ## 0.2.94 — 2026-08-30
 
 配套版本：`@michengai/dsh-codex-suite-installer@0.1.11`。

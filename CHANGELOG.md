@@ -4,6 +4,15 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.95 — 2026-09-01
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.12`.
+
+### Fixed
+
+- Matched the sidebar background to the Host workspace background in both light and dark themes.
+- Replaced the clipped white-tile WeCom channel icon with a compact multicolor brand mark that remains legible at sidebar size.
+
 ## 0.2.94 — 2026-08-30
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.11`.
