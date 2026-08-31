@@ -1,6 +1,6 @@
 {
   "name": "@michengai/dsh-codex-suite-installer",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "轻量 DSH Codex Suite 安装器：将六个成员装为同一 profile 的直接插件",
   "license": "Apache-2.0",
   "type": "module",
