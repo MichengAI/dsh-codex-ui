@@ -5,6 +5,7 @@ import { SlotTestRuntime } from '@deepseek-ai/dsh-client-test-runtime'
 import { apply, inject, startWorkspaceSession } from '../src/client/index.ts'
 import { CodexSidebar } from '../src/client/CodexSidebar.tsx'
 import { ConnectorsSection } from '../src/client/ConnectorsSection.tsx'
+import { DesktopTerminalButton } from '../src/client/DesktopTerminalButton.tsx'
 
 const createRoot = (createRequire(import.meta.url)('react-dom/client') as {
   createRoot: (container: Element) => { render: (node: ReactNode) => void; unmount: () => void }
@@ -13,6 +14,56 @@ const createRoot = (createRequire(import.meta.url)('react-dom/client') as {
 let runtime: SlotTestRuntime | undefined
 
 afterEach(async () => { await runtime?.dispose() })
+
+test('会话终端按钮传递当前 sessionId，并在失败时提供可见反馈', async () => {
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  const root = createRoot(container)
+  const openTerminal = vi.fn(async () => { throw new Error('unavailable') })
+  try {
+    await act(async () => {
+      root.render(createElement(DesktopTerminalButton, {
+        sessionId: 'session-current',
+        t: ((key: string) => key) as never,
+        openTerminal,
+      } as never))
+    })
+    const button = container.querySelector<HTMLButtonElement>('.dcu-session-terminal-button')
+    await act(async () => { button?.click(); await Promise.resolve(); await Promise.resolve() })
+
+    expect(openTerminal).toHaveBeenCalledWith('session-current')
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe('terminal.failed')
+    expect(button?.dataset.error).toBe('true')
+  } finally {
+    await act(async () => { root.unmount() })
+    container.remove()
+  }
+})
+
+test('终端入口仅在 Desktop 原生窗口服务存在时注册', async () => {
+  runtime = await SlotTestRuntime.create()
+  runtime.provide('connection', { api: { host: { openPath: async () => ({ result: { ok: true, value: undefined } }) } } })
+  runtime.provide('conversation', {})
+  runtime.provide('layout', { toggleSidebar: () => {} })
+  runtime.provide('locale', {
+    register: () => () => {},
+    bind: () => (key: string) => key,
+  })
+  await runtime.declare({
+    'conversation.session.header.utilities': { kind: 'list', scope: 'session' },
+  })
+
+  await runtime.mount({ inject, apply })
+  expect(runtime.slots.entries('conversation.session.header.utilities')).toHaveLength(1)
+
+  runtime.provide('desktopWindow', {
+    capabilities: { sessionTerminal: true },
+    openSessionTerminal: async () => {},
+  })
+  await vi.waitFor(() => {
+    expect(runtime?.slots.entries('conversation.session.header.utilities')).toHaveLength(2)
+  })
+})
 
 test('新建任务优先使用 Archive Manager 提供的 uiWorkspace，并保留官方回退', () => {
   const archiveStart = vi.fn()

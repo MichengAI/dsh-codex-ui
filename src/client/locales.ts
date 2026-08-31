@@ -107,6 +107,7 @@ export const zh = {
   'about.feature.sessions': '会话支持重命名、置顶、未读标记、归档、删除及右键快捷操作',
   'about.feature.conversation': '保留原生消息、工具调用、输入、权限和模型选择，仅调整容器视觉',
   'about.feature.navigator': '当前会话提供轮次缩略导航，可快速跳转至每一次用户提问',
+  'about.feature.terminal': '支持新版 DSH Desktop 时，可从会话标题栏打开当前工作区终端',
   'about.dependencies': '配套管理插件',
   'about.dependenciesDescription': '每个配套插件都可单独安装和更新，也可一键更新所有可更新项。可分别检查 Codex UI、专家、技能、归档、IM、定时任务和第三方插件市场。',
   'about.loading': '正在读取依赖安装状态…',
@@ -134,6 +135,9 @@ export const zh = {
   'turns.label': '当前会话轮次导航',
   'turns.untitled': '未命名提问',
   'turns.jump': '跳转到第 {index} 轮：{summary}',
+  'terminal.open': '在终端中打开工作区',
+  'terminal.opening': '正在打开终端…',
+  'terminal.failed': '无法打开工作区终端，请稍后重试。',
 } as const
 
 export const en: Record<keyof typeof zh, string> = {
@@ -240,6 +244,7 @@ export const en: Record<keyof typeof zh, string> = {
   'about.feature.sessions': 'Rename, pin, mark unread, archive, delete, or use context actions for conversations',
   'about.feature.conversation': 'Keeps native messages, tool calls, composer, permissions, and model selection while refining the container visuals',
   'about.feature.navigator': 'Navigate directly to each user prompt with the current conversation turn navigator',
+  'about.feature.terminal': 'Open the current workspace terminal from the conversation header in supported DSH Desktop generations',
   'about.dependencies': 'Companion management plugins',
   'about.dependenciesDescription': 'Install or update each companion plugin separately, or update every available plugin at once. Check Codex UI, expert, skill, archive, IM, scheduled-task, and marketplace plugins on their own.',
   'about.loading': 'Loading dependency status…',
@@ -267,6 +272,9 @@ export const en: Record<keyof typeof zh, string> = {
   'turns.label': 'Conversation turn navigation',
   'turns.untitled': 'Untitled prompt',
   'turns.jump': 'Jump to turn {index}: {summary}',
+  'terminal.open': 'Open workspace in terminal',
+  'terminal.opening': 'Opening terminal…',
+  'terminal.failed': 'Could not open the workspace terminal. Try again.',
 }
 
 export type CodexUiKey = keyof typeof zh

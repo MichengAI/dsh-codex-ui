@@ -4,6 +4,16 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## Unreleased
+
+### Added
+
+- Added a Codex-style terminal button to the conversation header. It appears only when a new DSH Desktop generation advertises the `sessionTerminal` capability and opens the current workspace through the public `desktopWindow.openSessionTerminal(sessionId)` action.
+
+### Safety
+
+- Codex UI passes only the session id. It never accepts or sends a working directory or command; DSH Desktop resolves the directory from the live session inside the Host.
+
 ## 0.2.94 — 2026-08-30
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.11`.

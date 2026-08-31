@@ -16,6 +16,7 @@ import { observePermissionLabels } from './permission-labels.ts'
 import { observeSlimSidebar } from './sidebar-width.ts'
 import { observeConversationHeader } from './conversation-header.ts'
 import { TurnNavigator } from './TurnNavigator.tsx'
+import { DesktopTerminalButton } from './DesktopTerminalButton.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
@@ -76,6 +77,22 @@ function hasStartSession(value: unknown): value is UiWorkspaceService {
   return value !== null && typeof value === 'object' && 'startSession' in value && typeof value.startSession === 'function'
 }
 
+type DesktopSessionTerminalService = {
+  readonly capabilities: { readonly sessionTerminal: true }
+  openSessionTerminal(sessionId: string): Promise<void>
+}
+
+function supportsDesktopSessionTerminal(value: unknown): value is DesktopSessionTerminalService {
+  if (value === null || typeof value !== 'object' || !('capabilities' in value)) return false
+  const capabilities = value.capabilities
+  return capabilities !== null
+    && typeof capabilities === 'object'
+    && 'sessionTerminal' in capabilities
+    && capabilities.sessionTerminal === true
+    && 'openSessionTerminal' in value
+    && typeof value.openSessionTerminal === 'function'
+}
+
 /** Archive Manager replaces the official ui-workspace row with this optional service. */
 export function startWorkspaceSession(ctx: ClientContext, workspaceId?: WorkspaceId): void {
   const uiWorkspace = (ctx.get as (name: string) => unknown)('uiWorkspace')
@@ -124,6 +141,19 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({
     name: 'conversation.session.header.utilities', id: 'turn-navigator', order: 100, locale: NS,
   }, TurnNavigator))
+  ctx.inject(['desktopWindow'], (desktopCtx) => {
+    const desktopWindow = desktopCtx.get('desktopWindow')
+    if (!supportsDesktopSessionTerminal(desktopWindow)) return
+    desktopCtx.slots.inject('conversation.session.header.utilities', () => desktopCtx.slots.register({
+      name: 'conversation.session.header.utilities',
+      id: 'desktop-session-terminal',
+      order: 80,
+      locale: NS,
+      inject: () => ({
+        openTerminal: (sessionId: string) => desktopWindow.openSessionTerminal(sessionId),
+      }),
+    }, DesktopTerminalButton))
+  })
 
   const forkSession = async (sessionId: SessionId): Promise<void> => {
     const childId = await ctx.sessions.fork({ sessionId, increaseTitle: true })

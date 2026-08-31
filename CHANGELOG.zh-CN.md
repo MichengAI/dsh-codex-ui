@@ -4,6 +4,16 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 未发布
+
+### 新增
+
+- 在会话标题栏增加 Codex 风格终端按钮；仅当新版 DSH Desktop 明确提供 `sessionTerminal` capability 时显示，并通过公开的 `desktopWindow.openSessionTerminal(sessionId)` 操作打开当前工作区。
+
+### 安全性
+
+- Codex UI 只传会话 ID，不接收或发送工作目录与命令；具体目录由 DSH Desktop Host 从 live session 中解析。
+
 ## 0.2.94 — 2026-08-30
 
 配套版本：`@michengai/dsh-codex-suite-installer@0.1.11`。

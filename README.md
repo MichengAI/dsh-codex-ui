@@ -27,6 +27,7 @@
 - List workspaces and conversations with expand/collapse, drag reorder, project pinning, unread dots, and running-state indicators.
 - Add project and conversation menus for rename, pin, unread, archive, fork, open folder, copy, and delete.
 - Restyle the conversation column and composer card, and add a compact turn navigator on the current session.
+- Add a current-workspace terminal button when DSH Desktop advertises the `sessionTerminal` capability; ordinary browsers and older Desktop generations do not show it.
 - Show companion-plugin status in **Settings → About**, and install the missing pieces from npm.
 
 ## Screenshots
@@ -122,6 +123,7 @@ Open DSH Web. The left navigation is rendered by this plugin.
 | Pin a workspace | Drag it into **Pinned**, or use **Pin project** in the project menu. |
 | Manage a conversation | Open the conversation menu to rename, pin, mark unread, archive, fork, copy, or delete. |
 | Jump between turns | Use the turn marks on the left of the current conversation. |
+| Open the workspace terminal | In a supported DSH Desktop generation, click the terminal button on the right side of the conversation header. |
 | Inspect connectors | Open **Settings → Connectors**. Addresses, commands, and credentials are never shown. |
 | Check companion plugins | Open **Settings → About** to install or update individual companion plugins. |
 
@@ -137,6 +139,7 @@ Deleting a workspace registration does not delete its folder or conversation rec
 | Conversation records | DSH host services | Unchanged by this plugin |
 
 - The plugin uses only public DSH slots and services.
+- The terminal button passes only a session id to the public `desktopWindow.openSessionTerminal(sessionId)` action. Desktop Host resolves the workspace and accepts no path or command.
 - It does not modify host source code or the conversation data model.
 - Permanent deletion of archived conversations is provided by `@michengai/dsh-archive-manager`.
 - The Connectors directory never exposes addresses, commands, or credentials.
