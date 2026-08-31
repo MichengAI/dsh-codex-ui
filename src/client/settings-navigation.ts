@@ -13,6 +13,21 @@ export function pickSettingsSectionButton<T extends { textContent: string | null
   return undefined
 }
 
+/**
+ * 可选插件未注册设置入口时，直接打开兜底页，避免先展示通用设置并等待导航超时。
+ */
+export function routeOptionalSettingsSection(
+  available: boolean,
+  openRequested: () => void,
+  openFallback: () => void,
+): void {
+  if (available) {
+    openRequested()
+    return
+  }
+  openFallback()
+}
+
 let cancelPendingNavigation: (() => void) | undefined
 export const SETTINGS_NAVIGATION_TIMEOUT_MS = 4_000
 

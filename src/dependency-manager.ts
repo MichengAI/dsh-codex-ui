@@ -268,6 +268,38 @@ export function applyReleaseExclude(source: string, packageName: string, version
   return `${source}${source === '' || source.endsWith('\n') ? '' : eol}minimumReleaseAgeExclude:${eol}${entry}${eol}`
 }
 
+/**
+ * pnpm 11 会在首次解析带 install script 的传递依赖时中止并写入占位值。
+ * 这些依赖的运行时不需要 postinstall，因此在调用 DSH plugin add 之前显式
+ * 记录拒绝执行，保证“关于”页单独安装和 Suite Installer 行为一致。
+ */
+export function applyRequiredBuildPolicies(source: string): string {
+  const eol = source.includes('\r\n') ? '\r\n' : '\n'
+  const lines = source.split(/\r?\n/)
+  const start = lines.findIndex(line => line === 'allowBuilds:')
+  if (start === -1) {
+    return `${source}${source === '' || source.endsWith('\n') ? '' : eol}allowBuilds:${eol}  protobufjs: false${eol}  koffi: false${eol}`
+  }
+  let end = start + 1
+  while (end < lines.length && (lines[end] === '' || /^\s/.test(lines[end]!))) end += 1
+  const body = lines.slice(start + 1, end).filter(line => !/^\s{2}(?:protobufjs|koffi):/.test(line))
+  lines.splice(start + 1, end - start - 1, '  protobufjs: false', '  koffi: false', ...body)
+  return lines.join(eol)
+}
+
+async function ensureRequiredBuildPolicies(runtime: DependencyRuntime): Promise<void> {
+  const path = resolve(profileDirectory(runtime), 'pnpm-workspace.yaml')
+  let source: string
+  try {
+    source = await readFile(path, 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    source = ''
+  }
+  const next = applyRequiredBuildPolicies(source)
+  if (next !== source) await writeFile(path, next, 'utf8')
+}
+
 /** 将用户本次确认的精确版本加入 Profile 的 pnpm 发布时间保护例外。 */
 async function ensureLatestReleaseAllowed(packageName: string, version: string, runtime: DependencyRuntime): Promise<void> {
   if (parseSemver(version) === undefined) throw new Error('npm 返回了无法识别的最新版本。')
@@ -422,6 +454,9 @@ export function pluginCommandError(stderr: string): Error {
   }
   if (/UNEXPECTED_STORE|Unexpected store location/i.test(detail)) {
     return new Error('插件目录和 pnpm 仓库不一致。请完全退出桌面端后再更新。')
+  }
+  if (/ERR_PNPM_IGNORED_BUILDS|Ignored build scripts/i.test(detail)) {
+    return new Error('插件依赖的 pnpm 构建脚本策略尚未确认。请更新 Profile 的 allowBuilds 配置后重试。')
   }
   if (/pnpm not found/i.test(detail)) {
     return new Error('当前环境找不到 pnpm。请从桌面端启动后再更新。')
@@ -600,6 +635,7 @@ async function installDependenciesLocked(
     return { packageName, version }
   }))
   const remove = [...new Set(targets.flatMap(target => pluginsToRemoveBeforeInstall(declared, target.packageName)))]
+  await ensureRequiredBuildPolicies(runtime)
   for (const target of targets) {
     await ensureLatestReleaseAllowed(target.packageName, target.version, runtime)
     if (!isOfficialRuntimePackage(target.packageName)) await recordDeclaredVersion(target.packageName, target.version, runtime)

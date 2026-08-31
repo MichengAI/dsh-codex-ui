@@ -7,7 +7,7 @@ import {
 import type { SessionId, WorkspaceId } from '@deepseek-ai/dsh-client-runtime/client'
 import type { PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { NS } from './locales.ts'
-import { openSettingsSection } from './settings-navigation.ts'
+import { openSettingsSection, routeOptionalSettingsSection } from './settings-navigation.ts'
 import { filterSidebarSearchItems, type SidebarSearchItem } from './sidebar-search.ts'
 import { EMPTY_COMPANION_TABS, type CompanionTabAvailability } from './companion-slots.ts'
 import { ChannelBrowser } from './ChannelBrowser.tsx'
@@ -78,12 +78,13 @@ type SearchEntry = SidebarSearchItem & {
 type SidebarSearchHandle = { open: () => void }
 
 type SidebarSearchProps = Pick<CodexSidebarProps, 'openSession' | 'startSession' | 't' | 'useSessions' | 'useWorkspaces'> & {
+  imSettingsAvailable: boolean
   settingsSeat: RefObject<HTMLDivElement>
 }
 
 /** 搜索状态与大侧栏隔离：输入、悬停和开关弹窗都不能让工作区树跟着重渲染。 */
 const SidebarSearch = forwardRef<SidebarSearchHandle, SidebarSearchProps>(function SidebarSearch(
-  { openSession, startSession, t, useSessions, useWorkspaces, settingsSeat },
+  { imSettingsAvailable, openSession, startSession, t, useSessions, useWorkspaces, settingsSeat },
   ref,
 ) {
   const [open, setOpen] = useState(false)
@@ -109,6 +110,13 @@ const SidebarSearch = forwardRef<SidebarSearchHandle, SidebarSearchProps>(functi
   const selectExternalSection = useCallback((label: string | readonly string[]): void => {
     openSettingsSection(settingsSeat.current, label, () => { selectSection(t('about.nav')) })
   }, [selectSection, settingsSeat, t])
+  const openImSettings = useCallback((): void => {
+    routeOptionalSettingsSection(
+      imSettingsAvailable,
+      () => { selectExternalSection([t('sidebar.imSettings'), 'IM助理']) },
+      () => { selectSection(t('about.nav')) },
+    )
+  }, [imSettingsAvailable, selectExternalSection, selectSection, t])
   const openSettings = useCallback((): void => {
     settingsSeat.current?.querySelector<HTMLButtonElement>('[aria-haspopup="dialog"]')?.click()
   }, [settingsSeat])
@@ -128,11 +136,11 @@ const SidebarSearch = forwardRef<SidebarSearchHandle, SidebarSearchProps>(functi
       { id: 'settings:plugins', group: 'settings', label: t('sidebar.plugins'), keywords: t('search.settings'), run: () => { close(); selectPluginSection() } },
       { id: 'settings:connectors', group: 'settings', label: t('sidebar.connectors'), keywords: t('search.settings'), run: () => { close(); selectSection(t('sidebar.connectors')) } },
       { id: 'settings:schedule', group: 'settings', label: t('sidebar.schedule'), keywords: t('search.settings'), run: () => { close(); selectExternalSection(t('sidebar.schedule')) } },
-      { id: 'settings:assistant', group: 'settings', label: t('sidebar.assistant'), keywords: t('search.settings'), run: () => { close(); selectExternalSection([t('sidebar.imSettings'), 'IM助理']) } },
+      { id: 'settings:assistant', group: 'settings', label: t('sidebar.assistant'), keywords: t('search.settings'), run: () => { close(); openImSettings() } },
       { id: 'settings:about', group: 'settings', label: t('about.nav'), keywords: t('search.settings'), run: () => { close(); selectSection(t('about.nav')) } },
     ]
     return [...sessionEntries, ...settingEntries, { id: 'action:new', group: 'actions', label: t('sidebar.newTask'), keywords: t('search.actions'), run: () => { close(); startSession() } }]
-  }, [close, openSession, openSettings, selectExternalSection, selectPluginSection, selectSection, sessions.byId, sessions.ids, startSession, t, workspaces.archivedSessionIds, workspaces.items])
+  }, [close, openImSettings, openSession, openSettings, selectExternalSection, selectPluginSection, selectSection, sessions.byId, sessions.ids, startSession, t, workspaces.archivedSessionIds, workspaces.items])
   const results = useMemo(() => filterSidebarSearchItems(entries, deferredQuery).slice(0, 12), [deferredQuery, entries])
 
   useEffect(() => { setActiveIndex(0) }, [query, open])
@@ -178,6 +186,13 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
   const selectPluginSection = (): void => { openSettingsSection(settingsSeat.current, [t('sidebar.marketplace'), t('sidebar.plugins')]) }
   const selectExternalSection = (label: string | readonly string[]): void => {
     openSettingsSection(settingsSeat.current, label, () => { selectSection(t('about.nav')) })
+  }
+  const openImSettings = (): void => {
+    routeOptionalSettingsSection(
+      showChannels,
+      () => { selectExternalSection([t('sidebar.imSettings'), 'IM助理']) },
+      () => { selectSection(t('about.nav')) },
+    )
   }
   useEffect(() => {
     if (imTab === 'channels' && !showChannels) setImTab('tasks')
@@ -274,7 +289,7 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
       <button type="button" aria-expanded={extensionsOpen} onClick={() => { setExtensionsOpen(open => !open) }}><MenuIcon><IconEnhanceOutline16 size={16} /></MenuIcon>{t('sidebar.extensions')}</button>
       {extensionsOpen && <div className="dcu-extension-items"><button type="button" onClick={() => { selectExternalSection(t('sidebar.experts')) }}><MenuIcon><IconUserOutline16 size={16} /></MenuIcon>{t('sidebar.experts')}</button><button type="button" onClick={() => { selectExternalSection(t('sidebar.skills')) }}><MenuIcon><IconSkillOutline16 size={16} /></MenuIcon>{t('sidebar.skills')}</button><button type="button" onClick={() => { selectPluginSection() }}><MenuIcon><IconPersonalizationOutline16 size={16} /></MenuIcon>{t('sidebar.plugins')}</button><button type="button" onClick={() => { selectSection(t('sidebar.connectors')) }}><MenuIcon><IconLinkOutline16 size={16} /></MenuIcon>{t('sidebar.connectors')}</button></div>}
       <button type="button" onClick={() => { selectExternalSection(t('sidebar.schedule')) }}><MenuIcon><ScheduleIcon /></MenuIcon>{t('sidebar.schedule')}</button>
-      <button type="button" onClick={() => { selectExternalSection([t('sidebar.imSettings'), 'IM助理']) }}><MenuIcon><ImAssistantIcon /></MenuIcon>{t('sidebar.assistant')}</button>
+      <button type="button" onClick={openImSettings}><MenuIcon><ImAssistantIcon /></MenuIcon>{t('sidebar.assistant')}</button>
     </nav>
     <div className={showCompanionTabs ? "dcu-workspaces dcu-workspaces-tabs" : "dcu-workspaces"}>
       {showCompanionTabs && <div className="dcu-im-tabs">
@@ -291,9 +306,9 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
           : <div className="dcu-native-workspaces">{workspaceSlot}</div>}
     </div>
     </div>
-    <div className="dcu-compact-shell"><button type="button" className="dcu-icon" aria-label={t('sidebar.expand')} onClick={toggleSidebar}><IconPanelLeftOutline16 size={16} /></button><nav className="dcu-compact-nav" aria-label={t('sidebar.mainMenu')}><button type="button" className="dcu-icon" aria-label={t('sidebar.newTask')} onClick={() => { startSession() }}><IconNewChatOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.search')} onClick={() => { search.current?.open() }}><IconSearchOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.experts')} onClick={() => { selectExternalSection(t('sidebar.experts')) }}><IconUserOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.skills')} onClick={() => { selectExternalSection(t('sidebar.skills')) }}><IconSkillOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.plugins')} onClick={() => { selectPluginSection() }}><IconPersonalizationOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.connectors')} onClick={() => { selectSection(t('sidebar.connectors')) }}><IconLinkOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.schedule')} onClick={() => { selectExternalSection(t('sidebar.schedule')) }}><ScheduleIcon /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.assistant')} onClick={() => { selectExternalSection([t('sidebar.imSettings'), 'IM助理']) }}><ImAssistantIcon /></button></nav></div>
+    <div className="dcu-compact-shell"><button type="button" className="dcu-icon" aria-label={t('sidebar.expand')} onClick={toggleSidebar}><IconPanelLeftOutline16 size={16} /></button><nav className="dcu-compact-nav" aria-label={t('sidebar.mainMenu')}><button type="button" className="dcu-icon" aria-label={t('sidebar.newTask')} onClick={() => { startSession() }}><IconNewChatOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.search')} onClick={() => { search.current?.open() }}><IconSearchOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.experts')} onClick={() => { selectExternalSection(t('sidebar.experts')) }}><IconUserOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.skills')} onClick={() => { selectExternalSection(t('sidebar.skills')) }}><IconSkillOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.plugins')} onClick={() => { selectPluginSection() }}><IconPersonalizationOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.connectors')} onClick={() => { selectSection(t('sidebar.connectors')) }}><IconLinkOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.schedule')} onClick={() => { selectExternalSection(t('sidebar.schedule')) }}><ScheduleIcon /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.assistant')} onClick={openImSettings}><ImAssistantIcon /></button></nav></div>
     <footer className="dcu-foot"><div className="dcu-footer-actions">{renderSlot('sidebar.footer.action', { wide: !visualCompact })}</div><div ref={settingsSeat} className="dcu-settings-seat">{renderSlot('sidebar.settings', { wide: !visualCompact })}</div></footer>
-    <SidebarSearch ref={search} settingsSeat={settingsSeat} openSession={openSession} startSession={startSession} t={t} useSessions={useSessions} useWorkspaces={useWorkspaces} />
+    <SidebarSearch ref={search} imSettingsAvailable={showChannels} settingsSeat={settingsSeat} openSession={openSession} startSession={startSession} t={t} useSessions={useSessions} useWorkspaces={useWorkspaces} />
   </aside>
 }
 

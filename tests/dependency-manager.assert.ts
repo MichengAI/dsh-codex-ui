@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { PassThrough } from 'node:stream'
 import { pathToFileURL } from 'node:url'
-import { applyReleaseExclude, dependencyStatuses, directPackagesForInstall, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, pluginCommandError, pluginExecArgv, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, updatableDependencyIds } from '../src/dependency-manager.ts'
+import { applyReleaseExclude, applyRequiredBuildPolicies, dependencyStatuses, directPackagesForInstall, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, pluginCommandError, pluginExecArgv, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, updatableDependencyIds } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 const sourceRoot = resolve('fixtures', 'deepseek-harness')
@@ -172,6 +172,22 @@ assert.match(
   '预发布版本仍可写入白名单',
 )
 
+assert.equal(
+  applyRequiredBuildPolicies('packages:\n  - .\n'),
+  'packages:\n  - .\nallowBuilds:\n  protobufjs: false\n  koffi: false\n',
+  '干净 Profile 必须在安装前显式拒绝已知非必要构建脚本',
+)
+assert.equal(
+  applyRequiredBuildPolicies('allowBuilds:\n  esbuild: true\n'),
+  'allowBuilds:\n  protobufjs: false\n  koffi: false\n  esbuild: true\n',
+  '已有 allowBuilds 项必须保留',
+)
+assert.equal(
+  applyRequiredBuildPolicies('allowBuilds:\n  protobufjs: set this to true or false\n  koffi: true\n  protobufjs: false\n'),
+  'allowBuilds:\n  protobufjs: false\n  koffi: false\n',
+  'pnpm 占位值与重复项必须规范化成确定策略',
+)
+
 // 依赖安装 POST 端点的跨站请求判定：浏览器恶意网页可用表单跨站触发安装，
 // 必须按 Sec-Fetch-Site / Origin 与 Host 的比对阻断。
 assert.equal(
@@ -319,6 +335,11 @@ assert.match(
   pluginCommandError('ERR_PNPM_UNEXPECTED_STORE Unexpected store location').message,
   /pnpm 仓库不一致/,
   'store 不一致必须给出明确原因',
+)
+assert.match(
+  pluginCommandError('ERR_PNPM_IGNORED_BUILDS Ignored build scripts: protobufjs').message,
+  /allowBuilds/,
+  '未知构建脚本再次触发拦截时必须给出准确配置提示',
 )
 assert.equal(isRestartableInstallError(new Error('无法覆盖正在运行的插件文件。请先完全退出桌面端，再重新打开后更新。')), true)
 

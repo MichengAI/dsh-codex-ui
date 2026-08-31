@@ -4,6 +4,19 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.96 — 2026-09-01
+
+配套版本：`@michengai/dsh-codex-suite-installer@0.1.13`。
+
+### 修复
+
+- 未安装 IM 配套插件时，点击 IM 助理会立即进入“关于”，不再先显示通用设置并等待缺失分区超时；已安装时仍正常进入 IM 设置。
+- “关于”页安装插件前会预先将非必要的 `protobufjs` 与 `koffi` 安装脚本声明为禁用，避免 pnpm 写入 ignored-build 占位配置并阻断安全安装。
+
+### 依赖
+
+- 发布时通过官方 npm 源重新解析 Suite Installer 全部成员的最新精确版本。
+
 ## 0.2.95 — 2026-09-01
 
 配套版本：`@michengai/dsh-codex-suite-installer@0.1.12`。

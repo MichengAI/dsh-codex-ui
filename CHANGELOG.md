@@ -4,6 +4,19 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.96 — 2026-09-01
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.13`.
+
+### Fixed
+
+- Opened About immediately when the IM companion is not installed instead of showing General settings while waiting for a missing section to time out; the installed IM settings route is unchanged.
+- Predeclared the nonessential `protobufjs` and `koffi` install scripts as disabled before About-page plugin installs, preventing pnpm's ignored-build placeholder from blocking an otherwise safe install.
+
+### Dependencies
+
+- Refreshed the Suite Installer against the latest exact member versions from the official npm registry at release time.
+
 ## 0.2.95 — 2026-09-01
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.12`.
