@@ -4,6 +4,24 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.100 — 2026-09-01
+
+配套版本：`@michengai/dsh-codex-suite-installer@0.1.17`。
+
+### 修复
+
+- 在任务、频道和定时任务树中显示等待回答、等待审批和计划待审状态，并让待处理警告优先于未读和运行中标记。
+- 三棵树统一使用官方 `SessionSummary.pendingInteraction` 契约，删除未使用的宿主状态抽象，并对齐官方英文状态文案。
+- 移除关于页配套插件安装与更新的发布时间保护，让用户明确请求的版本可以立即安装。
+
+### 测试
+
+- 使用完整类型约束的 `SessionListState` 和 `SessionSummary` 快照，为三棵树补充待处理状态 DOM 渲染测试。
+
+### 依赖
+
+- Suite Installer 发布 workflow 会在本版本发布后解析 Codex UI `0.2.100`。
+
 ## 0.2.99 — 2026-09-01
 
 配套版本：`@michengai/dsh-codex-suite-installer@0.1.16`。
