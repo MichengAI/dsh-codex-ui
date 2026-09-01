@@ -16,6 +16,7 @@ import {
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { NS } from './locales.ts'
 import { sessionDeepLink } from './session-manager.ts'
+import type { PendingInteractionKind } from './session-pending.ts'
 
 export function PinIcon() {
   return <svg viewBox="0 0 16 16" width={16} height={16} aria-hidden="true"><path d="M5.6 9.7 3.2 14M10.9 2.4c.9.9 1.1 2.2.5 3.3L10 7.6l2.3 2.3c.3.3.3.8 0 1.1l-.5.5c-.3.3-.8.3-1.1 0L8.4 9.2 6.5 10.6c-1.1.6-2.4.4-3.3-.5" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -85,6 +86,7 @@ export type SessionRowProps = {
   pinned: boolean
   unread: boolean
   running: boolean
+  pendingInteraction?: PendingInteractionKind
   t: TranslateNS<typeof NS>
   menuItems: MenuEntry[]
   onOpen: () => void
@@ -106,15 +108,33 @@ export type SessionRowProps = {
   onDrop?: (event: DragEvent<HTMLDivElement>) => void
 }
 
+function pendingLabel(kind: PendingInteractionKind, t: TranslateNS<typeof NS>): string {
+  switch (kind) {
+    case 'approval': return t('sessions.waitingApproval')
+    case 'plan-review': return t('sessions.planReview')
+    case 'question': return t('sessions.waitingAnswer')
+  }
+}
+
+export function SessionState({ pendingInteraction, unread, running, t }: Pick<SessionRowProps, 'pendingInteraction' | 'unread' | 'running' | 't'>) {
+  if (pendingInteraction !== undefined) {
+    const label = pendingLabel(pendingInteraction, t)
+    return <span className="dcu-wb-pending" data-state="warning" data-pending-kind={pendingInteraction} aria-label={label}><span className="dcu-wb-pending-dot" aria-hidden="true" /><span className="dcu-wb-pending-label">{label}</span></span>
+  }
+  if (unread) return <span className="dcu-wb-unread" aria-label={t('sessions.unread')} />
+  if (running) return <span className="dcu-wb-running" aria-hidden="true" />
+  return null
+}
+
 export function SessionRow({
-  id, title, selected, menuOpen, pinned, unread, running, t, menuItems,
+  id, title, selected, menuOpen, pinned, unread, running, pendingInteraction, t, menuItems,
   onOpen, onMenuChange, onSelectAction, onPin, onArchive, onHover, onLeave, onContextMenu, menuPoint,
   subtitle, flat, draggable, dropActive, onDragStart, onDragEnd, onDragOver, onDrop,
 }: SessionRowProps) {
   return <div className={`dcu-wb-session${selected ? ' dcu-wb-selected' : ''}${menuOpen ? ' dcu-wb-menu-open' : ''}${dropActive === true ? ' dcu-wb-drop' : ''}${flat === true ? ' dcu-wb-session-flat' : ''}`} role="treeitem" aria-selected={selected} draggable={draggable} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragOver={onDragOver} onDrop={onDrop} onClick={onOpen} onContextMenu={onContextMenu} onMouseEnter={onHover} onMouseLeave={onLeave}>
     {subtitle !== undefined && subtitle !== '' ? <span className="dcu-wb-session-copy"><span className="dcu-wb-session-title">{title.split(/\r?\n/)[0] ?? title}</span><span className="dcu-wb-session-sub">{subtitle}</span></span> : <span className="dcu-wb-session-title">{title.split(/\r?\n/)[0] ?? title}</span>}
     {pinned && <span className="dcu-wb-pin" aria-label={t('sessions.pinned')}><PinMark /></span>}
-    {unread ? <span className="dcu-wb-unread" aria-label={t('sessions.unread')} /> : running ? <span className="dcu-wb-running" aria-hidden="true" /> : null}
+    <SessionState pendingInteraction={pendingInteraction} unread={unread} running={running} t={t} />
     <span className="dcu-wb-quick-actions">
       <button type="button" className="dcu-wb-more dcu-wb-quick-pin" aria-label={t(pinned ? 'sessions.unpin' : 'sessions.pin')} onClick={(event) => { event.stopPropagation(); onPin() }}><PinMark /></button>
       <button type="button" className="dcu-wb-more" aria-label={t('sessions.archive')} onClick={(event) => { event.stopPropagation(); onArchive() }}><IconArchiveOutline20 size={16} /></button>

@@ -10,13 +10,14 @@ import { toggleSessionId } from './session-manager.ts'
 import { SessionHoverCardLayer, SessionModals, useBusyAction, useSessionDialogs, useSessionFlags } from './session-row-actions.tsx'
 import { HoverShell, useHoverDispatch } from './hover-shell.tsx'
 import { GroupHead, SessionRow, sessionMenuItems } from './session-tree.tsx'
+import { pendingInteractionForSession, useEmptySessionPendingInteraction, type UseSessionPendingInteraction } from './session-pending.ts'
 import { browserStorage, CHANNEL_EXPANSION_STORAGE_KEY, readTreeExpansionState, writeTreeExpansionState } from './tree-expansion.ts'
 
 type OpenMenu = { id: string; x?: number; y?: number }
 
 type SessionStore = {
   current?: string
-  byId: Record<string, { running?: boolean; displayTitle?: string; updatedAt?: number }>
+  byId: Record<string, { running?: boolean; displayTitle?: string; updatedAt?: number; pendingInteraction?: unknown }>
 }
 
 type ChannelBrowserProps = {
@@ -26,6 +27,7 @@ type ChannelBrowserProps = {
   forkSession: (sessionId: SessionId) => Promise<void>
   renameSession: (sessionId: SessionId, title: string) => Promise<void>
   useSessions: (selector: (state: SessionStore) => SessionStore) => SessionStore
+  useSessionPendingInteraction?: UseSessionPendingInteraction
   t: TranslateNS<typeof NS>
 }
 
@@ -45,8 +47,9 @@ export function ChannelBrowser(props: ChannelBrowserProps) {
   return <HoverShell blocked={menu !== undefined}><ChannelBrowserTree {...props} menu={menu} setMenu={setMenu} /></HoverShell>
 }
 
-function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSession, renameSession, useSessions, t, menu, setMenu }: ChannelBrowserProps & { menu?: OpenMenu; setMenu: (menu?: OpenMenu) => void }) {
+function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSession, renameSession, useSessions, useSessionPendingInteraction, t, menu, setMenu }: ChannelBrowserProps & { menu?: OpenMenu; setMenu: (menu?: OpenMenu) => void }) {
   const sessions = useSessions(state => state)
+  const pendingInteractions = (useSessionPendingInteraction ?? useEmptySessionPendingInteraction)(state => state)
   const [groups, setGroups] = useState<ChannelGroup[]>([])
   const [pollError, setPollError] = useState<string>()
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => readTreeExpansionState(browserStorage(), CHANNEL_EXPANSION_STORAGE_KEY))
@@ -105,7 +108,8 @@ function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSe
             const updatedAt = session.updatedAt ?? sessions.byId[id]?.updatedAt
             const pinned = flags.pinnedSessionIds.includes(id)
             const unread = flags.unreadSessionIds.includes(id)
-            return <SessionRow key={id} id={id} title={title} selected={selected} menuOpen={menu?.id === id} pinned={pinned} unread={unread} running={running} t={t} menuItems={sessionMenuItems(t, { pinned, unread })} menuPoint={menu?.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { flags.setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id } : undefined) }} onPin={() => { flags.setPinnedSessionIds(ids => toggleSessionId(ids, id)) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ title, project: label, time: updatedAt === undefined ? undefined : formatHoverTime(updatedAt), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => { if (busy === undefined) dialogs.handleAction(action, id, title) }} />
+            const pendingInteraction = pendingInteractionForSession(id, pendingInteractions, sessions.byId[id]?.pendingInteraction)
+            return <SessionRow key={id} id={id} title={title} selected={selected} menuOpen={menu?.id === id} pinned={pinned} unread={unread} running={running} pendingInteraction={pendingInteraction} t={t} menuItems={sessionMenuItems(t, { pinned, unread })} menuPoint={menu?.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { flags.setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id } : undefined) }} onPin={() => { flags.setPinnedSessionIds(ids => toggleSessionId(ids, id)) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ title, project: label, time: updatedAt === undefined ? undefined : formatHoverTime(updatedAt), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => { if (busy === undefined) dialogs.handleAction(action, id, title) }} />
           })}
         </div>
       })}

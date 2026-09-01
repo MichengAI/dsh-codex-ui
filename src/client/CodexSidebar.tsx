@@ -16,6 +16,7 @@ import { isSidebarDragHandle, shouldCollapseOnSidebarDrag } from './sidebar-drag
 import { SLIM_SIDEBAR_PX, slimedSidebarWidth } from './sidebar-width.ts'
 import { isTaskSession } from './workspace-browser.ts'
 import { clearAutomationTaskSettingsRequest, requestAutomationTaskSettings } from './automation-task-settings.ts'
+import type { UseSessionPendingInteraction } from './session-pending.ts'
 
 type CompanionTabSource = {
   getSnapshot: () => CompanionTabAvailability
@@ -36,6 +37,7 @@ type CodexSidebarInjected = {
   renameSession: (sessionId: SessionId, title: string) => Promise<void>
   openPath: (path: string) => Promise<void> | void
   companionSlots?: CompanionTabSource
+  useSessionPendingInteraction?: UseSessionPendingInteraction
 }
 
 export type CodexSidebarProps =
@@ -166,7 +168,7 @@ const SidebarSearch = forwardRef<SidebarSearchHandle, SidebarSearchProps>(functi
 })
 
 /** Codex 风格的 DSH 侧栏，只替换导航外观，项目浏览和设置仍由 DSH 官方组件提供。 */
-export function CodexSidebar({ collapsed, width, openSession, startSession, toggleSidebar, archiveSession, deleteSession, forkSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useWorkspaces }: CodexSidebarProps) {
+export function CodexSidebar({ collapsed, width, openSession, startSession, toggleSidebar, archiveSession, deleteSession, forkSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useSessionPendingInteraction, useWorkspaces }: CodexSidebarProps) {
   const compact = collapsed || width < 80
   const [visualCompact, setVisualCompact] = useState(compact)
   const [collapsing, setCollapsing] = useState(false)
@@ -303,9 +305,9 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
         {showSchedule && <button type="button" className="dcu-im-tab" data-on={imTab === 'schedule'} onClick={() => { setImTab('schedule') }}>{t('sidebar.scheduleTab')}</button>}
       </div>}
       {imTab === 'channels' && showChannels
-        ? <div className="dcu-native-workspaces"><ChannelBrowser openSession={openSession} archiveSession={archiveSession} deleteSession={deleteSession} forkSession={forkSession} renameSession={renameSession} useSessions={useSessions} t={t} /></div>
+        ? <div className="dcu-native-workspaces"><ChannelBrowser openSession={openSession} archiveSession={archiveSession} deleteSession={deleteSession} forkSession={forkSession} renameSession={renameSession} useSessions={useSessions} useSessionPendingInteraction={useSessionPendingInteraction} t={t} /></div>
         : imTab === 'schedule' && showSchedule
-          ? <div className="dcu-native-workspaces"><ScheduleBrowser openSession={openSession} archiveSession={archiveSession} deleteSession={deleteSession} forkSession={forkSession} renameSession={renameSession} useSessions={useSessions} useWorkspaces={useWorkspaces} t={t} overviewContent={scheduleOverviewSlot} openTaskSettings={(request) => {
+          ? <div className="dcu-native-workspaces"><ScheduleBrowser openSession={openSession} archiveSession={archiveSession} deleteSession={deleteSession} forkSession={forkSession} renameSession={renameSession} useSessions={useSessions} useSessionPendingInteraction={useSessionPendingInteraction} useWorkspaces={useWorkspaces} t={t} overviewContent={scheduleOverviewSlot} openTaskSettings={(request) => {
               openSettingsSection(settingsSeat.current, t('sidebar.schedule'), () => { clearAutomationTaskSettingsRequest(); selectSection(t('about.nav')) }, () => { requestAutomationTaskSettings(request) })
             }} /></div>
           : <div className="dcu-native-workspaces">{workspaceSlot}</div>}
