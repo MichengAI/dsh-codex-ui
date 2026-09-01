@@ -668,7 +668,7 @@ export function ensurePnpmEntry(
   env: NodeJS.ProcessEnv = process.env,
   nodeDir: string = dirname(process.execPath),
 ): string | undefined {
-  const existing = (env.DSH_PNPM_ENTRY ?? env.npm_execpath ?? '').trim()
+  const existing = (env.DSH_PNPM_ENTRY ?? '').trim()
   if (existing !== '') return existing
   const candidate = join(nodeDir, 'node_modules', 'corepack', 'dist', 'pnpm.js')
   if (!existsSync(candidate)) return undefined

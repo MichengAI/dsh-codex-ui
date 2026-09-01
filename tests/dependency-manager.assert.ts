@@ -471,7 +471,7 @@ assert.deepEqual(
   await mkdir(join(corepackRoot, 'node_modules', 'corepack', 'dist'), { recursive: true })
   const candidate = join(corepackRoot, 'node_modules', 'corepack', 'dist', 'pnpm.js')
   await writeFile(candidate, '')
-  const env: NodeJS.ProcessEnv = {}
+  const env: NodeJS.ProcessEnv = { npm_execpath: 'C:\\node_modules\\npm\\bin\\npm-cli.js' }
   assert.equal(ensurePnpmEntry(env, corepackRoot), candidate, 'Web 下的 Desktop 桥接必须能补上 Node 自带的 corepack pnpm')
   assert.equal(env.DSH_PNPM_ENTRY, candidate)
   await rm(corepackRoot, { recursive: true, force: true })
