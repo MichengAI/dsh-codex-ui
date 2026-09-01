@@ -9,6 +9,7 @@ import { MANAGED_DEPENDENCIES, SUITE_MEMBER_PACKAGES, SUITE_PACKAGE, managedDepe
 export const PROFILE_PENDING_UPDATES_FILE = '.dsh-pending-updates.json'
 export const APPLY_PLUGIN_UPDATES_IPC = 'apply-plugin-updates'
 export const PLUGIN_INSTALL_TIMEOUT_MS = 10 * 60 * 1000
+export const PLUGIN_MOUNT_TIMEOUT_MS = 15_000
 
 type PackageManifest = { version?: string }
 
@@ -591,7 +592,7 @@ async function waitUntilPluginMounted(
   packageName: string,
   version: string,
   runtime: DependencyRuntime,
-  timeoutMs = 4_000,
+  timeoutMs = PLUGIN_MOUNT_TIMEOUT_MS,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs
   while (Date.now() <= deadline) {
@@ -672,8 +673,26 @@ export function ensurePnpmEntry(
   if (existing !== '') return existing
   const candidate = join(nodeDir, 'node_modules', 'corepack', 'dist', 'pnpm.js')
   if (!existsSync(candidate)) return undefined
-  env.DSH_PNPM_ENTRY = candidate
   return candidate
+}
+
+/** Desktop 桥接当前从 process.env 同步读取 pnpm 入口；调用结束后立即恢复，避免污染后续子进程。 */
+export function withPnpmEntry<T>(
+  callback: () => T,
+  env: NodeJS.ProcessEnv = process.env,
+  nodeDir: string = dirname(process.execPath),
+): T {
+  const entry = ensurePnpmEntry(env, nodeDir)
+  if (entry === undefined) return callback()
+  const hadEntry = Object.prototype.hasOwnProperty.call(env, 'DSH_PNPM_ENTRY')
+  const previous = env.DSH_PNPM_ENTRY
+  env.DSH_PNPM_ENTRY = entry
+  try {
+    return callback()
+  } finally {
+    if (hadEntry) env.DSH_PNPM_ENTRY = previous
+    else delete env.DSH_PNPM_ENTRY
+  }
 }
 
 /**
@@ -767,9 +786,10 @@ function monitorDesktopPlugin(handle: DesktopPnpmHandle, timeoutMs = PLUGIN_INST
 }
 
 export function runDshPlugin(args: readonly string[], runtime: DependencyRuntime = resolveDependencyRuntime(), timeoutMs = PLUGIN_INSTALL_TIMEOUT_MS): Promise<void> {
-  if (runtime.desktopPnpm !== undefined) {
-    ensurePnpmEntry()
-    return monitorDesktopPlugin(runtime.desktopPnpm.runPlugin(args, runtime.profileDir), timeoutMs)
+  const desktopPnpm = runtime.desktopPnpm
+  if (desktopPnpm !== undefined) {
+    const handle = withPnpmEntry(() => desktopPnpm.runPlugin(args, runtime.profileDir))
+    return monitorDesktopPlugin(handle, timeoutMs)
   }
   const entry = resolveDshCliEntry()
   const child = spawn(process.execPath, [...pluginExecArgv(), entry, 'plugin', '--profile', runtime.profileName, ...args], {

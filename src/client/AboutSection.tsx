@@ -20,6 +20,8 @@ type InstallProgress = {
   currentPackage: string | null
 }
 
+const PROGRESS_PHASES = new Set<ProgressPhase>(['resolving', 'downloading', 'linking', 'building'])
+
 const endpoint = '/api/michengai/codex-ui/dependencies'
 
 const stylesheet = `
@@ -33,10 +35,22 @@ function isDependencyStatus(value: unknown): value is DependencyStatus {
     && typeof status.packageName === 'string' && typeof status.installed === 'boolean' && typeof status.updateAvailable === 'boolean'
 }
 
-function isInstallProgress(value: unknown): value is InstallProgress {
+export function isInstallProgress(value: unknown): value is InstallProgress {
   if (value === null || typeof value !== 'object') return false
   const progress = value as Record<string, unknown>
-  return typeof progress.active === 'boolean' && typeof progress.lastLine === 'string'
+  const phase = progress.phase
+  const total = progress.total
+  const percent = progress.percent
+  const currentPackage = progress.currentPackage
+  return typeof progress.active === 'boolean'
+    && typeof progress.target === 'string'
+    && typeof progress.seconds === 'number' && Number.isInteger(progress.seconds) && progress.seconds >= 0
+    && typeof progress.lastLine === 'string'
+    && (phase === null || (typeof phase === 'string' && PROGRESS_PHASES.has(phase as ProgressPhase)))
+    && typeof progress.done === 'number' && Number.isInteger(progress.done) && progress.done >= 0
+    && (total === null || (typeof total === 'number' && Number.isInteger(total) && total >= 0))
+    && (percent === null || (typeof percent === 'number' && Number.isFinite(percent) && percent >= 0 && percent <= 100))
+    && (currentPackage === null || typeof currentPackage === 'string')
 }
 
 function installErrorText(error: unknown, t: TranslateNS<typeof NS>): string {

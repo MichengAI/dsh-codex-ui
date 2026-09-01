@@ -7,7 +7,7 @@ import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { PassThrough } from 'node:stream'
 import { pathToFileURL } from 'node:url'
-import { applyReleaseExclude, applyRequiredBuildPolicies, beginInstallProgress, dependencyStatuses, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, updatableDependencyIds } from '../src/dependency-manager.ts'
+import { applyReleaseExclude, applyRequiredBuildPolicies, beginInstallProgress, dependencyStatuses, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, PLUGIN_MOUNT_TIMEOUT_MS, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, updatableDependencyIds, withPnpmEntry } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 const sourceRoot = resolve('fixtures', 'deepseek-harness')
@@ -472,11 +472,19 @@ assert.deepEqual(
   const candidate = join(corepackRoot, 'node_modules', 'corepack', 'dist', 'pnpm.js')
   await writeFile(candidate, '')
   const env: NodeJS.ProcessEnv = { npm_execpath: 'C:\\node_modules\\npm\\bin\\npm-cli.js' }
-  assert.equal(ensurePnpmEntry(env, corepackRoot), candidate, 'Web 下的 Desktop 桥接必须能补上 Node 自带的 corepack pnpm')
-  assert.equal(env.DSH_PNPM_ENTRY, candidate)
+  assert.equal(ensurePnpmEntry(env, corepackRoot), candidate, 'Web 下的 Desktop 桥接必须能找到 Node 自带的 corepack pnpm')
+  assert.equal(env.DSH_PNPM_ENTRY, undefined, '解析 pnpm 入口不得改写调用方环境')
+  let observedEntry
+  assert.equal(withPnpmEntry(() => {
+    observedEntry = env.DSH_PNPM_ENTRY
+    return 'called'
+  }, env, corepackRoot), 'called')
+  assert.equal(observedEntry, candidate, '调用 Desktop 桥接时必须临时提供 pnpm 入口')
+  assert.equal(env.DSH_PNPM_ENTRY, undefined, 'Desktop 桥接调用返回后必须恢复环境')
   await rm(corepackRoot, { recursive: true, force: true })
 }
 
+assert.ok(PLUGIN_MOUNT_TIMEOUT_MS >= 15_000, '等待 Desktop 写入 bundles 至少保留 15 秒')
 assert.equal(requestDesktopHotUpdate(undefined), false)
 let sent
 assert.equal(requestDesktopHotUpdate((message) => { sent = message; return true }), true)

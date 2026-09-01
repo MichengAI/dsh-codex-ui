@@ -16,6 +16,7 @@ import { isSidebarDragHandle, shouldCollapseOnSidebarDrag } from './sidebar-drag
 import { SLIM_SIDEBAR_PX, slimedSidebarWidth } from './sidebar-width.ts'
 import { isTaskSession } from './workspace-browser.ts'
 import { clearAutomationTaskSettingsRequest, requestAutomationTaskSettings } from './automation-task-settings.ts'
+import { observeOfficialTurnNavigators } from './official-turn-navigator.ts'
 
 type CompanionTabSource = {
   getSnapshot: () => CompanionTabAvailability
@@ -59,11 +60,11 @@ const stylesheet = `
 [role="dialog"][aria-labelledby]{width:min(1000px,calc(100vw - 48px));max-width:calc(100vw - 48px);height:min(800px,calc(100vh - 48px))}
 .dcu-search-scrim{position:fixed;z-index:10020;inset:0;display:flex;justify-content:center;align-items:flex-start;padding:72px 20px;background:color-mix(in srgb,#000 48%,transparent);animation:dcu-search-scrim-in 140ms ease-out}.dcu-search-dialog{width:min(560px,100%);max-height:min(640px,calc(100vh - 120px));overflow:auto;border:1px solid var(--dcu-sidebar-border);border-radius:16px;padding:10px;background:var(--dsw-specific-menu);box-shadow:var(--dsw-shadow-lv4);animation:dcu-search-dialog-in 180ms cubic-bezier(.16,1,.3,1)}@keyframes dcu-search-scrim-in{from{opacity:0}to{opacity:1}}@keyframes dcu-search-dialog-in{from{opacity:0;transform:translateY(-6px) scale(.985)}to{opacity:1;transform:none}}.dcu-search-input{margin-bottom:8px}.dcu-search-section{padding:6px 0}.dcu-search-title{padding:0 8px 4px;color:var(--dcu-sidebar-tertiary);font-size:12px;font-weight:600}.dcu-search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;min-height:34px;border:0;border-radius:8px;padding:6px 8px;background:transparent;color:var(--dcu-sidebar-primary);font:inherit;text-align:left;cursor:pointer}.dcu-search-row:hover,.dcu-search-row[data-active=true]{background:var(--dcu-sidebar-hover)}.dcu-search-main{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dcu-search-detail{max-width:160px;overflow:hidden;color:var(--dcu-sidebar-tertiary);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.dcu-search-empty{padding:18px 8px;color:var(--dcu-sidebar-tertiary);font-size:13px}@media (prefers-reduced-motion:reduce){.dcu-expanded-shell,.dcu-root.dcu-compact .dcu-compact-shell,.dcu-foot,.dcu-search-scrim,.dcu-search-dialog{animation:none;transition:none}}
 [data-conversation-scroll]{--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:24px}[data-conversation-scroll] [data-composer-card]{min-height:96px;padding-top:10px;border-radius:16px;box-shadow:var(--dsw-shadow-lv3);transition:border-color 180ms ease,box-shadow 180ms ease}[data-conversation-scroll] [data-composer-card]:focus-within{border-color:var(--dsw-alias-button-info-fill);box-shadow:0 0 0 2px var(--dsw-static-deepseek-50),var(--dsw-shadow-lv3)}[data-conversation-scroll] [data-input-mirror]{min-height:44px}@media (prefers-reduced-motion:reduce){[data-conversation-scroll] [data-composer-card]{transition:none}}
-html:has(head style[data-plugin-css="@deepseek-ai/dsh-client-ui-chat/TurnNavigator.module.css"]) .dcu-turn-navigator{display:none}
-[data-conversation-scroll] :has(>[data-chat-flow])>:first-child>nav{right:auto!important;left:calc(12px - (var(--dsh-composer-side-clearance) + 16px))!important}
-[data-conversation-scroll] :has(>[data-chat-flow])>:first-child>nav>div:first-child button{inset:0 auto 0 0!important}
-[data-conversation-scroll] :has(>[data-chat-flow])>:first-child>nav>div:first-child button:before{right:auto!important;left:0!important}
-[data-conversation-scroll] :has(>[data-chat-flow])>:first-child>nav>[role="tooltip"]{right:auto!important;left:calc(100% + 10px)!important;animation:none!important}
+html:has([data-dcu-official-turn-navigator]) .dcu-turn-navigator{display:none}
+[data-dcu-official-turn-navigator]{right:auto!important;left:calc(12px - (var(--dsh-composer-side-clearance) + 16px))!important}
+[data-dcu-official-turn-navigator]>div:first-child button{inset:0 auto 0 0!important}
+[data-dcu-official-turn-navigator]>div:first-child button:before{right:auto!important;left:0!important}
+[data-dcu-official-turn-navigator]>[role="tooltip"]{right:auto!important;left:calc(100% + 10px)!important;animation:none!important}
 `
 
 function MenuIcon({ children }: { children: ReactNode }) { return <span className="dcu-menu-icon">{children}</span> }
@@ -199,6 +200,7 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
       () => { selectSection(t('about.nav')) },
     )
   }
+  useEffect(() => observeOfficialTurnNavigators(document.body), [])
   useEffect(() => {
     if (imTab === 'channels' && !showChannels) setImTab('tasks')
     if (imTab === 'schedule' && !showSchedule) setImTab('tasks')
