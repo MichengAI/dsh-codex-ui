@@ -4,6 +4,19 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.99 — 2026-09-01
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.16`.
+
+### Fixed
+
+- Restored full rendering for user question bubbles in the main conversation body so long prompts are not hidden by overflow, max-height, or multi-line clamp rules.
+- Kept the official DSH user bubble DOM intact while applying a stable compatibility marker to newly mounted user bubbles.
+
+### Dependencies
+
+- The Suite Installer release workflow will resolve Codex UI `0.2.99` after this release is published.
+
 ## 0.2.98 — 2026-09-01
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.15`.

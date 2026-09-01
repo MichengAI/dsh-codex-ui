@@ -4,6 +4,19 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.99 — 2026-09-01
+
+配套版本：`@michengai/dsh-codex-suite-installer@0.1.16`。
+
+### 修复
+
+- 恢复主会话正文中用户提问气泡的完整显示，避免长问题被溢出、高度上限或多行省略规则截断。
+- 保留 DSH 官方用户气泡 DOM，只为新增用户气泡补充稳定兼容标记。
+
+### 依赖
+
+- Suite Installer 发布 workflow 会在本版本发布后解析 Codex UI `0.2.99`。
+
 ## 0.2.98 — 2026-09-01
 
 配套版本：`@michengai/dsh-codex-suite-installer@0.1.15`。

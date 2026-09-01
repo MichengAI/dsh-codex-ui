@@ -166,7 +166,7 @@ function ensureStyle(doc: Document): void {
   doc.head.append(style)
 }
 
-const CONVERSATION_DECORATION_SELECTOR = 'header'
+const CONVERSATION_DECORATION_SELECTOR = 'header,[data-time-hover-root],[data-dcu-user-card],[data-dcu-user-source]'
 
 function conversationDecorationMutation(records: readonly MutationRecord[]): boolean {
   const relevant = (node: Node): boolean => node instanceof Element && (
@@ -179,7 +179,7 @@ function conversationDecorationMutation(records: readonly MutationRecord[]): boo
     || [...record.removedNodes].some(relevant))
 }
 
-/** 观察会话顶栏；只对相关子树变更按帧合并，流式回答不会触发全文档扫描。 */
+/** 观察会话顶栏与用户气泡；只对相关子树变更按帧合并，流式回答不会触发全文档扫描。 */
 export function observeConversationHeader(doc: Document = document): () => void {
   if (doc.head === null || doc.body === null) return () => {}
   ensureStyle(doc)
@@ -193,6 +193,7 @@ export function observeConversationHeader(doc: Document = document): () => void 
     if (applying) return
     applying = true
     try {
+      restoreOfficialUserBubbles(doc)
       placeConversationTabs(doc)
       const tabs = findConversationTablist(doc)
       if (tabs !== watchedTabs) {
