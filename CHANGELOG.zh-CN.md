@@ -4,6 +4,18 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.98 — 2026-09-01
+
+配套版本：`@michengai/dsh-codex-suite-installer@0.1.15`。
+
+### 修复
+
+- 让会话分段页签的滑块能够以页签容器自身作为同步根节点，选中“轨迹”或“上下文”后高亮背景不再停留在“对话”。
+
+### 依赖
+
+- 准备 Suite Installer `0.1.15`，在本版本发布后解析 Codex UI `0.2.98`。
+
 ## 0.2.97 — 2026-09-01
 
 配套版本：`@michengai/dsh-codex-suite-installer@0.1.14`。

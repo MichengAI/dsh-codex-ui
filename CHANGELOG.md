@@ -4,6 +4,18 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.98 — 2026-09-01
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.15`.
+
+### Fixed
+
+- Kept the segmented conversation-tab slider aligned with the host-selected view by recognizing the tab list itself as a synchronization root, preventing the highlight from remaining on Chat after selecting Trace or Context.
+
+### Dependencies
+
+- Prepared Suite Installer `0.1.15` to resolve Codex UI `0.2.98` after this release is published.
+
 ## 0.2.97 — 2026-09-01
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.14`.
