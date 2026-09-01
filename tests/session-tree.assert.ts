@@ -19,12 +19,15 @@ assert.match(schedule, /sessionMenuItems\(t, \{ pinned, unread \}\)/, '定时必
 assert.match(channel, /<SessionRow /, '频道必须复用共用会话行')
 assert.match(schedule, /<SessionRow /, '定时必须复用共用会话行')
 assert.match(tree, /data-state="warning"[^]*dcu-wb-pending-label/, '共用会话行必须显示待处理交互警告状态和文本')
-assert.match(workspace, /visiblePendingKind\(session\.pendingInteraction\)/, '任务树必须读取官方 SessionSummary 待处理状态')
-assert.match(channel, /visiblePendingKind\(sessions\.byId\[id\]\?\.pendingInteraction\)/, '频道必须读取官方 SessionSummary 待处理状态')
-assert.match(schedule, /visiblePendingKind\(sessions\.byId\[id\]\?\.pendingInteraction\)/, '定时必须读取官方 SessionSummary 待处理状态')
-for (const source of [workspace, channel, schedule, sidebar, pending]) {
-  assert.doesNotMatch(source, /useSessionPendingInteraction|useEmptySessionPendingInteraction|pendingInteractionForSession/, '不得保留宿主未提供的待处理交互 store 抽象')
+assert.match(workspace, /pendingInteractionForSession\(id, pendingInteractions, session\.pendingInteraction\)/, '任务树必须兼容 SessionSummary 和待处理交互 Store')
+assert.match(channel, /pendingInteractionForSession\(id, pendingInteractions, sessions\.byId\[id\]\?\.pendingInteraction\)/, '频道必须兼容 SessionSummary 和待处理交互 Store')
+assert.match(schedule, /pendingInteractionForSession\(id, pendingInteractions, sessions\.byId\[id\]\?\.pendingInteraction\)/, '定时必须兼容 SessionSummary 和待处理交互 Store')
+for (const source of [workspace, channel, schedule]) {
+  assert.match(source, /useSessionPendingInteraction \?\? useEmptySessionPendingInteraction/, '三棵树必须订阅宿主待处理交互 Store，并兼容旧宿主')
 }
+assert.match(sidebar, /<ChannelBrowser [^>]*useSessionPendingInteraction=\{useSessionPendingInteraction\}/, '侧栏必须向频道树透传待处理交互 Store')
+assert.match(sidebar, /<ScheduleBrowser [^>]*useSessionPendingInteraction=\{useSessionPendingInteraction\}/, '侧栏必须向定时树透传待处理交互 Store')
+assert.match(pending, /visiblePendingKind\(summaryKind\) \?\? visiblePendingKind\(pendingInteractions\.get\(sessionId\)\?\.kind\)/, '有效 SessionSummary 必须优先，缺失时回退待处理交互 Store')
 assert.match(locales, /'sessions\.waitingAnswer': 'Waiting for answer'/, '等待回答英文文案必须与官方一致')
 assert.match(locales, /'sessions\.waitingApproval': 'Waiting for approval'/, '等待审批英文文案必须与官方一致')
 assert.match(locales, /'sessions\.planReview': 'Plan awaiting review'/, '计划待审英文文案必须与归档插件一致')

@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module'
 import { act, createElement, type ReactNode } from 'react'
 import { expect, test } from 'vitest'
-import { visiblePendingKind } from '../src/client/session-pending.ts'
+import { pendingInteractionForSession, visiblePendingKind } from '../src/client/session-pending.ts'
 import { SessionRow } from '../src/client/session-tree.tsx'
 
 const createRoot = (createRequire(import.meta.url)('react-dom/client') as {
@@ -15,6 +15,19 @@ test('只显示官方 SessionSummary 支持的待处理交互字符串', () => {
   expect(visiblePendingKind('custom')).toBeUndefined()
   expect(visiblePendingKind({ kind: 'question' })).toBeUndefined()
   expect(visiblePendingKind(undefined)).toBeUndefined()
+})
+
+test('会话快照优先并在缺失时回退到待处理交互 Store', () => {
+  const pendingInteractions = new Map([
+    ['session-approval', { kind: 'approval' }],
+    ['session-invalid', { kind: 'custom' }],
+  ])
+
+  expect(pendingInteractionForSession('session-approval', pendingInteractions)).toBe('approval')
+  expect(pendingInteractionForSession('session-approval', pendingInteractions, 'question')).toBe('question')
+  expect(pendingInteractionForSession('session-approval', pendingInteractions, 'custom')).toBe('approval')
+  expect(pendingInteractionForSession('session-invalid', pendingInteractions)).toBeUndefined()
+  expect(pendingInteractionForSession('session-missing', pendingInteractions)).toBeUndefined()
 })
 
 test('待处理交互覆盖未读点和运行中状态', async () => {
