@@ -264,33 +264,6 @@ async function npmLatestVersion(packageName: string): Promise<string | undefined
   return npmTaggedVersion(packageName, 'latest')
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-/** 允许写入 YAML 单引号白名单的版本：semver 及常见预发布后缀，禁止引号与空白。 */
-function isSafeReleaseVersion(version: string): boolean {
-  return /^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)
-}
-
-/** 将用户确认的精确版本合并进 Profile 的 pnpm 发布时间保护例外。 */
-export function applyReleaseExclude(source: string, packageName: string, version: string): string {
-  if (!isSafeReleaseVersion(version)) throw new Error('npm 返回了无法识别的最新版本。')
-  const eol = source.includes('\r\n') ? '\r\n' : '\n'
-  const linePattern = new RegExp(`^  - '${escapeRegExp(packageName)}@([^']*)'\\s*$`, 'm')
-  const existing = linePattern.exec(source)
-  if (existing !== null) {
-    const versions = existing[1].split(/\s*\|\|\s*/).map(item => item.trim()).filter(item => item !== '')
-    if (versions.includes(version)) return source
-    const next = `  - '${packageName}@${[...versions, version].join(' || ')}'`
-    return `${source.slice(0, existing.index)}${next}${source.slice(existing.index + existing[0].length)}`
-  }
-  const entry = `  - '${packageName}@${version}'`
-  const section = /^minimumReleaseAgeExclude:\r?\n(?:(?:  |\t).*(?:\r?\n|$))*/m
-  if (section.test(source)) return source.replace(section, match => `${match.endsWith('\n') ? match : `${match}${eol}`}${entry}${eol}`)
-  return `${source}${source === '' || source.endsWith('\n') ? '' : eol}minimumReleaseAgeExclude:${eol}${entry}${eol}`
-}
-
 /**
  * pnpm 11 会在首次解析带 install script 的传递依赖时中止并写入占位值。
  * 这些依赖的运行时不需要 postinstall，因此在调用 DSH plugin add 之前显式
@@ -320,21 +293,6 @@ async function ensureRequiredBuildPolicies(runtime: DependencyRuntime): Promise<
     source = ''
   }
   const next = applyRequiredBuildPolicies(source)
-  if (next !== source) await writeFile(path, next, 'utf8')
-}
-
-/** 将用户本次确认的精确版本加入 Profile 的 pnpm 发布时间保护例外。 */
-async function ensureLatestReleaseAllowed(packageName: string, version: string, runtime: DependencyRuntime): Promise<void> {
-  if (parseSemver(version) === undefined) throw new Error('npm 返回了无法识别的最新版本。')
-  const path = resolve(profileDirectory(runtime), 'pnpm-workspace.yaml')
-  let source: string
-  try {
-    source = await readFile(path, 'utf8')
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-    source = ''
-  }
-  const next = applyReleaseExclude(source, packageName, version)
   if (next !== source) await writeFile(path, next, 'utf8')
 }
 
@@ -621,9 +579,6 @@ async function waitUntilPluginMounted(
 
 export function pluginCommandError(stderr: string): Error {
   const detail = stderr.replace(/\s+/g, ' ').trim()
-  if (detail.includes('minimumReleaseAge') || detail.includes('Release age')) {
-    return new Error('更新被 pnpm 发布时间保护拦截。请确认已写入当前版本白名单后重试。')
-  }
   if (/EPERM|EBUSY|EACCES|unable to unlink|ERR_PNPM_LOCKED|Lock/i.test(detail)) {
     return new Error('无法覆盖正在运行的插件文件。请先完全退出桌面端，再重新打开后更新。')
   }
@@ -894,7 +849,6 @@ async function installDependenciesLocked(
     const remove = [...new Set(targets.flatMap(target => pluginsToRemoveBeforeInstall(declared, target.packageName)))]
     await ensureRequiredBuildPolicies(runtime)
     for (const target of targets) {
-      await ensureLatestReleaseAllowed(target.packageName, target.version, runtime)
       if (!isOfficialRuntimePackage(target.packageName)) await removeUnmountedPackagePath(target.packageName, runtime)
       await recordPendingUpdate(target.packageName, target.version, runtime)
     }
@@ -912,7 +866,7 @@ async function installDependenciesLocked(
       ...(communityTargets.length === 0 ? [] : [communityTargets]),
     ]
     for (const batch of batches) {
-      await runDshPlugin(['add', ...batch.map(target => `${target.packageName}@${target.version}`), '--registry=https://registry.npmjs.org/'], runtime)
+      await runDshPlugin(['add', '--config.minimumReleaseAge=0', ...batch.map(target => `${target.packageName}@${target.version}`), '--registry=https://registry.npmjs.org/'], runtime)
       for (const target of batch) {
         await waitUntilPluginMounted(target.packageName, target.version, runtime)
         if (!isOfficialRuntimePackage(target.packageName)) await recordDeclaredVersion(target.packageName, target.version, runtime)

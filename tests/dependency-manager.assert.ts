@@ -7,7 +7,7 @@ import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { PassThrough } from 'node:stream'
 import { pathToFileURL } from 'node:url'
-import { applyReleaseExclude, applyRequiredBuildPolicies, beginInstallProgress, dependencyStatuses, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, PLUGIN_MOUNT_TIMEOUT_MS, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, supportsOfficialTurnNavigator, updatableDependencyIds, withPnpmEntry } from '../src/dependency-manager.ts'
+import { applyRequiredBuildPolicies, beginInstallProgress, dependencyStatuses, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, PLUGIN_MOUNT_TIMEOUT_MS, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, supportsOfficialTurnNavigator, updatableDependencyIds, withPnpmEntry } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 const sourceRoot = resolve('fixtures', 'deepseek-harness')
@@ -189,42 +189,6 @@ try {
   await rm(leftoverRoot, { recursive: true, force: true })
 }
 
-const source = [
-  'packages:',
-  '  - .',
-  '',
-  'minimumReleaseAgeExclude:',
-  "  - '@michengai/dsh-skills-manager@0.1.8'",
-  "  - '@michengai/dsh-archive-manager@0.1.2'",
-  '',
-].join('\n')
-
-assert.match(
-  applyReleaseExclude(source, '@michengai/dsh-skills-manager', '0.1.9'),
-  /@michengai\/dsh-skills-manager@0\.1\.8 \|\| 0\.1\.9/,
-  '同一包的新确认版本必须合并进已有白名单行',
-)
-assert.equal(
-  applyReleaseExclude(source, '@michengai/dsh-skills-manager', '0.1.8'),
-  source,
-  '重复确认同一版本时不得改写白名单',
-)
-assert.match(
-  applyReleaseExclude('packages:\n  - .\n', '@michengai/dsh-archive-manager', '0.1.3'),
-  /minimumReleaseAgeExclude:\n  - '@michengai\/dsh-archive-manager@0\.1\.3'\n/,
-  '没有白名单段时必须新建精确版本例外',
-)
-assert.throws(
-  () => applyReleaseExclude(source, '@michengai/dsh-skills-manager', "0.1.9'evil"),
-  /无法识别/,
-  '带单引号的版本不得写入 YAML 白名单',
-)
-assert.match(
-  applyReleaseExclude(source, '@michengai/dsh-codex-ui', '0.2.53-rc.1'),
-  /@michengai\/dsh-codex-ui@0\.2\.53-rc\.1/,
-  '预发布版本仍可写入白名单',
-)
-
 assert.equal(
   applyRequiredBuildPolicies('packages:\n  - .\n'),
   'packages:\n  - .\nallowBuilds:\n  protobufjs: false\n  koffi: false\n',
@@ -297,8 +261,8 @@ assert.equal(
 )
 
 assert.equal(
-  publicDependencyError(new Error('从 npm 安装或更新依赖失败。请检查网络、npm registry 或发布时间保护后重试。')),
-  '从 npm 安装或更新依赖失败。请检查网络、npm registry 或发布时间保护后重试。',
+  publicDependencyError(new Error('从 npm 安装或更新依赖失败。请检查网络或 npm registry 后重试。')),
+  '从 npm 安装或更新依赖失败。请检查网络或 npm registry 后重试。',
   '安装失败的安全文案必须回给浏览器',
 )
 assert.equal(
