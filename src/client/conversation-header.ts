@@ -40,6 +40,9 @@ const FOLDER_SVG = '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" 
 const MORE_SVG = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="4" cy="8" r="1.15" fill="currentColor"/><circle cx="8" cy="8" r="1.15" fill="currentColor"/><circle cx="12" cy="8" r="1.15" fill="currentColor"/></svg>'
 
 export function findConversationTablist(root: ParentNode): HTMLElement | undefined {
+  if ('matches' in root && typeof root.matches === 'function' && root.matches('[role=tablist]')) {
+    return root as HTMLElement
+  }
   return root.querySelector<HTMLElement>('header [role=tablist]') ?? undefined
 }
 

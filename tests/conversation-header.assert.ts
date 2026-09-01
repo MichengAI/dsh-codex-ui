@@ -7,6 +7,7 @@ import {
   HEADER_PROJECT_TIP_EVENT,
   HEADER_SESSION_MENU_EVENT,
   placeConversationTabs,
+  syncTabSlider,
 } from '../src/client/conversation-header.ts'
 
 const header = readFileSync(new URL('../src/client/conversation-header.ts', import.meta.url), 'utf8')
@@ -99,6 +100,36 @@ const mount = (): HTMLElement => {
   assert.equal(tabs.dataset.dcuInlineTabs, '', '标记必须落在 dataset 上')
   assert.equal(tabs.parentElement, host, '页签必须留在宿主 header 内，不得搬移')
   assert.equal(placeConversationTabs(doc), false, '重复执行必须幂等')
+}
+
+// 回归验证：监听器以 tablist 自身为同步根节点时，滑块也必须跟随 aria-selected 切换。
+{
+  mount()
+  const tabs = doc.querySelector('[role=tablist]') as HTMLElement
+  const [chat, trace] = [...tabs.querySelectorAll<HTMLElement>('[role=tab]')]
+  const rect = (left: number, width: number): DOMRect => ({
+    x: left,
+    y: 0,
+    left,
+    top: 0,
+    right: left + width,
+    bottom: 26,
+    width,
+    height: 26,
+    toJSON: () => ({}),
+  })
+  tabs.getBoundingClientRect = () => rect(100, 150)
+  chat!.getBoundingClientRect = () => rect(100, 50)
+  trace!.getBoundingClientRect = () => rect(150, 50)
+
+  syncTabSlider(tabs)
+  const slider = tabs.querySelector<HTMLElement>('[data-dcu-tab-slider]')
+  assert.equal(slider?.style.transform, 'translateX(0px)', '初始滑块必须位于对话页签')
+
+  chat!.setAttribute('aria-selected', 'false')
+  trace!.setAttribute('aria-selected', 'true')
+  syncTabSlider(tabs)
+  assert.equal(slider?.style.transform, 'translateX(50px)', '选中轨迹后滑块必须移动到第二段')
 }
 
 // 行为验证：标题装饰以兄弟节点插入，不搬移标题，且事件可派发
