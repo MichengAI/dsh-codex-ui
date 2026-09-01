@@ -17,7 +17,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { NS } from './locales.ts'
 import { PinIcon, SessionRow, SessionState, pointerMenuRect, sessionMenuItems } from './session-tree.tsx'
-import { pendingInteractionForSession, useEmptySessionPendingInteraction, type UseSessionPendingInteraction } from './session-pending.ts'
+import { visiblePendingKind } from './session-pending.ts'
 import { insertPinnedWorkspace, prunePinnedWorkspaceIds, readHostPinnedWorkspaceIds, readPinnedWorkspaceIds, resolvePinnedWorkspaceHydration, savePinnedWorkspaceIds, togglePinnedWorkspace, writeHostPinnedWorkspaceIds } from './pinned-workspaces.ts'
 import {
   readSessionIds,
@@ -46,7 +46,6 @@ type BrowserInjected = {
   renameSession: (sessionId: SessionId, title: string) => Promise<void>
   renameWorkspace: (workspaceId: WorkspaceId, title: string) => Promise<unknown>
   startSession: (workspaceId?: WorkspaceId) => void
-  useSessionPendingInteraction?: UseSessionPendingInteraction
 }
 
 type CodexWorkspaceBrowserProps = PropsRuntime<'sidebar.workspaces'> & PropsLocale<typeof NS> & BrowserInjected
@@ -126,9 +125,8 @@ export function CodexWorkspaceBrowser(props: CodexWorkspaceBrowserProps) {
   return <HoverShell><CodexWorkspaceTree {...props} /></HoverShell>
 }
 
-function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, useWorkspaces, t, archiveSession, deleteSession, deleteWorkspace, forkSession, insertSessionBefore, insertWorkspaceBefore, openPath, openSession, renameSession, renameWorkspace, startSession }: CodexWorkspaceBrowserProps) {
+function CodexWorkspaceTree({ wide, useSessions, useWorkspaces, t, archiveSession, deleteSession, deleteWorkspace, forkSession, insertSessionBefore, insertWorkspaceBefore, openPath, openSession, renameSession, renameWorkspace, startSession }: CodexWorkspaceBrowserProps) {
   const sessions = useSessions(state => state)
-  const pendingInteractions = (useSessionPendingInteraction ?? useEmptySessionPendingInteraction)(state => state)
   const workspaces = useWorkspaces(state => state)
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => readTreeExpansionState(storage(), WORKSPACE_EXPANSION_STORAGE_KEY))
   const [pinnedWorkspaceIds, setPinnedWorkspaceIdsState] = useState(() => readPinnedWorkspaceIds(storage()))
@@ -382,7 +380,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
       {isExpanded && shownIds.map((id) => {
         const session = sessions.byId[id as SessionId]
         if (session === undefined) return null
-        const pendingInteraction = pendingInteractionForSession(id, pendingInteractions, optionalText(session, 'pendingInteraction'))
+        const pendingInteraction = visiblePendingKind(session.pendingInteraction)
         const path = session.cwd ?? workspace.path
         const selected = sessions.current === id
         const sessionMenuOpen = menu?.type === 'session' && menu.id === id
@@ -417,7 +415,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
           const title = session.displayTitle
           const pinned = pinnedSessionIds.includes(id)
           const unread = unreadSessionIds.includes(id)
-          const pendingInteraction = pendingInteractionForSession(id, pendingInteractions, optionalText(session, 'pendingInteraction'))
+          const pendingInteraction = visiblePendingKind(session.pendingInteraction)
           return <SessionRow key={id} id={id} title={title} selected={sessions.current === id} menuOpen={menu?.type === 'session' && menu.id === id} pinned={pinned} unread={unread} running={session.running === true} pendingInteraction={pendingInteraction} t={t} menuItems={sessionMenu(id, title, session.cwd)} draggable onDragStart={(event) => { event.stopPropagation(); setWorkspaceDragId(undefined); setWorkspaceDropTarget(undefined); writeSessionDrag(event.dataTransfer, id, title); const preview = document.createElement('div'); preview.className = 'dcu-wb-drag-ghost'; preview.textContent = title; document.body.appendChild(preview); event.dataTransfer.setDragImage(preview, 16, 18); window.requestAnimationFrame(() => { preview.remove() }); setSessionDrag({ sessionId: id, workspaceId: '' }) }} onDragEnd={() => { setSessionDrag(undefined); setSessionDropTarget(undefined); setWorkspaceDropTarget(undefined) }} menuPoint={menu?.type === 'session' && menu.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id, type: 'session' } : undefined) }} onPin={() => { setPinnedSessionIds(ids => toggleSessionId(ids, id)) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ kind: 'session', id, title, time: formatHoverTime(session.updatedAt), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, type: 'session', x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => {
             if (busy !== undefined) return
             if (action === 'rename') beginRename('session', id, title)

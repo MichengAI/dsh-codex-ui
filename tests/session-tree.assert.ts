@@ -5,6 +5,9 @@ const tree = readFileSync(new URL('../src/client/session-tree.tsx', import.meta.
 const channel = readFileSync(new URL('../src/client/ChannelBrowser.tsx', import.meta.url), 'utf8')
 const schedule = readFileSync(new URL('../src/client/ScheduleBrowser.tsx', import.meta.url), 'utf8')
 const workspace = readFileSync(new URL('../src/client/CodexWorkspaceBrowser.tsx', import.meta.url), 'utf8')
+const sidebar = readFileSync(new URL('../src/client/CodexSidebar.tsx', import.meta.url), 'utf8')
+const pending = readFileSync(new URL('../src/client/session-pending.ts', import.meta.url), 'utf8')
+const locales = readFileSync(new URL('../src/client/locales.ts', import.meta.url), 'utf8')
 
 assert.match(tree, /id: 'pin'[\s\S]*PinIcon/, '共用菜单置顶必须有图标')
 assert.match(tree, /id: 'unread'[\s\S]*dcu-wb-unread/, '共用菜单未读必须有图标')
@@ -16,9 +19,15 @@ assert.match(schedule, /sessionMenuItems\(t, \{ pinned, unread \}\)/, '定时必
 assert.match(channel, /<SessionRow /, '频道必须复用共用会话行')
 assert.match(schedule, /<SessionRow /, '定时必须复用共用会话行')
 assert.match(tree, /data-state="warning"[^]*dcu-wb-pending-label/, '共用会话行必须显示待处理交互警告状态和文本')
-assert.match(workspace, /pendingInteractionForSession\(id, pendingInteractions/, '任务树必须从待处理交互 Map 派生状态')
-assert.match(channel, /pendingInteractionForSession\(id, pendingInteractions/, '频道必须从待处理交互 Map 派生状态')
-assert.match(schedule, /pendingInteractionForSession\(id, pendingInteractions/, '定时必须从待处理交互 Map 派生状态')
+assert.match(workspace, /visiblePendingKind\(session\.pendingInteraction\)/, '任务树必须读取官方 SessionSummary 待处理状态')
+assert.match(channel, /visiblePendingKind\(sessions\.byId\[id\]\?\.pendingInteraction\)/, '频道必须读取官方 SessionSummary 待处理状态')
+assert.match(schedule, /visiblePendingKind\(sessions\.byId\[id\]\?\.pendingInteraction\)/, '定时必须读取官方 SessionSummary 待处理状态')
+for (const source of [workspace, channel, schedule, sidebar, pending]) {
+  assert.doesNotMatch(source, /useSessionPendingInteraction|useEmptySessionPendingInteraction|pendingInteractionForSession/, '不得保留宿主未提供的待处理交互 store 抽象')
+}
+assert.match(locales, /'sessions\.waitingAnswer': 'Waiting for answer'/, '等待回答英文文案必须与官方一致')
+assert.match(locales, /'sessions\.waitingApproval': 'Waiting for approval'/, '等待审批英文文案必须与官方一致')
+assert.match(locales, /'sessions\.planReview': 'Plan awaiting review'/, '计划待审英文文案必须与归档插件一致')
 assert.match(channel, /<GroupHead /, '频道分组行必须走共用头部')
 assert.doesNotMatch(channel, /showTip\(\{ title: group/, '频道项目行不得显示悬停卡片')
 assert.doesNotMatch(schedule, /showTip\(\{ title: group/, '定时项目行不得显示悬停卡片')
