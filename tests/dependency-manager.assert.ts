@@ -7,7 +7,7 @@ import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { PassThrough } from 'node:stream'
 import { pathToFileURL } from 'node:url'
-import { applyReleaseExclude, applyRequiredBuildPolicies, beginInstallProgress, dependencyStatuses, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, PLUGIN_MOUNT_TIMEOUT_MS, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, updatableDependencyIds, withPnpmEntry } from '../src/dependency-manager.ts'
+import { applyReleaseExclude, applyRequiredBuildPolicies, beginInstallProgress, dependencyStatuses, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, PLUGIN_MOUNT_TIMEOUT_MS, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, supportsOfficialTurnNavigator, updatableDependencyIds, withPnpmEntry } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 const sourceRoot = resolve('fixtures', 'deepseek-harness')
@@ -500,6 +500,10 @@ assert.equal(newerVersion('0.1.0-alpha.9', '0.1.0-beta.1'), true, '预发布标�
 assert.equal(newerVersion('0.1.0-rc.1', '0.1.0'), true, '正式版必须高于同号预发布版')
 assert.equal(newerVersion('0.1.0', '0.1.0-rc.1'), false, '不得把同号预发布版推荐给正式版用户')
 assert.equal(newerVersion('0.1.0+build.1', '0.1.0+build.2'), false, '构建元数据不得影响版本先后')
+assert.equal(supportsOfficialTurnNavigator('0.1.2-alpha.1'), false, 'alpha.1 尚无官方轮次导航')
+assert.equal(supportsOfficialTurnNavigator('0.1.2-alpha.2'), true, 'alpha.2 起必须关闭旧版轮次导航')
+assert.equal(supportsOfficialTurnNavigator('0.1.2-alpha.3'), true, '后续兼容版本必须保持官方导航能力')
+assert.equal(supportsOfficialTurnNavigator('invalid'), false, '未知版本不得误报官方导航能力')
 assert.deepEqual(pluginExecArgv(['--inspect=9229', '--trace-warnings', '--inspect-brk']), ['--trace-warnings'], '安装子进程不得继承调试端口参数')
 
 function fakeChild(): ChildProcess & { killedSignal?: NodeJS.Signals | number } {

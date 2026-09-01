@@ -1,6 +1,6 @@
 /** 浏览器客户端插件的 Host 入口；客户端逻辑由 dsh.client 加载。 */
 import type { Context } from '@deepseek-ai/cordis'
-import { dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, requestDesktopHotUpdate, resolveDependencyRuntime, updateAllDependencies } from './dependency-manager.ts'
+import { dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, requestDesktopHotUpdate, resolveDependencyRuntime, runtimeSupportsOfficialTurnNavigator, updateAllDependencies } from './dependency-manager.ts'
 import { authorizedExplorerWorkspacePath } from './explorer-path-policy.ts'
 import { hostServices } from './host-services.ts'
 import { ForegroundExplorer } from './native-explorer.ts'
@@ -115,6 +115,14 @@ export function apply(ctx: Context): void {
         const url = new URL(request.url ?? '/', 'http://localhost')
         try {
           if (request.method === 'GET') {
+            if (url.searchParams.get('action') === 'capabilities') {
+              const capabilities = {
+                officialTurnNavigator: await runtimeSupportsOfficialTurnNavigator(resolveDependencyRuntime(ctx)),
+              }
+              response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+              response.end(JSON.stringify({ capabilities }))
+              return
+            }
             if (url.searchParams.get('action') === 'progress') {
               response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
               response.end(JSON.stringify({ progress: installProgressSnapshot() }))

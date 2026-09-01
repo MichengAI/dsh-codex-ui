@@ -15,6 +15,7 @@ import { observeSettingsNavIcons } from './settings-nav-icons.ts'
 import { observePermissionLabels } from './permission-labels.ts'
 import { observeSlimSidebar } from './sidebar-width.ts'
 import { observeConversationHeader } from './conversation-header.ts'
+import { observeOfficialTurnNavigators } from './official-turn-navigator.ts'
 import { TurnNavigator } from './TurnNavigator.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -96,6 +97,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => observeSettingsNavIcons(), 'michengai-codex-ui: settings nav icons')
   ctx.effect(() => observePermissionLabels(ctx.locale), 'michengai-codex-ui: permission labels')
   ctx.effect(() => observeConversationHeader(), 'michengai-codex-ui: conversation header')
+  ctx.effect(() => observeOfficialTurnNavigators(), 'michengai-codex-ui: official turn navigator')
   const companionSlots = createCompanionTabSource(ctx.slots)
   ctx.slots.inject('sidebar', () => ctx.slots.register({
     name: 'sidebar',

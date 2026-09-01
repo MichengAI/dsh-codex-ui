@@ -379,6 +379,20 @@ export function newerVersion(installed: string, latest: string): boolean {
   return comparePrerelease(candidate.prerelease, current.prerelease) > 0
 }
 
+const OFFICIAL_TURN_NAVIGATOR_MIN_VERSION = '0.1.2-alpha.2'
+
+/** 官方轮次导航从 DSH alpha.2 起成为运行时能力；版本判断不依赖其私有 DOM。 */
+export function supportsOfficialTurnNavigator(version: string): boolean {
+  return version === OFFICIAL_TURN_NAVIGATOR_MIN_VERSION
+    || newerVersion(OFFICIAL_TURN_NAVIGATOR_MIN_VERSION, version)
+}
+
+/** 只读取本地运行时清单，不访问 npm registry。 */
+export async function runtimeSupportsOfficialTurnNavigator(runtime: DependencyRuntime = resolveDependencyRuntime()): Promise<boolean> {
+  const version = await installedPackageVersion('@deepseek-ai/dsh', runtime)
+  return version !== undefined && supportsOfficialTurnNavigator(version)
+}
+
 /** 返回当前 profile 中固定管理插件的实际安装版本与 npm latest 状态。 */
 export async function dependencyStatuses(runtime: DependencyRuntime = resolveDependencyRuntime()): Promise<readonly DependencyStatus[]> {
   const bundleNames = await profileBundleNames(runtime)

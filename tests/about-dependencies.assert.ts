@@ -32,6 +32,8 @@ assert.match(host, /dependenciesEndpoint/, 'Host 必须提供依赖状态接口'
 assert.match(host, /installDependency/, 'Host 必须提供受限的依赖安装操作')
 assert.match(host, /get\('action'\) === 'progress'/, '依赖接口必须提供安装进度快照')
 assert.match(host, /installProgressSnapshot/, '进度接口必须读取当前安装进度')
+assert.match(host, /get\('action'\) === 'capabilities'/, '依赖接口必须提供无需访问 npm 的运行时能力查询')
+assert.match(host, /officialTurnNavigator: await runtimeSupportsOfficialTurnNavigator/, '官方导航能力必须由实际 DSH 运行时版本决定')
 assert.match(host, /updateAllDependencies/, 'Host 必须提供一次登记全部待更新插件的批量操作')
 assert.match(host, /action.*update-all/, '依赖接口必须暴露一键更新操作')
 assert.match(host, /restartAfterResponse/, '桌面热更新必须在依赖接口响应后再触发，避免浏览器请求被中断')
