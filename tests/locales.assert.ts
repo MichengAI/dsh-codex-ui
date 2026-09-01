@@ -35,6 +35,7 @@ for (const key of Object.keys(zh)) {
   if (key.startsWith('search.') && used.includes('search.${')) continue
   if (key.startsWith('permission.') && used.includes('permission.${')) continue
   if (key.startsWith('about.dependency.') && used.includes('about.dependency.${')) continue
+  if (key.startsWith('about.progress.') && used.includes('about.progress.${')) continue
   dead.push(key)
 }
 assert.deepEqual(dead, [], `词典不得保留未被引用的键：${dead.join(', ')}`)

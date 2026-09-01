@@ -1,7 +1,8 @@
 import { spawn, type ChildProcess } from 'node:child_process'
-import { readFile, unlink, writeFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { readFile, rm, unlink, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { basename, isAbsolute, resolve, sep } from 'node:path'
+import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { MANAGED_DEPENDENCIES, SUITE_MEMBER_PACKAGES, SUITE_PACKAGE, managedDependency, type ManagedDependencyId } from './dependencies.ts'
 
@@ -128,17 +129,38 @@ type ProfileManifest = {
   dsh?: { profile?: { bundles?: string[] } }
 }
 
-async function declaredPluginNames(runtime: DependencyRuntime): Promise<string[]> {
+async function readProfileManifest(runtime: DependencyRuntime): Promise<ProfileManifest> {
   try {
-    const manifest = JSON.parse(await readFile(resolve(profileDirectory(runtime), 'package.json'), 'utf8')) as ProfileManifest
-    return [...new Set([
-      ...Object.keys({ ...manifest.devDependencies, ...manifest.dependencies }),
-      ...(manifest.dsh?.profile?.bundles ?? []),
-    ])]
+    return JSON.parse(await readFile(resolve(profileDirectory(runtime), 'package.json'), 'utf8')) as ProfileManifest
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return {}
     throw error
   }
+}
+
+async function declaredPluginNames(runtime: DependencyRuntime): Promise<string[]> {
+  const manifest = await readProfileManifest(runtime)
+  return [...new Set([
+    ...Object.keys({ ...manifest.devDependencies, ...manifest.dependencies }),
+    ...(manifest.dsh?.profile?.bundles ?? []),
+  ])]
+}
+
+/** 真正挂进 Profile 的插件名单；残留 node_modules 或仅写在 dependencies 里都不算。 */
+async function profileBundleNames(runtime: DependencyRuntime): Promise<string[]> {
+  const manifest = await readProfileManifest(runtime)
+  return manifest.dsh?.profile?.bundles ?? []
+}
+
+/** 安装缺失插件前移除卸载遗留的目录或 Junction；已挂载插件绝不触碰。 */
+export async function removeUnmountedPackagePath(packageName: string, runtime: DependencyRuntime): Promise<void> {
+  if (!MANAGED_DEPENDENCIES.some(dependency => dependency.packageName === packageName)) {
+    throw new Error('不支持清理该依赖。')
+  }
+  const bundles = await profileBundleNames(runtime)
+  if (isManagedPackageDeclared(packageName, bundles)) return
+  const packagePath = resolve(profileDirectory(runtime), 'node_modules', ...packageName.split('/'))
+  await rm(packagePath, { recursive: true, force: true, maxRetries: 2, retryDelay: 50 })
 }
 
 /** 单独更新子插件时先卸套件，避免两套 patch 冲突。 */
@@ -358,7 +380,7 @@ export function newerVersion(installed: string, latest: string): boolean {
 
 /** 返回当前 profile 中固定管理插件的实际安装版本与 npm latest 状态。 */
 export async function dependencyStatuses(runtime: DependencyRuntime = resolveDependencyRuntime()): Promise<readonly DependencyStatus[]> {
-  const declaredNames = await declaredPluginNames(runtime)
+  const bundleNames = await profileBundleNames(runtime)
   return Promise.all(MANAGED_DEPENDENCIES.map(async dependency => {
     const version = await installedPackageVersion(dependency.packageName, runtime)
     // Desktop 本身已由 DSH runtime 启动。若宿主没有通过公开兼容路径暴露
@@ -366,7 +388,7 @@ export async function dependencyStatuses(runtime: DependencyRuntime = resolveDep
     if (version === undefined && runtime.environmentKind === 'desktop' && isOfficialRuntimePackage(dependency.packageName)) {
       return { ...dependency, installed: true, updateAvailable: false }
     }
-    const declared = isOfficialRuntimePackage(dependency.packageName) || isManagedPackageDeclared(dependency.packageName, declaredNames)
+    const declared = isOfficialRuntimePackage(dependency.packageName) || isManagedPackageDeclared(dependency.packageName, bundleNames)
     if (version === undefined || !isManagedPackageInstalled({ installedVersion: version, declared })) return { ...dependency, installed: false, updateAvailable: false }
     const latestVersion = await npmLatestVersion(dependency.packageName)
     return { ...dependency, installed: true, version, latestVersion, updateAvailable: latestVersion !== undefined && newerVersion(version, latestVersion) }
@@ -444,6 +466,144 @@ async function recordDeclaredVersion(packageName: string, version: string, runti
   manifest.dependencies = { ...manifest.dependencies, [packageName]: version }
   await writeFile(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`, 'utf8')
 }
+export type InstallProgressPhase = 'resolving' | 'downloading' | 'linking' | 'building' | null
+
+export type InstallProgressView = {
+  active: boolean
+  target: string
+  seconds: number
+  lastLine: string
+  phase: InstallProgressPhase
+  done: number
+  total: number | null
+  percent: number | null
+  currentPackage: string | null
+}
+
+const progressState: InstallProgressView & { leftover: string; startedAt: number } = {
+  active: false,
+  target: '',
+  seconds: 0,
+  lastLine: '',
+  phase: null,
+  done: 0,
+  total: null,
+  percent: null,
+  currentPackage: null,
+  leftover: '',
+  startedAt: 0,
+}
+
+export function beginInstallProgress(target: string): void {
+  progressState.active = true
+  progressState.target = target
+  progressState.startedAt = Date.now()
+  progressState.seconds = 0
+  progressState.lastLine = ''
+  progressState.phase = null
+  progressState.done = 0
+  progressState.total = null
+  progressState.percent = null
+  progressState.currentPackage = null
+  progressState.leftover = ''
+}
+
+export function endInstallProgress(): void {
+  if (progressState.leftover !== '') applyProgressLine(progressState.leftover.trim())
+  progressState.active = false
+  progressState.leftover = ''
+}
+
+export function installProgressSnapshot(): InstallProgressView {
+  return {
+    active: progressState.active,
+    target: progressState.target,
+    seconds: progressState.active && progressState.startedAt > 0
+      ? Math.max(0, Math.round((Date.now() - progressState.startedAt) / 1000))
+      : 0,
+    lastLine: progressState.lastLine,
+    phase: progressState.phase,
+    done: progressState.done,
+    total: progressState.total,
+    percent: progressState.percent,
+    currentPackage: progressState.currentPackage,
+  }
+}
+
+function applyProgressLine(line: string): void {
+  if (line === '') return
+  const human = /Progress:\s*resolved\s+(\d+),\s*reused\s+(\d+),\s*downloaded\s+(\d+),\s*added\s+(\d+)/.exec(line)
+  if (human !== null) {
+    const resolved = Number(human[1])
+    const added = Number(human[4])
+    progressState.lastLine = line.slice(0, 200)
+    progressState.total = resolved
+    progressState.done = added
+    progressState.percent = resolved > 0
+      ? Math.max(1, Math.min(/done/i.test(line) ? 100 : 99, Math.round(added / resolved * 100)))
+      : null
+    if (added > 0) progressState.phase = 'linking'
+    else if (Number(human[3]) > 0) progressState.phase = 'downloading'
+    else progressState.phase = 'resolving'
+    return
+  }
+  if (/^Done in /i.test(line)) {
+    progressState.lastLine = line.slice(0, 200)
+    if (progressState.percent !== null) progressState.percent = 100
+    progressState.phase = 'linking'
+    return
+  }
+  if (line.startsWith('{')) {
+    try {
+      const event = JSON.parse(line) as { name?: unknown; stage?: unknown; packageId?: unknown; status?: unknown }
+      if (typeof event.name !== 'string' || !event.name.startsWith('pnpm:')) return
+      if (event.name === 'pnpm:stage' && typeof event.stage === 'string') {
+        if (event.stage.includes('resolution')) progressState.phase = 'resolving'
+        else if (event.stage.includes('import')) progressState.phase = 'linking'
+        else if (event.stage.includes('build')) progressState.phase = 'building'
+      }
+      if (event.name === 'pnpm:progress' && typeof event.packageId === 'string' && event.packageId !== '') {
+        progressState.currentPackage = event.packageId.split('>')[0] ?? event.packageId
+        if (event.status === 'fetched') progressState.phase = 'downloading'
+      }
+    } catch {
+      return
+    }
+    return
+  }
+  progressState.lastLine = line.slice(0, 200)
+}
+
+/** 把 pnpm / dsh plugin 的输出收成关于页可轮询的进度。 */
+export function noteInstallOutput(chunk: string): void {
+  if (!progressState.active) return
+  const text = `${progressState.leftover}${chunk}`
+  const lines = text.split(/\r?\n/)
+  progressState.leftover = lines.pop() ?? ''
+  for (const line of lines) applyProgressLine(line.trim())
+}
+
+export function pluginUnchangedError(): Error {
+  return new Error('安装命令已结束，但插件没有进入当前 Profile。请重试。')
+}
+
+async function waitUntilPluginMounted(
+  packageName: string,
+  version: string,
+  runtime: DependencyRuntime,
+  timeoutMs = 4_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() <= deadline) {
+    const bundles = await profileBundleNames(runtime)
+    const inBundles = isOfficialRuntimePackage(packageName) || isManagedPackageDeclared(packageName, bundles)
+    const installed = await installedPackageVersion(packageName, runtime)
+    if (inBundles && installed === version) return
+    await new Promise(resolve => setTimeout(resolve, 80))
+  }
+  throw pluginUnchangedError()
+}
+
 export function pluginCommandError(stderr: string): Error {
   const detail = stderr.replace(/\s+/g, ' ').trim()
   if (detail.includes('minimumReleaseAge') || detail.includes('Release age')) {
@@ -458,10 +618,62 @@ export function pluginCommandError(stderr: string): Error {
   if (/ERR_PNPM_IGNORED_BUILDS|Ignored build scripts/i.test(detail)) {
     return new Error('插件依赖的 pnpm 构建脚本策略尚未确认。请更新 Profile 的 allowBuilds 配置后重试。')
   }
-  if (/pnpm not found/i.test(detail)) {
-    return new Error('当前环境找不到 pnpm。请从桌面端启动后再更新。')
+  if (/pnpm not found|未找到 pnpm/i.test(detail)) {
+    return new Error('当前环境找不到 pnpm。请确认已安装 pnpm 后重启 DSH 再试。')
   }
   return new Error('无法在应用运行时更新插件。请先完全退出桌面端，再重新打开后更新。')
+}
+
+/**
+ * 图形界面或桌面启动往往没有 shell PATH。把 pnpm 常见安装目录补进去，
+ * 让 `dsh plugin add` 能找到本机已有的 pnpm，而不是直接启动它。
+ */
+export function pluginToolSearchDirs(
+  platform: string = process.platform,
+  env: NodeJS.ProcessEnv = process.env,
+  home: string = homedir(),
+  nodeDir: string = dirname(process.execPath),
+): string[] {
+  const dirs: string[] = []
+  const pnpmHome = (env.PNPM_HOME ?? '').trim()
+  if (pnpmHome !== '') dirs.push(pnpmHome)
+  if (platform === 'win32') {
+    const local = (env.LOCALAPPDATA ?? '').trim()
+    const roaming = (env.APPDATA ?? '').trim()
+    if (local !== '') dirs.push(join(local, 'pnpm'))
+    if (roaming !== '') dirs.push(join(roaming, 'npm'))
+  } else {
+    dirs.push('/opt/homebrew/bin', '/usr/local/bin', join(home, '.local', 'bin'), join(home, '.local', 'share', 'pnpm'))
+  }
+  if (nodeDir.trim() !== '') dirs.push(nodeDir)
+  return [...new Set(dirs.filter(dir => dir.trim() !== ''))]
+}
+
+export function pluginSpawnEnv(
+  env: NodeJS.ProcessEnv = process.env,
+  platform: string = process.platform,
+  home: string = homedir(),
+  nodeDir: string = dirname(process.execPath),
+): NodeJS.ProcessEnv {
+  const separator = platform === 'win32' ? ';' : ':'
+  const parts = (env.PATH ?? env.Path ?? '').split(separator).filter(part => part !== '')
+  for (const dir of pluginToolSearchDirs(platform, env, home, nodeDir)) {
+    if (!parts.includes(dir)) parts.push(dir)
+  }
+  return { ...env, CI: 'true', PATH: parts.join(separator) }
+}
+
+/** Desktop 桥接在 Web 下不会设置 DSH_PNPM_ENTRY；补上 Node 自带的 corepack pnpm。 */
+export function ensurePnpmEntry(
+  env: NodeJS.ProcessEnv = process.env,
+  nodeDir: string = dirname(process.execPath),
+): string | undefined {
+  const existing = (env.DSH_PNPM_ENTRY ?? env.npm_execpath ?? '').trim()
+  if (existing !== '') return existing
+  const candidate = join(nodeDir, 'node_modules', 'corepack', 'dist', 'pnpm.js')
+  if (!existsSync(candidate)) return undefined
+  env.DSH_PNPM_ENTRY = candidate
+  return candidate
 }
 
 /**
@@ -497,7 +709,11 @@ export function monitorPluginChild(child: ChildProcess, timeoutMs = PLUGIN_INSTA
     activePluginChildren.add(child)
     let output = ''
     let settled = false
-    const collect = (chunk: Buffer): void => { output = `${output}${String(chunk)}`.slice(-64 * 1024) }
+    const collect = (chunk: Buffer): void => {
+      const text = String(chunk)
+      output = `${output}${text}`.slice(-64 * 1024)
+      noteInstallOutput(text)
+    }
     const finish = (error?: Error): void => {
       if (settled) return
       settled = true
@@ -522,7 +738,11 @@ function monitorDesktopPlugin(handle: DesktopPnpmHandle, timeoutMs = PLUGIN_INST
     activeDesktopPluginHandles.add(handle)
     let output = ''
     let settled = false
-    const collect = (chunk: Buffer | string): void => { output = `${output}${String(chunk)}`.slice(-64 * 1024) }
+    const collect = (chunk: Buffer | string): void => {
+      const text = String(chunk)
+      output = `${output}${text}`.slice(-64 * 1024)
+      noteInstallOutput(text)
+    }
     const finish = (error?: Error): void => {
       if (settled) return
       settled = true
@@ -548,12 +768,13 @@ function monitorDesktopPlugin(handle: DesktopPnpmHandle, timeoutMs = PLUGIN_INST
 
 export function runDshPlugin(args: readonly string[], runtime: DependencyRuntime = resolveDependencyRuntime(), timeoutMs = PLUGIN_INSTALL_TIMEOUT_MS): Promise<void> {
   if (runtime.desktopPnpm !== undefined) {
+    ensurePnpmEntry()
     return monitorDesktopPlugin(runtime.desktopPnpm.runPlugin(args, runtime.profileDir), timeoutMs)
   }
   const entry = resolveDshCliEntry()
   const child = spawn(process.execPath, [...pluginExecArgv(), entry, 'plugin', '--profile', runtime.profileName, ...args], {
     cwd: process.cwd(),
-    env: { ...process.env, CI: 'true' },
+    env: pluginSpawnEnv(),
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
   })
@@ -583,12 +804,12 @@ export type UpdateAllDependenciesResult = {
   updatedCount: number
 }
 
-/** 只挑选已安装且确有新版本的插件，缺失插件仍交给各行的“安装”按钮。 */
+/** 顶部批量操作同时安装缺失插件并更新落后版本。 */
 export function updatableDependencyIds(statuses: readonly DependencyStatus[]): ManagedDependencyId[] {
-  return statuses.filter(status => status.installed && status.updateAvailable).map(status => status.id)
+  return statuses.filter(status => !status.installed || status.updateAvailable).map(status => status.id)
 }
 
-/** 把所有待更新版本一次写入清单，最后只请求一次桌面热更新。 */
+/** 把所有待安装/更新版本一次写入清单，最后只请求一次桌面热更新。 */
 export async function updateAllDependencies(
   requestHotUpdate: () => boolean = requestDesktopHotUpdate,
   runtime: DependencyRuntime = resolveDependencyRuntime(),
@@ -634,25 +855,38 @@ async function installDependenciesLocked(
     if (version === undefined) throw new Error('无法读取 Suite 成员版本，请检查 npm 安装后重试。')
     return { packageName, version }
   }))
-  const remove = [...new Set(targets.flatMap(target => pluginsToRemoveBeforeInstall(declared, target.packageName)))]
-  await ensureRequiredBuildPolicies(runtime)
-  for (const target of targets) {
-    await ensureLatestReleaseAllowed(target.packageName, target.version, runtime)
-    if (!isOfficialRuntimePackage(target.packageName)) await recordDeclaredVersion(target.packageName, target.version, runtime)
-    await recordPendingUpdate(target.packageName, target.version, runtime)
-  }
-  if (remove.length > 0) await runDshPlugin(['remove', ...remove], runtime)
-  if (runtime.desktopPnpm === undefined && requestHotUpdate()) return dependencyStatuses(runtime)
-  for (const target of targets) {
-    try {
-      await runDshPlugin(['add', `${target.packageName}@${target.version}`, '--registry=https://registry.npmjs.org/'], runtime)
-    } catch (error) {
-      if (isRestartableInstallError(error)) return dependencyStatuses(runtime)
-      throw error
+  beginInstallProgress(targets.map(target => `${target.packageName}@${target.version}`).join(', '))
+  try {
+    const remove = [...new Set(targets.flatMap(target => pluginsToRemoveBeforeInstall(declared, target.packageName)))]
+    await ensureRequiredBuildPolicies(runtime)
+    for (const target of targets) {
+      await ensureLatestReleaseAllowed(target.packageName, target.version, runtime)
+      if (!isOfficialRuntimePackage(target.packageName)) await removeUnmountedPackagePath(target.packageName, runtime)
+      await recordPendingUpdate(target.packageName, target.version, runtime)
     }
-    const installed = await installedPackageVersion(target.packageName, runtime)
-    if (installed !== target.version) return dependencyStatuses(runtime)
-    await removePendingUpdate(target.packageName, runtime)
+    if (remove.length > 0) await runDshPlugin(['remove', ...remove], runtime)
+    if (runtime.desktopPnpm === undefined && requestHotUpdate()) {
+      for (const target of targets) {
+        if (!isOfficialRuntimePackage(target.packageName)) await recordDeclaredVersion(target.packageName, target.version, runtime)
+      }
+      return dependencyStatuses(runtime)
+    }
+    const officialTargets = targets.filter(target => isOfficialRuntimePackage(target.packageName))
+    const communityTargets = targets.filter(target => !isOfficialRuntimePackage(target.packageName))
+    const batches = [
+      ...officialTargets.map(target => [target]),
+      ...(communityTargets.length === 0 ? [] : [communityTargets]),
+    ]
+    for (const batch of batches) {
+      await runDshPlugin(['add', ...batch.map(target => `${target.packageName}@${target.version}`), '--registry=https://registry.npmjs.org/'], runtime)
+      for (const target of batch) {
+        await waitUntilPluginMounted(target.packageName, target.version, runtime)
+        if (!isOfficialRuntimePackage(target.packageName)) await recordDeclaredVersion(target.packageName, target.version, runtime)
+        await removePendingUpdate(target.packageName, runtime)
+      }
+    }
+    return dependencyStatuses(runtime)
+  } finally {
+    endInstallProgress()
   }
-  return dependencyStatuses(runtime)
 }

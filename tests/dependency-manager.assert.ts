@@ -1,18 +1,22 @@
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { existsSync, readFileSync } from 'node:fs'
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import type { ChildProcess } from 'node:child_process'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { PassThrough } from 'node:stream'
 import { pathToFileURL } from 'node:url'
-import { applyReleaseExclude, applyRequiredBuildPolicies, dependencyStatuses, directPackagesForInstall, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, pluginCommandError, pluginExecArgv, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, updatableDependencyIds } from '../src/dependency-manager.ts'
+import { applyReleaseExclude, applyRequiredBuildPolicies, beginInstallProgress, dependencyStatuses, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, updatableDependencyIds } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 const sourceRoot = resolve('fixtures', 'deepseek-harness')
 const sourceEntry = join(sourceRoot, 'apps', 'cli', 'src', 'bin.ts')
 const installedRoot = resolve('fixtures', 'npm')
 const installedEntry = join(installedRoot, 'node_modules', '@deepseek-ai', 'dsh', 'dist', 'bin.mjs')
+const managerModule = await import('../src/dependency-manager.ts') as unknown as {
+  removeUnmountedPackagePath?: (packageName: string, runtime: ReturnType<typeof resolveDependencyRuntime>) => Promise<void>
+}
 
 assert.equal(
   resolveDshCliEntry(join('apps', 'cli', 'src', 'bin.ts'), sourceRoot),
@@ -90,6 +94,28 @@ assert.equal(customRuntime.environmentKind, 'cli')
 assert.equal(customRuntime.profileName, 'custom')
 assert.equal(customRuntime.profileDir, resolve('fixtures', 'profiles', 'custom'), '普通 Web/CLI 必须继续尊重 DSH_PROFILE_DIR')
 
+assert.equal(typeof managerModule.removeUnmountedPackagePath, 'function', '安装缺失插件前必须提供残留 node_modules 清理')
+if (managerModule.removeUnmountedPackagePath !== undefined) {
+  const staleRoot = await mkdtemp(join(tmpdir(), 'dcu-stale-plugin-'))
+  const staleProfile = join(staleRoot, 'profile')
+  const staleTarget = join(staleRoot, 'local-skills-manager')
+  const stalePath = join(staleProfile, 'node_modules', '@michengai', 'dsh-skills-manager')
+  await mkdir(join(staleProfile, 'node_modules', '@michengai'), { recursive: true })
+  await mkdir(staleTarget)
+  await writeFile(join(staleTarget, 'sentinel.txt'), 'preserve target')
+  await writeFile(join(staleProfile, 'package.json'), JSON.stringify({ dsh: { profile: { bundles: [] } } }))
+  await symlink(staleTarget, stalePath, process.platform === 'win32' ? 'junction' : 'dir')
+  await managerModule.removeUnmountedPackagePath('@michengai/dsh-skills-manager', {
+    environmentKind: 'cli',
+    profileName: 'profile',
+    profileDir: staleProfile,
+    runtimeRoots: [],
+  })
+  assert.equal(existsSync(stalePath), false, '未挂载插件的旧链接必须删除')
+  assert.equal(existsSync(join(staleTarget, 'sentinel.txt')), true, '删除 Junction 不得伤及本地源码目录')
+  await rm(staleRoot, { recursive: true, force: true })
+}
+
 await runDshPlugin(['add', '@michengai/dsh-codex-ui@0.2.92'], desktopRuntime, 1_000)
 assert.deepEqual(desktopPluginArgs, ['add', '@michengai/dsh-codex-ui@0.2.92'])
 assert.equal(desktopPluginCwd, desktopProfileDir, 'Desktop 安装必须以当前 profile 作为调用目录')
@@ -103,7 +129,10 @@ const writeManifest = async (root: string, packageName: string, version: string)
   await writeFile(join(directory, 'package.json'), JSON.stringify({ name: packageName, version }), 'utf8')
 }
 await mkdir(statusProfile, { recursive: true })
-await writeFile(join(statusProfile, 'package.json'), JSON.stringify({ dependencies: { '@michengai/dsh-codex-ui': '0.2.92' } }), 'utf8')
+await writeFile(join(statusProfile, 'package.json'), JSON.stringify({
+  dsh: { profile: { bundles: ['@michengai/dsh-codex-ui'] } },
+  dependencies: { '@michengai/dsh-codex-ui': '0.2.92' },
+}), 'utf8')
 await writeManifest(statusProfile, '@michengai/dsh-codex-ui', '0.2.92')
 await writeManifest(statusRuntimeRoot, '@deepseek-ai/dsh', '0.1.2-alpha.1')
 const previousFetch = globalThis.fetch
@@ -134,6 +163,30 @@ try {
 } finally {
   globalThis.fetch = previousFetch
   await rm(statusRoot, { recursive: true, force: true })
+}
+
+const leftoverRoot = await mkdtemp(join(tmpdir(), 'dcu-leftover-im-'))
+try {
+  await writeFile(join(leftoverRoot, 'package.json'), JSON.stringify({
+    dsh: { profile: { bundles: ['@michengai/dsh-codex-ui'] } },
+    dependencies: { '@michengai/dsh-im-connect': '0.1.29' },
+  }), 'utf8')
+  const leftoverIm = join(leftoverRoot, 'node_modules', '@michengai', 'dsh-im-connect')
+  await mkdir(leftoverIm, { recursive: true })
+  await writeFile(join(leftoverIm, 'package.json'), JSON.stringify({ name: '@michengai/dsh-im-connect', version: '0.1.27' }), 'utf8')
+  const leftoverStatuses = await dependencyStatuses({
+    environmentKind: 'cli',
+    profileName: 'web',
+    profileDir: leftoverRoot,
+    runtimeRoots: [],
+  })
+  assert.equal(
+    leftoverStatuses.find(status => status.id === 'im')?.installed,
+    false,
+    '未进入 bundles 的残留 IM 目录不得显示为已安装',
+  )
+} finally {
+  await rm(leftoverRoot, { recursive: true, force: true })
 }
 
 const source = [
@@ -323,8 +376,8 @@ assert.deepEqual(
     { id: 'skills', packageName: '@michengai/dsh-skills-manager', installed: true, version: '0.1.24', latestVersion: '0.1.24', updateAvailable: false },
     { id: 'archive', packageName: '@michengai/dsh-archive-manager', installed: false, latestVersion: '0.1.14', updateAvailable: true },
   ]),
-  ['ui'],
-  '一键更新只应包含已安装且存在新版本的插件，不得顺带安装缺失插件',
+  ['ui', 'archive'],
+  '一键安装/更新必须同时包含缺失插件与存在新版本的插件',
 )
 assert.match(
   pluginCommandError('EPERM: unlink failed').message,
@@ -341,7 +394,88 @@ assert.match(
   /allowBuilds/,
   '未知构建脚本再次触发拦截时必须给出准确配置提示',
 )
+assert.match(
+  pluginCommandError('pnpm not found on PATH').message,
+  /找不到 pnpm/,
+  '英文 pnpm 缺失必须给出明确提示',
+)
+assert.match(
+  pluginCommandError('未找到 pnpm 入口，无法执行插件操作。').message,
+  /找不到 pnpm/,
+  'Desktop 桥接缺少 pnpm 入口时必须给出明确提示，不得误报成退出桌面端',
+)
 assert.equal(isRestartableInstallError(new Error('无法覆盖正在运行的插件文件。请先完全退出桌面端，再重新打开后更新。')), true)
+assert.match(
+  pluginUnchangedError().message,
+  /没有进入当前 Profile/,
+  '命令成功但未写入 bundles 时必须给出明确失败',
+)
+assert.doesNotMatch(
+  readFileSync(new URL('../src/dependency-manager.ts', import.meta.url), 'utf8'),
+  /isRestartableInstallError\(error\)\) return dependencyStatuses/,
+  '文件占用不得假装安装成功并返回当前状态',
+)
+
+beginInstallProgress('@michengai/dsh-im-connect@0.1.29')
+noteInstallOutput('Progress: resolved 91, reused 90, downloaded 1, added 45\n')
+{
+  const snapshot = installProgressSnapshot()
+  assert.equal(snapshot.active, true, '安装过程中进度必须标记为进行中')
+  assert.equal(snapshot.target, '@michengai/dsh-im-connect@0.1.29')
+  assert.equal(snapshot.total, 91)
+  assert.equal(snapshot.done, 45)
+  assert.equal(snapshot.percent, 49)
+  assert.match(snapshot.lastLine, /resolved 91/)
+}
+endInstallProgress()
+assert.equal(installProgressSnapshot().active, false, '安装结束后进度必须结束')
+
+beginInstallProgress('dshmarket@1.38.1')
+noteInstallOutput('Progress: resolved 95, reused 91, downloaded 0, added 4\nDone in 1.4s using pnpm v11.24.0\n')
+assert.equal(installProgressSnapshot().percent, 100, 'pnpm Done 行必须把进度收成完成')
+assert.match(installProgressSnapshot().lastLine, /Done in 1\.4s/)
+endInstallProgress()
+
+beginInstallProgress('dshmarket@1.38.1')
+noteInstallOutput('未找到 pnpm 命令，无法执行插件操作')
+endInstallProgress()
+assert.match(installProgressSnapshot().lastLine, /未找到 pnpm/, '没有换行的最后一行输出也必须进入进度快照')
+
+assert.deepEqual(
+  pluginToolSearchDirs('win32', {
+    PNPM_HOME: 'D:\\pnpm',
+    LOCALAPPDATA: 'C:\\Local',
+    APPDATA: 'C:\\Roaming',
+  }, 'C:\\Users\\me', 'D:\\Tools\\nodejs'),
+  ['D:\\pnpm', join('C:\\Local', 'pnpm'), join('C:\\Roaming', 'npm'), 'D:\\Tools\\nodejs'],
+  'Windows 必须把独立安装器和 npm 全局目录补进 PATH',
+)
+{
+  const env = pluginSpawnEnv({
+    PATH: 'C:\\Windows\\system32',
+    PNPM_HOME: 'D:\\pnpm',
+    LOCALAPPDATA: 'C:\\Local',
+    APPDATA: 'C:\\Roaming',
+  }, 'win32', 'C:\\Users\\me', 'D:\\Tools\\nodejs')
+  assert.match(env.PATH ?? '', /D:\\pnpm/, '安装子进程必须能找到 PNPM_HOME')
+  assert.match(env.PATH ?? '', /nodejs/, '安装子进程必须能找到当前 Node 目录下的 pnpm')
+  assert.equal(env.CI, 'true')
+}
+
+{
+  const env: NodeJS.ProcessEnv = { DSH_PNPM_ENTRY: 'C:\\bundled\\pnpm.cjs' }
+  assert.equal(ensurePnpmEntry(env, 'D:\\missing-node'), 'C:\\bundled\\pnpm.cjs', '已有桌面 pnpm 入口不得被覆盖')
+}
+{
+  const corepackRoot = await mkdtemp(join(tmpdir(), 'dcu-corepack-'))
+  await mkdir(join(corepackRoot, 'node_modules', 'corepack', 'dist'), { recursive: true })
+  const candidate = join(corepackRoot, 'node_modules', 'corepack', 'dist', 'pnpm.js')
+  await writeFile(candidate, '')
+  const env: NodeJS.ProcessEnv = {}
+  assert.equal(ensurePnpmEntry(env, corepackRoot), candidate, 'Web 下的 Desktop 桥接必须能补上 Node 自带的 corepack pnpm')
+  assert.equal(env.DSH_PNPM_ENTRY, candidate)
+  await rm(corepackRoot, { recursive: true, force: true })
+}
 
 assert.equal(requestDesktopHotUpdate(undefined), false)
 let sent

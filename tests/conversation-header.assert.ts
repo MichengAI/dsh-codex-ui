@@ -49,7 +49,8 @@ assert.match(header, /getRect/, '三点菜单必须按按钮位置取锚点')
 assert.match(header, /toggle: true/, '再次点击顶栏文件夹必须关闭卡片')
 assert.doesNotMatch(header, /mouseenter/, '顶栏文件夹不得再用悬停打开卡片')
 assert.match(header, /translate\(1.5 2.429\)/, '顶栏文件夹必须使用官方 IconFolderClose16 路径')
-assert.match(header, /decorateUserBubbles/, '会话观察必须把用户气泡改成 Codex 卡片')
+assert.doesNotMatch(header, /decorateUserBubbles|ensureUserBubbleStyle/, '会话观察不得再把用户气泡改成 Codex 卡片')
+assert.match(header, /restoreOfficialUserBubbles/, '会话观察启动时必须撤回旧版用户卡片')
 
 /** 复刻宿主 ConversationSessionHeader 的 DOM 结构（类名后缀与 CSS modules 一致）。 */
 const HOST_HEADER_HTML = `

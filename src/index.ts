@@ -1,6 +1,6 @@
 /** 浏览器客户端插件的 Host 入口；客户端逻辑由 dsh.client 加载。 */
 import type { Context } from '@deepseek-ai/cordis'
-import { dependencyStatuses, disposeDependencyInstaller, installDependency, requestDesktopHotUpdate, resolveDependencyRuntime, updateAllDependencies } from './dependency-manager.ts'
+import { dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, requestDesktopHotUpdate, resolveDependencyRuntime, updateAllDependencies } from './dependency-manager.ts'
 import { authorizedExplorerWorkspacePath } from './explorer-path-policy.ts'
 import { hostServices } from './host-services.ts'
 import { ForegroundExplorer } from './native-explorer.ts'
@@ -115,6 +115,11 @@ export function apply(ctx: Context): void {
         const url = new URL(request.url ?? '/', 'http://localhost')
         try {
           if (request.method === 'GET') {
+            if (url.searchParams.get('action') === 'progress') {
+              response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+              response.end(JSON.stringify({ progress: installProgressSnapshot() }))
+              return
+            }
             const dependencies = await dependencyStatuses(resolveDependencyRuntime(ctx))
             response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
             response.end(JSON.stringify({ dependencies }))
@@ -127,23 +132,25 @@ export function apply(ctx: Context): void {
               return
             }
             if (url.searchParams.get('action') === 'update-all') {
+              const autoReload = typeof process.send === 'function'
               let restartAfterResponse = false
               const { dependencies, updatedCount } = await updateAllDependencies(() => {
-                restartAfterResponse = typeof process.send === 'function'
+                restartAfterResponse = autoReload
                 return restartAfterResponse
               }, resolveDependencyRuntime(ctx))
               response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-              response.end(JSON.stringify({ dependencies, restartRequired: updatedCount > 0 }))
+              response.end(JSON.stringify({ dependencies, restartRequired: updatedCount > 0, autoReload: typeof process.send === 'function' }))
               if (restartAfterResponse) setTimeout(() => { requestDesktopHotUpdate() }, 150).unref?.()
               return
             }
+            const autoReload = typeof process.send === 'function'
             let restartAfterResponse = false
             const dependencies = await installDependency(url.searchParams.get('dependency'), () => {
-              restartAfterResponse = typeof process.send === 'function'
+              restartAfterResponse = autoReload
               return restartAfterResponse
             }, resolveDependencyRuntime(ctx))
             response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-            response.end(JSON.stringify({ dependencies, restartRequired: true }))
+            response.end(JSON.stringify({ dependencies, restartRequired: true, autoReload: typeof process.send === 'function' }))
             if (restartAfterResponse) setTimeout(() => { requestDesktopHotUpdate() }, 150).unref?.()
             return
           }

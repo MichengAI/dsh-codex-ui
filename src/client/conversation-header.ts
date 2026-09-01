@@ -1,4 +1,4 @@
-import { decorateUserBubbles, ensureUserBubbleStyle } from './conversation-bubbles.ts'
+import { restoreOfficialUserBubbles } from './conversation-bubbles.ts'
 
 export const CONVERSATION_HEADER_STYLE_ID = 'dcu-conversation-header-style'
 export const HEADER_PROJECT_TIP_EVENT = 'dcu-header-project-tip'
@@ -163,12 +163,12 @@ function ensureStyle(doc: Document): void {
   doc.head.append(style)
 }
 
-const CONVERSATION_DECORATION_SELECTOR = 'header, [data-conversation-scroll], [data-chat-flow-kind="user"], [data-pending-steering]'
+const CONVERSATION_DECORATION_SELECTOR = 'header'
 
 function conversationDecorationMutation(records: readonly MutationRecord[]): boolean {
   const relevant = (node: Node): boolean => node instanceof Element && (
     node.matches(CONVERSATION_DECORATION_SELECTOR)
-    || node.closest('header, [data-chat-flow-kind="user"], [data-pending-steering]') !== null
+    || node.closest(CONVERSATION_DECORATION_SELECTOR) !== null
     || node.querySelector(CONVERSATION_DECORATION_SELECTOR) !== null
   )
   return records.some(record => relevant(record.target)
@@ -176,11 +176,11 @@ function conversationDecorationMutation(records: readonly MutationRecord[]): boo
     || [...record.removedNodes].some(relevant))
 }
 
-/** 观察会话顶栏与用户气泡；只对相关子树变更按帧合并，流式回答不会触发全文档扫描。 */
+/** 观察会话顶栏；只对相关子树变更按帧合并，流式回答不会触发全文档扫描。 */
 export function observeConversationHeader(doc: Document = document): () => void {
   if (doc.head === null || doc.body === null) return () => {}
   ensureStyle(doc)
-  ensureUserBubbleStyle(doc)
+  restoreOfficialUserBubbles(doc)
   let applying = false
   let frame: number | undefined
   let watchedTabs: HTMLElement | undefined
@@ -200,7 +200,6 @@ export function observeConversationHeader(doc: Document = document): () => void 
       syncTabSlider(doc)
       decorateConversationTitle(doc)
       decorateSessionLogDownload(doc)
-      decorateUserBubbles(doc)
     } finally {
       applying = false
     }
