@@ -85,8 +85,8 @@ importers:
   packages/dsh-codex-suite:
     dependencies:
       '@michengai/dsh-agency-agents':
-        specifier: 0.1.24
-        version: 0.1.24(53e5aa7a4ace86e089b79cea2390c042)
+        specifier: 0.1.25
+        version: 0.1.25(53e5aa7a4ace86e089b79cea2390c042)
       '@michengai/dsh-archive-manager':
         specifier: 0.1.23
         version: 0.1.23(3ec75fc7596367106ffbf0b83c697d27)
@@ -1104,8 +1104,8 @@ packages:
   '@larksuiteoapi/node-sdk@1.73.0':
     resolution: {integrity: sha512-gs4EiupJ6RdYAEJGtuYrCVsB7wSMBwtUDK+ilpmOHD6RTvbtciW6AWciQO9coOQVuBZfh7hvAi25dPfCsny/nA==}
 
-  '@michengai/dsh-agency-agents@0.1.24':
-    resolution: {integrity: sha512-C+tPlsyNpfLfBZmgu6fqF3cnY5UI5rRi6iVNabFz2xGh7MW4FcXC0QttmjdHRgpho34uiXKf9+gQj8nEiGlaNQ==}
+  '@michengai/dsh-agency-agents@0.1.25':
+    resolution: {integrity: sha512-XIKoBxSHQR+MgJ9FSEznlA6F9fkTo/1DCkDZmgM7FtRahSUeJPfaNtI190FLwFmoM9/sTyUiKq/FL+aqRBeuAg==}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
       '@deepseek-ai/dsh-api-remotes': ^0.1.0-rc.5
@@ -4052,7 +4052,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@michengai/dsh-agency-agents@0.1.24(53e5aa7a4ace86e089b79cea2390c042)':
+  '@michengai/dsh-agency-agents@0.1.25(53e5aa7a4ace86e089b79cea2390c042)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-api-remotes': 0.1.0-rc.6(b72b6ce942c9829b523ef77a29aac597)
