@@ -88,8 +88,8 @@ importers:
         specifier: 0.1.23
         version: 0.1.23(53e5aa7a4ace86e089b79cea2390c042)
       '@michengai/dsh-archive-manager':
-        specifier: 0.1.21
-        version: 0.1.21(3ec75fc7596367106ffbf0b83c697d27)
+        specifier: 0.1.22
+        version: 0.1.22(3ec75fc7596367106ffbf0b83c697d27)
       '@michengai/dsh-automation':
         specifier: 0.1.22
         version: 0.1.22(57f07f77b14b07c327ef5931e1058bae)
@@ -97,8 +97,8 @@ importers:
         specifier: workspace:*
         version: link:../..
       '@michengai/dsh-im-connect':
-        specifier: 0.1.28
-        version: 0.1.28(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)
+        specifier: 0.1.30
+        version: 0.1.30(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)
       '@michengai/dsh-skills-manager':
         specifier: 0.1.32
         version: 0.1.32(b0594e640b77f7c4b51ffc39317da866)
@@ -1135,8 +1135,8 @@ packages:
       '@deepseek-ai/dsh-system-prompt': ^0.1.0-rc.5
       '@deepseek-ai/dsh-tools': ^0.1.0-rc.5
 
-  '@michengai/dsh-archive-manager@0.1.21':
-    resolution: {integrity: sha512-osZ7062g0jbtw/4acVfbm1U/fpg6lPauUvOxb0ZcjbSOWg0CqEYnZOdCKvN/jwv2llP3QtfSV6j3IvHMwx+Mwg==}
+  '@michengai/dsh-archive-manager@0.1.22':
+    resolution: {integrity: sha512-ewLx+gdRvkWdzepU9IO5UN/qRhv300JaulWphp3F7Z2MqEgflKWVt+g7Woi9CVrYTia5e5ESPvonqWWCiovVkQ==}
     engines: {node: ^22.19.0 || >=24.0.0}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
@@ -1184,8 +1184,8 @@ packages:
       react:
         optional: true
 
-  '@michengai/dsh-im-connect@0.1.28':
-    resolution: {integrity: sha512-vkfOT7I4gNZ+9k9usDgvUcRnocFZl24dn1H78N+FRV40X7Ou0dUtvT8YMR8hNQBO174dtU5D0X1CTqkC7T9E9Q==}
+  '@michengai/dsh-im-connect@0.1.30':
+    resolution: {integrity: sha512-4sx7lMKnykZvDUpZ8tyVAfdjfOvVBUlcJXerRcgBND0vO+MAUIo1Hw7anfshDbqIo7L87u5dxLTIphV4UtnVHQ==}
     engines: {node: '>=22.19'}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
@@ -4083,7 +4083,7 @@ snapshots:
       '@deepseek-ai/dsh-tools': 0.1.0-rc.6(236e827ae6fe39da32525b89845f982f)
       '@deepseek-ai/schemastery': 3.18.1
 
-  '@michengai/dsh-archive-manager@0.1.21(3ec75fc7596367106ffbf0b83c697d27)':
+  '@michengai/dsh-archive-manager@0.1.22(3ec75fc7596367106ffbf0b83c697d27)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-client-connection': 0.1.0-rc.6(641b9ea50d39216c4ab6bd371211c4c5)
@@ -4126,7 +4126,7 @@ snapshots:
     optionalDependencies:
       react: 18.3.1
 
-  '@michengai/dsh-im-connect@0.1.28(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)':
+  '@michengai/dsh-im-connect@0.1.30(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/schemastery@3.18.1)(debug@4.4.3(supports-color@7.1.0))(supports-color@7.1.0)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/schemastery': 3.18.1
