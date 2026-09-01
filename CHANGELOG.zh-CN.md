@@ -4,6 +4,23 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.101 — 2026-09-01
+
+配套版本：`@michengai/dsh-codex-suite-installer@0.1.18`。
+
+### 修复
+
+- 当 `SessionSummary.pendingInteraction` 缺失时，任务、频道和定时任务树恢复回退读取宿主待处理交互 Store，确保 Web 与 Desktop 侧栏继续显示等待审批、等待回答和计划待审状态。
+- 有效的 `SessionSummary.pendingInteraction` 仍保持最高优先级；旧宿主未注入 Hook 时使用稳定空 Store 安全降级。
+
+### 测试
+
+- 在原有 `SessionSummary` 快照覆盖之外，为三棵树补充真实待处理交互 Store 路径的 DOM 集成测试。
+
+### 依赖
+
+- Suite Installer 发布 workflow 会在本版本发布后解析 Codex UI `0.2.101`。
+
 ## 0.2.100 — 2026-09-01
 
 配套版本：`@michengai/dsh-codex-suite-installer@0.1.17`。

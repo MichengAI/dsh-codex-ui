@@ -4,6 +4,23 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.101 — 2026-09-01
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.18`.
+
+### Fixed
+
+- Restored the host pending-interaction store as a fallback for workspace, channel, and scheduled-task trees when `SessionSummary.pendingInteraction` is absent, so approvals, questions, and plan reviews remain visible in Web and Desktop sidebars.
+- Kept valid `SessionSummary.pendingInteraction` values authoritative while preserving a stable empty-store fallback for older hosts that do not inject the hook.
+
+### Tests
+
+- Added DOM integration coverage for all three trees using the real pending-interaction store path, alongside the existing `SessionSummary` snapshot coverage.
+
+### Dependencies
+
+- The Suite Installer release workflow will resolve Codex UI `0.2.101` after this release is published.
+
 ## 0.2.100 — 2026-09-01
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.17`.
