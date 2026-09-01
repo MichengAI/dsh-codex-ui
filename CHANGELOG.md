@@ -4,6 +4,26 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.97 — 2026-09-01
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.14`.
+
+### Compatibility
+
+- Adopted the official DSH alpha turn navigator while preserving the legacy navigator on older runtimes, with runtime capability gating and resilient left-side mirroring that no longer depends on private stylesheet names or host DOM nesting.
+- Preserved upstream conversation width dragging, adaptive transcript sizing, and turn navigation while retaining the Codex composer treatment.
+
+### Fixed
+
+- Reworked About-page companion installs with live pnpm progress, accurate Profile mount verification, bulk installation of missing or outdated plugins, stale junction cleanup, and correct Desktop versus standalone Web restart guidance.
+- Hardened pnpm discovery for GUI environments without trusting unrelated package-manager entry points or leaking the inferred entry into later child processes.
+- Added strict progress payload validation and extended slow Desktop bundle reconciliation tolerance.
+- Filtered and frame-coalesced navigator DOM observation so streaming responses do not trigger repeated document-wide scans.
+
+### Dependencies
+
+- Prepared Suite Installer `0.1.14` to resolve the latest exact companion versions after this release is published.
+
 ## 0.2.96 — 2026-09-01
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.13`.
