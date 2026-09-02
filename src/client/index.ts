@@ -24,6 +24,7 @@ import { observeSlimSidebar } from './sidebar-width.ts'
 import { observeConversationHeader } from './conversation-header.ts'
 import { observeOfficialTurnNavigators } from './official-turn-navigator.ts'
 import { TurnNavigator } from './TurnNavigator.tsx'
+import { hasConnectWorkspace, hasStartSession, recentWorkspaceId, workspaceBaselinesReady } from './workspace-compat.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
@@ -72,42 +73,8 @@ type ArchiveRegistry = {
   deleteSession: (sessionId: SessionId) => Promise<{ ok: boolean; error?: { message: string } }>
 }
 
-type UiWorkspaceService = {
-  startSession: (workspaceId?: WorkspaceId) => void
-  connectWorkspace: (workspaceId: WorkspaceId) => Promise<SessionId>
-}
-
 function hasDeleteSession(value: unknown): value is ArchiveRegistry {
   return value !== null && typeof value === 'object' && 'deleteSession' in value && typeof value.deleteSession === 'function'
-}
-
-function hasStartSession(value: unknown): value is UiWorkspaceService {
-  return value !== null && typeof value === 'object' && 'startSession' in value && typeof value.startSession === 'function'
-}
-
-function hasConnectWorkspace(value: unknown): value is UiWorkspaceService {
-  return value !== null && typeof value === 'object' && 'connectWorkspace' in value && typeof value.connectWorkspace === 'function'
-}
-
-function recentWorkspaceId(
-  workspaces: readonly { workspaceId: WorkspaceId; sessionIds: readonly SessionId[]; createdAt: string }[],
-  sessions: Readonly<Record<string, { updatedAt: number }>>,
-): WorkspaceId | undefined {
-  let selected: WorkspaceId | undefined
-  let selectedTime = Number.NEGATIVE_INFINITY
-  for (const workspace of workspaces) {
-    let latest = Number.NEGATIVE_INFINITY
-    for (const sessionId of workspace.sessionIds) {
-      const session = sessions[sessionId]
-      if (session !== undefined) latest = Math.max(latest, session.updatedAt)
-    }
-    if (latest === Number.NEGATIVE_INFINITY) latest = Date.parse(workspace.createdAt)
-    if (selected === undefined || latest > selectedTime) {
-      selected = workspace.workspaceId
-      selectedTime = latest
-    }
-  }
-  return selected
 }
 
 /** Archive Manager replaces the official ui-workspace row with this optional service. */
@@ -117,7 +84,11 @@ export function startWorkspaceSession(ctx: ClientContext, workspaceId?: Workspac
     uiWorkspace.startSession(workspaceId)
     return
   }
-  if (hasStartSession(ctx.workspaces)) ctx.workspaces.startSession(workspaceId)
+  if (hasStartSession(ctx.workspaces)) {
+    ctx.workspaces.startSession(workspaceId)
+    return
+  }
+  console.warn('DSH 工作空间服务尚未就绪，无法新建会话。')
 }
 
 /** 替换 DSH 的官方 sidebar 插槽，不修改 DSH 源码或会话数据。 */
@@ -185,7 +156,9 @@ export function apply(ctx: ClientContext): void {
     const currentWorkspaceId = currentSessionId === undefined
       ? undefined
       : workspaces.items.find(workspace => workspace.sessionIds.includes(currentSessionId))?.workspaceId
-    const targetWorkspaceId = currentWorkspaceId ?? recentWorkspaceId(workspaces.items, sessionSnapshot.byId)
+    const baselinesReady = workspaceBaselinesReady(workspaces, sessionSnapshot)
+    const targetWorkspaceId = currentWorkspaceId ?? (baselinesReady ? recentWorkspaceId(workspaces.items, sessionSnapshot.byId) : undefined)
+    if (targetWorkspaceId === undefined && !baselinesReady) throw new Error('DSH 工作空间数据尚未就绪，请稍后重试')
     if (targetWorkspaceId === undefined) throw new Error('请先选择一个工作空间，再使用示例 Prompt')
     const uiWorkspace = (ctx.get as (name: string) => unknown)('uiWorkspace')
     const workspaceNavigation = hasConnectWorkspace(uiWorkspace) ? uiWorkspace : hasConnectWorkspace(ctx.workspaces) ? ctx.workspaces : undefined

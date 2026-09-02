@@ -37,6 +37,7 @@ import { HoverShell, useHoverDispatch, type HoverCardTip } from './hover-shell.t
 import { WorkspaceHoverCard } from './workspace-hover-card.tsx'
 import { moveBefore, orderByIds, pinnedHeaderDropIndicator, readWorkspaceDrag, readWorkspaceGroupDrag, reorderDropBeforeId, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag, writeWorkspaceGroupDrag } from './workspace-browser.ts'
 import { browserStorage, readTreeExpansionState, WORKSPACE_EXPANSION_STORAGE_KEY, writeTreeExpansionState } from './tree-expansion.ts'
+import { workspaceBaselinesReady } from './workspace-compat.ts'
 
 type BrowserInjected = {
   archiveSession: (sessionId: SessionId) => Promise<void>
@@ -194,10 +195,6 @@ function optionalText(value: object, key: string): string | undefined {
   return typeof next === 'string' && next !== '' ? next : undefined
 }
 
-function workspaceBaselinesReady(workspaces: object, sessions: object): boolean {
-  if ('baselinesReady' in workspaces) return workspaces.baselinesReady === true
-  return 'phase' in workspaces && workspaces.phase === 'ready' && 'phase' in sessions && sessions.phase === 'ready'
-}
 /** 插件自有的工作区树：复刻原生层级和拖拽行为，并在每个会话菜单中增加管理操作。 */
 export function CodexWorkspaceBrowser(props: CodexWorkspaceBrowserProps) {
   return <HoverShell><CodexWorkspaceTree {...props} /></HoverShell>

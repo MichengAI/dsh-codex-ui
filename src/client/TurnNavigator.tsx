@@ -78,12 +78,15 @@ function turnLinks(snapshot: ChatSnapshot, fallback: string): readonly TurnLink[
   return links
 }
 
-function legacyChatHook(useSession: TurnNavigatorProps['useSession']): SnapshotSelectorHook<ChatSnapshot> {
-  return (selector, equal) => (useSession as SnapshotSelectorHook<LegacyConversationSnapshot>)(snapshot => selector(snapshot.chat), equal)
-}
-
 function equalTurns(left: readonly TurnLink[], right: readonly TurnLink[]): boolean {
   return left.length === right.length && left.every((turn, index) => turn.key === right[index]?.key && turn.summary === right[index]?.summary)
+}
+
+function legacyTurnLinks(useSession: TurnNavigatorProps['useSession'], fallback: string): readonly TurnLink[] {
+  return (useSession as SnapshotSelectorHook<SessionSnapshot | LegacyConversationSnapshot>)(snapshot => {
+    const chat = 'chat' in snapshot ? snapshot.chat : undefined
+    return chat === undefined ? [] : turnLinks(chat, fallback)
+  }, equalTurns)
 }
 
 function railLeftFromSidebar(): number {
@@ -94,8 +97,10 @@ function railLeftFromSidebar(): number {
 
 /** 当前会话的轮次导航；只读取原生聊天锚点并滚动，不改写会话数据或消息视图。 */
 export function TurnNavigator({ useChat, useSession, t }: TurnNavigatorProps) {
-  const useChatSnapshot = useChat ?? legacyChatHook(useSession)
-  const turns = useChatSnapshot(snapshot => turnLinks(snapshot, t('turns.untitled')), equalTurns)
+  const fallback = t('turns.untitled')
+  const turns = useChat === undefined
+    ? legacyTurnLinks(useSession, fallback)
+    : useChat(snapshot => turnLinks(snapshot, fallback), equalTurns)
   const [current, setCurrent] = useState<string | null>(turns[0]?.key ?? null)
   const [hoverAt, setHoverAt] = useState<number | null>(null)
   const [railLeft, setRailLeft] = useState(288)

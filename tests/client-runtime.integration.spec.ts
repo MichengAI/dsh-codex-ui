@@ -95,6 +95,45 @@ test('新建任务优先使用 Archive Manager 提供的 uiWorkspace，并保留
   expect(coreStart).toHaveBeenCalledWith(workspaceId)
 })
 
+test('新建任务缺少两路工作区服务时记录诊断', () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  try {
+    startWorkspaceSession({
+      get: () => undefined,
+      workspaces: {},
+    } as never)
+    expect(warn).toHaveBeenCalledWith('DSH 工作空间服务尚未就绪，无法新建会话。')
+  } finally {
+    warn.mockRestore()
+  }
+})
+
+test('连接器示例 Prompt 在双基线就绪前不选择临时工作区', async () => {
+  runtime = new ClientApplyHarness()
+  const connectWorkspace = vi.fn(async () => 'temporary-session')
+  Object.assign(runtime.ctx.workspaces.list, {
+    getSnapshot: () => ({
+      items: [{ workspaceId: 'temporary-workspace', sessionIds: [], createdAt: '2026-09-03T00:00:00.000Z' }],
+      phase: 'pending',
+    }),
+  })
+  Object.assign(runtime.ctx.sessions.list, {
+    getSnapshot: () => ({ current: undefined, byId: {}, phase: 'pending' }),
+  })
+  Object.assign(runtime.ctx, {
+    get: (name: string): unknown => name === 'connection'
+      ? { api: { host: { openPath: async () => ({ result: { ok: true, value: undefined } }) } } }
+      : name === 'uiWorkspace' ? { connectWorkspace } : name === 'conversation' ? {} : undefined,
+  })
+  runtime.mount()
+  const connector = runtime.slots.entries('settings.section').find(entry => entry.id === 'connectors')
+  expect(connector).toBeDefined()
+  const injected = (connector?.inject as (() => { startPromptSession: (prompt: string) => Promise<void> }))()
+
+  await expect(injected.startPromptSession('检查项目')).rejects.toThrow('DSH 工作空间数据尚未就绪，请稍后重试')
+  expect(connectWorkspace).not.toHaveBeenCalled()
+})
+
 test('侧栏替换以更低优先级接管工作区树，并保留 footer action 子插槽', async () => {
   runtime = new ClientApplyHarness()
   runtime.mount()
