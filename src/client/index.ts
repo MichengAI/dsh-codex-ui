@@ -25,7 +25,7 @@ import { observeConversationHeader } from './conversation-header.ts'
 import { observeOfficialTurnNavigators } from './official-turn-navigator.ts'
 import { TurnNavigator } from './TurnNavigator.tsx'
 import { hasConnectWorkspace, hasStartSession, recentWorkspaceId, workspaceBaselinesReady } from './workspace-compat.ts'
-import { UserFacingError } from './user-error.ts'
+import { HostActionError, type HostAction, UserFacingError } from './user-error.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
@@ -71,11 +71,23 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 export const inject = ['slots', 'sessions', 'workspaces', 'layout', 'locale', 'connection', 'conversation']
 
 type ArchiveRegistry = {
-  deleteSession: (sessionId: SessionId) => Promise<{ ok: boolean; error?: { message: string } }>
+  deleteSession: (sessionId: SessionId) => Promise<
+    { ok: true; value?: unknown }
+    | { ok: false; error?: { message: string; code?: string; details?: unknown; isDSHRemoteError?: true } }
+  >
 }
 
 function hasDeleteSession(value: unknown): value is ArchiveRegistry {
   return value !== null && typeof value === 'object' && 'deleteSession' in value && typeof value.deleteSession === 'function'
+}
+
+async function runHostAction<T>(action: HostAction, execute: () => Promise<T>): Promise<T> {
+  try {
+    return await execute()
+  } catch (reason) {
+    if (reason instanceof UserFacingError || reason instanceof HostActionError) throw reason
+    throw new HostActionError(action, reason)
+  }
 }
 
 /** Archive Manager replaces the official ui-workspace row with this optional service. */
@@ -119,7 +131,7 @@ export function apply(ctx: ClientContext): void {
       openSession: (sessionId: SessionId) => { ctx.sessions.open(sessionId) },
       startSession: (workspaceId?: WorkspaceId) => { startWorkspaceSession(ctx, workspaceId) },
       toggleSidebar: () => { ctx.layout.toggleSidebar() },
-      archiveSession: (sessionId: SessionId) => ctx.workspaces.archiveSession(sessionId),
+      archiveSession,
       deleteSession,
       forkSession,
       renameSession,
@@ -133,23 +145,30 @@ export function apply(ctx: ClientContext): void {
   }, TurnNavigator))
 
   const forkSession = async (sessionId: SessionId): Promise<void> => {
-    const childId = await ctx.sessions.fork({ sessionId, increaseTitle: true })
-    ctx.sessions.open(childId)
+    await runHostAction('fork', async () => {
+      const childId = await ctx.sessions.fork({ sessionId, increaseTitle: true })
+      ctx.sessions.open(childId)
+    })
   }
   const renameSession = async (sessionId: SessionId, title: string): Promise<void> => {
     const session = ctx.sessions.binding(sessionId)?.session
     if (session === undefined) throw new UserFacingError(t('sessions.unknown'))
-    const result = await session.rename(title)
-    if (!result.ok) throw new Error(result.error.message)
+    await runHostAction('rename', async () => {
+      const result = await session.rename(title)
+      if (!result.ok) throw result.error
+    })
   }
   const deleteSession = async (sessionId: SessionId): Promise<void> => {
     const registry = ctx.get('remote.workspaceRegistry')
     if (!hasDeleteSession(registry)) throw new UserFacingError(t('sessions.deleteUnavailable'))
-    const result = await registry.deleteSession(sessionId)
-    if (!result.ok) throw result.error?.message === undefined
-      ? new UserFacingError(t('sessions.deleteUnavailable'))
-      : new Error(result.error.message)
+    await runHostAction('delete', async () => {
+      const result = await registry.deleteSession(sessionId)
+      if (!result.ok) throw result.error === undefined
+        ? new UserFacingError(t('sessions.deleteUnavailable'))
+        : result.error
+    })
   }
+  const archiveSession = (sessionId: SessionId): Promise<void> => runHostAction('archive', () => ctx.workspaces.archiveSession(sessionId))
   const startConnectorPromptSession = async (promptText: string): Promise<void> => {
     const prompt = promptText.trim()
     if (prompt === '') throw new UserFacingError(t('connectors.promptRequired'))
@@ -177,7 +196,7 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({
     name: 'sidebar.workspaces', priority: -1, locale: NS,
     inject: () => ({
-      archiveSession: (sessionId: SessionId) => ctx.workspaces.archiveSession(sessionId),
+      archiveSession,
       deleteSession,
       deleteWorkspace: (workspaceId: WorkspaceId) => ctx.workspaces.delete(workspaceId),
       forkSession,

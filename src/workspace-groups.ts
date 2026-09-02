@@ -10,6 +10,24 @@ export type WorkspaceGroup = {
   workspaceIds: string[]
 }
 
+export type WorkspaceGroupErrorCode = 'group-invalid' | 'workspace-invalid' | 'group-missing' | 'order-anchor-missing'
+
+const WORKSPACE_GROUP_ERROR_MESSAGES: Readonly<Record<WorkspaceGroupErrorCode, string>> = {
+  'group-invalid': '分组信息无效。',
+  'workspace-invalid': '项目标识无效。',
+  'group-missing': '目标分组不存在。',
+  'order-anchor-missing': '排序锚点不存在。',
+}
+
+/** 以稳定错误码承载分组业务失败，诊断文案不参与界面控制逻辑。 */
+export class WorkspaceGroupError extends Error {
+  readonly name = 'WorkspaceGroupError'
+
+  constructor(readonly code: WorkspaceGroupErrorCode, message = WORKSPACE_GROUP_ERROR_MESSAGES[code]) {
+    super(message)
+  }
+}
+
 /** 对持久化分组做严格校验，避免一个项目同时出现在多个分组。 */
 export function parseWorkspaceGroups(value: unknown): WorkspaceGroup[] | undefined {
   if (!Array.isArray(value) || value.length > MAX_WORKSPACE_GROUPS) return undefined
@@ -39,14 +57,14 @@ export function parseWorkspaceGroups(value: unknown): WorkspaceGroup[] | undefin
 /** 新建空分组；项目只有被显式移动后才会进入其中。 */
 export function createWorkspaceGroup(groups: readonly WorkspaceGroup[], group: Pick<WorkspaceGroup, 'id' | 'title'>): WorkspaceGroup[] {
   const next = parseWorkspaceGroups([...groups, { ...group, workspaceIds: [] }])
-  if (next === undefined) throw new Error('分组信息无效。')
+  if (next === undefined) throw new WorkspaceGroupError('group-invalid')
   return next
 }
 
 /** 将项目放入指定分组；未传分组时退回未分组区。 */
 export function assignWorkspaceToGroup(groups: readonly WorkspaceGroup[], workspaceId: string, groupId?: string): WorkspaceGroup[] {
-  if (workspaceId.trim() === '' || workspaceId.length > MAX_WORKSPACE_ID_LENGTH) throw new Error('项目标识无效。')
-  if (groupId !== undefined && !groups.some(group => group.id === groupId)) throw new Error('目标分组不存在。')
+  if (workspaceId.trim() === '' || workspaceId.length > MAX_WORKSPACE_ID_LENGTH) throw new WorkspaceGroupError('workspace-invalid')
+  if (groupId !== undefined && !groups.some(group => group.id === groupId)) throw new WorkspaceGroupError('group-missing')
   return groups.map(group => ({
     ...group,
     workspaceIds: group.id === groupId
@@ -57,12 +75,12 @@ export function assignWorkspaceToGroup(groups: readonly WorkspaceGroup[], worksp
 
 /** 将项目插入目标分组的指定位置，同时从原分组移除。 */
 export function placeWorkspaceInGroup(groups: readonly WorkspaceGroup[], workspaceId: string, groupId: string, beforeId?: string): WorkspaceGroup[] {
-  if (workspaceId.trim() === '' || workspaceId.length > MAX_WORKSPACE_ID_LENGTH) throw new Error('项目标识无效。')
+  if (workspaceId.trim() === '' || workspaceId.length > MAX_WORKSPACE_ID_LENGTH) throw new WorkspaceGroupError('workspace-invalid')
   const target = groups.find(group => group.id === groupId)
-  if (target === undefined) throw new Error('目标分组不存在。')
+  if (target === undefined) throw new WorkspaceGroupError('group-missing')
   const targetIds = target.workspaceIds.filter(id => id !== workspaceId)
   const index = beforeId === undefined ? targetIds.length : targetIds.indexOf(beforeId)
-  if (index < 0) throw new Error('排序锚点不存在。')
+  if (index < 0) throw new WorkspaceGroupError('order-anchor-missing')
   targetIds.splice(index, 0, workspaceId)
   return groups.map(group => ({
     ...group,
@@ -73,11 +91,11 @@ export function placeWorkspaceInGroup(groups: readonly WorkspaceGroup[], workspa
 /** 在同一分组内移动项目；省略锚点时放到分组末尾。 */
 export function moveWorkspaceGroupMember(groups: readonly WorkspaceGroup[], workspaceId: string, groupId: string, beforeId?: string): WorkspaceGroup[] {
   const target = groups.find(group => group.id === groupId)
-  if (target === undefined) throw new Error('目标分组不存在。')
+  if (target === undefined) throw new WorkspaceGroupError('group-missing')
   if (!target.workspaceIds.includes(workspaceId)) return groups.map(group => ({ ...group, workspaceIds: [...group.workspaceIds] }))
   const remaining = target.workspaceIds.filter(id => id !== workspaceId)
   const index = beforeId === undefined ? remaining.length : remaining.indexOf(beforeId)
-  if (index < 0) throw new Error('排序锚点不存在。')
+  if (index < 0) throw new WorkspaceGroupError('order-anchor-missing')
   const workspaceIds = [...remaining]
   workspaceIds.splice(index, 0, workspaceId)
   return groups.map(group => group.id === groupId ? { ...group, workspaceIds } : { ...group, workspaceIds: [...group.workspaceIds] })
@@ -86,11 +104,11 @@ export function moveWorkspaceGroupMember(groups: readonly WorkspaceGroup[], work
 /** 调整自定义分组顺序；省略锚点时移动到所有自定义分组末尾。 */
 export function moveWorkspaceGroup(groups: readonly WorkspaceGroup[], groupId: string, beforeGroupId?: string): WorkspaceGroup[] {
   const moved = groups.find(group => group.id === groupId)
-  if (moved === undefined) throw new Error('分组不存在。')
+  if (moved === undefined) throw new WorkspaceGroupError('group-missing')
   if (beforeGroupId === groupId) return groups.map(group => ({ ...group, workspaceIds: [...group.workspaceIds] }))
   const remaining = groups.filter(group => group.id !== groupId)
   const index = beforeGroupId === undefined ? remaining.length : remaining.findIndex(group => group.id === beforeGroupId)
-  if (index < 0) throw new Error('排序锚点不存在。')
+  if (index < 0) throw new WorkspaceGroupError('order-anchor-missing')
   remaining.splice(index, 0, moved)
   return remaining.map(group => ({ ...group, workspaceIds: [...group.workspaceIds] }))
 }

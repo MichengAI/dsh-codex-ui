@@ -9,6 +9,7 @@ import {
   parseWorkspaceGroups,
   placeWorkspaceInGroup,
   pruneWorkspaceGroups,
+  WorkspaceGroupError,
 } from '../src/workspace-groups.ts'
 
 const initial = [
@@ -48,7 +49,10 @@ assert.deepEqual(placeWorkspaceInGroup(initial, 'ungrouped', 'knowledge', 'engra
   { id: 'knowledge', title: '数据与知识管理', workspaceIds: ['archive', 'ungrouped', 'engram'] },
   { id: 'platform', title: '平台与基础设施', workspaceIds: ['codex'] },
 ])
-assert.throws(() => placeWorkspaceInGroup(initial, 'archive', 'platform', 'missing'), /排序锚点不存在/)
+assert.throws(
+  () => placeWorkspaceInGroup(initial, 'archive', 'platform', 'missing'),
+  error => error instanceof WorkspaceGroupError && error.code === 'order-anchor-missing',
+)
 assert.deepEqual(moveWorkspaceGroup(initial, 'knowledge'), [
   { id: 'platform', title: '平台与基础设施', workspaceIds: ['codex'] },
   { id: 'knowledge', title: '数据与知识管理', workspaceIds: ['archive', 'engram'] },
@@ -58,7 +62,10 @@ assert.deepEqual(moveWorkspaceGroup(initial, 'platform', 'knowledge'), [
   { id: 'knowledge', title: '数据与知识管理', workspaceIds: ['archive', 'engram'] },
 ])
 assert.deepEqual(moveWorkspaceGroup(initial, 'knowledge', 'knowledge'), initial)
-assert.throws(() => moveWorkspaceGroup(initial, 'knowledge', 'missing'), /排序锚点不存在/)
+assert.throws(
+  () => moveWorkspaceGroup(initial, 'knowledge', 'missing'),
+  error => error instanceof WorkspaceGroupError && error.code === 'order-anchor-missing',
+)
 assert.deepEqual(deleteWorkspaceGroup(initial, 'knowledge'), [{ id: 'platform', title: '平台与基础设施', workspaceIds: ['codex'] }])
 assert.deepEqual(pruneWorkspaceGroups(initial, ['archive', 'codex']), [
   { id: 'knowledge', title: '数据与知识管理', workspaceIds: ['archive'] },

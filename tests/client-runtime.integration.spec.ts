@@ -4,6 +4,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { apply, startWorkspaceSession } from '../src/client/index.ts'
 import { CodexSidebar } from '../src/client/CodexSidebar.tsx'
 import { ConnectorsSection } from '../src/client/ConnectorsSection.tsx'
+import { HostActionError } from '../src/client/user-error.ts'
 
 const createRoot = (createRequire(import.meta.url)('react-dom/client') as {
   createRoot: (container: Element) => { render: (node: ReactNode) => void; unmount: () => void }
@@ -106,6 +107,47 @@ test('新建任务缺少两路工作区服务时记录诊断', () => {
   } finally {
     warn.mockRestore()
   }
+})
+
+test('会话操作适配层保留 Host 结构化错误', async () => {
+  runtime = new ClientApplyHarness()
+  const renameFailure = {
+    code: 'session/title-invalid',
+    details: { sessionId: 'session-1' },
+    isDSHRemoteError: true,
+    message: 'invalid title',
+  }
+  const deleteFailure = {
+    code: 'session/not-found',
+    details: { sessionId: 'session-1' },
+    isDSHRemoteError: true,
+    message: 'missing session',
+  }
+  Object.assign(runtime.ctx.sessions, {
+    binding: () => ({ session: { rename: async () => ({ ok: false, error: renameFailure }) } }),
+  })
+  Object.assign(runtime.ctx, {
+    get: (name: string): unknown => name === 'connection'
+      ? { api: { host: { openPath: async () => ({ result: { ok: true, value: undefined } }) } } }
+      : name === 'remote.workspaceRegistry'
+        ? { deleteSession: async () => ({ ok: false, error: deleteFailure }) }
+        : name === 'conversation' ? {} : undefined,
+  })
+  runtime.mount()
+  const workspace = runtime.slots.entries('sidebar.workspaces')[0]
+  const actions = (workspace.inject as (() => {
+    renameSession: (sessionId: string, title: string) => Promise<void>
+    deleteSession: (sessionId: string) => Promise<void>
+  }))()
+
+  await expect(actions.renameSession('session-1', '新名称')).rejects.toMatchObject({
+    action: 'rename',
+    reason: renameFailure,
+  } satisfies Partial<HostActionError>)
+  await expect(actions.deleteSession('session-1')).rejects.toMatchObject({
+    action: 'delete',
+    reason: deleteFailure,
+  } satisfies Partial<HostActionError>)
 })
 
 test('连接器示例 Prompt 在双基线就绪前不选择临时工作区', async () => {

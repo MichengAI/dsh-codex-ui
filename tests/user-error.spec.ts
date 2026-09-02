@@ -1,15 +1,45 @@
 import { describe, expect, test } from 'vitest'
 import { en, zh, type CodexUiKey } from '../src/client/locales.ts'
-import { installErrorText, userErrorText, UserFacingError } from '../src/client/user-error.ts'
+import { HostActionError, installErrorText, userErrorText, UserFacingError } from '../src/client/user-error.ts'
+import { WorkspaceGroupError } from '../src/workspace-groups.ts'
 
 function translator(dictionary: Record<CodexUiKey, string>) {
   return ((key: CodexUiKey) => dictionary[key]) as never
 }
 
 describe('用户错误本地化', () => {
-  test('将已知分组错误映射到当前语言', () => {
-    expect(userErrorText(new Error('目标分组不存在。'), translator(zh))).toBe('目标分组不存在。')
-    expect(userErrorText(new Error('目标分组不存在。'), translator(en))).toBe('The target group no longer exists.')
+  test('按稳定错误码映射分组错误，不依赖诊断文案', () => {
+    const error = new WorkspaceGroupError('group-missing', '诊断文案已经变化')
+    expect(userErrorText(error, translator(zh))).toBe('目标分组不存在。')
+    expect(userErrorText(error, translator(en))).toBe('The target group no longer exists.')
+  })
+
+  test('按 Host 业务错误码和操作类型提供明确提示', () => {
+    const titleInvalid = {
+      code: 'session/title-invalid',
+      details: { sessionId: 'session-1' },
+      isDSHRemoteError: true,
+      message: '底层诊断 D:\\secret',
+    }
+    const forkUnavailable = {
+      code: 'session/fork-unavailable',
+      details: { sessionId: 'session-1' },
+      isDSHRemoteError: true,
+      message: 'open turn',
+    }
+    expect(userErrorText(new HostActionError('rename', titleInvalid), translator(zh))).toBe('会话名称无效，请修改后重试。')
+    expect(userErrorText(new HostActionError('fork', { rpcError: forkUnavailable }), translator(en))).toBe('This conversation cannot be continued in a new conversation right now. Try again after the current turn finishes.')
+    expect(userErrorText(new HostActionError('delete', {
+      code: 'gateway/internal',
+      details: {},
+      isDSHRemoteError: true,
+      message: 'unknown session "session-1" (UNKNOWN_SESSION)',
+    }), translator(zh))).toBe('找不到该会话。')
+  })
+
+  test('Host 未知错误只显示操作级提示且不泄露诊断信息', () => {
+    expect(userErrorText(new HostActionError('archive', new Error('包含本地路径 D:\\secret')), translator(zh))).toBe('暂时无法归档该会话，请稍后重试。')
+    expect(userErrorText(new HostActionError('delete', new Error('host exploded')), translator(en))).toBe('The conversation could not be deleted. Try again later.')
   })
 
   test('未知底层错误不直接进入界面', () => {
