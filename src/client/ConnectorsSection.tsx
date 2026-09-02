@@ -3,6 +3,7 @@ import { IconLinkOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { NS } from './locales.ts'
+import { userErrorText } from './user-error.ts'
 
 type SnapshotStore<T> = { getSnapshot: () => T; subscribe: (listener: () => void) => () => void }
 type Connector = { name: string; tools: readonly { name: string; description: string }[] }
@@ -52,7 +53,7 @@ function syncFrameTheme(frame: HTMLIFrameElement | null): void {
   style.textContent = document.body.hasAttribute('data-ds-dark-theme') ? frameDarkTheme : frameLightTheme
 }
 
-function ConnectorMarket({ startPromptSession }: Pick<ConnectorsSectionProps, 'startPromptSession'>) {
+function ConnectorMarket({ startPromptSession, t }: Pick<ConnectorsSectionProps, 'startPromptSession' | 't'>) {
   const frameRef = useRef<HTMLIFrameElement>(null)
   useEffect(() => {
     const onMessage = (event: MessageEvent<unknown>): void => {
@@ -64,8 +65,8 @@ function ConnectorMarket({ startPromptSession }: Pick<ConnectorsSectionProps, 's
         frameWindow.postMessage({ type: PROMPT_RESULT_TYPE, requestId, ok, message }, window.location.origin)
       }
       void startPromptSession(prompt).then(
-        () => { reply(true, '已带入新会话') },
-        error => { reply(false, error instanceof Error ? error.message : String(error)) },
+        () => { reply(true, t('connectors.promptReady')) },
+        error => { reply(false, userErrorText(error, t)) },
       )
     }
     const syncTheme = (): void => { syncFrameTheme(frameRef.current) }
@@ -76,12 +77,12 @@ function ConnectorMarket({ startPromptSession }: Pick<ConnectorsSectionProps, 's
       observer.disconnect()
       window.removeEventListener('message', onMessage)
     }
-  }, [startPromptSession])
+  }, [startPromptSession, t])
   return <iframe
     ref={frameRef}
     className="dcu-connector-frame"
     src={MCP_CONNECTOR_UI}
-    title="MCP连接器"
+    title={t('connectors.title')}
     onLoad={() => { syncFrameTheme(frameRef.current) }}
   />
 }
@@ -126,7 +127,7 @@ export function ConnectorsSection({ sessionStore, startPromptSession, t }: Conne
     {marketAvailable === undefined
       ? <div className="dcu-connector-empty">{t('connectors.loading')}</div>
       : marketAvailable
-        ? <ConnectorMarket startPromptSession={startPromptSession} />
+        ? <ConnectorMarket startPromptSession={startPromptSession} t={t} />
         : <><h2>{t('connectors.title')}</h2><p>{t('connectors.description')}</p><NativeConnectorList sessionStore={sessionStore} t={t} /></>}
   </section>
 }

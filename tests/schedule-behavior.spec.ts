@@ -11,6 +11,15 @@ describe('scheduled-session ownership', () => {
       { id: 'dsh-automation-session-run', title: '2026-08-27 09:00 - 自动任务', running: false },
     ]).map(group => group.label)).toEqual(['自动任务'])
   })
+
+  test('sorts task groups with the active interface locale', () => {
+    const items = [
+      { id: 'dsh-automation-session-cn', title: '2026-08-27 09:00 - 北京', running: false },
+      { id: 'dsh-automation-session-en', title: '2026-08-27 09:00 - Alpha', running: false },
+    ]
+    expect(groupScheduleSessions(items, 'zh-CN').map(group => group.label)).toEqual(['北京', 'Alpha'])
+    expect(groupScheduleSessions(items, 'en-US').map(group => group.label)).toEqual(['Alpha', '北京'])
+  })
 })
 
 describe('archiveScheduleGroup', () => {

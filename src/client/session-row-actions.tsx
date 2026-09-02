@@ -7,6 +7,7 @@ import { readSessionIds, SESSION_PINS_STORAGE_KEY, SESSION_UNREAD_STORAGE_KEY, t
 import { copySessionLink, SessionHoverCard } from './session-tree.tsx'
 import { useHoverDispatch, useHoverValue } from './hover-shell.tsx'
 import { browserStorage } from './tree-expansion.ts'
+import { userErrorText } from './user-error.ts'
 
 export type DialogTarget = { id: string; title: string }
 
@@ -40,7 +41,7 @@ export function SessionHoverCardLayer() {
   return <SessionHoverCard tip={tip} onEnter={keepTip} onLeave={hideTip} />
 }
 
-export function useBusyAction(onSuccess?: () => void) {
+export function useBusyAction(t: TranslateNS<typeof NS>, onSuccess?: () => void) {
   const [busy, setBusy] = useState<string>()
   const [error, setError] = useState<string>()
   const busyRef = useRef<string>()
@@ -49,7 +50,7 @@ export function useBusyAction(onSuccess?: () => void) {
     busyRef.current = key
     setBusy(key)
     setError(undefined)
-    try { await action(); onSuccess?.() } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)) } finally { busyRef.current = undefined; setBusy(undefined) }
+    try { await action(); onSuccess?.() } catch (reason) { setError(userErrorText(reason, t)) } finally { busyRef.current = undefined; setBusy(undefined) }
   }
   return { busy, error, setError, run }
 }

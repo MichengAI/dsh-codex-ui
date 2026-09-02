@@ -26,7 +26,7 @@ export function scheduleGroupName(title: string): string {
 }
 
 /** 把定时运行会话按任务名收成和任务树一样的分组。 */
-export function groupScheduleSessions(items: readonly ScheduleSession[]): ScheduleGroup[] {
+export function groupScheduleSessions(items: readonly ScheduleSession[], locale = 'zh-CN'): ScheduleGroup[] {
   const groups = new Map<string, ScheduleGroup>()
   for (const item of items) {
     if (!isScheduleSession(item.id, item.title)) continue
@@ -42,5 +42,5 @@ export function groupScheduleSessions(items: readonly ScheduleSession[]): Schedu
     }))
     // 会话投影在归档后会重排 ids；若沿用首次出现顺序，移除某个会话会让整组文件夹换位。
     // 文件夹按任务名固定排序，组内仍按最近执行时间倒序，避免连续归档时界面跳动。
-    .sort((left, right) => left.label.localeCompare(right.label, 'zh-CN', { numeric: true, sensitivity: 'base' }))
+    .sort((left, right) => left.label.localeCompare(right.label, locale, { numeric: true, sensitivity: 'base' }))
 }

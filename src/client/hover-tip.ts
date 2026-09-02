@@ -12,10 +12,10 @@ export function hoverCardAnchor(rect: { right: number; top: number }): { left: n
 }
 
 /** Codex 会话卡片右上角的紧凑相对时间。 */
-export function formatHoverTime(updatedAt: number, now: number = Date.now()): string {
+export function formatHoverTime(updatedAt: number, t: (key: 'time.justNow' | 'time.minutes' | 'time.hours' | 'time.days', params?: { count: number }) => string, now: number = Date.now()): string {
   const seconds = Math.max(0, Math.round((now - updatedAt) / 1000))
-  if (seconds < 60) return '刚刚'
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}分`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}小时`
-  return `${Math.floor(seconds / 86400)}天`
+  if (seconds < 60) return t('time.justNow')
+  if (seconds < 3600) return t('time.minutes', { count: Math.floor(seconds / 60) })
+  if (seconds < 86400) return t('time.hours', { count: Math.floor(seconds / 3600) })
+  return t('time.days', { count: Math.floor(seconds / 86400) })
 }

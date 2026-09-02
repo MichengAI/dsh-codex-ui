@@ -130,7 +130,7 @@ test('连接器示例 Prompt 在双基线就绪前不选择临时工作区', asy
   expect(connector).toBeDefined()
   const injected = (connector?.inject as (() => { startPromptSession: (prompt: string) => Promise<void> }))()
 
-  await expect(injected.startPromptSession('检查项目')).rejects.toThrow('DSH 工作空间数据尚未就绪，请稍后重试')
+  await expect(injected.startPromptSession('检查项目')).rejects.toThrow('connectors.workspacesLoading')
   expect(connectWorkspace).not.toHaveBeenCalled()
 })
 

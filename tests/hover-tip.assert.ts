@@ -11,10 +11,21 @@ assert.deepEqual(clampHoverCardPosition(10, 10, 240, 120, 800, 600), { left: 10,
 assert.deepEqual(clampHoverCardPosition(700, 560, 240, 120, 800, 600), { left: 552, top: 472 })
 
 const now = 1_700_000_000_000
-assert.equal(formatHoverTime(now - 10_000, now), '刚刚')
-assert.equal(formatHoverTime(now - 7 * 60_000, now), '7分')
-assert.equal(formatHoverTime(now - 2 * 3600_000, now), '2小时')
-assert.equal(formatHoverTime(now - 3 * 86400_000, now), '3天')
+const hoverTime = (locale: 'zh' | 'en') => (key: string, params?: Record<string, unknown>): string => {
+  const count = String(params?.count ?? '')
+  const dictionary = locale === 'zh'
+    ? { 'time.justNow': '刚刚', 'time.minutes': `${count}分`, 'time.hours': `${count}小时`, 'time.days': `${count}天` }
+    : { 'time.justNow': 'Just now', 'time.minutes': `${count}m`, 'time.hours': `${count}h`, 'time.days': `${count}d` }
+  return dictionary[key as keyof typeof dictionary]
+}
+assert.equal(formatHoverTime(now - 10_000, hoverTime('zh'), now), '刚刚')
+assert.equal(formatHoverTime(now - 7 * 60_000, hoverTime('zh'), now), '7分')
+assert.equal(formatHoverTime(now - 2 * 3600_000, hoverTime('zh'), now), '2小时')
+assert.equal(formatHoverTime(now - 3 * 86400_000, hoverTime('zh'), now), '3天')
+assert.equal(formatHoverTime(now - 10_000, hoverTime('en'), now), 'Just now')
+assert.equal(formatHoverTime(now - 7 * 60_000, hoverTime('en'), now), '7m')
+assert.equal(formatHoverTime(now - 2 * 3600_000, hoverTime('en'), now), '2h')
+assert.equal(formatHoverTime(now - 3 * 86400_000, hoverTime('en'), now), '3d')
 
 assert.equal(shouldCollapseOnSidebarDrag(240, 300, 179), true)
 assert.equal(shouldCollapseOnSidebarDrag(240, 300, 180), false)

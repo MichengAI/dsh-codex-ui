@@ -25,6 +25,7 @@ import { observeConversationHeader } from './conversation-header.ts'
 import { observeOfficialTurnNavigators } from './official-turn-navigator.ts'
 import { TurnNavigator } from './TurnNavigator.tsx'
 import { hasConnectWorkspace, hasStartSession, recentWorkspaceId, workspaceBaselinesReady } from './workspace-compat.ts'
+import { UserFacingError } from './user-error.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
@@ -137,19 +138,21 @@ export function apply(ctx: ClientContext): void {
   }
   const renameSession = async (sessionId: SessionId, title: string): Promise<void> => {
     const session = ctx.sessions.binding(sessionId)?.session
-    if (session === undefined) throw new Error(t('sessions.unknown'))
+    if (session === undefined) throw new UserFacingError(t('sessions.unknown'))
     const result = await session.rename(title)
     if (!result.ok) throw new Error(result.error.message)
   }
   const deleteSession = async (sessionId: SessionId): Promise<void> => {
     const registry = ctx.get('remote.workspaceRegistry')
-    if (!hasDeleteSession(registry)) throw new Error(t('sessions.deleteUnavailable'))
+    if (!hasDeleteSession(registry)) throw new UserFacingError(t('sessions.deleteUnavailable'))
     const result = await registry.deleteSession(sessionId)
-    if (!result.ok) throw new Error(result.error?.message ?? t('sessions.deleteUnavailable'))
+    if (!result.ok) throw result.error?.message === undefined
+      ? new UserFacingError(t('sessions.deleteUnavailable'))
+      : new Error(result.error.message)
   }
   const startConnectorPromptSession = async (promptText: string): Promise<void> => {
     const prompt = promptText.trim()
-    if (prompt === '') throw new Error('Prompt 不能为空')
+    if (prompt === '') throw new UserFacingError(t('connectors.promptRequired'))
     const workspaces = ctx.workspaces.list.getSnapshot()
     const sessionSnapshot = ctx.sessions.list.getSnapshot()
     const currentSessionId = sessionSnapshot.current
@@ -158,16 +161,16 @@ export function apply(ctx: ClientContext): void {
       : workspaces.items.find(workspace => workspace.sessionIds.includes(currentSessionId))?.workspaceId
     const baselinesReady = workspaceBaselinesReady(workspaces, sessionSnapshot)
     const targetWorkspaceId = currentWorkspaceId ?? (baselinesReady ? recentWorkspaceId(workspaces.items, sessionSnapshot.byId) : undefined)
-    if (targetWorkspaceId === undefined && !baselinesReady) throw new Error('DSH 工作空间数据尚未就绪，请稍后重试')
-    if (targetWorkspaceId === undefined) throw new Error('请先选择一个工作空间，再使用示例 Prompt')
+    if (targetWorkspaceId === undefined && !baselinesReady) throw new UserFacingError(t('connectors.workspacesLoading'))
+    if (targetWorkspaceId === undefined) throw new UserFacingError(t('connectors.workspaceRequired'))
     const uiWorkspace = (ctx.get as (name: string) => unknown)('uiWorkspace')
     const workspaceNavigation = hasConnectWorkspace(uiWorkspace) ? uiWorkspace : hasConnectWorkspace(ctx.workspaces) ? ctx.workspaces : undefined
-    if (workspaceNavigation === undefined) throw new Error('DSH 工作空间服务尚未就绪，请稍后重试')
+    if (workspaceNavigation === undefined) throw new UserFacingError(t('connectors.workspaceUnavailable'))
     const sessionId = await workspaceNavigation.connectWorkspace(targetWorkspaceId)
     const conversation = ctx.get('conversation')
-    if (conversation === undefined) throw new Error('DSH 对话服务尚未就绪，请稍后重试')
+    if (conversation === undefined) throw new UserFacingError(t('connectors.conversationUnavailable'))
     const binding = ctx.sessions.binding(sessionId)
-    if (binding === undefined) throw new Error('新会话尚未就绪，请稍后重试')
+    if (binding === undefined) throw new UserFacingError(t('connectors.sessionPending'))
     conversation.input.for(binding.ctx).setDraft(prompt)
     ctx.sessions.open(sessionId)
   }

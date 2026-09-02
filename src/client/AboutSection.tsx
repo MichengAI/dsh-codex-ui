@@ -3,6 +3,7 @@ import { IconCheckOutline16, IconDownloadOutline16, IconListPenOutline16, IconLo
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { MANAGED_DEPENDENCIES, type ManagedDependencyId } from '../dependencies.ts'
 import { NS } from './locales.ts'
+import { installErrorText } from './user-error.ts'
 
 type DependencyStatus = { id: ManagedDependencyId; packageName: string; installed: boolean; version?: string; latestVersion?: string; updateAvailable: boolean }
 type LoadState = 'loading' | 'ready' | 'failed'
@@ -57,12 +58,6 @@ export function isInstallProgress(value: unknown): value is InstallProgress {
     && (total === null || (typeof total === 'number' && Number.isInteger(total) && total >= 0))
     && (percent === null || (typeof percent === 'number' && Number.isFinite(percent) && percent >= 0 && percent <= 100))
     && (currentPackage === null || typeof currentPackage === 'string')
-}
-
-function installErrorText(error: unknown, t: TranslateNS<typeof NS>): string {
-  const message = error instanceof Error ? error.message : ''
-  if (message.includes('没有进入当前 Profile') || message.includes('did not enter this profile')) return t('about.installUnchanged')
-  return message !== '' ? message : t('about.installFailed')
 }
 
 function progressLabel(progress: InstallProgress, t: TranslateNS<typeof NS>): string {

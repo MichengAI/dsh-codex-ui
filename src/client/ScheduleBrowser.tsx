@@ -12,6 +12,7 @@ import { SessionHoverCardLayer, SessionModals, useBusyAction, useSessionDialogs,
 import { HoverShell, useHoverDispatch } from './hover-shell.tsx'
 import { GroupHead, SessionRow, sessionMenuItems } from './session-tree.tsx'
 import { pendingInteractionForSession, useEmptySessionPendingInteraction, type UseSessionPendingInteraction } from './session-pending.ts'
+import { UserFacingError } from './user-error.ts'
 import { browserStorage, readTreeExpansionState, SCHEDULE_EXPANSION_STORAGE_KEY, writeTreeExpansionState } from './tree-expansion.ts'
 import { archiveScheduleGroup } from './schedule-group-actions.ts'
 
@@ -82,7 +83,7 @@ function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkS
   const [archiveGroupTarget, setArchiveGroupTarget] = useState<{ id: string; label: string; sessionIds: string[] }>()
   const flags = useSessionFlags(sessions.current)
   const { showTip, hideTip, dismissTip } = useHoverDispatch()
-  const { busy, error, setError, run } = useBusyAction(() => { setMenu(undefined) })
+  const { busy, error, setError, run } = useBusyAction(t, () => { setMenu(undefined) })
   const dialogs = useSessionDialogs({ archiveSession, deleteSession, forkSession, renameSession }, flags, run, () => { setMenu(undefined); setError(undefined) })
   const groupMenuItems: MenuEntry[] = [
     { id: 'task-settings', label: t('schedule.taskSettings'), icon: <IconSettingsOutline16 size={16} /> },
@@ -97,8 +98,8 @@ function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkS
       if (session === undefined || archived.has(id) || session.blank === true || session.origin === 'im' || session.origin === 'subagent' || isChannelSession(id)) return []
       return [{ id, title: session.displayTitle ?? session.title ?? id, updatedAt: session.updatedAt, running: session.running === true }]
     })
-    return groupScheduleSessions(items)
-  }, [sessions.byId, sessions.ids, workspaces.archivedSessionIds])
+    return groupScheduleSessions(items, t('meta.locale'))
+  }, [sessions.byId, sessions.ids, t, workspaces.archivedSessionIds])
   return <section className="dcu-wb" aria-label={t('sidebar.scheduleTab')}>
     <style>{WORKSPACE_TREE_STYLE}</style>
     <div className="dcu-wb-tree" role="tree">
@@ -140,7 +141,7 @@ function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkS
             const pinned = flags.pinnedSessionIds.includes(id)
             const unread = flags.unreadSessionIds.includes(id)
             const pendingInteraction = pendingInteractionForSession(id, pendingInteractions, sessions.byId[id]?.pendingInteraction)
-            return <SessionRow key={id} id={id} title={title} selected={sessions.current === id} menuOpen={menu?.id === id} pinned={pinned} unread={unread} running={session.running} pendingInteraction={pendingInteraction} t={t} menuItems={sessionMenuItems(t, { pinned, unread })} menuPoint={menu?.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { flags.setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id } : undefined) }} onPin={() => { flags.setPinnedSessionIds(ids => toggleSessionId(ids, id)) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ title, project: group.label, time: session.updatedAt === undefined ? undefined : formatHoverTime(session.updatedAt), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => { if (busy === undefined) dialogs.handleAction(action, id, title) }} />
+            return <SessionRow key={id} id={id} title={title} selected={sessions.current === id} menuOpen={menu?.id === id} pinned={pinned} unread={unread} running={session.running} pendingInteraction={pendingInteraction} t={t} menuItems={sessionMenuItems(t, { pinned, unread })} menuPoint={menu?.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { flags.setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id } : undefined) }} onPin={() => { flags.setPinnedSessionIds(ids => toggleSessionId(ids, id)) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ title, project: group.label, time: session.updatedAt === undefined ? undefined : formatHoverTime(session.updatedAt, t), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => { if (busy === undefined) dialogs.handleAction(action, id, title) }} />
           })}
         </div>
       })}
@@ -163,7 +164,7 @@ function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkS
             flags.setUnreadSessionIds(ids => ids.filter(id => !result.archivedIds.includes(id)))
             if (result.failedIds.length > 0) {
               setArchiveGroupTarget({ ...target, sessionIds: result.failedIds })
-              throw new Error(t('schedule.archiveGroupPartial', { archived: result.archivedIds.length, failed: result.failedIds.length }))
+              throw new UserFacingError(t('schedule.archiveGroupPartial', { archived: result.archivedIds.length, failed: result.failedIds.length }))
             }
             setArchiveGroupTarget(undefined)
           })

@@ -45,7 +45,7 @@ export function parseChannelSession(value: unknown): ChannelSession | undefined 
   }
 }
 
-export function parseChannelGroups(payload: unknown): ChannelGroup[] {
+export function parseChannelGroups(payload: unknown, fallbackLabel = ''): ChannelGroup[] {
   const root = payload !== null && typeof payload === 'object' ? payload as Record<string, unknown> : {}
   const raw = Array.isArray(root.groups) ? root.groups : Array.isArray(payload) ? payload : []
   return raw.flatMap((item, index) => {
@@ -57,14 +57,14 @@ export function parseChannelGroups(payload: unknown): ChannelGroup[] {
     }) : []
     return [{
       id: text(group.id, `channel-${index}`),
-      label: text(group.label, text(group.title, '频道')),
+      label: text(group.label, text(group.title, fallbackLabel)),
       sessions,
     }]
   })
 }
 
 /** 读取 IM 频道分组；失败时交给界面显示空态或错误。 */
-export async function loadChannelGroups(signal?: AbortSignal): Promise<ChannelGroup[]> {
+export async function loadChannelGroups(signal?: AbortSignal, fallbackLabel = ''): Promise<ChannelGroup[]> {
   const response = await fetch(CHANNELS_ENDPOINT, { cache: 'no-store', signal })
   let payload: unknown
   try {
@@ -75,5 +75,5 @@ export async function loadChannelGroups(signal?: AbortSignal): Promise<ChannelGr
   const root = payload !== null && typeof payload === 'object' ? payload as Record<string, unknown> : {}
   if (!response.ok) throw new Error(text(root.error, '无法读取频道会话'))
   if (root.ok === false) throw new Error(text(root.error, '无法读取频道会话'))
-  return parseChannelGroups(payload)
+  return parseChannelGroups(payload, fallbackLabel)
 }
