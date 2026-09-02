@@ -1,7 +1,8 @@
-/** 浏览器本地持久化键；置顶只影响本插件中的工作区分区。 */
+/** 浏览器本地持久化键；用于工作区偏好的首帧恢复与 Host 故障兜底。 */
 import { parseWorkspaceGroups, pruneWorkspaceGroups, type WorkspaceGroup } from '../workspace-groups.ts'
 
 export const PINNED_WORKSPACES_STORAGE_KEY = 'dsh-codex-ui.pinned-workspace-ids'
+export const WORKSPACE_GROUPS_STORAGE_KEY = 'dsh-codex-ui.workspace-groups.v1'
 export const WORKSPACE_PREFERENCES_ENDPOINT = '/api/michengai/codex-ui/preferences'
 
 export type HostPinnedWorkspacePreferences = {
@@ -11,6 +12,12 @@ export type HostPinnedWorkspacePreferences = {
 
 export type HostWorkspacePreferences = HostPinnedWorkspacePreferences & {
   workspaceGroups: WorkspaceGroup[]
+  workspaceGroupsSupported?: boolean
+}
+
+export type WorkspaceGroupsCache = {
+  workspaceGroups: WorkspaceGroup[]
+  pendingHostSync: boolean
 }
 
 type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -41,14 +48,22 @@ export function resolvePinnedWorkspaceHydration(
   return { ids, writeHost: ids.length > 0 }
 }
 
-/** Host 数据优先；浏览器本地只用于首次迁移，用户操作始终覆盖延迟响应。 */
+/** Host 数据优先；旧 Host 或待同步分组使用本地缓存，读取期间的用户操作始终优先。 */
 export function resolveWorkspacePreferencesHydration(
   local: Pick<HostWorkspacePreferences, 'pinnedWorkspaceIds' | 'workspaceGroups'>,
   host: HostWorkspacePreferences,
   dirty?: Pick<HostWorkspacePreferences, 'pinnedWorkspaceIds' | 'workspaceGroups'>,
+  localWorkspaceGroupsPendingHostSync = false,
 ): { pinnedWorkspaceIds: string[]; workspaceGroups: WorkspaceGroup[]; writeHost: boolean } {
   if (dirty !== undefined) return { pinnedWorkspaceIds: normalizePinnedWorkspaceIds(dirty.pinnedWorkspaceIds), workspaceGroups: dirty.workspaceGroups, writeHost: true }
-  if (host.exists) return { pinnedWorkspaceIds: normalizePinnedWorkspaceIds(host.pinnedWorkspaceIds), workspaceGroups: host.workspaceGroups, writeHost: false }
+  if (host.exists) {
+    const preserveLocalGroups = host.workspaceGroupsSupported === false || localWorkspaceGroupsPendingHostSync
+    return {
+      pinnedWorkspaceIds: normalizePinnedWorkspaceIds(host.pinnedWorkspaceIds),
+      workspaceGroups: preserveLocalGroups ? local.workspaceGroups : host.workspaceGroups,
+      writeHost: localWorkspaceGroupsPendingHostSync && host.workspaceGroupsSupported !== false,
+    }
+  }
   const pinnedWorkspaceIds = normalizePinnedWorkspaceIds(local.pinnedWorkspaceIds)
   return { pinnedWorkspaceIds, workspaceGroups: local.workspaceGroups, writeHost: pinnedWorkspaceIds.length > 0 || local.workspaceGroups.length > 0 }
 }
@@ -63,11 +78,12 @@ export async function readHostWorkspacePreferences(fetcher: Fetcher = fetch): Pr
   const payload: unknown = await response.json()
   if (payload === null || typeof payload !== 'object') throw new Error('置顶偏好响应格式无效。')
   const record = payload as Record<string, unknown>
-  const workspaceGroups = parseWorkspaceGroups(record.workspaceGroups)
+  const workspaceGroupsSupported = Object.prototype.hasOwnProperty.call(record, 'workspaceGroups')
+  const workspaceGroups = workspaceGroupsSupported ? parseWorkspaceGroups(record.workspaceGroups) : []
   if (typeof record.exists !== 'boolean' || !Array.isArray(record.pinnedWorkspaceIds) || !record.pinnedWorkspaceIds.every(id => typeof id === 'string') || workspaceGroups === undefined) {
     throw new Error('置顶偏好响应格式无效。')
   }
-  return { exists: record.exists, pinnedWorkspaceIds: normalizePinnedWorkspaceIds(record.pinnedWorkspaceIds as string[]), workspaceGroups }
+  return { exists: record.exists, pinnedWorkspaceIds: normalizePinnedWorkspaceIds(record.pinnedWorkspaceIds as string[]), workspaceGroups, workspaceGroupsSupported }
 }
 
 export async function writeHostWorkspacePreferences(pinnedWorkspaceIds: readonly string[], workspaceGroups: readonly WorkspaceGroup[], fetcher: Fetcher = fetch): Promise<void> {
@@ -135,6 +151,32 @@ export function savePinnedWorkspaceIds(storage: Storage | undefined, ids: readon
   if (storage === undefined) return
   try {
     storage.setItem(PINNED_WORKSPACES_STORAGE_KEY, JSON.stringify(normalizePinnedWorkspaceIds(ids)))
+  } catch {
+    // 隐私模式或配额不足时退化为本次页面内状态。
+  }
+}
+
+/** 分组缓存用于首帧恢复和 Host 暂时不可用时兜底，并记录尚未完成的 Host 迁移。 */
+export function readWorkspaceGroupsCache(storage: Storage | undefined): WorkspaceGroupsCache {
+  if (storage === undefined) return { workspaceGroups: [], pendingHostSync: false }
+  try {
+    const value: unknown = JSON.parse(storage.getItem(WORKSPACE_GROUPS_STORAGE_KEY) ?? '{"version":1,"workspaceGroups":[],"pendingHostSync":false}')
+    if (value === null || typeof value !== 'object') return { workspaceGroups: [], pendingHostSync: false }
+    const record = value as Record<string, unknown>
+    const workspaceGroups = record.version === 1 ? parseWorkspaceGroups(record.workspaceGroups) : undefined
+    if (workspaceGroups === undefined || typeof record.pendingHostSync !== 'boolean') return { workspaceGroups: [], pendingHostSync: false }
+    return { workspaceGroups, pendingHostSync: record.pendingHostSync }
+  } catch {
+    return { workspaceGroups: [], pendingHostSync: false }
+  }
+}
+
+export function saveWorkspaceGroupsCache(storage: Storage | undefined, groups: readonly WorkspaceGroup[], pendingHostSync: boolean): void {
+  if (storage === undefined) return
+  const workspaceGroups = parseWorkspaceGroups([...groups])
+  if (workspaceGroups === undefined) return
+  try {
+    storage.setItem(WORKSPACE_GROUPS_STORAGE_KEY, JSON.stringify({ version: 1, workspaceGroups, pendingHostSync }))
   } catch {
     // 隐私模式或配额不足时退化为本次页面内状态。
   }

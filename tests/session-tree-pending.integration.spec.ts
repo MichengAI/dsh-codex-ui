@@ -5,6 +5,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { ChannelBrowser } from '../src/client/ChannelBrowser.tsx'
 import { CodexWorkspaceBrowser } from '../src/client/CodexWorkspaceBrowser.tsx'
 import { ScheduleBrowser } from '../src/client/ScheduleBrowser.tsx'
+import { WORKSPACE_GROUPS_STORAGE_KEY } from '../src/client/pinned-workspaces.ts'
 import type { PendingInteractionSnapshot, UseSessionPendingInteraction } from '../src/client/session-pending.ts'
 
 const createRoot = (createRequire(import.meta.url)('react-dom/client') as {
@@ -118,6 +119,63 @@ test('任务树从 SessionSummary 快照渲染等待回答状态', async () => {
   } as never))
   try {
     expectPendingState(view.container, '任务会话', 'question', '等待回答')
+  } finally {
+    await view.dispose()
+  }
+})
+
+test('Host 读取失败时从同步缓存恢复分组并继续写回新操作', async () => {
+  const session = createSession('cached-workspace-session', '缓存任务会话', undefined)
+  const useSessions = createSessionStore(session)
+  const workspaces = {
+    baselinesReady: true,
+    archivedSessionIds: [],
+    items: [{ workspaceId: 'cached-workspace', title: '缓存项目', path: 'D:\\Workspace\\cached', sessionIds: [session.id] }],
+  }
+  const useWorkspaces = <T,>(selector: (snapshot: typeof workspaces) => T): T => selector(workspaces)
+  window.localStorage.setItem(WORKSPACE_GROUPS_STORAGE_KEY, JSON.stringify({
+    version: 1,
+    workspaceGroups: [{ id: 'cached-group', title: '缓存分组', workspaceIds: ['cached-workspace'] }],
+    pendingHostSync: true,
+  }))
+  const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    if (init?.method === 'GET') throw new Error('Host 暂时不可用')
+    return new Response('{}', { status: 200 })
+  })
+  vi.stubGlobal('fetch', fetcher)
+
+  const view = await render(createElement(CodexWorkspaceBrowser, {
+    ...sessionActions,
+    wide: true,
+    useSessions,
+    useSessionPendingInteraction: useEmptyPendingInteractions,
+    useWorkspaces,
+    t,
+    deleteWorkspace: async () => {},
+    insertSessionBefore: async () => {},
+    insertWorkspaceBefore: async () => {},
+    openPath: async () => {},
+    renameWorkspace: async () => {},
+    startSession: () => {},
+  } as never))
+  try {
+    expect(view.container.querySelector('.dcu-wb-collection-label')?.textContent).toContain('缓存分组')
+
+    const createButton = view.container.querySelector<HTMLButtonElement>('button[aria-label="workspace.createGroup"]')
+    await act(async () => { createButton?.click() })
+    const input = document.querySelector<HTMLInputElement>('input[aria-label="workspace.groupName"]')
+    await act(async () => {
+      const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+      setValue?.call(input, '故障期间新建')
+      input?.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    const saveButton = [...document.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === 'sessions.save')
+    await act(async () => {
+      saveButton?.click()
+      await Promise.resolve()
+    })
+    expect(fetcher.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(true)
+    expect(JSON.parse(window.localStorage.getItem(WORKSPACE_GROUPS_STORAGE_KEY) ?? '{}').workspaceGroups).toHaveLength(2)
   } finally {
     await view.dispose()
   }
