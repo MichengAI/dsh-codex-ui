@@ -4,7 +4,8 @@ import {
   IconLinkOutline16, IconNewChatOutline16, IconPanelLeftOutline16, IconPersonalizationOutline16, IconSearchOutline16, IconSkillOutline16,
   IconUserOutline16, Input,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { SessionId, WorkspaceId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type { PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { NS } from './locales.ts'
 import { openSettingsSection, routeOptionalSettingsSection } from './settings-navigation.ts'

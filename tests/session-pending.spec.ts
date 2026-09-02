@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module'
 import { act, createElement, type ReactNode } from 'react'
 import { expect, test } from 'vitest'
-import { pendingInteractionForSession, visiblePendingKind } from '../src/client/session-pending.ts'
+import { legacyPendingInteraction, pendingInteractionForSession, visiblePendingKind } from '../src/client/session-pending.ts'
 import { SessionRow } from '../src/client/session-tree.tsx'
 
 const createRoot = (createRequire(import.meta.url)('react-dom/client') as {
@@ -28,6 +28,12 @@ test('会话快照优先并在缺失时回退到待处理交互 Store', () => {
   expect(pendingInteractionForSession('session-approval', pendingInteractions, 'custom')).toBe('approval')
   expect(pendingInteractionForSession('session-invalid', pendingInteractions)).toBeUndefined()
   expect(pendingInteractionForSession('session-missing', pendingInteractions)).toBeUndefined()
+})
+
+test('仅从旧版会话快照读取待处理交互字段', () => {
+  expect(legacyPendingInteraction({ pendingInteraction: 'question' })).toBe('question')
+  expect(legacyPendingInteraction({ running: true })).toBeUndefined()
+  expect(legacyPendingInteraction(null)).toBeUndefined()
 })
 
 test('待处理交互覆盖未读点和运行中状态', async () => {

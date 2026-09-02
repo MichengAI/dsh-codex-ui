@@ -1,6 +1,8 @@
 packages:
   - 'packages/*'
 
+autoInstallPeers: false
+
 overrides:
   ansi-regex: 5.0.1
 
@@ -15,3 +17,32 @@ minimumReleaseAgeExclude:
   - '@michengai/dsh-archive-manager@0.1.0 || 0.1.12 || 0.1.13 || 0.1.16 || 0.1.18 || 0.1.21 || 0.1.22 || 0.1.23'
   - '@michengai/dsh-im-connect@0.1.10 || 0.1.18 || 0.1.19 || 0.1.20 || 0.1.22 || 0.1.23 || 0.1.24 || 0.1.25 || 0.1.26 || 0.1.28 || 0.1.30'
   - '@michengai/dsh-automation@0.1.5 || 0.1.10 || 0.1.12 || 0.1.13 || 0.1.14 || 0.1.21 || 0.1.22'
+  - '@deepseek-ai/dsh-api-session-controller@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-api-workspace-controller@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-attachment@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-connection@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-locale@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-store@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-test-runtime@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-ui-chat@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-ui-conversation@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-ui-layout@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-ui-primitives@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-ui-renderer@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-ui-session@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-ui-settings-general@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-ui-settings@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-ui-sidebar@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-ui-slots@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-client-ui-workspace@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-session@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-subagent@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-typert-protocol@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-workspace@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-brand@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-credentials@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-deque@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-llm@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-timeout@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-util-crypto@0.1.2-alpha.5'
+  - '@deepseek-ai/dsh-util-values@0.1.2-alpha.5'

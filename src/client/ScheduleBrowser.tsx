@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { Button, IconArchiveOutline20, IconEllipsisOutline16, IconSettingsOutline16, Menu, Modal, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
 import { NS } from './locales.ts'

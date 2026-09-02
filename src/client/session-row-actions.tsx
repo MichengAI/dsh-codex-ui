@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { Button, Modal, writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives'
 import { NS } from './locales.ts'

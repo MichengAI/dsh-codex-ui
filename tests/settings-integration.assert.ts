@@ -71,7 +71,7 @@ assert.match(workspaceBrowser, /\.dcu-wb-rename-input:focus\{[^}]*var\(--dsw-ali
 assert.match(workspaceBrowser, /description=\{t\('sessions\.renameDescription'\)\}/, '项目和会话重命名弹窗必须显示辅助说明')
 assert.match(sessionRowActions, /description=\{t\('sessions\.renameDescription'\)\}/, '频道和定时会话的重命名弹窗必须同步辅助说明')
 assert.match(workspaceBrowser, /workspace\.pinnedEmpty/, '置顶区域必须支持拖入项目')
-assert.match(workspaceBrowser, /if \(workspaces\.baselinesReady !== true\) return/, '工作区完整基线就绪前不得清理持久化置顶')
+assert.match(workspaceBrowser, /if \(!baselinesReady\) return/, '工作区完整基线就绪前不得清理持久化置顶')
 assert.match(workspaceBrowser, /prunePinnedWorkspaceIds/, '完整基线就绪后才可清理失效的置顶工作区')
 assert.match(workspaceBrowser, /readHostPinnedWorkspaceIds/, '置顶必须从 Host Profile 恢复，不能只依赖当前端口的 localStorage')
 assert.match(workspaceBrowser, /pinnedHostDirtyRef/, 'Host hydration 期间的用户操作必须优先，不能被迟到的读取覆盖')

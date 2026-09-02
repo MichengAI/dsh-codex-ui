@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
-import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionSnapshot } from '@deepseek-ai/dsh-api-session-controller/client'
+import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-store'
+import type { ChatSnapshot } from '@deepseek-ai/dsh-client-ui-chat/client'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { conversationAnchor, conversationAnchors, conversationScrollRoot } from './conversation-dom.ts'
 import { NS } from './locales.ts'
 
 type TurnLink = { key: string; summary: string }
 
-type TurnNavigatorProps = PropsRuntime<'conversation.session.header.utilities'> & PropsLocale<typeof NS>
+type LegacyConversationSnapshot = { readonly chat: ChatSnapshot }
+type TurnNavigatorProps = Omit<PropsRuntime<'conversation.session.header.utilities'>, 'useChat' | 'useSession'> & PropsLocale<typeof NS> & {
+  useChat?: SnapshotSelectorHook<ChatSnapshot>
+  useSession: SnapshotSelectorHook<SessionSnapshot> | SnapshotSelectorHook<LegacyConversationSnapshot>
+}
 
 const stylesheet = `
 .dcu-turn-navigator{position:fixed;z-index:20;top:50%;left:var(--dcu-turn-left,288px);transform:translateY(-50%);width:16px;max-height:calc(100vh - 120px);overflow:visible;pointer-events:none}
@@ -62,14 +68,18 @@ function userContent(data: unknown): readonly unknown[] {
   return Array.isArray(content) ? content : []
 }
 
-function turnLinks(snapshot: ConversationSnapshot, fallback: string): readonly TurnLink[] {
+function turnLinks(snapshot: ChatSnapshot, fallback: string): readonly TurnLink[] {
   const links: TurnLink[] = []
-  for (const key of snapshot.chat.order) {
-    const node = snapshot.chat.nodes.get(key)
+  for (const key of snapshot.order) {
+    const node = snapshot.nodes.get(key)
     if (node?.kind !== 'user') continue
     links.push({ key: node.key, summary: textSummary(userContent(node.data), fallback) })
   }
   return links
+}
+
+function legacyChatHook(useSession: TurnNavigatorProps['useSession']): SnapshotSelectorHook<ChatSnapshot> {
+  return (selector, equal) => (useSession as SnapshotSelectorHook<LegacyConversationSnapshot>)(snapshot => selector(snapshot.chat), equal)
 }
 
 function equalTurns(left: readonly TurnLink[], right: readonly TurnLink[]): boolean {
@@ -83,8 +93,9 @@ function railLeftFromSidebar(): number {
 }
 
 /** 当前会话的轮次导航；只读取原生聊天锚点并滚动，不改写会话数据或消息视图。 */
-export function TurnNavigator({ useSession, t }: TurnNavigatorProps) {
-  const turns = useSession(snapshot => turnLinks(snapshot, t('turns.untitled')), equalTurns)
+export function TurnNavigator({ useChat, useSession, t }: TurnNavigatorProps) {
+  const useChatSnapshot = useChat ?? legacyChatHook(useSession)
+  const turns = useChatSnapshot(snapshot => turnLinks(snapshot, t('turns.untitled')), equalTurns)
   const [current, setCurrent] = useState<string | null>(turns[0]?.key ?? null)
   const [hoverAt, setHoverAt] = useState<number | null>(null)
   const [railLeft, setRailLeft] = useState(288)

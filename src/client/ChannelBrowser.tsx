@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { NS } from './locales.ts'
 import { ChannelBrandIcon } from './channel-brand.tsx'

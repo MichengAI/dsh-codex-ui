@@ -1,8 +1,7 @@
 import { createRequire } from 'node:module'
 import { act, createElement, type ReactNode } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
-import { SlotTestRuntime } from '@deepseek-ai/dsh-client-test-runtime'
-import { apply, inject, startWorkspaceSession } from '../src/client/index.ts'
+import { apply, startWorkspaceSession } from '../src/client/index.ts'
 import { CodexSidebar } from '../src/client/CodexSidebar.tsx'
 import { ConnectorsSection } from '../src/client/ConnectorsSection.tsx'
 
@@ -10,9 +9,73 @@ const createRoot = (createRequire(import.meta.url)('react-dom/client') as {
   createRoot: (container: Element) => { render: (node: ReactNode) => void; unmount: () => void }
 }).createRoot
 
-let runtime: SlotTestRuntime | undefined
+type SlotEntry = { readonly name: string; readonly [key: string]: unknown }
 
-afterEach(async () => { await runtime?.dispose() })
+class ClientApplyHarness {
+  private readonly slotEntries = new Map<string, SlotEntry[]>()
+  private readonly disposers: Array<() => void> = []
+
+  readonly slots = {
+    inject: (_name: string, mount: () => (() => void) | void): void => {
+      const dispose = mount()
+      if (typeof dispose === 'function') this.disposers.push(dispose)
+    },
+    register: (spec: SlotEntry, _component?: unknown): (() => void) => {
+      const entries = this.slotEntries.get(spec.name) ?? []
+      entries.push(spec)
+      this.slotEntries.set(spec.name, entries)
+      return () => {
+        const current = this.slotEntries.get(spec.name) ?? []
+        this.slotEntries.set(spec.name, current.filter(entry => entry !== spec))
+      }
+    },
+    entries: (name: string): readonly SlotEntry[] => this.slotEntries.get(name) ?? [],
+    entriesOfSlot: (name: string): readonly SlotEntry[] => this.slotEntries.get(name) ?? [],
+    subscribe: (): (() => void) => () => {},
+  }
+
+  readonly ctx = {
+    slots: this.slots,
+    locale: {
+      register: () => () => {},
+      bind: () => (key: string) => key,
+    },
+    layout: { toggleSidebar: () => {} },
+    sessions: {
+      open: () => {},
+      fork: async () => 'forked-session',
+      binding: () => undefined,
+      list: { getSnapshot: () => ({ current: undefined, byId: {} }), subscribe: () => () => {} },
+    },
+    workspaces: {
+      archiveSession: async () => {},
+      delete: async () => {},
+      rename: async () => {},
+      insertBefore: async () => {},
+      insertSessionBefore: async () => {},
+      list: { getSnapshot: () => ({ items: [] }) },
+    },
+    get: (name: string): unknown => name === 'connection'
+      ? { api: { host: { openPath: async () => ({ result: { ok: true, value: undefined } }) } } }
+      : name === 'conversation' ? {} : undefined,
+    effect: (mount: () => (() => void) | void): void => {
+      const dispose = mount()
+      if (typeof dispose === 'function') this.disposers.push(dispose)
+    },
+  }
+
+  mount(): void {
+    apply(this.ctx as never)
+  }
+
+  dispose(): void {
+    for (const dispose of this.disposers.reverse()) dispose()
+  }
+}
+
+let runtime: ClientApplyHarness | undefined
+
+afterEach(() => { runtime?.dispose(); runtime = undefined })
 
 test('新建任务优先使用 Archive Manager 提供的 uiWorkspace，并保留官方回退', () => {
   const archiveStart = vi.fn()
@@ -33,19 +96,8 @@ test('新建任务优先使用 Archive Manager 提供的 uiWorkspace，并保留
 })
 
 test('侧栏替换以更低优先级接管工作区树，并保留 footer action 子插槽', async () => {
-  runtime = await SlotTestRuntime.create()
-  runtime.provide('connection', { api: { host: { openPath: async () => ({ result: { ok: true, value: undefined } }) } } })
-  runtime.provide('conversation', {})
-  runtime.provide('layout', { toggleSidebar: () => {} })
-  runtime.provide('locale', {
-    register: () => () => {},
-    bind: () => (key: string) => key,
-  })
-  await runtime.root.declare({
-    sidebar: { kind: 'single', scope: 'root', owner: { collapsed: false, width: 280 } },
-  }, () => null)
-
-  await runtime.mount({ inject, apply })
+  runtime = new ClientApplyHarness()
+  runtime.mount()
   expect(runtime.slots.entries('sidebar')).toHaveLength(1)
   expect(runtime.slots.entries('sidebar.workspaces')).toHaveLength(1)
   expect(runtime.slots.entries('sidebar.footer.action')).toHaveLength(0)
@@ -58,19 +110,8 @@ test('侧栏替换以更低优先级接管工作区树，并保留 footer action
 })
 
 test('未安装 IM 和定时插件时配套插槽没有注册项', async () => {
-  runtime = await SlotTestRuntime.create()
-  runtime.provide('connection', { api: { host: { openPath: async () => ({ result: { ok: true, value: undefined } }) } } })
-  runtime.provide('conversation', {})
-  runtime.provide('layout', { toggleSidebar: () => {} })
-  runtime.provide('locale', {
-    register: () => () => {},
-    bind: () => (key: string) => key,
-  })
-  await runtime.root.declare({
-    sidebar: { kind: 'single', scope: 'root', owner: { collapsed: false, width: 280 } },
-  }, () => null)
-
-  await runtime.mount({ inject, apply })
+  runtime = new ClientApplyHarness()
+  runtime.mount()
   expect(runtime.slots.entries('sidebar.channels')).toHaveLength(0)
   expect(runtime.slots.entries('sidebar.schedule')).toHaveLength(0)
 })

@@ -21,6 +21,12 @@ export function visiblePendingKind(kind: unknown): PendingInteractionKind | unde
   }
 }
 
+/** 旧版 SessionSummary 的兼容读取；alpha.5 已将该状态迁移到独立 Store。 */
+export function legacyPendingInteraction(summary: unknown): unknown {
+  if (typeof summary !== 'object' || summary === null || !('pendingInteraction' in summary)) return undefined
+  return summary.pendingInteraction
+}
+
 export function pendingInteractionForSession(
   sessionId: string,
   pendingInteractions: PendingInteractionSnapshot,

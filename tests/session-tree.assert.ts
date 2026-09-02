@@ -20,7 +20,8 @@ assert.match(schedule, /sessionMenuItems\(t, \{ pinned, unread \}\)/, '定时必
 assert.match(channel, /<SessionRow /, '频道必须复用共用会话行')
 assert.match(schedule, /<SessionRow /, '定时必须复用共用会话行')
 assert.match(tree, /data-state="warning"[^]*dcu-wb-pending-label/, '共用会话行必须显示待处理交互警告状态和文本')
-assert.match(workspace, /pendingInteractionForSession\(id, pendingInteractions, session\.pendingInteraction\)/, '任务树必须兼容 SessionSummary 和待处理交互 Store')
+assert.match(workspace, /pendingInteractionForSession\(id, pendingInteractions, legacyPendingInteraction\(session\)\)/, '任务树必须兼容旧版 SessionSummary 和新版待处理交互 Store')
+assert.match(pending, /'pendingInteraction' in summary/, '旧版 SessionSummary 字段必须经过结构检查后读取')
 assert.match(channel, /pendingInteractionForSession\(id, pendingInteractions, sessions\.byId\[id\]\?\.pendingInteraction\)/, '频道必须兼容 SessionSummary 和待处理交互 Store')
 assert.match(schedule, /pendingInteractionForSession\(id, pendingInteractions, sessions\.byId\[id\]\?\.pendingInteraction\)/, '定时必须兼容 SessionSummary 和待处理交互 Store')
 for (const source of [workspace, channel, schedule]) {

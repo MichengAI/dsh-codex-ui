@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module'
-import type { SessionId, SessionListState, SessionSummary } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { act, createElement, type ReactNode } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { ChannelBrowser } from '../src/client/ChannelBrowser.tsx'
@@ -7,6 +8,7 @@ import { CodexWorkspaceBrowser } from '../src/client/CodexWorkspaceBrowser.tsx'
 import { ScheduleBrowser } from '../src/client/ScheduleBrowser.tsx'
 import { WORKSPACE_GROUPS_STORAGE_KEY } from '../src/client/pinned-workspaces.ts'
 import type { PendingInteractionSnapshot, UseSessionPendingInteraction } from '../src/client/session-pending.ts'
+import type { PendingInteractionKind } from '../src/client/session-pending.ts'
 
 const createRoot = (createRequire(import.meta.url)('react-dom/client') as {
   createRoot: (container: Element) => { render: (node: ReactNode) => void; unmount: () => void }
@@ -29,7 +31,9 @@ const sessionActions = {
 const EMPTY_PENDING_INTERACTIONS: PendingInteractionSnapshot = new Map()
 const useEmptyPendingInteractions: UseSessionPendingInteraction = selector => selector(EMPTY_PENDING_INTERACTIONS)
 
-function createSession(id: string, displayTitle: string, pendingInteraction: SessionSummary['pendingInteraction']): SessionSummary {
+type LegacySessionSummary = SessionSummary & { pendingInteraction?: PendingInteractionKind }
+
+function createSession(id: string, displayTitle: string, pendingInteraction: PendingInteractionKind | undefined): LegacySessionSummary {
   return {
     id: id as SessionId,
     displayTitle,
@@ -53,7 +57,7 @@ function createSessionStore(session: SessionSummary) {
   return <T,>(selector: (snapshot: SessionListState) => T): T => selector(state)
 }
 
-function createPendingInteractionStore(sessionId: string, kind: NonNullable<SessionSummary['pendingInteraction']>): UseSessionPendingInteraction {
+function createPendingInteractionStore(sessionId: string, kind: PendingInteractionKind): UseSessionPendingInteraction {
   const state = new Map([[sessionId, { kind }]])
   return selector => selector(state)
 }
@@ -76,7 +80,7 @@ async function render(node: ReactNode) {
   }
 }
 
-function expectPendingState(container: Element, title: string, kind: NonNullable<SessionSummary['pendingInteraction']>, label: string): void {
+function expectPendingState(container: Element, title: string, kind: PendingInteractionKind, label: string): void {
   const row = [...container.querySelectorAll<HTMLElement>('.dcu-wb-session')]
     .find(candidate => candidate.querySelector('.dcu-wb-session-title')?.textContent === title)
   const pending = row?.querySelector<HTMLElement>('[data-state="warning"]')
