@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { IconCheckOutline16, IconDownloadOutline16, IconLoadingOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCheckOutline16, IconDownloadOutline16, IconListPenOutline16, IconLoadingOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { MANAGED_DEPENDENCIES, type ManagedDependencyId } from '../dependencies.ts'
 import { NS } from './locales.ts'
@@ -26,7 +26,13 @@ const endpoint = '/api/michengai/codex-ui/dependencies'
 
 const stylesheet = `
 .dcu-about{color:var(--dsw-alias-label-primary)}.dcu-about h2{margin:0;font-size:20px;line-height:28px}.dcu-about-intro{margin:6px 0 22px;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:20px}.dcu-about h3{margin:24px 0 8px;font-size:14px;line-height:20px}.dcu-about-features{margin:0;padding-left:20px;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:24px}.dcu-about-dependencies-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:24px}.dcu-about-dependencies-heading h3{margin:0}.dcu-about-dependencies-heading+.dcu-about-intro{margin-bottom:14px}.dcu-about-dependencies{overflow:hidden;border:1px solid var(--dsw-alias-border-l2);border-radius:10px}.dcu-about-dependency{display:flex;align-items:center;gap:12px;min-height:64px;padding:12px;border-bottom:1px solid var(--dsw-alias-border-l2)}.dcu-about-dependency:last-child{border-bottom:0}.dcu-about-copy{min-width:0;flex:1}.dcu-about-name{font-size:13px;line-height:20px;font-weight:600}.dcu-about-package{overflow:hidden;margin-top:2px;color:var(--dsw-alias-label-tertiary);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.dcu-about-status{display:flex;align-items:center;gap:5px;font-size:12px}.dcu-about-status[data-installed=true]{color:var(--dsw-alias-state-success-primary)}.dcu-about-status[data-installed=false]{color:var(--dsw-alias-state-error-primary)}.dcu-about-status[data-update=true]{color:var(--dsw-alias-state-warning-primary)}.dcu-about-install{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:32px;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;padding:6px 9px;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;cursor:pointer}.dcu-about-install:hover:not(:disabled){background:var(--dsw-specific-menu-item-hover)}.dcu-about-install:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}.dcu-about-install:disabled{cursor:wait;opacity:.65}.dcu-about-update-all{min-width:92px}.dcu-about-message{margin:10px 0 0;border-radius:8px;padding:9px 10px;background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 12%,transparent);color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px}.dcu-about-message[data-error=true]{background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 12%,transparent);color:var(--dsw-alias-state-error-primary)}.dcu-about-progress{display:grid;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;margin-top:10px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;padding:9px 10px}.dcu-about-progress code{min-width:0;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dcu-about-progress-pct{color:var(--dsw-alias-label-tertiary);font-size:12px;font-variant-numeric:tabular-nums}.dcu-about-progress-bar{grid-column:1/-1;height:4px;overflow:hidden;border-radius:99px;background:var(--dsw-alias-border-l2)}.dcu-about-progress-fill{height:100%;background:var(--dsw-alias-state-business-primary);transition:width .2s ease}.dcu-about-progress-fill[data-wave=true]{width:28%;animation:dcu-about-progress-wave 1.2s ease-in-out infinite}@keyframes dcu-about-progress-wave{0%{transform:translateX(-60%)}100%{transform:translateX(280%)}}
+.dcu-about-title-row{display:flex;align-items:center;gap:8px;min-width:0}.dcu-about-links{display:flex;align-items:center;gap:4px}.dcu-about-external-link{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 8px;color:var(--dsw-alias-label-secondary);background:transparent;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;font-size:12px;font-weight:500;line-height:18px;text-decoration:none;white-space:nowrap}.dcu-about-external-link:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.dcu-about-external-link:focus-visible{outline:2px solid var(--dsw-alias-state-success-primary);outline-offset:2px}.dcu-about-external-link svg{flex:none}@media(max-width:720px){.dcu-about-title-row{flex-wrap:wrap}}
 `
+
+/** 宿主图标库不提供 GitHub 品牌标识，内联后可离线使用并继承当前文字颜色。 */
+function GithubMark16() {
+  return <svg viewBox="0 0 16 16" width={16} height={16} aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0a8 8 0 0 0-2.53 15.59c.4.074.547-.173.547-.385 0-.19-.007-.693-.01-1.36-2.226.484-2.695-1.073-2.695-1.073-.364-.924-.89-1.17-.89-1.17-.726-.496.055-.486.055-.486.803.056 1.225.824 1.225.824.714 1.223 1.872.87 2.328.665.072-.517.28-.87.508-1.07-1.777-.202-3.645-.888-3.645-3.956 0-.874.31-1.588.823-2.148-.083-.202-.357-1.017.078-2.12 0 0 .672-.215 2.2.82A7.65 7.65 0 0 1 8 4.8c.68.003 1.365.092 2.004.27 1.527-1.035 2.197-.82 2.197-.82.437 1.103.162 1.918.08 2.12.513.56.822 1.274.822 2.148 0 3.076-1.872 3.752-3.654 3.95.288.248.544.735.544 1.482 0 1.07-.01 1.932-.01 2.195 0 .214.144.463.55.384A8.001 8.001 0 0 0 8 0Z" /></svg>
+}
 
 function isDependencyStatus(value: unknown): value is DependencyStatus {
   if (value === null || typeof value !== 'object') return false
@@ -191,7 +197,13 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
   const title = (id: ManagedDependencyId): string => t(`about.dependency.${id}`)
   return <section ref={root} className="dcu-about" aria-label={t('about.nav')}>
     <style>{stylesheet}</style>
-    <h2>{t('about.title')}</h2>
+    <div className="dcu-about-title-row">
+      <h2>{t('about.title')}</h2>
+      <div className="dcu-about-links">
+        <a className="dcu-about-external-link" href="https://github.com/MichengAI/dsh-codex-ui" target="_blank" rel="noreferrer" aria-label={t('about.viewProject')}><GithubMark16 />{t('about.viewProject')}</a>
+        <a className="dcu-about-external-link" href="https://github.com/MichengAI/dsh-codex-ui/issues" target="_blank" rel="noreferrer" aria-label={t('about.feedback')}><IconListPenOutline16 />{t('about.feedback')}</a>
+      </div>
+    </div>
     <p className="dcu-about-intro">{t('about.description')}</p>
     <h3>{t('about.features')}</h3>
     <ul className="dcu-about-features"><li>{t('about.feature.sidebar')}</li><li>{t('about.feature.search')}</li><li>{t('about.feature.workspace')}</li><li>{t('about.feature.sessions')}</li><li>{t('about.feature.conversation')}</li><li>{t('about.feature.navigator')}</li></ul>
