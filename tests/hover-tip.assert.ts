@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { JSDOM } from 'jsdom'
 import { HOVER_TIP_SHOW_DELAY_MS } from '../src/client/hover-shell.tsx'
 import { clampHoverCardPosition, formatHoverTime, hoverCardAnchor } from '../src/client/hover-tip.ts'
 import { shouldCollapseOnSidebarDrag } from '../src/client/sidebar-drag.ts'
-import { parseSidebarGrid, slimedSidebarWidth } from '../src/client/sidebar-width.ts'
+import { applySlimSidebar, parseSidebarGrid } from '../src/client/sidebar-width.ts'
 
 assert.deepEqual(hoverCardAnchor({ right: 260, top: 120 }), { left: 268, top: 120 })
 assert.deepEqual(clampHoverCardPosition(10, 10, 240, 120, 800, 600), { left: 10, top: 10 })
@@ -15,17 +16,30 @@ assert.equal(formatHoverTime(now - 7 * 60_000, now), '7分')
 assert.equal(formatHoverTime(now - 2 * 3600_000, now), '2小时')
 assert.equal(formatHoverTime(now - 3 * 86400_000, now), '3天')
 
-assert.equal(shouldCollapseOnSidebarDrag(275, 280, 244), true)
-assert.equal(shouldCollapseOnSidebarDrag(275, 280, 245), false)
-assert.equal(shouldCollapseOnSidebarDrag(520, 520, 240), false)
-assert.equal(shouldCollapseOnSidebarDrag(240, 240, 241), false)
+assert.equal(shouldCollapseOnSidebarDrag(240, 300, 179), true)
+assert.equal(shouldCollapseOnSidebarDrag(240, 300, 180), false)
+assert.equal(shouldCollapseOnSidebarDrag(520, 520, 259), true)
+assert.equal(shouldCollapseOnSidebarDrag(240, 240, 120), false)
 
-assert.equal(slimedSidebarWidth(56, true), 56)
-assert.equal(slimedSidebarWidth(280, false), 275)
-assert.equal(slimedSidebarWidth(264, false), 240)
-assert.equal(slimedSidebarWidth(420, false), 520)
-assert.equal(slimedSidebarWidth(420, false, 500), 260)
 assert.deepEqual(parseSidebarGrid('280px minmax(0, 1fr) 0px')?.sidebar, 280)
+assert.deepEqual(parseSidebarGrid('264px minmax(0px, 1fr) 0px')?.sidebar, 264)
+
+const sidebarDom = new JSDOM('<div id="frame" style="grid-template-columns: 360px minmax(0px, 1fr) 0px"><div data-side="sidebar"></div></div>')
+const sidebarFrame = sidebarDom.window.document.getElementById('frame') as HTMLElement
+const sidebarHandle = sidebarFrame.querySelector<HTMLElement>('[data-side="sidebar"]')
+assert.equal(applySlimSidebar(sidebarFrame), true)
+assert.equal(sidebarFrame.style.gridTemplateColumns, '240px minmax(0px, 1fr) 0px')
+assert.equal(sidebarFrame.hasAttribute('data-dcu-codex-sidebar-initialized'), true)
+assert.equal(sidebarHandle?.style.left, '240px')
+sidebarFrame.style.gridTemplateColumns = '320px minmax(0px, 1fr) 0px'
+assert.equal(applySlimSidebar(sidebarFrame), false)
+assert.equal(sidebarFrame.style.gridTemplateColumns, '320px minmax(0px, 1fr) 0px')
+
+const sidebarWidth = readFileSync(new URL('../src/client/sidebar-width.ts', import.meta.url), 'utf8')
+assert.doesNotMatch(sidebarWidth, /slimedSidebarWidth|slimedGridTemplate|HOST_SIDEBAR_/, '固定侧边栏宽度不得保留旧的宽度映射逻辑')
+assert.doesNotMatch(sidebarWidth, /localStorage|sessionStorage/, '固定侧边栏宽度不得写入浏览器存储')
+assert.match(sidebarWidth, /pauseInitialSidebarTransition/, '首次覆盖宿主默认宽度时必须暂停宽度过渡')
+assert.match(sidebarWidth, /window\.requestAnimationFrame\(\(\) => window\.requestAnimationFrame\(restoreTransition\)\)/, '首次宽度切换绘制完成后必须恢复正常拖拽过渡')
 
 const hoverShell = readFileSync(new URL('../src/client/hover-shell.tsx', import.meta.url), 'utf8')
 assert.match(hoverShell, /clearTimeout\(hideTipTimer\.current\)/, '悬停层卸载必须清掉延迟关闭定时器')

@@ -11,6 +11,11 @@ export function toggleSessionId(ids: readonly string[], sessionId: string): stri
     : [sessionId, ...ids.filter(id => id !== sessionId)]
 }
 
+/** 返回本次刷新中结束、且不在当前会话中的后台会话。 */
+export function completedBackgroundSessionIds(previous: Readonly<Record<string, boolean>>, current: Readonly<Record<string, boolean>>, currentSessionId?: string): string[] {
+  return Object.entries(current).flatMap(([id, running]) => previous[id] === true && running !== true && id !== currentSessionId ? [id] : [])
+}
+
 export function readSessionIds(storage: Storage | undefined, key: string): string[] {
   if (storage === undefined) return []
   try {

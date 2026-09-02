@@ -1,10 +1,16 @@
 /** 浏览器本地持久化键；置顶只影响本插件中的工作区分区。 */
+import { parseWorkspaceGroups, pruneWorkspaceGroups, type WorkspaceGroup } from '../workspace-groups.ts'
+
 export const PINNED_WORKSPACES_STORAGE_KEY = 'dsh-codex-ui.pinned-workspace-ids'
 export const WORKSPACE_PREFERENCES_ENDPOINT = '/api/michengai/codex-ui/preferences'
 
 export type HostPinnedWorkspacePreferences = {
   exists: boolean
   pinnedWorkspaceIds: string[]
+}
+
+export type HostWorkspacePreferences = HostPinnedWorkspacePreferences & {
+  workspaceGroups: WorkspaceGroup[]
 }
 
 type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -21,6 +27,8 @@ export function prunePinnedWorkspaceIds(ids: readonly string[], validIds: readon
   return next.length === ids.length ? [...ids] : next
 }
 
+export { pruneWorkspaceGroups }
+
 /** Host 数据优先；首次升级没有 Host 文件时迁移旧 origin 的 localStorage；读取期间的用户操作永远优先。 */
 export function resolvePinnedWorkspaceHydration(
   localIds: readonly string[],
@@ -33,7 +41,19 @@ export function resolvePinnedWorkspaceHydration(
   return { ids, writeHost: ids.length > 0 }
 }
 
-export async function readHostPinnedWorkspaceIds(fetcher: Fetcher = fetch): Promise<HostPinnedWorkspacePreferences> {
+/** Host 数据优先；浏览器本地只用于首次迁移，用户操作始终覆盖延迟响应。 */
+export function resolveWorkspacePreferencesHydration(
+  local: Pick<HostWorkspacePreferences, 'pinnedWorkspaceIds' | 'workspaceGroups'>,
+  host: HostWorkspacePreferences,
+  dirty?: Pick<HostWorkspacePreferences, 'pinnedWorkspaceIds' | 'workspaceGroups'>,
+): { pinnedWorkspaceIds: string[]; workspaceGroups: WorkspaceGroup[]; writeHost: boolean } {
+  if (dirty !== undefined) return { pinnedWorkspaceIds: normalizePinnedWorkspaceIds(dirty.pinnedWorkspaceIds), workspaceGroups: dirty.workspaceGroups, writeHost: true }
+  if (host.exists) return { pinnedWorkspaceIds: normalizePinnedWorkspaceIds(host.pinnedWorkspaceIds), workspaceGroups: host.workspaceGroups, writeHost: false }
+  const pinnedWorkspaceIds = normalizePinnedWorkspaceIds(local.pinnedWorkspaceIds)
+  return { pinnedWorkspaceIds, workspaceGroups: local.workspaceGroups, writeHost: pinnedWorkspaceIds.length > 0 || local.workspaceGroups.length > 0 }
+}
+
+export async function readHostWorkspacePreferences(fetcher: Fetcher = fetch): Promise<HostWorkspacePreferences> {
   const response = await fetcher(WORKSPACE_PREFERENCES_ENDPOINT, {
     method: 'GET',
     cache: 'no-store',
@@ -43,10 +63,29 @@ export async function readHostPinnedWorkspaceIds(fetcher: Fetcher = fetch): Prom
   const payload: unknown = await response.json()
   if (payload === null || typeof payload !== 'object') throw new Error('置顶偏好响应格式无效。')
   const record = payload as Record<string, unknown>
-  if (typeof record.exists !== 'boolean' || !Array.isArray(record.pinnedWorkspaceIds) || !record.pinnedWorkspaceIds.every(id => typeof id === 'string')) {
+  const workspaceGroups = parseWorkspaceGroups(record.workspaceGroups)
+  if (typeof record.exists !== 'boolean' || !Array.isArray(record.pinnedWorkspaceIds) || !record.pinnedWorkspaceIds.every(id => typeof id === 'string') || workspaceGroups === undefined) {
     throw new Error('置顶偏好响应格式无效。')
   }
-  return { exists: record.exists, pinnedWorkspaceIds: normalizePinnedWorkspaceIds(record.pinnedWorkspaceIds as string[]) }
+  return { exists: record.exists, pinnedWorkspaceIds: normalizePinnedWorkspaceIds(record.pinnedWorkspaceIds as string[]), workspaceGroups }
+}
+
+export async function writeHostWorkspacePreferences(pinnedWorkspaceIds: readonly string[], workspaceGroups: readonly WorkspaceGroup[], fetcher: Fetcher = fetch): Promise<void> {
+  const groups = parseWorkspaceGroups([...workspaceGroups])
+  if (groups === undefined) throw new Error('工作区分组数据无效。')
+  const response = await fetcher(WORKSPACE_PREFERENCES_ENDPOINT, {
+    method: 'PUT',
+    cache: 'no-store',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ pinnedWorkspaceIds: normalizePinnedWorkspaceIds(pinnedWorkspaceIds), workspaceGroups: groups }),
+    signal: AbortSignal.timeout(5_000),
+  })
+  if (!response.ok) throw new Error(`保存置顶偏好失败：HTTP ${response.status}`)
+}
+
+/** 兼容旧调用方；新代码应同时写入分组。 */
+export async function readHostPinnedWorkspaceIds(fetcher: Fetcher = fetch): Promise<HostWorkspacePreferences> {
+  return readHostWorkspacePreferences(fetcher)
 }
 
 export async function writeHostPinnedWorkspaceIds(ids: readonly string[], fetcher: Fetcher = fetch): Promise<void> {

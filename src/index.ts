@@ -4,7 +4,7 @@ import { dependencyStatuses, disposeDependencyInstaller, installDependency, inst
 import { authorizedExplorerWorkspacePath } from './explorer-path-policy.ts'
 import { hostServices } from './host-services.ts'
 import { ForegroundExplorer } from './native-explorer.ts'
-import { parsePinnedWorkspaceIds, readWorkspacePreferences, writeWorkspacePreferences } from './workspace-preferences.ts'
+import { parsePinnedWorkspaceIds, parseWorkspaceGroups, readWorkspacePreferences, writeWorkspacePreferences } from './workspace-preferences.ts'
 
 const connectorsEndpoint = '/api/michengai/codex-ui/connectors'
 const dependenciesEndpoint = '/api/michengai/codex-ui/dependencies'
@@ -189,17 +189,22 @@ export function apply(ctx: Context): void {
               return
             }
             const body = JSON.parse(await readRequestBody(request)) as unknown
-            const pinnedWorkspaceIds = body !== null && typeof body === 'object'
-              ? parsePinnedWorkspaceIds((body as Record<string, unknown>).pinnedWorkspaceIds)
-              : undefined
-            if (pinnedWorkspaceIds === undefined) {
+            const record = body !== null && typeof body === 'object' ? body as Record<string, unknown> : undefined
+            const pinnedWorkspaceIds = record === undefined ? undefined : parsePinnedWorkspaceIds(record.pinnedWorkspaceIds)
+            const existing = await readWorkspacePreferences()
+            const workspaceGroups = record === undefined
+              ? undefined
+              : 'workspaceGroups' in record
+                ? parseWorkspaceGroups(record.workspaceGroups)
+                : existing.workspaceGroups
+            if (pinnedWorkspaceIds === undefined || workspaceGroups === undefined) {
               response.writeHead(400, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-              response.end(JSON.stringify({ error: '置顶偏好格式无效。' }))
+              response.end(JSON.stringify({ error: '工作区偏好格式无效。' }))
               return
             }
-            await writeWorkspacePreferences(pinnedWorkspaceIds)
+            await writeWorkspacePreferences(pinnedWorkspaceIds, workspaceGroups)
             response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-            response.end(JSON.stringify({ version: 1, pinnedWorkspaceIds, exists: true }))
+            response.end(JSON.stringify({ version: 2, pinnedWorkspaceIds, workspaceGroups, exists: true }))
             return
           }
           response.writeHead(405, { allow: 'GET, HEAD, PUT' })

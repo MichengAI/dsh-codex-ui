@@ -7,6 +7,7 @@ import {
   MAX_PINNED_WORKSPACE_IDS,
   MAX_WORKSPACE_ID_LENGTH,
   parsePinnedWorkspaceIds,
+  parseWorkspaceGroups,
   readWorkspacePreferences,
   WORKSPACE_PREFERENCES_FILE,
   writeWorkspacePreferences,
@@ -16,19 +17,24 @@ const directory = await mkdtemp(join(tmpdir(), 'dcu-workspace-preferences-'))
 const path = join(directory, WORKSPACE_PREFERENCES_FILE)
 
 try {
-  assert.deepEqual(await readWorkspacePreferences(path), { version: 1, pinnedWorkspaceIds: [], exists: false })
+  assert.deepEqual(await readWorkspacePreferences(path), { version: 2, pinnedWorkspaceIds: [], workspaceGroups: [], exists: false })
   assert.deepEqual(parsePinnedWorkspaceIds(['a', 'a', 'b']), ['a', 'b'])
   assert.equal(parsePinnedWorkspaceIds(Array.from({ length: MAX_PINNED_WORKSPACE_IDS + 1 }, (_, index) => String(index))), undefined)
   assert.equal(parsePinnedWorkspaceIds(['x'.repeat(MAX_WORKSPACE_ID_LENGTH + 1)]), undefined)
+  assert.deepEqual(parseWorkspaceGroups([{ id: 'knowledge', title: '数据与知识管理', workspaceIds: ['a'] }]), [{ id: 'knowledge', title: '数据与知识管理', workspaceIds: ['a'] }])
+  assert.equal(parseWorkspaceGroups([{ id: 'knowledge', title: '数据与知识管理', workspaceIds: ['a'] }, { id: 'duplicate', title: '重复', workspaceIds: ['a'] }]), undefined)
 
-  await writeWorkspacePreferences(['a', 'a', 'b'], path)
-  assert.deepEqual(await readWorkspacePreferences(path), { version: 1, pinnedWorkspaceIds: ['a', 'b'], exists: true })
+  await writeWorkspacePreferences(['a', 'a', 'b'], [{ id: 'knowledge', title: '数据与知识管理', workspaceIds: ['a'] }], path)
+  assert.deepEqual(await readWorkspacePreferences(path), { version: 2, pinnedWorkspaceIds: ['a', 'b'], workspaceGroups: [{ id: 'knowledge', title: '数据与知识管理', workspaceIds: ['a'] }], exists: true })
 
   await Promise.all([
-    writeWorkspacePreferences(['first'], path),
-    writeWorkspacePreferences(['second'], path),
+    writeWorkspacePreferences(['first'], [], path),
+    writeWorkspacePreferences(['second'], [], path),
   ])
-  assert.deepEqual(JSON.parse(await readFile(path, 'utf8')), { version: 1, pinnedWorkspaceIds: ['second'] })
+  assert.deepEqual(JSON.parse(await readFile(path, 'utf8')), { version: 2, pinnedWorkspaceIds: ['second'], workspaceGroups: [] })
+
+  await writeFile(path, JSON.stringify({ version: 1, pinnedWorkspaceIds: ['legacy'] }), 'utf8')
+  assert.deepEqual(await readWorkspacePreferences(path), { version: 2, pinnedWorkspaceIds: ['legacy'], workspaceGroups: [], exists: true })
 
   await writeFile(path, '{broken', 'utf8')
   await assert.rejects(readWorkspacePreferences(path), SyntaxError)
@@ -90,11 +96,18 @@ try {
 
   const missing = await invoke('GET')
   assert.equal(missing.status, 200)
-  assert.deepEqual(JSON.parse(missing.body ?? ''), { version: 1, pinnedWorkspaceIds: [], exists: false })
+  assert.deepEqual(JSON.parse(missing.body ?? ''), { version: 2, pinnedWorkspaceIds: [], workspaceGroups: [], exists: false })
 
   const saved = await invoke('PUT', [JSON.stringify({ pinnedWorkspaceIds: ['one', 'two'] })], { 'sec-fetch-site': 'same-origin' })
   assert.equal(saved.status, 200)
   assert.deepEqual((await readWorkspacePreferences(join(endpointDirectory, WORKSPACE_PREFERENCES_FILE))).pinnedWorkspaceIds, ['one', 'two'])
+
+  const savedGroups = await invoke('PUT', [JSON.stringify({ pinnedWorkspaceIds: ['one'], workspaceGroups: [{ id: 'knowledge', title: '数据与知识管理', workspaceIds: ['one'] }] })], { 'sec-fetch-site': 'same-origin' })
+  assert.equal(savedGroups.status, 200)
+  assert.deepEqual(JSON.parse(savedGroups.body ?? '').workspaceGroups, [{ id: 'knowledge', title: '数据与知识管理', workspaceIds: ['one'] }])
+
+  await invoke('PUT', [JSON.stringify({ pinnedWorkspaceIds: ['two'] })], { 'sec-fetch-site': 'same-origin' })
+  assert.deepEqual((await readWorkspacePreferences(join(endpointDirectory, WORKSPACE_PREFERENCES_FILE))).workspaceGroups, [{ id: 'knowledge', title: '数据与知识管理', workspaceIds: ['one'] }], '旧客户端更新置顶时必须保留服务端已有分组')
 
   assert.equal((await invoke('PUT', ['{}'], { 'sec-fetch-site': 'cross-site' })).status, 403)
   assert.equal((await invoke('PUT', [], { 'content-length': String(33 * 1024) })).status, 413)

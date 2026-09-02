@@ -1,8 +1,6 @@
-import { CODEX_SIDEBAR_MIN_PX } from './sidebar-width.ts'
-
-/** Codex collapses the sidebar when a resize drag would make it narrower than 240px. */
+/** 左移超过开始宽度的一半时收起侧栏，避免轻微拖动误触。 */
 export function shouldCollapseOnSidebarDrag(startWidth: number, startX: number, endX: number): boolean {
-  return startWidth + endX - startX < CODEX_SIDEBAR_MIN_PX
+  return startX - endX > startWidth / 2
 }
 
 export function isSidebarDragHandle(target: EventTarget | null): boolean {

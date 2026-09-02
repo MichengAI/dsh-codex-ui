@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { isTaskSession, moveBefore, orderByIds, pinnedHeaderDropIndicator, readSessionDrag, readWorkspaceDrag, reorderDropBeforeId, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag } from '../src/client/workspace-browser.ts'
+import { isTaskSession, moveBefore, orderByIds, pinnedHeaderDropIndicator, readSessionDrag, readWorkspaceDrag, readWorkspaceGroupDrag, reorderDropBeforeId, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag, writeWorkspaceGroupDrag } from '../src/client/workspace-browser.ts'
 
 const sessions = {
   a: { id: 'a', origin: 'user', blank: false },
@@ -54,4 +54,12 @@ assert.deepEqual(
   writeSessionDrag(data, 's1', '会话')
   assert.equal(readWorkspaceDrag(data), undefined, '会话拖拽不得被识别为可置顶项目')
   assert.equal(readSessionDrag({ getData: (type: string) => type === 'text/plain' ? 'dcu-session:s1' : '' } as unknown as DataTransfer), 's1', '自定义类型被剥掉时必须还能从 text/plain 读出会话')
+}
+{
+  const store = new Map<string, string>()
+  const data = { effectAllowed: '', setData: (type: string, value: string) => { store.set(type, value) }, getData: (type: string) => store.get(type) ?? '' } as unknown as DataTransfer
+  writeWorkspaceGroupDrag(data, 'g1', '项目分组')
+  assert.equal(readWorkspaceGroupDrag(data), 'g1', '项目分组拖拽必须能从 dataTransfer 读回')
+  assert.equal(readWorkspaceDrag(data, 'stale-workspace'), undefined, '分组载荷不得被旧项目状态误判为项目拖拽')
+  assert.equal(readSessionDrag(data), undefined, '分组载荷不得被识别为会话拖拽')
 }
