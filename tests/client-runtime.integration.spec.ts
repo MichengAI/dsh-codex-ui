@@ -134,6 +134,68 @@ test('搜索和窄轨切换不会重渲染或重新挂载工作区树', async ()
   }
 })
 
+test('扩展分组默认展开，展开偏好会持久化且悬停不改变展开状态', async () => {
+  window.localStorage.removeItem('dsh-codex-ui.sidebar-expansion.v1')
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  let root = createRoot(container)
+  const sessions = { ids: [], byId: {} }
+  const workspaces = { archivedSessionIds: [], items: [] }
+  const base = {
+    width: 240,
+    collapsed: false,
+    renderSlot: () => null,
+    t: (key: string) => key,
+    useSessions: (selector: (state: typeof sessions) => unknown): unknown => selector(sessions),
+    useWorkspaces: (selector: (state: typeof workspaces) => unknown): unknown => selector(workspaces),
+    openSession: () => {},
+    startSession: () => {},
+    toggleSidebar: () => {},
+    archiveSession: async () => {},
+    deleteSession: async () => {},
+    forkSession: async () => {},
+    renameSession: async () => {},
+    openPath: () => {},
+  }
+
+  try {
+    await act(async () => { root.render(createElement(CodexSidebar, base as never)) })
+    const extensions = container.querySelector<HTMLButtonElement>('.dcu-extensions-toggle')
+    const extensionsGroup = container.querySelector<HTMLElement>('.dcu-extensions-group')
+    expect(extensions?.getAttribute('aria-expanded')).toBe('true')
+
+    await act(async () => { extensions?.click() })
+    expect(extensions?.getAttribute('aria-expanded')).toBe('false')
+    expect(window.localStorage.getItem('dsh-codex-ui.sidebar-expansion.v1')).toBe('{"extensions":false}')
+    expect(container.querySelector<HTMLElement>('.dcu-extension-panel')?.getAttribute('data-open')).toBe('false')
+    expect([...container.querySelectorAll<HTMLButtonElement>('.dcu-extension-items button')].every(item => item.tabIndex === -1)).toBe(true)
+
+    await act(async () => { extensionsGroup?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })) })
+    expect(extensions?.getAttribute('aria-expanded')).toBe('false')
+    await act(async () => { extensionsGroup?.dispatchEvent(new MouseEvent('mouseout', { bubbles: true })) })
+    expect(extensions?.getAttribute('aria-expanded')).toBe('false')
+
+    await act(async () => { root.unmount() })
+    root = createRoot(container)
+    await act(async () => { root.render(createElement(CodexSidebar, base as never)) })
+    const remountedExtensions = container.querySelector<HTMLButtonElement>('.dcu-extensions-toggle')
+    const remountedItems = container.querySelectorAll<HTMLButtonElement>('.dcu-extension-items button')
+    expect(remountedExtensions?.getAttribute('aria-expanded')).toBe('false')
+    expect([...remountedItems].every(item => item.tabIndex === -1)).toBe(true)
+
+    await act(async () => { remountedExtensions?.click() })
+    expect(remountedExtensions?.getAttribute('aria-expanded')).toBe('true')
+    expect(window.localStorage.getItem('dsh-codex-ui.sidebar-expansion.v1')).toBe('{"extensions":true}')
+    remountedExtensions?.focus()
+    expect(document.activeElement).toBe(remountedExtensions)
+    expect([...remountedItems].every(item => item.tabIndex === 0)).toBe(true)
+  } finally {
+    await act(async () => { root.unmount() })
+    container.remove()
+    window.localStorage.removeItem('dsh-codex-ui.sidebar-expansion.v1')
+  }
+})
+
 test('连接器设置页嵌入可用的市场并只接受该 iframe 的 Prompt 消息', async () => {
   const container = document.createElement('div')
   document.body.appendChild(container)
