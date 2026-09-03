@@ -10,6 +10,8 @@ export type SidebarGridTracks = {
   details: number
 }
 
+const visibleSidebarWidths = new WeakMap<HTMLElement, number>()
+
 /** 解析宿主 AppFrame 的 grid-template-columns。 */
 export function parseSidebarGrid(value: string): SidebarGridTracks | undefined {
   const match = /^(\d+(?:\.\d+)?)px\s+(minmax\(0(?:px)?,\s*1fr\))\s+(\d+(?:\.\d+)?)px$/.exec(value.trim())
@@ -26,18 +28,26 @@ export function findSidebarFrame(root: ParentNode): HTMLElement | undefined {
   return undefined
 }
 
-export function applySlimSidebar(frame: HTMLElement): boolean {
-  if (frame.hasAttribute('data-dragging') || frame.hasAttribute('data-dcu-codex-sidebar-initialized')) return false
+/** 同步侧栏网格和拖拽柄，保证两者始终使用同一个可见宽度。 */
+export function applySidebarWidth(frame: HTMLElement, width: number): boolean {
   const tracks = parseSidebarGrid(frame.style.gridTemplateColumns)
-  if (tracks === undefined) return false
-  const collapsed = frame.hasAttribute('data-sidebar-collapsed')
-  if (collapsed) return false
-  const next = `${CODEX_SIDEBAR_MIN_PX}px ${tracks.middle} ${tracks.details}px`
+  if (tracks === undefined || frame.hasAttribute('data-sidebar-collapsed')) return false
+  visibleSidebarWidths.set(frame, width)
+  const next = `${width}px ${tracks.middle} ${tracks.details}px`
   const changed = frame.style.gridTemplateColumns !== next
   if (changed) frame.style.gridTemplateColumns = next
-  frame.setAttribute('data-dcu-codex-sidebar-initialized', '')
   const handle = frame.querySelector<HTMLElement>('[data-side="sidebar"]')
-  if (handle !== null) handle.style.left = `${CODEX_SIDEBAR_MIN_PX}px`
+  if (handle !== null) handle.style.left = `${width}px`
+  return changed
+}
+
+export function applySlimSidebar(frame: HTMLElement): boolean {
+  if (frame.hasAttribute('data-dragging')) return false
+  if (parseSidebarGrid(frame.style.gridTemplateColumns) === undefined || frame.hasAttribute('data-sidebar-collapsed')) return false
+  const initialized = frame.hasAttribute('data-dcu-codex-sidebar-initialized')
+  const width = initialized ? visibleSidebarWidths.get(frame) ?? CODEX_SIDEBAR_MIN_PX : CODEX_SIDEBAR_MIN_PX
+  const changed = applySidebarWidth(frame, width)
+  frame.setAttribute('data-dcu-codex-sidebar-initialized', '')
   return changed
 }
 

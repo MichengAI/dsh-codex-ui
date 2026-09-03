@@ -15,11 +15,34 @@ type SessionMoveCompletionOptions = {
   navigate: (url: string) => void
 }
 
+export type SessionMoveErrorKey =
+  | 'sessions.moveUnavailable'
+  | 'sessions.moveNotFound'
+  | 'sessions.moveSubagent'
+  | 'sessions.moveBusy'
+  | 'sessions.moveRollbackFailed'
+  | 'sessions.moveFailed'
+
+const SESSION_MOVE_ERROR_KEYS: Readonly<Record<string, SessionMoveErrorKey>> = {
+  'session-move/unavailable': 'sessions.moveUnavailable',
+  'session-move/service-unavailable': 'sessions.moveUnavailable',
+  'session-move/session-not-found': 'sessions.moveNotFound',
+  'session-move/workspace-not-found': 'sessions.moveNotFound',
+  'session-move/subagent-unsupported': 'sessions.moveSubagent',
+  'session-move/busy': 'sessions.moveBusy',
+  'session-move/rollback-failed': 'sessions.moveRollbackFailed',
+}
+
 export class SessionMoveRequestError extends Error {
   constructor(readonly code: string) {
     super(code)
     this.name = 'SessionMoveRequestError'
   }
+}
+
+/** 将 Host 公开错误码映射为受控 i18n 键，未知错误统一使用安全兜底。 */
+export function sessionMoveErrorKey(code: string): SessionMoveErrorKey {
+  return SESSION_MOVE_ERROR_KEYS[code] ?? 'sessions.moveFailed'
 }
 
 export function moveSessionActionId(workspaceId: string): string {

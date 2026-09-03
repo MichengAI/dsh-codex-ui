@@ -4,6 +4,7 @@ import {
   moveSessionActionId,
   parseMoveSessionActionId,
   requestSessionMove,
+  sessionMoveErrorKey,
   sessionMoveTargets,
 } from '../src/client/session-move.ts'
 
@@ -34,6 +35,15 @@ test('Host 拒绝迁移时保留结构化错误码', async () => {
   await expect(requestSessionMove('session-1', 'target', fetcher)).rejects.toMatchObject({
     code: 'session-move/subagent-unsupported',
   })
+})
+
+test('迁移错误码映射为准确的客户端文案键', () => {
+  expect(sessionMoveErrorKey('session-move/rollback-failed')).toBe('sessions.moveRollbackFailed')
+  expect(sessionMoveErrorKey('session-move/service-unavailable')).toBe('sessions.moveUnavailable')
+  expect(sessionMoveErrorKey('session-move/session-not-found')).toBe('sessions.moveNotFound')
+  expect(sessionMoveErrorKey('session-move/subagent-unsupported')).toBe('sessions.moveSubagent')
+  expect(sessionMoveErrorKey('session-move/busy')).toBe('sessions.moveBusy')
+  expect(sessionMoveErrorKey('session-move/unrecognized')).toBe('sessions.moveFailed')
 })
 
 test('迁移成功后导航到被移动会话并保留其他查询参数', () => {

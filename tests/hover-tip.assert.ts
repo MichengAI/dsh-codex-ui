@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs'
 import { JSDOM } from 'jsdom'
 import { HOVER_TIP_SHOW_DELAY_MS, WORKSPACE_HOVER_CARD_WIDTH } from '../src/client/hover-shell.tsx'
 import { clampHoverCardPosition, formatHoverTime, hoverCardAnchor } from '../src/client/hover-tip.ts'
-import { shouldCollapseOnSidebarDrag } from '../src/client/sidebar-drag.ts'
-import { applySlimSidebar, parseSidebarGrid } from '../src/client/sidebar-width.ts'
+import { sidebarWidthDuringDrag, shouldCollapseOnSidebarDrag } from '../src/client/sidebar-drag.ts'
+import { applySidebarWidth, applySlimSidebar, parseSidebarGrid } from '../src/client/sidebar-width.ts'
 
 assert.deepEqual(hoverCardAnchor({ right: 260, top: 120 }), { left: 268, top: 120 })
 assert.deepEqual(clampHoverCardPosition(10, 10, 240, 120, 800, 600), { left: 10, top: 10 })
@@ -31,9 +31,12 @@ assert.equal(shouldCollapseOnSidebarDrag(240, 300, 179), true)
 assert.equal(shouldCollapseOnSidebarDrag(240, 300, 180), false)
 assert.equal(shouldCollapseOnSidebarDrag(520, 520, 259), true)
 assert.equal(shouldCollapseOnSidebarDrag(240, 240, 120), false)
+assert.equal(sidebarWidthDuringDrag(240, 300, 301), 241, '从默认宽度向右轻拖必须连续增长，不能回弹到宿主下限')
+assert.equal(sidebarWidthDuringDrag(240, 300, 299), 240, '从默认宽度向左轻拖必须保持唯一最小宽度')
+assert.equal(sidebarWidthDuringDrag(300, 300, 250), 250, '自定义宽度左拖时必须按实际位移连续缩小')
 
 assert.deepEqual(parseSidebarGrid('280px minmax(0, 1fr) 0px')?.sidebar, 280)
-assert.deepEqual(parseSidebarGrid('264px minmax(0px, 1fr) 0px')?.sidebar, 264)
+assert.deepEqual(parseSidebarGrid('240px minmax(0px, 1fr) 0px')?.sidebar, 240)
 
 const sidebarDom = new JSDOM('<div id="frame" style="grid-template-columns: 360px minmax(0px, 1fr) 0px"><div data-side="sidebar"></div></div>')
 const sidebarFrame = sidebarDom.window.document.getElementById('frame') as HTMLElement
@@ -42,9 +45,11 @@ assert.equal(applySlimSidebar(sidebarFrame), true)
 assert.equal(sidebarFrame.style.gridTemplateColumns, '240px minmax(0px, 1fr) 0px')
 assert.equal(sidebarFrame.hasAttribute('data-dcu-codex-sidebar-initialized'), true)
 assert.equal(sidebarHandle?.style.left, '240px')
+assert.equal(applySidebarWidth(sidebarFrame, 241), true)
+assert.equal(sidebarFrame.style.gridTemplateColumns, '241px minmax(0px, 1fr) 0px')
 sidebarFrame.style.gridTemplateColumns = '320px minmax(0px, 1fr) 0px'
-assert.equal(applySlimSidebar(sidebarFrame), false)
-assert.equal(sidebarFrame.style.gridTemplateColumns, '320px minmax(0px, 1fr) 0px')
+assert.equal(applySlimSidebar(sidebarFrame), true)
+assert.equal(sidebarFrame.style.gridTemplateColumns, '241px minmax(0px, 1fr) 0px', '宿主重绘后必须恢复当前可见宽度')
 
 const sidebarWidth = readFileSync(new URL('../src/client/sidebar-width.ts', import.meta.url), 'utf8')
 assert.doesNotMatch(sidebarWidth, /slimedSidebarWidth|slimedGridTemplate|HOST_SIDEBAR_/, '固定侧边栏宽度不得保留旧的宽度映射逻辑')

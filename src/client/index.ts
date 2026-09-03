@@ -26,7 +26,7 @@ import { observeOfficialTurnNavigators } from './official-turn-navigator.ts'
 import { TurnNavigator } from './TurnNavigator.tsx'
 import { hasConnectWorkspace, hasStartSession, recentWorkspaceId, workspaceBaselinesReady } from './workspace-compat.ts'
 import { HostActionError, type HostAction, UserFacingError } from './user-error.ts'
-import { finishSessionMove, requestSessionMove, SessionMoveRequestError } from './session-move.ts'
+import { finishSessionMove, requestSessionMove, sessionMoveErrorKey, SessionMoveRequestError } from './session-move.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
@@ -178,11 +178,7 @@ export function apply(ctx: ClientContext): void {
       await requestSessionMove(sessionId, targetWorkspaceId)
     } catch (error) {
       if (!(error instanceof SessionMoveRequestError)) throw error
-      if (error.code === 'session-move/unavailable' || error.code === 'session-move/service-unavailable') throw new UserFacingError(t('sessions.moveUnavailable'))
-      if (error.code === 'session-move/session-not-found' || error.code === 'session-move/workspace-not-found') throw new UserFacingError(t('sessions.moveNotFound'))
-      if (error.code === 'session-move/subagent-unsupported') throw new UserFacingError(t('sessions.moveSubagent'))
-      if (error.code === 'session-move/busy') throw new UserFacingError(t('sessions.moveBusy'))
-      throw new UserFacingError(t('sessions.moveFailed'))
+      throw new UserFacingError(t(sessionMoveErrorKey(error.code)))
     }
     finishSessionMove({
       sessionId,

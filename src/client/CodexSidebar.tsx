@@ -13,8 +13,8 @@ import { filterSidebarSearchItems, type SidebarSearchItem } from './sidebar-sear
 import { EMPTY_COMPANION_TABS, type CompanionTabAvailability } from './companion-slots.ts'
 import { ChannelBrowser } from './ChannelBrowser.tsx'
 import { ScheduleBrowser } from './ScheduleBrowser.tsx'
-import { isSidebarDragHandle, shouldCollapseOnSidebarDrag } from './sidebar-drag.ts'
-import { findSidebarFrame, SLIM_SIDEBAR_PX } from './sidebar-width.ts'
+import { isSidebarDragHandle, sidebarWidthDuringDrag, shouldCollapseOnSidebarDrag } from './sidebar-drag.ts'
+import { applySidebarWidth, findSidebarFrame, parseSidebarGrid, SLIM_SIDEBAR_PX } from './sidebar-width.ts'
 import { isTaskSession } from './workspace-browser.ts'
 import { clearAutomationTaskSettingsRequest, requestAutomationTaskSettings } from './automation-task-settings.ts'
 import type { UseSessionPendingInteraction } from './session-pending.ts'
@@ -224,36 +224,72 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
     let startWidth = SLIM_SIDEBAR_PX
     let dragging = false
     let pointerId: number | undefined
+    let frame: HTMLElement | undefined
+    let handle: HTMLElement | undefined
+    const stopHostDrag = (event: PointerEvent): void => {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    const finishDrag = (): void => {
+      frame?.removeAttribute('data-dragging')
+      handle?.removeAttribute('data-dragging')
+      if (handle !== undefined && pointerId !== undefined && handle.hasPointerCapture?.(pointerId)) {
+        handle.releasePointerCapture(pointerId)
+      }
+      dragging = false
+      pointerId = undefined
+      frame = undefined
+      handle = undefined
+    }
     const onDown = (event: PointerEvent): void => {
       if (dragging || !isSidebarDragHandle(event.target)) return
+      const nextFrame = findSidebarFrame(document)
+      const tracks = nextFrame === undefined ? undefined : parseSidebarGrid(nextFrame.style.gridTemplateColumns)
+      const nextHandle = event.target instanceof Element
+        ? event.target.closest<HTMLElement>('[data-side="sidebar"]') ?? undefined
+        : undefined
+      if (nextFrame === undefined || tracks === undefined || nextHandle === undefined) return
+      stopHostDrag(event)
       dragging = true
       pointerId = event.pointerId
       startX = event.clientX
-      const frame = findSidebarFrame(document)
-      const match = frame?.style.gridTemplateColumns.match(/^(\d+(?:\.\d+)?)px\s/)
-      startWidth = match === null || match === undefined ? SLIM_SIDEBAR_PX : Number(match[1])
+      startWidth = tracks.sidebar
+      frame = nextFrame
+      handle = nextHandle
+      frame.setAttribute('data-dragging', '')
+      handle.setAttribute('data-dragging', 'true')
+      try { handle.setPointerCapture(event.pointerId) } catch { /* 窗口级监听仍可完成当前拖拽。 */ }
+    }
+    const onMove = (event: PointerEvent): void => {
+      if (!dragging || event.pointerId !== pointerId || frame === undefined) return
+      stopHostDrag(event)
+      applySidebarWidth(frame, sidebarWidthDuringDrag(startWidth, startX, event.clientX))
     }
     const onUp = (event: PointerEvent): void => {
       if (!dragging || event.pointerId !== pointerId) return
-      dragging = false
-      pointerId = undefined
-      if (!shouldCollapseOnSidebarDrag(startWidth, startX, event.clientX)) return
-      window.requestAnimationFrame(() => { window.requestAnimationFrame(() => { toggleSidebar() }) })
+      stopHostDrag(event)
+      if (frame !== undefined) applySidebarWidth(frame, sidebarWidthDuringDrag(startWidth, startX, event.clientX))
+      const collapse = shouldCollapseOnSidebarDrag(startWidth, startX, event.clientX)
+      finishDrag()
+      if (collapse) window.requestAnimationFrame(() => { window.requestAnimationFrame(() => { toggleSidebarRef.current() }) })
     }
     const onCancel = (event: PointerEvent): void => {
       if (event.pointerId !== pointerId) return
-      dragging = false
-      pointerId = undefined
+      stopHostDrag(event)
+      finishDrag()
     }
     window.addEventListener('pointerdown', onDown, true)
+    window.addEventListener('pointermove', onMove, true)
     window.addEventListener('pointerup', onUp, true)
     window.addEventListener('pointercancel', onCancel, true)
     return () => {
+      finishDrag()
       window.removeEventListener('pointerdown', onDown, true)
+      window.removeEventListener('pointermove', onMove, true)
       window.removeEventListener('pointerup', onUp, true)
       window.removeEventListener('pointercancel', onCancel, true)
     }
-  }, [toggleSidebar])
+  }, [])
   useLayoutEffect(() => {
     if (!compact) {
       setCollapsing(false)
