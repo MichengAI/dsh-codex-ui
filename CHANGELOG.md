@@ -4,6 +4,34 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.102 — 2026-09-03
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.19`.
+
+### Added
+
+- Added persistent, reorderable workspace groups with a collapsible ungrouped collection, while preserving the flat project list when no custom groups exist.
+- Added Codex-style session and project menus, project-wide session archiving, and confirmed cross-project session moves that migrate the session working directory with rollback protection.
+- Added Codex-aligned drag previews, exact insertion indicators, group ordering, project-to-group movement, and session movement between projects.
+- Added GitHub and Issues actions to the Codex UI settings page.
+
+### Changed
+
+- Removed session pinning and kept project pinning as the single pinning model.
+- Published runtime files from `lib` and aligned the client bundle contract with the current DSH module loader.
+- Upgraded supported DSH development dependencies to `0.1.2-rc.1`; `dsh-client-runtime` remains on its highest published version, `0.1.1-rc.2`.
+
+### Fixed
+
+- Matched Codex sidebar spacing, typography, controls, hover cards, folder treatments, animations, and drag feedback across pinned, project, recent, channel, schedule, and extension sections.
+- Stabilized sidebar resizing at a 240px minimum without persisting width, retained the 50% collapse threshold, and removed the initial resize animation and first-drag rebound.
+- Hardened workspace-group hydration and persistence, host compatibility fallbacks, structured user-facing errors, unread state updates, and move rollback failure messaging.
+- Completed Simplified Chinese and English coverage for the updated sidebar, menus, confirmations, errors, and settings actions.
+
+### Dependencies
+
+- The Suite Installer release workflow will resolve Codex UI `0.2.102` after this release is published.
+
 ## 0.2.101 — 2026-09-01
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.18`.
