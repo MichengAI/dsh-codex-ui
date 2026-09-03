@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { JSDOM } from 'jsdom'
-import { HOVER_TIP_SHOW_DELAY_MS } from '../src/client/hover-shell.tsx'
+import { HOVER_TIP_SHOW_DELAY_MS, WORKSPACE_HOVER_CARD_WIDTH } from '../src/client/hover-shell.tsx'
 import { clampHoverCardPosition, formatHoverTime, hoverCardAnchor } from '../src/client/hover-tip.ts'
 import { shouldCollapseOnSidebarDrag } from '../src/client/sidebar-drag.ts'
 import { applySlimSidebar, parseSidebarGrid } from '../src/client/sidebar-width.ts'
@@ -56,8 +56,18 @@ const hoverShell = readFileSync(new URL('../src/client/hover-shell.tsx', import.
 assert.match(hoverShell, /clearTimeout\(hideTipTimer\.current\)/, '悬停层卸载必须清掉延迟关闭定时器')
 assert.match(hoverShell, /HoverValueContext/, '悬停值必须与树的 dispatch 分上下文，避免整树重绘')
 assert.equal(HOVER_TIP_SHOW_DELAY_MS, 1000, '划过行必须停满 1 秒才出卡片，避免闪现')
+assert.equal(WORKSPACE_HOVER_CARD_WIDTH, 316, '项目悬浮卡片宽度必须与 Codex 一致')
 assert.match(hoverShell, /showTipTimer/, '首次悬停必须用独立定时器，离开时取消')
 assert.match(hoverShell, /immediate/, '点击文件夹必须能立刻出卡片')
 
 const hoverCard = readFileSync(new URL('../src/client/workspace-hover-card.tsx', import.meta.url), 'utf8')
 assert.doesNotMatch(hoverCard, /title=\{hoverTip\.path\}/, '悬停卡片路径不得再套原生 title，避免叠出浏览器 tips')
+assert.match(hoverCard, /dcu-wb-tip-workspace/, '项目悬浮卡片必须使用独立的 Codex 尺寸样式')
+assert.match(hoverCard, /dcu-wb-tip-pin/, '项目悬浮卡片右上角必须提供置顶操作')
+assert.match(hoverCard, /MessageCircle/, '项目任务摘要必须使用 Codex 对话图标')
+assert.match(hoverCard, /IconSettingsOutline16/, '重命名项目必须使用 Codex 设置图标')
+assert.doesNotMatch(hoverCard, /<svg/, '项目悬浮卡片不得保留手绘图标')
+
+const workspaceBrowser = readFileSync(new URL('../src/client/CodexWorkspaceBrowser.tsx', import.meta.url), 'utf8')
+assert.match(workspaceBrowser, /\.dcu-wb-tip-workspace\{width:316px;/, '项目悬浮卡片必须使用 Codex 的固定宽度')
+assert.match(workspaceBrowser, /\.dcu-wb-tip-path-copy\{[^}]*overflow-wrap:anywhere;[^}]*white-space:normal/, '项目路径必须完整换行，不能截断成省略号')

@@ -12,10 +12,14 @@ export type HoverCardTip = {
   id?: string
   path?: string
   count?: number
+  unreadCount?: number
+  pinned?: boolean
 }
 
 export const HOVER_TIP_SHOW_DELAY_MS = 1000
 export const HOVER_TIP_HIDE_DELAY_MS = 120
+export const WORKSPACE_HOVER_CARD_WIDTH = 316
+const WORKSPACE_HOVER_CARD_ESTIMATED_HEIGHT = 152
 
 export type HoverDispatch = {
   showTip: (tip: HoverCardTip, options?: { immediate?: boolean }) => void
@@ -48,7 +52,14 @@ export function HoverShell({ blocked = false, children }: { blocked?: boolean; c
   tipRef.current = hoverTip
   const place = (tip: HoverCardTip): HoverCardTip => ({
     ...tip,
-    ...clampHoverCardPosition(tip.left, tip.top, 248, 148, window.innerWidth, window.innerHeight),
+    ...clampHoverCardPosition(
+      tip.left,
+      tip.top,
+      tip.kind === 'workspace' ? WORKSPACE_HOVER_CARD_WIDTH : 248,
+      tip.kind === 'workspace' ? WORKSPACE_HOVER_CARD_ESTIMATED_HEIGHT : 148,
+      window.innerWidth,
+      window.innerHeight,
+    ),
   })
   const dispatch = useMemo<HoverDispatch>(() => ({
     showTip: (tip, options) => {

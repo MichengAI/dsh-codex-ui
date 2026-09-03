@@ -64,7 +64,7 @@ assert.doesNotMatch(sidebar, /transition:none!important/, '不得再关闭宿主
 assert.match(sidebar, /background:#eef7f5/, '浅色侧栏必须使用 Codex 风格的浅青灰背景')
 assert.match(sidebar, /body\[data-ds-dark-theme\] \.dcu-root\{background:#1d2120/, '暗色侧栏必须使用 Codex 风格的深灰绿背景')
 assert.match(sidebar, /--dcu-tip-bg:#ffffff/, '浅色悬停卡片必须是浅底，不得写死深色')
-assert.match(sidebar, /body\[data-ds-dark-theme\] \.dcu-root\{[^}]*--dcu-tip-bg:#2a2e2c/, '暗色悬停卡片必须跟侧栏一起切到深底')
+assert.match(sidebar, /body\[data-ds-dark-theme\] \.dcu-root\{[^}]*--dcu-tip-bg:#2a2a2a/, '暗色悬停卡片必须使用 Codex 的中性深灰背景')
 assert.match(sidebar, /--dcu-sidebar-primary:#393d3e;--dcu-sidebar-secondary:#676b6c;--dcu-sidebar-tertiary:#9a9f9f;--dcu-sidebar-navigation:#4e5253;--dcu-sidebar-icon:#4e5253/, '浅色侧栏必须使用 Codex 风格的中性灰文字层级，不能接近纯黑')
 assert.match(sidebar, /--dcu-sidebar-primary:#b9bab9;--dcu-sidebar-secondary:#909191;--dcu-sidebar-tertiary:#666867;--dcu-sidebar-navigation:#b9bab9;--dcu-sidebar-icon:#afafaf/, '暗色侧栏必须使用 Codex 风格的中性灰文字层级，不能接近纯白')
 assert.match(sidebar, /--dcu-sidebar-navigation:#4e5253/, '浅色导航文字必须比项目标题更淡，匹配 Codex 的常规层级')

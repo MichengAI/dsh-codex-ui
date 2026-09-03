@@ -108,7 +108,7 @@ dsh plugin --profile web add .
 dsh --profile web --dump-config
 ```
 
-Restart DSH Web and hard-refresh the browser. Do not copy `dist` manually; local installation reads both package metadata and `cordis.patch.yml`.
+Restart DSH Web and hard-refresh the browser. Do not copy `lib` manually; local installation reads both package metadata and `cordis.patch.yml`.
 
 ## Usage
 

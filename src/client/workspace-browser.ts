@@ -91,6 +91,55 @@ export function orderByIds<T>(items: readonly T[], ids: readonly string[], idOf:
   })
 }
 
+type SessionMoveExpansionTarget = {
+  workspaceId: string
+  pinned: boolean
+  groupId?: string
+  hasGroups: boolean
+}
+
+/** 展开移动目标的全部父级，保证页面重载并选中会话后该行仍然可见。 */
+export function expandedForSessionMove(
+  current: Readonly<Record<string, boolean>>,
+  target: SessionMoveExpansionTarget,
+): Record<string, boolean> {
+  const next = { ...current }
+  if (target.pinned) {
+    next['section:pinned'] = true
+    next[`pin:${target.workspaceId}`] = true
+    return next
+  }
+  next['section:projects'] = true
+  next[target.workspaceId] = true
+  if (target.groupId !== undefined) next[`workspace-group:${target.groupId}`] = true
+  else if (target.hasGroups) next['workspace-group:ungrouped'] = true
+  return next
+}
+
+type WorkspaceGroupSummary = {
+  id: string
+  title: string
+  workspaceIds: readonly string[]
+}
+
+export type WorkspaceGroupMoveTarget = {
+  groupId: string | undefined
+  title: string | undefined
+}
+
+/** 仅提供真正改变归属的目标；未分组目标固定排在自定义分组之后。 */
+export function workspaceGroupMoveTargets(
+  groups: readonly WorkspaceGroupSummary[],
+  workspaceId: string,
+): WorkspaceGroupMoveTarget[] {
+  const currentGroupId = groups.find(group => group.workspaceIds.includes(workspaceId))?.id
+  const targets: WorkspaceGroupMoveTarget[] = groups
+    .filter(group => group.id !== currentGroupId)
+    .map(group => ({ groupId: group.id, title: group.title }))
+  if (currentGroupId !== undefined) targets.push({ groupId: undefined, title: undefined })
+  return targets
+}
+
 export const SESSION_DRAG_TYPE = 'application/x-dcu-session'
 export const WORKSPACE_DRAG_TYPE = 'application/x-dcu-workspace'
 export const WORKSPACE_GROUP_DRAG_TYPE = 'application/x-dcu-workspace-group'
@@ -132,6 +181,10 @@ export function readSessionDrag(data: DataTransfer | undefined, fallback?: strin
   const text = textPayload(data)
   if (text.startsWith(SESSION_DRAG_PREFIX)) return text.slice(SESSION_DRAG_PREFIX.length)
   return fallback !== undefined && fallback.trim() !== '' ? fallback : undefined
+}
+
+export function sessionDropAction(sourceWorkspaceId: string | undefined, targetWorkspaceId: string): 'reorder' | 'move' {
+  return sourceWorkspaceId !== undefined && sourceWorkspaceId === targetWorkspaceId ? 'reorder' : 'move'
 }
 
 export function readWorkspaceGroupDrag(data: DataTransfer | undefined, fallback?: string): string | undefined {

@@ -17,20 +17,20 @@
   "homepage": "https://github.com/MichengAI/dsh-codex-ui#readme",
   "type": "module",
   "packageManager": "pnpm@11.22.0",
-  "main": "dist/index.mjs",
-  "types": "dist/index.d.mts",
+  "main": "lib/index.mjs",
+  "types": "lib/index.d.mts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.mts",
-      "default": "./dist/index.mjs"
+      "types": "./lib/index.d.mts",
+      "default": "./lib/index.mjs"
     },
     "./client": {
-      "default": "./dist/client.js"
+      "default": "./lib/client.js"
     },
     "./package.json": "./package.json"
   },
   "files": [
-    "dist",
+    "lib",
     "assets",
     "cordis.patch.yml",
     "CHANGELOG.md",
@@ -119,5 +119,8 @@
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
+  },
+  "dependencies": {
+    "lucide-react": "^1.39.0"
   }
 }

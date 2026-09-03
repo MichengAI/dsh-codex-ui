@@ -26,6 +26,7 @@ import { observeOfficialTurnNavigators } from './official-turn-navigator.ts'
 import { TurnNavigator } from './TurnNavigator.tsx'
 import { hasConnectWorkspace, hasStartSession, recentWorkspaceId, workspaceBaselinesReady } from './workspace-compat.ts'
 import { HostActionError, type HostAction, UserFacingError } from './user-error.ts'
+import { finishSessionMove, requestSessionMove, SessionMoveRequestError } from './session-move.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
@@ -40,6 +41,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
         archiveSession: (sessionId: SessionId) => Promise<void>
         deleteSession: (sessionId: SessionId) => Promise<void>
         forkSession: (sessionId: SessionId) => Promise<void>
+        moveSession: (sessionId: SessionId, targetWorkspaceId: WorkspaceId) => Promise<void>
         openPath: (path: string) => Promise<void> | void
         skin?: 'codex' | 'native'
         view?: 'runs' | 'overview'
@@ -59,6 +61,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
         archiveSession: (sessionId: SessionId) => Promise<void>
         deleteSession: (sessionId: SessionId) => Promise<void>
         forkSession: (sessionId: SessionId) => Promise<void>
+        moveSession: (sessionId: SessionId, targetWorkspaceId: WorkspaceId) => Promise<void>
         openPath: (path: string) => Promise<void> | void
         skin?: 'codex' | 'native'
         useSessions: unknown
@@ -134,6 +137,7 @@ export function apply(ctx: ClientContext): void {
       archiveSession,
       deleteSession,
       forkSession,
+      moveSession,
       renameSession,
       openPath,
       companionSlots,
@@ -169,6 +173,23 @@ export function apply(ctx: ClientContext): void {
     })
   }
   const archiveSession = (sessionId: SessionId): Promise<void> => runHostAction('archive', () => ctx.workspaces.archiveSession(sessionId))
+  const moveSession = async (sessionId: SessionId, targetWorkspaceId: WorkspaceId): Promise<void> => {
+    try {
+      await requestSessionMove(sessionId, targetWorkspaceId)
+    } catch (error) {
+      if (!(error instanceof SessionMoveRequestError)) throw error
+      if (error.code === 'session-move/unavailable' || error.code === 'session-move/service-unavailable') throw new UserFacingError(t('sessions.moveUnavailable'))
+      if (error.code === 'session-move/session-not-found' || error.code === 'session-move/workspace-not-found') throw new UserFacingError(t('sessions.moveNotFound'))
+      if (error.code === 'session-move/subagent-unsupported') throw new UserFacingError(t('sessions.moveSubagent'))
+      if (error.code === 'session-move/busy') throw new UserFacingError(t('sessions.moveBusy'))
+      throw new UserFacingError(t('sessions.moveFailed'))
+    }
+    finishSessionMove({
+      sessionId,
+      currentUrl: window.location.href,
+      navigate: url => { window.location.replace(url) },
+    })
+  }
   const startConnectorPromptSession = async (promptText: string): Promise<void> => {
     const prompt = promptText.trim()
     if (prompt === '') throw new UserFacingError(t('connectors.promptRequired'))
@@ -200,6 +221,7 @@ export function apply(ctx: ClientContext): void {
       deleteSession,
       deleteWorkspace: (workspaceId: WorkspaceId) => ctx.workspaces.delete(workspaceId),
       forkSession,
+      moveSession,
       openPath,
       openSession: (sessionId: SessionId) => { ctx.sessions.open(sessionId) },
       renameSession,

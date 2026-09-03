@@ -108,7 +108,7 @@ dsh plugin --profile web add .
 dsh --profile web --dump-config
 ```
 
-完成后重启 DSH Web 并硬刷新浏览器。不要手工复制 `dist`；本地目录安装会同时读取包信息和 `cordis.patch.yml`。
+完成后重启 DSH Web 并硬刷新浏览器。不要手工复制 `lib`；本地目录安装会同时读取包信息和 `cordis.patch.yml`。
 
 ## 使用
 

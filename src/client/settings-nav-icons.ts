@@ -33,7 +33,7 @@ const LABEL_ALIASES: ReadonlyArray<readonly [readonly string[], SettingsNavIconI
   [['定时任务', 'Scheduled tasks'], 'schedule'],
   [['IM助理', 'IM Assistant'], 'assistant'],
   [['已归档', 'Archived'], 'archive'],
-  [['关于', 'About'], 'about'],
+  [['Codex UI'], 'about'],
 ]
 
 /** 按设置导航可见文案解析侧栏同款图标；插件市场复用插件图标。 */

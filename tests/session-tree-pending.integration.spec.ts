@@ -62,6 +62,24 @@ function createPendingInteractionStore(sessionId: string, kind: PendingInteracti
   return selector => selector(state)
 }
 
+function createDataTransfer(): DataTransfer {
+  const values = new Map<string, string>()
+  return {
+    effectAllowed: 'uninitialized',
+    dropEffect: 'none',
+    getData: (type: string) => values.get(type) ?? '',
+    setData: (type: string, value: string) => { values.set(type, value) },
+    setDragImage: () => {},
+  } as unknown as DataTransfer
+}
+
+function dispatchDrag(target: Element, type: 'dragstart' | 'dragover' | 'drop', dataTransfer: DataTransfer): void {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperty(event, 'dataTransfer', { value: dataTransfer })
+  Object.defineProperty(event, 'clientY', { value: 0 })
+  target.dispatchEvent(event)
+}
+
 async function render(node: ReactNode) {
   const container = document.createElement('div')
   document.body.appendChild(container)
@@ -123,6 +141,196 @@ test('任务树从 SessionSummary 快照渲染等待回答状态', async () => {
   } as never))
   try {
     expectPendingState(view.container, '任务会话', 'question', '等待回答')
+  } finally {
+    await view.dispose()
+  }
+})
+
+test('任务树把会话拖到其他项目时先确认，取消不迁移且确认只执行一次', async () => {
+  const session = createSession('move-session', '待移动会话', undefined)
+  const targetSession = createSession('target-session', '目标项目会话', undefined)
+  const sessionState: SessionListState = {
+    ids: [session.id, targetSession.id],
+    byId: { [session.id]: session, [targetSession.id]: targetSession },
+    current: undefined,
+    phase: 'ready',
+    subagentsByParent: {},
+    jobsBySession: {},
+    currentAddress: undefined,
+  }
+  const useSessions = <T,>(selector: (snapshot: SessionListState) => T): T => selector(sessionState)
+  const workspaces = {
+    baselinesReady: true,
+    archivedSessionIds: [],
+    items: [
+      { workspaceId: 'source', title: '源项目', path: 'D:\\Workspace\\source', sessionIds: [session.id] },
+      { workspaceId: 'target', title: '目标项目', path: 'D:\\Workspace\\target', sessionIds: [targetSession.id] },
+    ],
+  }
+  const useWorkspaces = <T,>(selector: (snapshot: typeof workspaces) => T): T => selector(workspaces)
+  const moveSession = vi.fn(async () => {})
+  const insertSessionBefore = vi.fn(async () => {})
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ exists: true, pinnedWorkspaceIds: [] }), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  })))
+
+  const view = await render(createElement(CodexWorkspaceBrowser, {
+    ...sessionActions,
+    moveSession,
+    wide: true,
+    useSessions,
+    useSessionPendingInteraction: useEmptyPendingInteractions,
+    useWorkspaces,
+    t,
+    deleteWorkspace: async () => {},
+    insertSessionBefore,
+    insertWorkspaceBefore: async () => {},
+    openPath: async () => {},
+    renameWorkspace: async () => {},
+    startSession: () => {},
+  } as never))
+  try {
+    const sourceRow = [...view.container.querySelectorAll<HTMLElement>('.dcu-wb-session')]
+      .find(row => row.querySelector('.dcu-wb-session-title')?.textContent === '待移动会话')
+    const targetProject = [...view.container.querySelectorAll<HTMLElement>('.dcu-wb-project')]
+      .find(project => project.querySelector('.dcu-wb-project-title')?.textContent === '目标项目')
+    const targetSessionRow = [...targetProject!.querySelectorAll<HTMLElement>('.dcu-wb-session')]
+      .find(row => row.querySelector('.dcu-wb-session-title')?.textContent === '目标项目会话')
+    expect(sourceRow).toBeDefined()
+    expect(targetProject).toBeDefined()
+    expect(targetSessionRow).toBeDefined()
+    const dataTransfer = createDataTransfer()
+
+    await act(async () => { dispatchDrag(sourceRow!, 'dragstart', dataTransfer) })
+    await act(async () => { dispatchDrag(targetSessionRow!, 'dragover', dataTransfer) })
+    expect(targetProject?.classList.contains('dcu-wb-session-move-drop')).toBe(true)
+
+    await act(async () => {
+      dispatchDrag(targetSessionRow!, 'drop', dataTransfer)
+      await Promise.resolve()
+    })
+    expect(moveSession).not.toHaveBeenCalled()
+    expect(insertSessionBefore).not.toHaveBeenCalled()
+
+    const cancelButton = [...document.querySelectorAll<HTMLButtonElement>('button')]
+      .find(button => button.textContent === 'sessions.cancel')
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('sessions.moveConfirmTitle')
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('目标项目')
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('D:\\Workspace\\target')
+    await act(async () => { cancelButton?.click() })
+    expect(moveSession).not.toHaveBeenCalled()
+
+    const secondDataTransfer = createDataTransfer()
+    await act(async () => { dispatchDrag(sourceRow!, 'dragstart', secondDataTransfer) })
+    await act(async () => { dispatchDrag(targetSessionRow!, 'drop', secondDataTransfer) })
+    const confirmButton = [...document.querySelectorAll<HTMLButtonElement>('button')]
+      .find(button => button.textContent === 'sessions.moveConfirmAction')
+    await act(async () => {
+      confirmButton?.click()
+      await Promise.resolve()
+    })
+    expect(moveSession).toHaveBeenCalledTimes(1)
+    expect(moveSession).toHaveBeenCalledWith('move-session', 'target')
+  } finally {
+    await view.dispose()
+  }
+})
+
+test('项目跨分组拖动时高亮整个目标分组并保留精确插入', async () => {
+  const sessionState: SessionListState = {
+    ids: [],
+    byId: {},
+    current: undefined,
+    phase: 'ready',
+    subagentsByParent: {},
+    jobsBySession: {},
+    currentAddress: undefined,
+  }
+  const useSessions = <T,>(selector: (snapshot: SessionListState) => T): T => selector(sessionState)
+  const workspaces = {
+    baselinesReady: true,
+    archivedSessionIds: [],
+    items: [
+      { workspaceId: 'source', title: '源项目', path: 'D:\\Workspace\\source', sessionIds: [] as SessionId[] },
+      { workspaceId: 'target', title: '目标项目', path: 'D:\\Workspace\\target', sessionIds: [] as SessionId[] },
+      { workspaceId: 'ungrouped', title: '未分组项目', path: 'D:\\Workspace\\ungrouped', sessionIds: [] as SessionId[] },
+    ],
+  }
+  const workspaceGroups = [
+    { id: 'source-group', title: '源分组', workspaceIds: ['source'] },
+    { id: 'target-group', title: '目标分组', workspaceIds: ['target'] },
+  ]
+  const useWorkspaces = <T,>(selector: (snapshot: typeof workspaces) => T): T => selector(workspaces)
+  window.localStorage.setItem(WORKSPACE_GROUPS_STORAGE_KEY, JSON.stringify({ version: 1, workspaceGroups, pendingHostSync: false }))
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ exists: true, pinnedWorkspaceIds: [], workspaceGroups }), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  })))
+
+  const view = await render(createElement(CodexWorkspaceBrowser, {
+    ...sessionActions,
+    moveSession: async () => {},
+    wide: true,
+    useSessions,
+    useSessionPendingInteraction: useEmptyPendingInteractions,
+    useWorkspaces,
+    t,
+    deleteWorkspace: async () => {},
+    insertSessionBefore: async () => {},
+    insertWorkspaceBefore: async () => {},
+    openPath: async () => {},
+    renameWorkspace: async () => {},
+    startSession: () => {},
+  } as never))
+  try {
+    const sourceProject = [...view.container.querySelectorAll<HTMLElement>('.dcu-wb-project')]
+      .find(project => project.querySelector('.dcu-wb-project-title')?.textContent === '源项目')
+    const targetGroup = [...view.container.querySelectorAll<HTMLElement>('.dcu-wb-collection')]
+      .find(group => group.querySelector('.dcu-wb-collection-label')?.textContent?.includes('目标分组'))
+    const targetMember = targetGroup?.querySelector<HTMLElement>('[data-dcu-group-member]')
+    expect(sourceProject).toBeDefined()
+    expect(targetGroup).toBeDefined()
+    expect(targetMember).toBeDefined()
+    const dataTransfer = createDataTransfer()
+
+    await act(async () => { dispatchDrag(sourceProject!.querySelector('.dcu-wb-project-head')!, 'dragstart', dataTransfer) })
+    await act(async () => { dispatchDrag(targetMember!, 'dragover', dataTransfer) })
+    expect(targetGroup?.classList.contains('dcu-wb-workspace-move-drop')).toBe(true)
+    expect(targetMember?.classList.contains('dcu-wb-drop')).toBe(false)
+
+    await act(async () => {
+      dispatchDrag(targetMember!, 'drop', dataTransfer)
+      await Promise.resolve()
+    })
+    const targetTitles = [...targetGroup!.querySelectorAll<HTMLElement>('.dcu-wb-project-title')].map(node => node.textContent)
+    expect(targetTitles).toEqual(['源项目', '目标项目'])
+
+    const sameGroupDraggedProject = [...targetGroup!.querySelectorAll<HTMLElement>('.dcu-wb-project')]
+      .find(project => project.querySelector('.dcu-wb-project-title')?.textContent === '目标项目')
+    const sameGroupTarget = [...targetGroup!.querySelectorAll<HTMLElement>('.dcu-wb-project')]
+      .find(project => project.querySelector('.dcu-wb-project-title')?.textContent === '源项目')
+      ?.closest<HTMLElement>('[data-dcu-group-member]')
+    expect(sameGroupDraggedProject).toBeDefined()
+    expect(sameGroupTarget).toBeDefined()
+    const sameGroupDataTransfer = createDataTransfer()
+    await act(async () => { dispatchDrag(sameGroupDraggedProject!.querySelector('.dcu-wb-project-head')!, 'dragstart', sameGroupDataTransfer) })
+    await act(async () => { dispatchDrag(sameGroupTarget!, 'dragover', sameGroupDataTransfer) })
+    expect(targetGroup?.classList.contains('dcu-wb-workspace-move-drop')).toBe(false)
+    expect(sameGroupTarget?.classList.contains('dcu-wb-drop')).toBe(true)
+
+    const ungroupedCollection = view.container.querySelector<HTMLElement>('.dcu-wb-ungrouped')
+    const ungroupedTarget = ungroupedCollection?.querySelector<HTMLElement>('[data-dcu-ungrouped-member]')
+    const sourceProjectInTarget = [...targetGroup!.querySelectorAll<HTMLElement>('.dcu-wb-project')]
+      .find(project => project.querySelector('.dcu-wb-project-title')?.textContent === '源项目')
+    expect(ungroupedCollection).toBeDefined()
+    expect(ungroupedTarget).toBeDefined()
+    expect(sourceProjectInTarget).toBeDefined()
+    const ungroupedDataTransfer = createDataTransfer()
+    await act(async () => { dispatchDrag(sourceProjectInTarget!.querySelector('.dcu-wb-project-head')!, 'dragstart', ungroupedDataTransfer) })
+    await act(async () => { dispatchDrag(ungroupedTarget!, 'dragover', ungroupedDataTransfer) })
+    expect(ungroupedCollection?.classList.contains('dcu-wb-workspace-move-drop')).toBe(true)
+    expect(ungroupedTarget?.classList.contains('dcu-wb-drop')).toBe(false)
   } finally {
     await view.dispose()
   }

@@ -4,12 +4,14 @@ import { dependencyStatuses, disposeDependencyInstaller, installDependency, inst
 import { authorizedExplorerWorkspacePath } from './explorer-path-policy.ts'
 import { hostServices } from './host-services.ts'
 import { ForegroundExplorer } from './native-explorer.ts'
+import { moveSessionToWorkspace, SessionMoveError } from './session-migration.ts'
 import { parsePinnedWorkspaceIds, parseWorkspaceGroups, readWorkspacePreferences, writeWorkspacePreferences } from './workspace-preferences.ts'
 
 const connectorsEndpoint = '/api/michengai/codex-ui/connectors'
 const dependenciesEndpoint = '/api/michengai/codex-ui/dependencies'
 const explorerEndpoint = '/api/michengai/codex-ui/open-in-explorer'
 const preferencesEndpoint = '/api/michengai/codex-ui/preferences'
+const sessionMoveEndpoint = '/api/michengai/codex-ui/session-move'
 const maxPreferencesBodyBytes = 32 * 1024
 
 type HostRequest = {
@@ -74,7 +76,34 @@ export async function readRequestBody(request: HostRequest, maxBytes = maxPrefer
   return Buffer.concat(chunks).toString('utf8')
 }
 
-export const inject = ['webServer', 'agents', 'tools', 'workspaceRegistry']
+export const inject = ['webServer', 'agents', 'tools', 'workspaceRegistry', 'sessions', 'sessionPersistence']
+
+function sessionMoveStatus(error: unknown): number {
+  if (!(error instanceof SessionMoveError)) return 500
+  if (error.code === 'session-move/invalid-request') return 400
+  if (error.code === 'session-move/session-not-found' || error.code === 'session-move/workspace-not-found') return 404
+  if (error.code === 'session-move/service-unavailable') return 503
+  if (error.code === 'session-move/zstd-unavailable') return 501
+  if (error.code === 'session-move/busy' || error.code === 'session-move/subagent-unsupported' || error.code === 'session-move/accounting-invalid' || error.code === 'session-move/destination-occupied') return 409
+  return 500
+}
+
+function publicSessionMoveError(error: unknown): { code: string; error: string } {
+  const code = error instanceof SessionMoveError ? error.code : 'session-move/failed'
+  const messages: Record<string, string> = {
+    'session-move/invalid-request': '会话或目标项目标识无效。',
+    'session-move/session-not-found': '该会话没有可迁移的持久化记录。',
+    'session-move/workspace-not-found': '目标项目不存在。',
+    'session-move/service-unavailable': '宿主暂时无法安全移动活跃会话。',
+    'session-move/subagent-unsupported': '子代理会话不能移动到其他项目。',
+    'session-move/busy': '该会话正在移动，请稍后重试。',
+    'session-move/accounting-invalid': '会话当前的项目归属不一致，无法安全移动。',
+    'session-move/destination-occupied': '目标项目已经存在同名会话工件。',
+    'session-move/zstd-unavailable': '当前运行环境不支持该会话的存储格式。',
+    'session-move/rollback-failed': '移动失败，自动恢复未完整完成，请查看服务端日志。',
+  }
+  return { code, error: messages[code] ?? '暂时无法移动该会话，请稍后重试。' }
+}
 
 /** 提供不泄露地址、命令和凭证的连接器目录。 */
 export function apply(ctx: Context): void {
@@ -226,6 +255,42 @@ export function apply(ctx: Context): void {
         }
       },
     })
+    const disposeSessionMove = host.webServer.register({
+      kind: 'exact',
+      path: sessionMoveEndpoint,
+      handler: async (request, response) => {
+        if (request.method !== 'POST') { response.writeHead(405, { allow: 'POST' }); response.end(); return }
+        if (crossSiteRequest(request)) {
+          response.writeHead(403, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+          response.end(JSON.stringify({ ok: false, code: 'session-move/cross-site', error: '已拒绝跨站请求。' }))
+          return
+        }
+        try {
+          const body = JSON.parse(await readRequestBody(request)) as unknown
+          const record = body !== null && typeof body === 'object' ? body as Record<string, unknown> : undefined
+          const sessionId = typeof record?.sessionId === 'string' ? record.sessionId.trim() : ''
+          const targetWorkspaceId = typeof record?.targetWorkspaceId === 'string' ? record.targetWorkspaceId.trim() : ''
+          const result = await moveSessionToWorkspace(host, sessionId, targetWorkspaceId)
+          response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+          response.end(JSON.stringify({ ok: true, result }))
+        } catch (error) {
+          if (error instanceof RequestBodyTooLargeError) {
+            response.writeHead(413, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+            response.end(JSON.stringify({ ok: false, code: 'session-move/invalid-request', error: '请求体过大。' }))
+            return
+          }
+          if (error instanceof SyntaxError) {
+            response.writeHead(400, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+            response.end(JSON.stringify({ ok: false, code: 'session-move/invalid-request', error: '请求格式无效。' }))
+            return
+          }
+          ctx.logger.warn('session move failed: %s', error)
+          const payload = publicSessionMoveError(error)
+          response.writeHead(sessionMoveStatus(error), { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+          response.end(JSON.stringify({ ok: false, ...payload }))
+        }
+      },
+    })
     const disposeExplorer = host.webServer.register({
       kind: 'exact',
       path: explorerEndpoint,
@@ -271,6 +336,7 @@ export function apply(ctx: Context): void {
       disposeDependencies()
       disposeExplorer()
       disposePreferences()
+      disposeSessionMove()
     }
   }, 'michengai-codex-ui: catalogs')
 }

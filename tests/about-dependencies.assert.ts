@@ -12,6 +12,7 @@ const about = readFileSync(aboutPath, 'utf8')
 const locales = readFileSync(new URL('../src/client/locales.ts', import.meta.url), 'utf8')
 const manager = readFileSync(new URL('../src/dependency-manager.ts', import.meta.url), 'utf8')
 
+assert.equal(locales.match(/'about\.nav': 'Codex UI'/g)?.length, 2, '设置入口的中英文文案必须统一为 Codex UI')
 assert.match(client, /id: 'about'/, '关于页必须注册为最后的设置分区')
 assert.match(client, /order: Number\.MAX_SAFE_INTEGER/, '关于页必须在注册排序中保持最后')
 assert.match(dependencies, /@deepseek-ai\/dsh/, '关于页必须提供官方运行时手动升级')

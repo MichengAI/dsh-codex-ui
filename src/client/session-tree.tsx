@@ -8,22 +8,21 @@ import {
   IconFolderClose16,
   IconFolderOpenOutline16,
   IconLinkOutline16,
-  IconShareOutline16,
   IconTrashOutline16,
   Menu,
   type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import { Archive as LucideArchiveIcon, Eye, EyeOff, Pin as LucidePinIcon } from 'lucide-react'
 import { NS } from './locales.ts'
-import { sessionDeepLink } from './session-manager.ts'
 import type { PendingInteractionKind } from './session-pending.ts'
 
 export function PinIcon() {
-  return <svg viewBox="0 0 16 16" width={16} height={16} aria-hidden="true"><path d="M5.6 9.7 3.2 14M10.9 2.4c.9.9 1.1 2.2.5 3.3L10 7.6l2.3 2.3c.3.3.3.8 0 1.1l-.5.5c-.3.3-.8.3-1.1 0L8.4 9.2 6.5 10.6c-1.1.6-2.4.4-3.3-.5" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  return <LucidePinIcon aria-hidden="true" size={16} strokeWidth={1.5} />
 }
 
-export function PinMark() {
-  return <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2.5h6M5 2.5v2L3.75 6v1h8.5V6L11 4.5v-2M8 7v6" /></svg>
+export function QuickArchiveIcon() {
+  return <LucideArchiveIcon aria-hidden="true" size={16} strokeWidth={1.5} />
 }
 
 export type SessionHoverTip = {
@@ -37,40 +36,41 @@ export type SessionHoverTip = {
 
 export function SessionHoverCard({ tip, onEnter, onLeave }: { tip: SessionHoverTip; onEnter: () => void; onLeave: () => void }) {
   return <div className="dcu-wb-tip" style={{ left: tip.left, top: tip.top }} onMouseEnter={onEnter} onMouseLeave={onLeave}>
-    <div className="dcu-wb-tip-title"><span>{tip.title}</span>{tip.time !== undefined && <span className="dcu-wb-tip-time">{tip.time}</span>}</div>
+    <div className="dcu-wb-tip-title"><span className="dcu-wb-tip-title-main">{tip.title}</span>{tip.time !== undefined && <span className="dcu-wb-tip-time">{tip.time}</span>}</div>
     {tip.project !== undefined && <div className="dcu-wb-tip-row"><span className="dcu-wb-folder"><IconFolderClose16 size={16} /></span><span>{tip.project}</span></div>}
     {tip.branch !== undefined && tip.branch !== '' && <div className="dcu-wb-tip-row"><span className="dcu-wb-folder"><IconBranchOutline16 size={16} /></span><span>{tip.branch}</span></div>}
   </div>
 }
 
-export function sessionMenuItems(t: TranslateNS<typeof NS>, options: { pinned: boolean; unread: boolean; path?: string; includePath?: boolean }): MenuEntry[] {
+export function sessionMenuItems(t: TranslateNS<typeof NS>, options: { unread: boolean; path?: string; includePath?: boolean; moveTargets?: readonly { id: string; label: string }[] }): MenuEntry[] {
   const items: MenuEntry[] = [
     { id: 'rename', label: t('sessions.rename'), icon: <IconEditOutline16 size={16} /> },
-    { id: 'pin', label: t(options.pinned ? 'sessions.unpin' : 'sessions.pin'), icon: <PinIcon /> },
-    { id: 'unread', label: t(options.unread ? 'sessions.markRead' : 'sessions.markUnread'), icon: <span className="dcu-wb-unread" /> },
+    { id: 'unread', label: t(options.unread ? 'sessions.markRead' : 'sessions.markUnread'), icon: options.unread ? <EyeOff aria-hidden="true" size={16} strokeWidth={1.5} /> : <Eye aria-hidden="true" size={16} strokeWidth={1.5} /> },
     { id: 'archive', label: t('sessions.archive'), icon: <IconArchiveOutline20 size={16} /> },
     { type: 'separator', id: 'main-separator' },
     { id: 'fork', label: t('sessions.fork'), icon: <IconBranchOutline16 size={16} /> },
-    { type: 'separator', id: 'copy-separator' },
   ]
   if (options.includePath === true) {
-    items.push(
-      { id: 'openPath', label: t('sessions.openPath'), icon: <IconFolderOpenOutline16 size={16} />, disabled: options.path === undefined },
-      { id: 'copyPath', label: t('sessions.copyPath'), icon: <IconCopyOutline16 size={16} />, disabled: options.path === undefined },
-    )
+    items.push({ id: 'openPath', label: t('sessions.openPath'), icon: <IconFolderOpenOutline16 size={16} />, disabled: options.path === undefined })
+  }
+  if (options.moveTargets !== undefined) {
+    items.push({
+      id: 'moveWorkspace',
+      label: t('sessions.moveWorkspace'),
+      icon: <IconFolderClose16 size={16} />,
+      disabled: options.moveTargets.length === 0,
+      submenu: options.moveTargets.map(target => ({ id: target.id, label: target.label, icon: <IconFolderClose16 size={16} /> })),
+    })
   }
   items.push(
-    { id: 'copyTitle', label: t('sessions.copyTitle'), icon: <IconCopyOutline16 size={16} /> },
+    { type: 'separator', id: 'copy-separator' },
     { id: 'copyId', label: t('sessions.copyId'), icon: <IconLinkOutline16 size={16} /> },
-    { id: 'copyLink', label: t('sessions.copyLink'), icon: <IconShareOutline16 size={16} /> },
+    { id: 'copyTitle', label: t('sessions.copyTitle'), icon: <IconCopyOutline16 size={16} /> },
+    ...(options.includePath === true ? [{ id: 'copyPath', label: t('sessions.copyPath'), icon: <IconCopyOutline16 size={16} />, disabled: options.path === undefined } satisfies MenuEntry] : []),
     { type: 'separator', id: 'delete-separator' },
     { id: 'delete', label: t('sessions.delete'), icon: <IconTrashOutline16 size={16} />, danger: true },
   )
   return items
-}
-
-export function copySessionLink(sessionId: string): string {
-  return sessionDeepLink(typeof window === 'undefined' || window.location.origin === 'null' ? 'http://dsh.internal/' : `${window.location.origin}/`, sessionId)
 }
 
 /** 把右键落点收成 Menu 的锚点矩形，让列表贴着指针打开。 */
@@ -83,7 +83,6 @@ export type SessionRowProps = {
   title: string
   selected: boolean
   menuOpen: boolean
-  pinned: boolean
   unread: boolean
   running: boolean
   pendingInteraction?: PendingInteractionKind
@@ -92,7 +91,6 @@ export type SessionRowProps = {
   onOpen: () => void
   onMenuChange: (open: boolean) => void
   onSelectAction: (id: string) => void
-  onPin: () => void
   onArchive: () => void
   onHover: (event: MouseEvent<HTMLDivElement>) => void
   onLeave: () => void
@@ -127,17 +125,15 @@ export function SessionState({ pendingInteraction, unread, running, t }: Pick<Se
 }
 
 export function SessionRow({
-  id, title, selected, menuOpen, pinned, unread, running, pendingInteraction, t, menuItems,
-  onOpen, onMenuChange, onSelectAction, onPin, onArchive, onHover, onLeave, onContextMenu, menuPoint,
+  id, title, selected, menuOpen, unread, running, pendingInteraction, t, menuItems,
+  onOpen, onMenuChange, onSelectAction, onArchive, onHover, onLeave, onContextMenu, menuPoint,
   subtitle, flat, draggable, dropActive, onDragStart, onDragEnd, onDragOver, onDrop,
 }: SessionRowProps) {
   return <div className={`dcu-wb-session${selected ? ' dcu-wb-selected' : ''}${menuOpen ? ' dcu-wb-menu-open' : ''}${dropActive === true ? ' dcu-wb-drop' : ''}${flat === true ? ' dcu-wb-session-flat' : ''}`} role="treeitem" aria-selected={selected} draggable={draggable} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragOver={onDragOver} onDrop={onDrop} onClick={onOpen} onContextMenu={onContextMenu} onMouseEnter={onHover} onMouseLeave={onLeave}>
     {subtitle !== undefined && subtitle !== '' ? <span className="dcu-wb-session-copy"><span className="dcu-wb-session-title">{title.split(/\r?\n/)[0] ?? title}</span><span className="dcu-wb-session-sub">{subtitle}</span></span> : <span className="dcu-wb-session-title">{title.split(/\r?\n/)[0] ?? title}</span>}
-    {pinned && <span className="dcu-wb-pin" aria-label={t('sessions.pinned')}><PinMark /></span>}
     <SessionState pendingInteraction={pendingInteraction} unread={unread} running={running} t={t} />
     <span className="dcu-wb-quick-actions">
-      <button type="button" className="dcu-wb-more dcu-wb-quick-pin" aria-label={t(pinned ? 'sessions.unpin' : 'sessions.pin')} onClick={(event) => { event.stopPropagation(); onPin() }}><PinMark /></button>
-      <button type="button" className="dcu-wb-more" aria-label={t('sessions.archive')} onClick={(event) => { event.stopPropagation(); onArchive() }}><IconArchiveOutline20 size={16} /></button>
+      <button type="button" className="dcu-wb-more" aria-label={t('sessions.archive')} onClick={(event) => { event.stopPropagation(); onArchive() }}><QuickArchiveIcon /></button>
     </span>
     <span className="dcu-wb-actions">
       <Menu open={menuOpen} onClose={() => { onMenuChange(false) }} items={menuItems} onSelect={onSelectAction} portal dense compact getAnchorRect={menuPoint === undefined ? undefined : () => pointerMenuRect(menuPoint.x, menuPoint.y)} anchor={<button type="button" className="dcu-wb-more dcu-wb-context-anchor" aria-label={t('sessions.actions', { name: title })} onClick={(event) => { event.stopPropagation(); onMenuChange(!menuOpen) }}><IconEllipsisOutline16 size={16} /></button>} />

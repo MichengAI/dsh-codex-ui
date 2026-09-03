@@ -3,8 +3,8 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { Button, Modal, writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives'
 import { NS } from './locales.ts'
-import { readSessionIds, SESSION_PINS_STORAGE_KEY, SESSION_UNREAD_STORAGE_KEY, toggleSessionId, writeSessionIds } from './session-manager.ts'
-import { copySessionLink, SessionHoverCard } from './session-tree.tsx'
+import { readSessionIds, SESSION_UNREAD_STORAGE_KEY, toggleSessionId, writeSessionIds } from './session-manager.ts'
+import { SessionHoverCard } from './session-tree.tsx'
 import { useHoverDispatch, useHoverValue } from './hover-shell.tsx'
 import { browserStorage } from './tree-expansion.ts'
 import { userErrorText } from './user-error.ts'
@@ -22,16 +22,14 @@ function storage(): Storage | undefined {
   return browserStorage()
 }
 
-/** 频道/定时共用的本地置顶与未读标记。 */
+/** 频道/定时共用的本地未读标记。 */
 export function useSessionFlags(current?: string) {
-  const [pinnedSessionIds, setPinnedSessionIds] = useState(() => readSessionIds(storage(), SESSION_PINS_STORAGE_KEY))
   const [unreadSessionIds, setUnreadSessionIds] = useState(() => readSessionIds(storage(), SESSION_UNREAD_STORAGE_KEY))
-  useEffect(() => { writeSessionIds(storage(), SESSION_PINS_STORAGE_KEY, pinnedSessionIds) }, [pinnedSessionIds])
   useEffect(() => { writeSessionIds(storage(), SESSION_UNREAD_STORAGE_KEY, unreadSessionIds) }, [unreadSessionIds])
   useEffect(() => {
     if (current !== undefined) setUnreadSessionIds(ids => ids.filter(id => id !== current))
   }, [current])
-  return { pinnedSessionIds, setPinnedSessionIds, unreadSessionIds, setUnreadSessionIds }
+  return { unreadSessionIds, setUnreadSessionIds }
 }
 
 export function SessionHoverCardLayer() {
@@ -72,21 +70,18 @@ export function useSessionDialogs(actions: SessionActions, flags: ReturnType<typ
     const target = deleteTarget
     void run('delete', async () => {
       await actions.deleteSession(target.id as SessionId)
-      flags.setPinnedSessionIds(ids => ids.filter(id => id !== target.id))
       flags.setUnreadSessionIds(ids => ids.filter(id => id !== target.id))
       setDeleteTarget(undefined)
     })
   }
   const handleAction = (action: string, id: string, title: string): void => {
     if (action === 'rename') { setRenameTarget({ id, title }); setRenameDraft(title); closeMenu() }
-    if (action === 'pin') { flags.setPinnedSessionIds(ids => toggleSessionId(ids, id)); closeMenu() }
     if (action === 'unread') { flags.setUnreadSessionIds(ids => toggleSessionId(ids, id)); closeMenu() }
     if (action === 'archive') void run('archive', () => actions.archiveSession(id as SessionId))
     if (action === 'delete') { setDeleteTarget({ id, title }); closeMenu() }
     if (action === 'fork') void run('fork', () => actions.forkSession(id as SessionId))
     if (action === 'copyTitle') void run('copy', async () => { await writeClipboard(title) })
     if (action === 'copyId') void run('copy', async () => { await writeClipboard(id) })
-    if (action === 'copyLink') void run('copy', async () => { await writeClipboard(copySessionLink(id)) })
   }
   return { renameTarget, deleteTarget, renameDraft, setRenameDraft, setRenameTarget, setDeleteTarget, submitRename, submitDelete, handleAction }
 }

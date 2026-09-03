@@ -3,7 +3,7 @@ import { pickSettingsSectionButton, routeOptionalSettingsSection } from '../src/
 
 const plugins = { textContent: '插件' }
 const market = { textContent: '插件市场' }
-const about = { textContent: ' 关于 ' }
+const about = { textContent: ' Codex UI ' }
 
 assert.equal(
   pickSettingsSectionButton([plugins, about], ['插件市场', '插件']),
