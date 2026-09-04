@@ -57,12 +57,14 @@ type Route = { path: string; handler: (req: ReturnType<typeof request> & { metho
 type ResponseRecorder = { status?: number; headers?: Record<string, string>; body?: string; writeHead: (status: number, headers?: Record<string, string>) => void; end: (body?: string) => void }
 
 let preferencesRoute: Route | undefined
+let dependenciesRoute: Route | undefined
 let explorerRoute: Route | undefined
 let sessionMoveRoute: Route | undefined
 let disposeEffect: (() => void) | undefined
 const webServer = {
   register: (route: Route) => {
     if (route.path === '/api/michengai/codex-ui/preferences') preferencesRoute = route
+    if (route.path === '/api/michengai/codex-ui/dependencies') dependenciesRoute = route
     if (route.path === '/api/michengai/codex-ui/open-in-explorer') explorerRoute = route
     if (route.path === '/api/michengai/codex-ui/session-move') sessionMoveRoute = route
     return () => {}
@@ -98,6 +100,7 @@ process.env.DSH_PROFILE_DIR = endpointDirectory
 try {
   apply(context as never)
   assert.ok(preferencesRoute)
+  assert.ok(dependenciesRoute)
   assert.ok(sessionMoveRoute)
 
   const invoke = async (method: string, chunks: string[] = [], headers: Record<string, string> = {}) => {
@@ -127,6 +130,27 @@ try {
   assert.equal((await invoke('PUT', ['{}'], { 'sec-fetch-site': 'cross-site' })).status, 403)
   assert.equal((await invoke('PUT', [], { 'content-length': String(33 * 1024) })).status, 413)
   assert.equal((await invoke('POST')).status, 405)
+
+  const invokeDependencies = async (method: string, url: string, headers: Record<string, string> = {}) => {
+    const response: ResponseRecorder = {
+      writeHead: (status, responseHeaders) => { response.status = status; response.headers = responseHeaders },
+      end: body => { response.body = body },
+    }
+    await dependenciesRoute?.handler({ ...request([], headers), method, url }, response)
+    return response
+  }
+  const crossSiteDependency = await invokeDependencies('POST', `${dependenciesRoute?.path}?dependency=ui`, { 'sec-fetch-site': 'cross-site' })
+  assert.equal(crossSiteDependency.status, 403, '依赖安装路由必须拒绝跨站 POST')
+  assert.equal(JSON.parse(crossSiteDependency.body ?? '{}').error, '已拒绝跨站请求。')
+
+  services.desktopProfiles = {
+    get current(): never { throw new Error('无法读取 D:\\Users\\demo\\secret-profile') },
+  }
+  const dependencyFailure = await invokeDependencies('GET', dependenciesRoute?.path ?? '')
+  assert.equal(dependencyFailure.status, 503)
+  assert.equal(JSON.parse(dependencyFailure.body ?? '{}').error, '依赖管理暂不可用，请查看服务端日志。', '依赖路由不得返回本地路径')
+  assert.doesNotMatch(dependencyFailure.body ?? '', /secret-profile|D:\\\\Users/, '依赖路由响应必须脱敏')
+  delete services.desktopProfiles
 
   const explorerResponse: ResponseRecorder = {
     writeHead: (status, responseHeaders) => { explorerResponse.status = status; explorerResponse.headers = responseHeaders },

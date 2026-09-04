@@ -5,7 +5,7 @@ import { authorizedExplorerWorkspacePath } from './explorer-path-policy.ts'
 import { hostServices } from './host-services.ts'
 import { ForegroundExplorer } from './native-explorer.ts'
 import { moveSessionToWorkspace, SessionMoveError } from './session-migration.ts'
-import { parsePinnedWorkspaceIds, parseWorkspaceGroups, readWorkspacePreferences, writeWorkspacePreferences } from './workspace-preferences.ts'
+import { parsePinnedWorkspaceIds, parseWorkspaceGroups, readWorkspacePreferences, WORKSPACE_PREFERENCES_VERSION, writeWorkspacePreferences } from './workspace-preferences.ts'
 
 const connectorsEndpoint = '/api/michengai/codex-ui/connectors'
 const dependenciesEndpoint = '/api/michengai/codex-ui/dependencies'
@@ -233,7 +233,7 @@ export function apply(ctx: Context): void {
             }
             await writeWorkspacePreferences(pinnedWorkspaceIds, workspaceGroups)
             response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-            response.end(JSON.stringify({ version: 2, pinnedWorkspaceIds, workspaceGroups, exists: true }))
+            response.end(JSON.stringify({ version: WORKSPACE_PREFERENCES_VERSION, pinnedWorkspaceIds, workspaceGroups, exists: true }))
             return
           }
           response.writeHead(405, { allow: 'GET, HEAD, PUT' })

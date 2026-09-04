@@ -77,6 +77,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
   const [installing, setInstalling] = useState<InstallTarget>()
   const [progress, setProgress] = useState<InstallProgress>()
   const [message, setMessage] = useState<{ error: boolean; text: string }>()
+  const [refreshFailed, setRefreshFailed] = useState(false)
   const alive = useRef(true)
   const root = useRef<HTMLElement>(null)
   const stateRef = useRef<LoadState>('loading')
@@ -94,9 +95,11 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
       if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) throw new Error()
       setDependencies(payload.dependencies)
       setState('ready')
+      setRefreshFailed(false)
     } catch (error) {
       if (signal?.aborted || (error instanceof DOMException && error.name === 'AbortError') || currentRequest !== requestId.current) return
-      if (stateRef.current !== 'ready') setState('failed')
+      if (stateRef.current === 'ready') setRefreshFailed(true)
+      else setState('failed')
     }
   }, [])
   useEffect(() => {
@@ -156,6 +159,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
       if (!alive.current) return
       setDependencies(payload.dependencies)
       setState('ready')
+      setRefreshFailed(false)
       setMessage({ error: false, text: payload.autoReload === false ? t('about.restartManually') : t('about.restartRequired') })
     } catch (error) {
       if (!alive.current) return
@@ -177,6 +181,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
       if (!alive.current) return
       setDependencies(payload.dependencies)
       setState('ready')
+      setRefreshFailed(false)
       setMessage({ error: false, text: payload.restartRequired === false
         ? t('about.upToDate')
         : payload.autoReload === false ? t('about.restartManually') : t('about.restartRequired') })
@@ -208,6 +213,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
       : state === 'failed' ? <div className="dcu-about-message" data-error="true" role="alert">{t('about.statusFailed')}</div>
         : <div className="dcu-about-dependencies" aria-busy={installing !== undefined}>{dependencies.map(dependency => <article className="dcu-about-dependency" key={dependency.id}><div className="dcu-about-copy"><div className="dcu-about-name">{title(dependency.id)}</div><div className="dcu-about-package">{dependency.packageName}{dependency.version === undefined ? '' : ` · ${dependency.version}`}{dependency.updateAvailable && dependency.latestVersion !== undefined ? ` → ${dependency.latestVersion}` : ''}</div></div><div className="dcu-about-status" data-installed={dependency.installed} data-update={dependency.updateAvailable}>{dependency.installed && !dependency.updateAvailable && <IconCheckOutline16 size={14} />}{dependency.updateAvailable ? t('about.updateAvailable') : dependency.installed ? t('about.installed') : t('about.missing')}</div>{(!dependency.installed || dependency.updateAvailable) && <button className="dcu-about-install" type="button" disabled={installing !== undefined} onClick={() => { void install(dependency.id) }}>{installing === dependency.id ? <IconLoadingOutline16 size={14} /> : <IconDownloadOutline16 size={14} />}{installing === dependency.id ? t('about.installing') : dependency.updateAvailable ? t('about.update') : t('about.install')}</button>}</article>)}</div>}
     {installing !== undefined && <div className="dcu-about-progress" role="status"><span><IconLoadingOutline16 size={14} /></span><code>{progress === undefined ? t('about.progressHint') : progressLabel(progress, t)}</code>{progress?.percent !== null && progress?.percent !== undefined && <span className="dcu-about-progress-pct">{progress.percent}%</span>}<div className="dcu-about-progress-bar"><div className="dcu-about-progress-fill" data-wave={progress?.percent === null || progress?.percent === undefined} style={progress?.percent === null || progress?.percent === undefined ? undefined : { width: `${progress.percent}%` }} /></div></div>}
+    {refreshFailed && state === 'ready' && <div className="dcu-about-message" data-error="true" role="status">{t('about.refreshFailed')}</div>}
     {message !== undefined && <div className="dcu-about-message" data-error={message.error} role={message.error ? 'alert' : 'status'}>{message.text}</div>}
   </section>
 }

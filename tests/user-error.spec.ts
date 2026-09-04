@@ -42,6 +42,13 @@ describe('用户错误本地化', () => {
     expect(userErrorText(new HostActionError('delete', new Error('host exploded')), translator(en))).toBe('The conversation could not be deleted. Try again later.')
   })
 
+  test('循环嵌套的远程错误安全回退为操作级提示', () => {
+    const first: { rpcError?: unknown } = {}
+    const second: { rpcError?: unknown } = { rpcError: first }
+    first.rpcError = second
+    expect(userErrorText(new HostActionError('archive', first), translator(zh))).toBe('暂时无法归档该会话，请稍后重试。')
+  })
+
   test('未知底层错误不直接进入界面', () => {
     expect(userErrorText(new Error('包含本地路径 D:\\secret 的底层错误'), translator(zh))).toBe('操作未完成，请重试。')
     expect(userErrorText(new Error('host exploded'), translator(en))).toBe('The action could not be completed. Try again.')

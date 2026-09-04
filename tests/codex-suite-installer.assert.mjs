@@ -13,6 +13,7 @@ import {
   normalizeBundles,
   parseArgs,
   profileDirectory,
+  quoteWindowsCommandArgument,
   validateWindowsDshCommand,
 } from '../packages/dsh-codex-suite-installer/installer.mjs'
 
@@ -55,6 +56,11 @@ assert.equal(
   'allowBuilds:\n  protobufjs: false\n  koffi: false\n',
   '安装器必须修复 pnpm 失败后留下的重复构建占位项',
 )
+assert.equal(
+  allowRequiredBuilds('allowBuilds:\n    protobufjs: true\n    koffi: true\n    esbuild: true\n'),
+  'allowBuilds:\n    protobufjs: false\n    koffi: false\n    esbuild: true\n',
+  '安装器必须沿用现有 YAML 缩进并移除不同缩进下的重复键',
+)
 assert.deepEqual(
   normalizeBundles([
     BASE_BUNDLE,
@@ -78,6 +84,10 @@ assert.equal(validateWindowsDshCommand('dsh'), 'dsh')
 assert.equal(validateWindowsDshCommand('C:\\Program Files\\nodejs\\dsh.cmd'), 'C:\\Program Files\\nodejs\\dsh.cmd')
 assert.throws(() => validateWindowsDshCommand('dsh & calc.exe'), /unsupported shell characters/)
 assert.throws(() => validateWindowsDshCommand('\\\\server\\share\\dsh.cmd'), /absolute local Windows path/)
+assert.equal(quoteWindowsCommandArgument('safe-value'), '"safe-value"')
+for (const argument of ['%TEMP%', '^value', '!value!']) {
+  assert.throws(() => quoteWindowsCommandArgument(argument), /unsupported shell characters/, `Windows cmd 参数必须拒绝 ${argument}`)
+}
 assert.match(helpText(), /^Usage: dsh-codex-suite-installer \[options\]/, '帮助文案必须使用实际发布的 bin 名称')
 assert.equal(
   profileDirectory('codex', { DSH_HOME: '/srv/dsh-home' }, '/home/demo'),

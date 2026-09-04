@@ -84,8 +84,10 @@ export function allowRequiredBuilds(source) {
   if (start === -1) return `${source}${source === '' || source.endsWith('\n') ? '' : eol}allowBuilds:${eol}  protobufjs: false${eol}  koffi: false${eol}`
   let end = start + 1
   while (end < lines.length && (lines[end] === '' || /^\s/.test(lines[end]))) end += 1
-  const body = lines.slice(start + 1, end).filter(line => !/^\s{2}(?:protobufjs|koffi):/.test(line))
-  lines.splice(start + 1, end - start - 1, '  protobufjs: false', '  koffi: false', ...body)
+  const existing = lines.slice(start + 1, end)
+  const indentation = existing.map(line => /^(\s+)\S/.exec(line)?.[1]).find(value => value !== undefined) ?? '  '
+  const body = existing.filter(line => !/^\s+(?:protobufjs|koffi):/.test(line))
+  lines.splice(start + 1, end - start - 1, `${indentation}protobufjs: false`, `${indentation}koffi: false`, ...body)
   return lines.join(eol)
 }
 
@@ -110,8 +112,8 @@ export function validateWindowsDshCommand(command) {
   throw new Error('DSH_BIN must be a command name or an absolute local Windows path.')
 }
 
-function quoteWindowsCommandArgument(argument) {
-  if (/["\r\n]/u.test(argument)) throw new Error('dsh argument contains unsupported shell characters.')
+export function quoteWindowsCommandArgument(argument) {
+  if (/["%^!\r\n]/u.test(argument)) throw new Error('dsh argument contains unsupported shell characters.')
   return `"${argument}"`
 }
 

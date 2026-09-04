@@ -68,10 +68,8 @@ export function observePermissionLabels(locale: PermissionLabelLocale): () => vo
   const apply = (): void => {
     if (applying) return
     applying = true
-    const active = locale.getSnapshot?.().active
-      ?? document.documentElement.lang
-      ?? window.navigator.language
-      ?? 'zh'
+    const active = [locale.getSnapshot?.().active, document.documentElement.lang, window.navigator.language]
+      .find(value => typeof value === 'string' && value.trim() !== '') ?? 'zh'
     const roots = [...pendingRoots]
     pendingRoots.clear()
     try { for (const root of roots) localizePermissionLabels(root, active) }

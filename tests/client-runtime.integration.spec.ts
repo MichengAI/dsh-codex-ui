@@ -341,7 +341,7 @@ test('连接器设置页嵌入可用的市场并只接受该 iframe 的 Prompt �
     })
     const frame = container.querySelector<HTMLIFrameElement>('.dcu-connector-frame')
     expect(frame).not.toBeNull()
-    expect(fetchMock).toHaveBeenCalledWith('/mcp-connector/ui/', expect.objectContaining({ method: 'HEAD', cache: 'no-store' }))
+    expect(fetchMock).toHaveBeenCalledWith('/mcp-connector/ui/', expect.objectContaining({ method: 'GET', cache: 'no-store' }))
 
     window.dispatchEvent(new MessageEvent('message', {
       origin: 'https://untrusted.example',

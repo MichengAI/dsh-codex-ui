@@ -50,7 +50,7 @@ assert.match(sidebar, /\[t\('sidebar.marketplace'\), t\('sidebar.plugins'\)\]/, 
 assert.match(sidebar, /selectSection\(t\('sidebar\.connectors'\)\)/, '连接器菜单必须直达设置内的连接器页')
 assert.match(sidebar, /\.dcu-root \.mcpConnectorLauncher,[^}]*display:none!important/, '第三方 MCP 连接器不得再保留独立侧栏入口')
 assert.match(connectors, /const MCP_CONNECTOR_UI = '\/mcp-connector\/ui\/'/, '设置连接器页必须探测第三方插件的同源 UI')
-assert.match(connectors, /fetch\(MCP_CONNECTOR_UI, \{ method: 'HEAD', cache: 'no-store'/, '第三方插件必须运行时探测，不能成为硬依赖')
+assert.match(connectors, /fetch\(MCP_CONNECTOR_UI, \{ method: 'GET', cache: 'no-store'/, '第三方插件必须运行时探测，不能成为硬依赖')
 assert.match(connectors, /marketAvailable[^]*ConnectorMarket[^]*NativeConnectorList/, '安装插件时必须显示市场，缺失时必须回退原生工具目录')
 assert.match(connectors, /event\.origin !== window\.location\.origin[^]*event\.source !== frameWindow/, 'Prompt 消息桥接必须同时校验来源和 iframe 窗口')
 assert.match(connectors, /mcp-connector:start-session-result/, 'Prompt 消息桥接必须向插件页面返回处理结果')

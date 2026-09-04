@@ -17,8 +17,11 @@ header:has([data-dcu-inline-tabs]) [class*="headerActions"]{order:2;flex:none}
 header [data-dcu-inline-tabs]{box-sizing:border-box;order:3;flex:none;display:flex;align-items:center;gap:0;margin:0;padding:0;height:28px;position:relative;z-index:1;overflow:hidden;border:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.12));border-radius:8px;background:var(--dsw-alias-background-secondary,rgba(255,255,255,.025))}
 header:has([data-dcu-inline-tabs]) [class*="headerUtilities"]{order:4;flex:none}
 header [data-dcu-tab-slider]{position:absolute;left:0;top:0;height:26px;border-radius:7px;background:color-mix(in srgb,var(--dsw-alias-button-info-fill,#4c8dff) 18%,transparent);pointer-events:none;z-index:0;opacity:0;transform:translateX(0);width:0;transition:transform 240ms cubic-bezier(.16,1,.3,1),width 240ms cubic-bezier(.16,1,.3,1),opacity 160ms ease}
-/* 顶栏统一使用 34px 控件带：与宿主扩展常用的 top:3px + 28px 图标按钮同心，
-   外部插件按钮无需在展开/收起时改变位置。 */
+/* 顶栏统一使用 34px 控件带：与宿主扩展常用的 top:3px + 28px 图标按钮同心。
+   better-sidebar 0.18.0 收起时会把开关组改到 14px（按官方 padding-top:12px 算），
+   这里只在紧凑顶栏存在时扣回 3px，不搬 DOM、不跟展开/收起跳动。 */
+body[data-dsh-sidebar-collapsed]:has([data-dcu-inline-tabs]) [data-dsh-toggle-cluster]{top:calc(3px + env(safe-area-inset-top))}
+body[data-dsh-sidebar-collapsed][data-dsh-title-bar-compat]:has([data-dcu-inline-tabs]) [data-dsh-toggle-cluster]{top:calc(var(--dsh-title-bar-strip, 40px) + 3px)}
 header [data-dcu-inline-tabs] [role=tab]{box-sizing:border-box;position:relative;z-index:1;height:26px;padding:3px 10px;margin:0;line-height:20px;color:var(--dsw-alias-label-tertiary);border:0;box-shadow:none;background:transparent;font-size:13px;white-space:nowrap}
 header [data-dcu-inline-tabs] [role=tab][aria-selected=true],header [data-dcu-inline-tabs] [role=tab][data-state=active]{color:var(--dsw-alias-button-info-fill,#4c8dff);font-weight:500}
 header [data-dcu-inline-tabs] [role=tab]+[role=tab]{border-left:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.08))}
@@ -166,17 +169,38 @@ function ensureStyle(doc: Document): void {
   doc.head.append(style)
 }
 
-const CONVERSATION_DECORATION_SELECTOR = 'header,[data-time-hover-root],[data-dcu-user-card],[data-dcu-user-source]'
+const CONVERSATION_BUBBLE_SELECTOR = '[data-time-hover-root],[data-dcu-user-card],[data-dcu-user-source]'
 
-function conversationDecorationMutation(records: readonly MutationRecord[]): boolean {
-  const relevant = (node: Node): boolean => node instanceof Element && (
-    node.matches(CONVERSATION_DECORATION_SELECTOR)
-    || node.closest(CONVERSATION_DECORATION_SELECTOR) !== null
-    || node.querySelector(CONVERSATION_DECORATION_SELECTOR) !== null
-  )
-  return records.some(record => relevant(record.target)
-    || [...record.addedNodes].some(relevant)
-    || [...record.removedNodes].some(relevant))
+type ConversationMutationImpact = {
+  headerChanged: boolean
+  bubbleRoots: Set<Element>
+}
+
+function inspectConversationNode(node: Node, impact: ConversationMutationImpact, includeDescendants: boolean): void {
+  if (!(node instanceof Element)) return
+  if (node.matches('header') || node.closest('header') !== null || (includeDescendants && node.querySelector('header') !== null)) {
+    impact.headerChanged = true
+  }
+  const row = node.closest('[data-time-hover-root]')
+  if (row !== null) {
+    impact.bubbleRoots.add(row)
+    return
+  }
+  if (node.matches(CONVERSATION_BUBBLE_SELECTOR) || (includeDescendants && node.querySelector(CONVERSATION_BUBBLE_SELECTOR) !== null)) {
+    impact.bubbleRoots.add(node)
+  }
+}
+
+function conversationMutationImpact(records: readonly MutationRecord[]): ConversationMutationImpact {
+  const impact: ConversationMutationImpact = { headerChanged: false, bubbleRoots: new Set() }
+  for (const record of records) {
+    inspectConversationNode(record.target, impact, false)
+    for (const node of record.addedNodes) inspectConversationNode(node, impact, true)
+    for (const node of record.removedNodes) {
+      if (node instanceof Element && (node.matches('header') || node.querySelector('header') !== null)) impact.headerChanged = true
+    }
+  }
+  return impact
 }
 
 /** 观察会话顶栏与用户气泡；只对相关子树变更按帧合并，流式回答不会触发全文档扫描。 */
@@ -186,6 +210,8 @@ export function observeConversationHeader(doc: Document = document): () => void 
   restoreOfficialUserBubbles(doc)
   let applying = false
   let frame: number | undefined
+  let headerPending = true
+  const bubbleRoots = new Set<Element>()
   let watchedTabs: HTMLElement | undefined
   let stopWatchingTabs: (() => void) | undefined
   const run = (): void => {
@@ -193,17 +219,22 @@ export function observeConversationHeader(doc: Document = document): () => void 
     if (applying) return
     applying = true
     try {
-      restoreOfficialUserBubbles(doc)
-      placeConversationTabs(doc)
-      const tabs = findConversationTablist(doc)
-      if (tabs !== watchedTabs) {
-        stopWatchingTabs?.()
-        watchedTabs = tabs
-        stopWatchingTabs = tabs === undefined ? undefined : watchTabSelection(tabs)
+      const roots = [...bubbleRoots]
+      bubbleRoots.clear()
+      for (const root of roots) restoreOfficialUserBubbles(root)
+      if (headerPending) {
+        headerPending = false
+        placeConversationTabs(doc)
+        const tabs = findConversationTablist(doc)
+        if (tabs !== watchedTabs) {
+          stopWatchingTabs?.()
+          watchedTabs = tabs
+          stopWatchingTabs = tabs === undefined ? undefined : watchTabSelection(tabs)
+        }
+        syncTabSlider(doc)
+        decorateConversationTitle(doc)
+        decorateSessionLogDownload(doc)
       }
-      syncTabSlider(doc)
-      decorateConversationTitle(doc)
-      decorateSessionLogDownload(doc)
     } finally {
       applying = false
     }
@@ -213,7 +244,13 @@ export function observeConversationHeader(doc: Document = document): () => void 
     frame = window.requestAnimationFrame(run)
   }
   sync()
-  const observer = new MutationObserver(records => { if (conversationDecorationMutation(records)) sync() })
+  const observer = new MutationObserver(records => {
+    const impact = conversationMutationImpact(records)
+    if (!impact.headerChanged && impact.bubbleRoots.size === 0) return
+    headerPending ||= impact.headerChanged
+    for (const root of impact.bubbleRoots) bubbleRoots.add(root)
+    sync()
+  })
   observer.observe(doc.body, { childList: true, subtree: true })
   return () => {
     observer.disconnect()

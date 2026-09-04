@@ -61,10 +61,15 @@ function objectRecord(value: unknown): Record<string, unknown> | undefined {
 
 /** DSH 明确要求跨 bundle 按结构标记识别 RemoteFailure，不能使用 instanceof。 */
 function remoteFailureCode(value: unknown): string | undefined {
-  const record = objectRecord(value)
-  if (record === undefined) return undefined
-  if (record.isDSHRemoteError === true && typeof record.code === 'string') return record.code
-  return record.rpcError === value ? undefined : remoteFailureCode(record.rpcError)
+  const seen = new Set<object>()
+  let current = value
+  while (true) {
+    const record = objectRecord(current)
+    if (record === undefined || seen.has(record)) return undefined
+    seen.add(record)
+    if (record.isDSHRemoteError === true && typeof record.code === 'string') return record.code
+    current = record.rpcError
+  }
 }
 
 function diagnosticMessage(value: unknown): string | undefined {

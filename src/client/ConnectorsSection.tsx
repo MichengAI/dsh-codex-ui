@@ -117,8 +117,11 @@ export function ConnectorsSection({ sessionStore, startPromptSession, t }: Conne
   const [marketAvailable, setMarketAvailable] = useState<boolean | undefined>()
   useEffect(() => {
     const controller = new AbortController()
-    void fetch(MCP_CONNECTOR_UI, { method: 'HEAD', cache: 'no-store', signal: controller.signal })
-      .then(response => { if (!controller.signal.aborted) setMarketAvailable(response.ok) })
+    void fetch(MCP_CONNECTOR_UI, { method: 'GET', cache: 'no-store', signal: controller.signal })
+      .then(response => {
+        void response.body?.cancel().catch(() => {})
+        if (!controller.signal.aborted) setMarketAvailable(response.ok)
+      })
       .catch(() => { if (!controller.signal.aborted) setMarketAvailable(false) })
     return () => { controller.abort() }
   }, [])
