@@ -9,7 +9,7 @@ export const WEB_BUNDLE = '@deepseek-ai/dsh-web-app'
 
 const suiteManifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 
-/** Keep the same layer order as the legacy aggregate patch. */
+/** 保持与旧聚合补丁一致的成员加载顺序。 */
 export const MEMBER_PACKAGES = [
   '@michengai/dsh-archive-manager',
   '@michengai/dsh-codex-ui',
@@ -72,9 +72,23 @@ export function profileDirectory(profile, env = process.env, home = homedir()) {
 }
 
 export function normalizeBundles(bundles = []) {
-  const managed = new Set([BASE_BUNDLE, WEB_BUNDLE, SUITE_PACKAGE, ...MEMBER_PACKAGES])
-  const unrelated = bundles.filter((name, index) => typeof name === 'string' && !managed.has(name) && bundles.indexOf(name) === index)
-  return [BASE_BUNDLE, WEB_BUNDLE, ...unrelated, ...MEMBER_PACKAGES]
+  const unique = bundles.filter((name, index) => typeof name === 'string' && bundles.indexOf(name) === index)
+  const baseIndex = unique.indexOf(BASE_BUNDLE)
+  const webIndex = unique.indexOf(WEB_BUNDLE)
+  if (baseIndex === -1) throw new Error(`目标 profile 缺少 ${BASE_BUNDLE} bundle，已中止迁移。`)
+  if (webIndex === -1) throw new Error(`目标 profile 缺少 ${WEB_BUNDLE} bundle，已中止迁移。`)
+  if (baseIndex > webIndex) throw new Error(`${BASE_BUNDLE} 必须位于 ${WEB_BUNDLE} 之前；安装器不会自动修改既有加载顺序。`)
+
+  const managed = new Set([SUITE_PACKAGE, ...MEMBER_PACKAGES])
+  const suiteIndex = unique.indexOf(SUITE_PACKAGE)
+  const firstMemberIndex = unique.findIndex(name => MEMBER_PACKAGES.includes(name))
+  const anchorIndex = suiteIndex === -1 ? firstMemberIndex : suiteIndex
+  const retained = unique.filter(name => !managed.has(name))
+  const minimumInsertionIndex = retained.indexOf(WEB_BUNDLE) + 1
+  const insertionIndex = anchorIndex === -1
+    ? retained.length
+    : Math.max(minimumInsertionIndex, unique.slice(0, anchorIndex).filter(name => !managed.has(name)).length)
+  return [...retained.slice(0, insertionIndex), ...MEMBER_PACKAGES, ...retained.slice(insertionIndex)]
 }
 
 export function allowRequiredBuilds(source) {
@@ -145,11 +159,11 @@ function legacyDirectPackages(manifest) {
   ]
 }
 
-function writeNormalizedManifest(path) {
+function writeNormalizedManifest(path, bundles) {
   const manifest = readProfileManifest(path)
   manifest.dsh ??= {}
   manifest.dsh.profile ??= {}
-  manifest.dsh.profile.bundles = normalizeBundles(manifest.dsh.profile.bundles)
+  manifest.dsh.profile.bundles = bundles
   writeFileSync(path, `${JSON.stringify(manifest, undefined, 2)}\n`, 'utf8')
 }
 
@@ -162,7 +176,11 @@ export function installSuite(argv = process.argv.slice(2)) {
   const profilePath = profileDirectory(options.profile)
   const manifestPath = resolve(profilePath, 'package.json')
   const workspacePath = resolve(profilePath, 'pnpm-workspace.yaml')
-  if (!existsSync(manifestPath)) runDsh(['plugin', '--profile', options.profile, 'install', '--lockfile-only', '--ignore-scripts'], options)
+  const manifestExists = existsSync(manifestPath)
+  if (!manifestExists) runDsh(['plugin', '--profile', options.profile, 'install', '--lockfile-only', '--ignore-scripts'], options)
+  const normalizedBundles = manifestExists || !options.dryRun
+    ? normalizeBundles(readProfileManifest(manifestPath).dsh?.profile?.bundles)
+    : undefined
   if (options.dryRun) {
     process.stdout.write(`> ensure protobufjs build scripts stay explicitly disabled in ${workspacePath}\n`)
   } else {
@@ -176,10 +194,11 @@ export function installSuite(argv = process.argv.slice(2)) {
     process.stdout.write(`> remove legacy ${SUITE_PACKAGE} and redundant direct ${WEB_BUNDLE} dependencies when present\n`)
     return
   }
+  if (normalizedBundles === undefined) throw new Error('无法读取目标 profile 的 bundle 配置。')
   const installedManifest = readProfileManifest(manifestPath)
   const legacyPackages = legacyDirectPackages(installedManifest)
   if (legacyPackages.length > 0) runDsh(['plugin', '--profile', options.profile, 'remove', ...legacyPackages], options)
-  writeNormalizedManifest(manifestPath)
+  writeNormalizedManifest(manifestPath, normalizedBundles)
   runDsh(['--profile', options.profile, '--dump-config'], options)
   process.stdout.write(`\nCodex Suite members are direct plugins in profile ${options.profile}. Restart DSH and hard-refresh the browser.\n`)
 }

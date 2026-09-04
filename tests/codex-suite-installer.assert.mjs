@@ -71,8 +71,42 @@ assert.deepEqual(
     WEB_BUNDLE,
     'third-party-before',
   ]),
-  [BASE_BUNDLE, WEB_BUNDLE, 'third-party-before', 'third-party-after', ...MEMBER_PACKAGES],
-  '迁移必须移除旧 Suite、去重、保留无关插件，并让六个成员成为独立 bundle',
+  [BASE_BUNDLE, 'third-party-before', 'third-party-after', WEB_BUNDLE, ...MEMBER_PACKAGES],
+  '旧 Suite 位于 web 前时，只能把六成员移动到 web 后，不得重排无关 bundle',
+)
+assert.deepEqual(
+  normalizeBundles([
+    BASE_BUNDLE,
+    'before-web',
+    WEB_BUNDLE,
+    'before-suite',
+    SUITE_PACKAGE,
+    'after-suite',
+    '@michengai/dsh-codex-ui',
+    'tail',
+  ]),
+  [BASE_BUNDLE, 'before-web', WEB_BUNDLE, 'before-suite', ...MEMBER_PACKAGES, 'after-suite', 'tail'],
+  '迁移必须在旧 Suite 原位展开六成员，并保留所有无关 bundle 的相对加载位置',
+)
+assert.deepEqual(
+  normalizeBundles([BASE_BUNDLE, 'before-web', WEB_BUNDLE, 'tail']),
+  [BASE_BUNDLE, 'before-web', WEB_BUNDLE, 'tail', ...MEMBER_PACKAGES],
+  '没有旧 Suite 锚点时必须在末尾追加成员，不得移动现有 bundle',
+)
+assert.throws(
+  () => normalizeBundles([WEB_BUNDLE, 'third-party']),
+  /dsh-base/,
+  '缺少 base 的 profile 必须失败，不得静默注入基础 bundle',
+)
+assert.throws(
+  () => normalizeBundles([BASE_BUNDLE, 'third-party']),
+  /dsh-web-app/,
+  '缺少 web 的 profile 必须失败，不得静默注入 Web bundle',
+)
+assert.throws(
+  () => normalizeBundles([WEB_BUNDLE, 'third-party', BASE_BUNDLE]),
+  /加载顺序/,
+  'base 位于 web 后时必须失败，不得擅自重排 profile 基线',
 )
 assert.deepEqual(
   parseArgs(['--profile', 'codex', '--registry=https://registry.npmjs.org', '--dry-run']),
