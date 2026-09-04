@@ -4,6 +4,25 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.103 — 2026-09-04
+
+Companion release: `@michengai/dsh-codex-suite-installer@0.1.20`.
+
+### Fixed
+
+- Limited conversation DOM processing to affected message roots during streaming updates, avoiding repeated full-document decoration scans.
+- Corrected blank-language fallback, cyclic remote-error handling, workspace-preference response versioning, About-page refresh warnings, and connector marketplace probing compatibility.
+- Hardened Suite Installer YAML build-policy normalization across indentation styles and rejected Windows command-expansion characters.
+- Preserved existing third-party bundle order during Suite migration, expanded managed members at the prior Suite anchor, and rejected profiles with missing or reversed base/web prerequisites instead of silently rewriting them.
+
+### Tests
+
+- Added behavior coverage for cross-site dependency-route rejection, error redaction, localized refresh failures, connector probing, observer scope, cyclic errors, installer ordering, invalid bundle baselines, and Windows command quoting.
+
+### Dependencies
+
+- The Suite Installer release workflow will resolve Codex UI `0.2.103` and publish the companion `0.1.20` release.
+
 ## 0.2.102 — 2026-09-03
 
 Companion release: `@michengai/dsh-codex-suite-installer@0.1.19`.

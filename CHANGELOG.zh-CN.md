@@ -4,6 +4,25 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.103 — 2026-09-04
+
+配套版本：`@michengai/dsh-codex-suite-installer@0.1.20`。
+
+### 修复
+
+- 将流式更新期间的会话 DOM 处理限制在受影响的消息根，避免反复执行全文档装饰扫描。
+- 修复空语言兜底、远程错误循环引用、工作区偏好响应版本、关于页刷新失败提示和连接器市场探测兼容性。
+- 强化 Suite 安装器对不同缩进 YAML 构建策略的归一化，并拒绝 Windows 命令展开字符。
+- Suite 迁移时保留既有第三方 bundle 顺序，在原 Suite 锚点展开受管成员；缺少或颠倒 `base/web` 前置项时明确失败，不再静默改写。
+
+### 测试
+
+- 新增依赖路由跨站拒绝、错误脱敏、本地化刷新失败、连接器探测、观察器范围、循环错误、安装器保序、无效 bundle 基线和 Windows 命令引用的行为覆盖。
+
+### 依赖
+
+- Suite Installer 发布 workflow 会解析 Codex UI `0.2.103`，并发布配套的 `0.1.20` 版本。
+
 ## 0.2.102 — 2026-09-03
 
 配套版本：`@michengai/dsh-codex-suite-installer@0.1.19`。
