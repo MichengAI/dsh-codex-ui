@@ -4,6 +4,17 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.106 — 2026-09-07
+
+- Added Wallpaper Engine sidebar glass support while keeping settings and search dialogs correctly positioned and clickable.
+- Integrated the billing plugin entry into the sidebar, aligning icon size, colors, typography, and spacing with Settings while preserving billing details and the collapsed entry.
+- Added visual regression assertions. Glass and billing have been verified separately; combined verification remains pending because the current test profile does not include the wallpaper plugin.
+
+## suite-installer-v0.1.23 — 2026-09-07
+
+- Updated the bundled Codex UI to `0.2.106`, including sidebar glass support and billing entry styling.
+- Other Suite members remain unchanged. Combined glass and billing verification remains pending.
+
 ## 0.2.105 — 2026-09-06
 
 - Added Simplify directly below BTW on the About page, with version status, install, update, and bulk-update support.
