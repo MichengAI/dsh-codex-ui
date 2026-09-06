@@ -27,6 +27,7 @@
 - List workspaces and conversations with expand/collapse, drag reorder, project pinning, unread dots, and running-state indicators.
 - Add project and conversation menus for rename, pin, unread, archive, fork, open folder, copy, and delete.
 - Restyle the conversation column and composer card, and add a compact turn navigator on the current session.
+- Recall submitted text with Up/Down from an empty composer, with workspace isolation and guards for drafts, IME, and candidate menus. BTW is not required.
 - Show companion-plugin status in **Settings → About**, and install the missing pieces from npm.
 
 ## Screenshots

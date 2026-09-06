@@ -4,6 +4,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-slots'
 export const NS = 'michengai.codexUi'
 
 export const zh = {
+  'input.historyHint': '↑↓ 翻历史',
   'sidebar.label': 'DSH 导航',
   'sidebar.expand': '展开侧边栏',
   'sidebar.collapse': '收缩侧边栏',
@@ -150,7 +151,7 @@ export const zh = {
   'about.feature.conversation': '保留原生消息、工具调用、输入、权限和模型选择，仅调整容器视觉',
   'about.feature.navigator': '当前会话提供轮次缩略导航，可快速跳转至每一次用户提问',
   'about.dependencies': '配套管理插件',
-  'about.dependenciesDescription': '每个配套插件都可单独安装和更新，也可一键安装缺失项并更新旧版本。可分别检查 Codex UI、专家、技能、归档、IM、定时任务和第三方插件市场。',
+  'about.dependenciesDescription': '每个配套插件都可单独安装和更新，也可一键安装缺失项并更新旧版本。可分别检查 Codex UI、专家、技能、归档、IM、定时任务、BTW 和第三方插件市场。',
   'about.loading': '正在读取依赖安装状态…',
   'about.statusFailed': '暂时无法读取依赖安装状态。',
   'about.refreshFailed': '依赖状态刷新失败，当前显示上次成功读取的结果。',
@@ -184,9 +185,10 @@ export const zh = {
   'about.dependency.ui': 'Codex UI',
   'about.dependency.experts': '专家管理',
   'about.dependency.skills': '技能管理',
-  'about.dependency.archive': '归档会话管理',
+  'about.dependency.archive': '归档会话',
   'about.dependency.im': 'IM助理',
   'about.dependency.schedule': '定时任务',
+  'about.dependency.btw': 'BTW 旁问',
   'about.dependency.market': '插件市场',
   'turns.label': '当前会话轮次导航',
   'turns.untitled': '未命名提问',
@@ -204,6 +206,7 @@ export const zh = {
 } as const
 
 export const en: Record<keyof typeof zh, string> = {
+  'input.historyHint': '↑↓ History',
   'sidebar.label': 'DSH navigation',
   'sidebar.expand': 'Expand sidebar',
   'sidebar.collapse': 'Collapse sidebar',
@@ -350,7 +353,7 @@ export const en: Record<keyof typeof zh, string> = {
   'about.feature.conversation': 'Keeps native messages, tool calls, composer, permissions, and model selection while refining the container visuals',
   'about.feature.navigator': 'Navigate directly to each user prompt with the current conversation turn navigator',
   'about.dependencies': 'Companion management plugins',
-  'about.dependenciesDescription': 'Install or update each companion separately, or install missing plugins and update old versions in one action. Check Codex UI, expert, skill, archive, IM, scheduled-task, and marketplace plugins on their own.',
+  'about.dependenciesDescription': 'Install or update each companion separately, or install missing plugins and update old versions in one action. Check Codex UI, expert, skill, archive, IM, scheduled-task, BTW, and marketplace plugins on their own.',
   'about.loading': 'Loading dependency status…',
   'about.statusFailed': 'Dependency status is temporarily unavailable.',
   'about.refreshFailed': 'Dependency status refresh failed. Showing the last successful result.',
@@ -384,9 +387,10 @@ export const en: Record<keyof typeof zh, string> = {
   'about.dependency.ui': 'Codex UI',
   'about.dependency.experts': 'Expert management',
   'about.dependency.skills': 'Skill management',
-  'about.dependency.archive': 'Archived conversation management',
+  'about.dependency.archive': 'Archived conversations',
   'about.dependency.im': 'IM Assistant',
   'about.dependency.schedule': 'Scheduled tasks',
+  'about.dependency.btw': 'BTW',
   'about.dependency.market': 'Plugin Market',
   'turns.label': 'Conversation turn navigation',
   'turns.untitled': 'Untitled prompt',
