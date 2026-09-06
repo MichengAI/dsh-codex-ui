@@ -43,19 +43,20 @@ export function InputHistoryDock({ ctx, sessionId, history, seen }: HistoryDockP
     const scope = ctx.sessions.list.getSnapshot().byId[sessionId]?.cwd ?? sessionId
     const input = ctx.conversation.input.for(binding.ctx)
     const menu = ctx.inputTriggers.sessionOf(binding.ctx).menu
+    // 挂载只建立版本基线，历史窗口和未挂载期间的输入不回灌；多实例共用版本去重。
+    seen.set(binding, binding.eventSource.getSnapshot().revision)
     const collect = () => {
-      const watermark = seen.get(binding) ?? -1
-      let latest = watermark
-      for (const entry of binding.eventSource.getSnapshot().entries) {
-        if (entry.type !== 'event' || entry.event.seq <= watermark) continue
-        latest = Math.max(latest, entry.event.seq)
+      const snapshot = binding.eventSource.getSnapshot()
+      // 完整窗口替换可重设版本基线，兼容宿主重建窗口后计数归零；不回灌窗口内容。
+      if (snapshot.change.kind !== 'replace' && snapshot.revision <= (seen.get(binding) ?? -1)) return
+      seen.set(binding, snapshot.revision)
+      if (snapshot.change.kind !== 'append') return
+      for (const entry of snapshot.change.entries) {
         if (entry.event.type !== 'user/message' || entry.event.data.source?.kind !== 'user') continue
         const text = entry.event.data.content.filter(block => block.type === 'text').map(block => block.text).join('')
         history.add(scope, text)
       }
-      seen.set(binding, latest)
     }
-    collect()
     const offEvents = binding.eventSource.subscribe(collect)
     let previous = input.state.getSnapshot()
     const offInput = input.state.subscribe(() => {

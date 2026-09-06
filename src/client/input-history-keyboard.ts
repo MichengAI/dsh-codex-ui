@@ -12,9 +12,11 @@ export interface KeyboardAdapter {
 export function bindHistoryKeys(editor: Editor, adapter: KeyboardAdapter): () => void {
   const cursor = new HistoryCursor()
   let composing = false
+  let writingHistory = false
   const begin = () => { composing = true }
   const end = () => { composing = false }
-  const changed = () => cursor.reset()
+  // 只忽略自身同步 setDraft 引发的 input，外部编辑即使草稿镜像滞后也必须退出历史。
+  const changed = () => { if (!writingHistory) cursor.reset() }
   const keydown = (event: KeyboardEvent) => {
     if (event.target !== editor && !editor.contains(event.target as Node)) return
     if (event.defaultPrevented || composing || event.isComposing || event.keyCode === 229 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || adapter.blocked()) return
@@ -25,7 +27,9 @@ export function bindHistoryKeys(editor: Editor, adapter: KeyboardAdapter): () =>
     if (next === undefined) return
     event.preventDefault()
     event.stopImmediatePropagation()
-    adapter.setDraft(next)
+    writingHistory = true
+    try { adapter.setDraft(next) }
+    finally { writingHistory = false }
   }
   editor.addEventListener('compositionstart', begin)
   editor.addEventListener('compositionend', end)

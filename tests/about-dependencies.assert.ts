@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
+import { MANAGED_DEPENDENCIES, managedDependency } from '../src/dependencies.ts'
+import { en, zh } from '../src/client/locales.ts'
 
 const aboutPath = new URL('../src/client/AboutSection.tsx', import.meta.url)
 assert.equal(existsSync(aboutPath), true, '必须提供设置内的关于页面')
@@ -11,6 +13,14 @@ const dependencies = readFileSync(new URL('../src/dependencies.ts', import.meta.
 const about = readFileSync(aboutPath, 'utf8')
 const locales = readFileSync(new URL('../src/client/locales.ts', import.meta.url), 'utf8')
 const manager = readFileSync(new URL('../src/dependency-manager.ts', import.meta.url), 'utf8')
+
+assert.equal(managedDependency('btw')?.packageName, '@michengai/dsh-btw', 'BTW 安装入口必须映射到正式包名')
+const btwIndex = MANAGED_DEPENDENCIES.findIndex(dependency => dependency.id === 'btw')
+assert.deepEqual(MANAGED_DEPENDENCIES.slice(btwIndex - 1, btwIndex + 2).map(dependency => dependency.id), ['schedule', 'btw', 'market'], 'BTW 必须位于自研插件末尾、第三方市场之前')
+assert.equal(zh['about.dependency.btw'], 'BTW 旁问')
+assert.equal(en['about.dependency.btw'], 'BTW')
+assert.equal(zh['about.dependency.archive'], '归档会话')
+assert.equal(en['about.dependency.archive'], 'Archived conversations')
 
 assert.equal(locales.match(/'about\.nav': 'Codex UI'/g)?.length, 2, '设置入口的中英文文案必须统一为 Codex UI')
 assert.match(client, /id: 'about'/, '关于页必须注册为最后的设置分区')

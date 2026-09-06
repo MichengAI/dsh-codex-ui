@@ -66,6 +66,7 @@
     "@deepseek-ai/dsh-client-locale": ">=0.1.0-rc.5 <0.2.0",
     "@deepseek-ai/dsh-client-runtime": ">=0.1.0-rc.5 <0.2.0",
     "@deepseek-ai/dsh-client-ui-conversation": ">=0.1.0-rc.5 <0.2.0",
+    "@deepseek-ai/dsh-client-ui-input-trigger": ">=0.1.0-rc.5 <0.2.0",
     "@deepseek-ai/dsh-client-ui-layout": ">=0.1.0-rc.5 <0.2.0",
     "@deepseek-ai/dsh-client-ui-primitives": ">=0.1.0-rc.5 <0.2.0",
     "@deepseek-ai/dsh-client-ui-settings": ">=0.1.0-rc.5 <0.2.0",

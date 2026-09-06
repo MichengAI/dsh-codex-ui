@@ -89,3 +89,62 @@ test('富文本编辑器召回多行后，光标在中间或选中文字时保�
     expect(draft).toBe('旧输入')
   } finally { off(); selection.removeAllRanges() }
 })
+
+test.each(['textarea', 'richtext'] as const)('%s 的 setDraft 同步派发 input 时仍可连续上下召回', kind => {
+  const editor = document.createElement(kind === 'textarea' ? 'textarea' : 'div')
+  if (kind === 'richtext') editor.contentEditable = 'true'
+  document.body.append(editor)
+  const selection = document.getSelection()!
+  let draft = ''
+  const off = bindHistoryKeys(editor, {
+    draft: () => draft, entries: () => ['第一条', '第二条'], blocked: () => false,
+    setDraft: text => {
+      if (editor instanceof HTMLTextAreaElement) editor.value = text
+      else {
+        editor.textContent = text
+        if (editor.firstChild) selection.collapse(editor.firstChild, text.length)
+      }
+      editor.dispatchEvent(new Event('input', { bubbles: true }))
+      draft = text
+    },
+  })
+  const press = (key: string) => {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+    editor.dispatchEvent(event)
+    return event.defaultPrevented
+  }
+  try {
+    expect(press('ArrowUp')).toBe(true)
+    expect(draft).toBe('第二条')
+    expect(press('ArrowUp')).toBe(true)
+    expect(draft).toBe('第一条')
+    expect(press('ArrowDown')).toBe(true)
+    expect(draft).toBe('第二条')
+    expect(press('ArrowDown')).toBe(true)
+    expect(draft).toBe('')
+  } finally { off(); selection.removeAllRanges() }
+})
+
+test('自身召回之外的 input 仍退出历史，即使宿主草稿镜像尚未同步', () => {
+  const editor = document.createElement('textarea')
+  document.body.append(editor)
+  let draft = ''
+  const off = bindHistoryKeys(editor, {
+    draft: () => draft, entries: () => ['第一条', '第二条'], blocked: () => false,
+    setDraft: text => { editor.value = text; draft = text },
+  })
+  const press = () => {
+    const event = new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })
+    editor.dispatchEvent(event)
+    return event.defaultPrevented
+  }
+  try {
+    expect(press()).toBe(true)
+    expect(draft).toBe('第二条')
+    editor.value = '用户或其他插件编辑后的草稿'
+    editor.dispatchEvent(new Event('input', { bubbles: true }))
+    expect(draft).toBe('第二条')
+    expect(press()).toBe(false)
+    expect(editor.value).toBe('用户或其他插件编辑后的草稿')
+  } finally { off() }
+})
