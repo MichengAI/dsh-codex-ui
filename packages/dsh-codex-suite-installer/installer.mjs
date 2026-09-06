@@ -9,7 +9,7 @@ export const WEB_BUNDLE = '@deepseek-ai/dsh-web-app'
 
 const suiteManifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 
-/** 保持与旧聚合补丁一致的成员加载顺序。 */
+/** 保留旧聚合包的成员顺序，新成员追加在末尾。 */
 export const MEMBER_PACKAGES = [
   '@michengai/dsh-archive-manager',
   '@michengai/dsh-codex-ui',
@@ -17,6 +17,8 @@ export const MEMBER_PACKAGES = [
   '@michengai/dsh-agency-agents',
   '@michengai/dsh-im-connect',
   '@michengai/dsh-automation',
+  '@michengai/dsh-btw',
+  '@michengai/dsh-simplify',
 ]
 
 export function memberSpecs(manifest = suiteManifest) {
@@ -190,7 +192,7 @@ export function installSuite(argv = process.argv.slice(2)) {
   }
   runDsh(directInstallArgs(options.profile, options.registry), options)
   if (options.dryRun) {
-    process.stdout.write(`> ensure ${WEB_BUNDLE} precedes the six member bundles in ${manifestPath}\n`)
+    process.stdout.write(`> ensure ${WEB_BUNDLE} precedes the ${MEMBER_PACKAGES.length} member bundles in ${manifestPath}\n`)
     process.stdout.write(`> remove legacy ${SUITE_PACKAGE} and redundant direct ${WEB_BUNDLE} dependencies when present\n`)
     return
   }

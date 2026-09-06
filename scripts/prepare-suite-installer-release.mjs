@@ -77,10 +77,11 @@ if (compareVersions(version, currentVersion) < 0) throw new Error(`Installer ver
 const members = Object.fromEntries(await Promise.all(MEMBER_PACKAGES.map(async (packageName) => [packageName, await resolveLatest(packageName)])))
 manifest.version = version
 manifest.dshCodexSuite = { ...manifest.dshCodexSuite, members }
-for (const packageName of MEMBER_PACKAGES) {
+// 旧聚合包只保留历史成员；新安装器扩员不能扩大旧包的声明权。
+for (const packageName of Object.keys(compatibilitySuite.dependencies)) {
   if (packageName === UI_PACKAGE) continue
-  if (!(packageName in compatibilitySuite.dependencies)) {
-    throw new Error(`Compatibility suite is missing ${packageName}.`)
+  if (!(packageName in members)) {
+    throw new Error(`Installer members are missing compatibility package ${packageName}.`)
   }
   compatibilitySuite.dependencies[packageName] = members[packageName]
 }

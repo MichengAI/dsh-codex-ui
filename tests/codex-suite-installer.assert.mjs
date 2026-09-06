@@ -19,10 +19,20 @@ import {
 
 const installerManifest = JSON.parse(readFileSync(new URL('../packages/dsh-codex-suite-installer/package.json', import.meta.url), 'utf8'))
 const rootManifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+assert.deepEqual(MEMBER_PACKAGES, [
+  '@michengai/dsh-archive-manager',
+  '@michengai/dsh-codex-ui',
+  '@michengai/dsh-skills-manager',
+  '@michengai/dsh-agency-agents',
+  '@michengai/dsh-im-connect',
+  '@michengai/dsh-automation',
+  '@michengai/dsh-btw',
+  '@michengai/dsh-simplify',
+], '安装器必须包含 BTW 和 Simplify，同时保持既有成员顺序')
 assert.equal(installerManifest.name, '@michengai/dsh-codex-suite-installer')
 assert.match(installerManifest.version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/, '安装器版本必须是发布版 semver')
 assert.equal(installerManifest.bin?.['dsh-codex-suite-installer'], 'bin.mjs', '安装器清单必须使用 npm 发布后保留的规范 bin 路径')
-assert.equal(installerManifest.dependencies, undefined, '轻量 npx 安装器不能安装六个成员的传递依赖树')
+assert.equal(installerManifest.dependencies, undefined, '轻量 npx 安装器不能安装成员的传递依赖树')
 assert.deepEqual(Object.keys(installerManifest.dshCodexSuite?.members ?? {}), MEMBER_PACKAGES)
 assert.match(rootManifest.version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/, '根包必须使用发布版 semver')
 assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-codex-ui'], rootManifest.version, '安装器必须锁定与根包相同的 UI 版本')
@@ -72,7 +82,7 @@ assert.deepEqual(
     'third-party-before',
   ]),
   [BASE_BUNDLE, 'third-party-before', 'third-party-after', WEB_BUNDLE, ...MEMBER_PACKAGES],
-  '旧 Suite 位于 web 前时，只能把六成员移动到 web 后，不得重排无关 bundle',
+  '旧 Suite 位于 web 前时，只能把成员移动到 web 后，不得重排无关 bundle',
 )
 assert.deepEqual(
   normalizeBundles([
@@ -86,7 +96,7 @@ assert.deepEqual(
     'tail',
   ]),
   [BASE_BUNDLE, 'before-web', WEB_BUNDLE, 'before-suite', ...MEMBER_PACKAGES, 'after-suite', 'tail'],
-  '迁移必须在旧 Suite 原位展开六成员，并保留所有无关 bundle 的相对加载位置',
+  '迁移必须在旧 Suite 原位展开成员，并保留所有无关 bundle 的相对加载位置',
 )
 assert.deepEqual(
   normalizeBundles([BASE_BUNDLE, 'before-web', WEB_BUNDLE, 'tail']),
@@ -97,6 +107,16 @@ assert.throws(
   () => normalizeBundles([WEB_BUNDLE, 'third-party']),
   /dsh-base/,
   '缺少 base 的 profile 必须失败，不得静默注入基础 bundle',
+)
+assert.deepEqual(
+  normalizeBundles([BASE_BUNDLE, WEB_BUNDLE, 'before', SUITE_PACKAGE, '@michengai/dsh-btw', 'middle', '@michengai/dsh-simplify', '@michengai/dsh-btw', 'after']),
+  [BASE_BUNDLE, WEB_BUNDLE, 'before', ...MEMBER_PACKAGES, 'middle', 'after'],
+  '迁移旧 Suite 时，已单独安装的 BTW 和 Simplify 不得重复加载，第三方顺序必须保留',
+)
+assert.deepEqual(
+  normalizeBundles([BASE_BUNDLE, WEB_BUNDLE, 'before', '@michengai/dsh-simplify', 'after']),
+  [BASE_BUNDLE, WEB_BUNDLE, 'before', ...MEMBER_PACKAGES, 'after'],
+  '仅装新成员时也必须在其原位展开套件，不能遗漏原六个成员',
 )
 assert.throws(
   () => normalizeBundles([BASE_BUNDLE, 'third-party']),
@@ -131,5 +151,5 @@ assert.equal(
 assert.deepEqual(
   directInstallArgs('codex', 'https://registry.npmjs.org/', manifest),
   ['plugin', '--profile', 'codex', 'add', ...memberSpecs(manifest), '--save-exact', '--registry=https://registry.npmjs.org/'],
-  '一键入口必须把六个成员作为同一次 dsh plugin add 的直接参数',
+  '一键入口必须把所有成员作为同一次 dsh plugin add 的直接参数',
 )
