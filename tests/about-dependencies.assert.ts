@@ -15,10 +15,13 @@ const locales = readFileSync(new URL('../src/client/locales.ts', import.meta.url
 const manager = readFileSync(new URL('../src/dependency-manager.ts', import.meta.url), 'utf8')
 
 assert.equal(managedDependency('btw')?.packageName, '@michengai/dsh-btw', 'BTW 安装入口必须映射到正式包名')
+assert.equal(managedDependency('simplify')?.packageName, '@michengai/dsh-simplify', 'Simplify 安装入口必须映射到正式包名')
 const btwIndex = MANAGED_DEPENDENCIES.findIndex(dependency => dependency.id === 'btw')
-assert.deepEqual(MANAGED_DEPENDENCIES.slice(btwIndex - 1, btwIndex + 2).map(dependency => dependency.id), ['schedule', 'btw', 'market'], 'BTW 必须位于自研插件末尾、第三方市场之前')
+assert.deepEqual(MANAGED_DEPENDENCIES.slice(btwIndex - 1, btwIndex + 3).map(dependency => dependency.id), ['schedule', 'btw', 'simplify', 'market'], 'Simplify 必须紧随 BTW，并位于第三方市场之前')
 assert.equal(zh['about.dependency.btw'], 'BTW 旁问')
 assert.equal(en['about.dependency.btw'], 'BTW')
+assert.equal(zh['about.dependency.simplify'], 'Simplify')
+assert.equal(en['about.dependency.simplify'], 'Simplify')
 assert.equal(zh['about.dependency.archive'], '归档会话')
 assert.equal(en['about.dependency.archive'], 'Archived conversations')
 
@@ -35,6 +38,7 @@ assert.match(dependencies, /@michengai\/dsh-skills-manager/, '关于页必须声
 assert.match(dependencies, /@michengai\/dsh-archive-manager/, '关于页必须声明归档插件依赖')
 assert.match(dependencies, /@michengai\/dsh-im-connect/, '关于页必须声明 IM 插件依赖')
 assert.match(dependencies, /@michengai\/dsh-automation/, '关于页必须声明定时任务插件依赖')
+assert.match(dependencies, /@michengai\/dsh-simplify/, '关于页必须声明 Simplify 插件依赖')
 assert.match(dependencies, /packageName: 'dshmarket'/, '关于页必须声明第三方插件市场依赖')
 assert.match(dependencies, /id: 'im'/, 'about must declare im dependency id')
 assert.match(dependencies, /id: 'schedule'/, 'about must declare schedule dependency id')
