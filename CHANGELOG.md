@@ -6,34 +6,14 @@ This changelog records recent releases of DSH Codex UI and its one-click install
 
 ## 0.2.104 — 2026-09-06
 
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.21`.
-
-### Added
-
-- Moved Up/Down input history from BTW into Codex UI, with workspace persistence, legacy history import, and guards for drafts, IME, and candidate menus.
-- Added BTW at the end of the first-party About list with existing install and update actions; shortened the archive label to "Archived conversations".
-
-### Fixed
-
-- Capture only live appended messages after mounting, preventing duplicate history when opening, reloading, or replacing conversation windows. Messages sent while unmounted are not backfilled.
-- Preserve the history cursor during synchronous draft writes for consecutive Up/Down navigation, and resume live collection after window revision resets.
-- Declare the official input-trigger peer dependency and add contracts for the BTW package, display order, and localized names.
-
-### Validation
-
-- Type checking, 96 tests, the build, and 31 assertion scripts passed. Actual DSH interaction acceptance remains pending user testing after local installation.
+- Added input history: press Up/Down in an empty composer to recall previously sent text. Each project keeps its own history.
+- Added BTW to the About page, with version information and install/update actions.
+- Shortened the archive plugin label to "Archived conversations".
 
 ## suite-installer-v0.1.21 — 2026-09-06
 
-### Dependencies
-
-- Pin Codex UI to `0.2.104`, including input history, About-page updates, and their fixes.
-- Update Skills Manager, Agency Agents, and Automation to `0.1.40`, `0.1.32`, and `0.1.31`, respectively; keep Archive Manager at `0.1.30` and IM Connect at `0.1.34`.
-- Continue installing exact member versions with `--save-exact` for reproducible installations.
-
-### Release
-
-- Extract GitHub Release notes from both CHANGELOG files, with Chinese first and English second.
+- Updated the bundled Codex UI to `0.2.104`, adding Up/Down input history and a BTW entry on the About page.
+- Updated Skills Manager, Agency Agents, and Automation.
 
 ## 0.2.103 — 2026-09-04
 
