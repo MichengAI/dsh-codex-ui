@@ -55,6 +55,11 @@ jobs:
           fi
           node scripts/prepare-suite-installer-release.mjs "${args[@]}"
 
+      - name: 从 CHANGELOG 生成双语版本说明
+        run: |
+          version=$(node -p "require('./packages/dsh-codex-suite-installer/package.json').version")
+          node scripts/extract-release-notes.mjs "suite-installer-v$version" "$RUNNER_TEMP/release-notes.md"
+
       - name: 更新锁定文件
         run: pnpm install --lockfile-only
 
