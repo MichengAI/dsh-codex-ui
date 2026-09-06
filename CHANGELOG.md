@@ -4,6 +4,15 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.105 — 2026-09-06
+
+- Added Simplify directly below BTW on the About page, with version status, install, update, and bulk-update support.
+
+## suite-installer-v0.1.22 — 2026-09-06
+
+- Updated the bundled Codex UI to `0.2.105`, adding Simplify management to the About page.
+- Updated Automation to `0.1.32`; other Suite members remain unchanged.
+
 ## 0.2.104 — 2026-09-06
 
 - Added input history: press Up/Down in an empty composer to recall previously sent text. Each project keeps its own history.
