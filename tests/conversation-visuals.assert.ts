@@ -6,6 +6,22 @@ const sidebar = readFileSync(new URL('../src/client/CodexSidebar.tsx', import.me
 const navigator = readFileSync(new URL('../src/client/TurnNavigator.tsx', import.meta.url), 'utf8')
 const client = readFileSync(new URL('../src/client/index.ts', import.meta.url), 'utf8')
 
+assert.match(sidebar, /\.dcu-footer-actions \[data-testid="billing-trigger"\]\{[^}]*border:0[^}]*background:transparent[^}]*box-shadow:none[^}]*transform:none/, '费用入口必须融入侧栏，不保留独立卡片的边框、阴影和抬升')
+assert.match(sidebar, /\.dcu-footer-actions \[data-testid="billing-trigger-icon"\]\{[^}]*width:16px;height:20px[^}]*border:0/, '费用图标必须去掉方框并与侧栏图标同宽')
+assert.match(sidebar, /\[data-testid="billing-trigger-icon"\]\+span>span:first-child>span:last-child\{[^}]*font-size:16px;font-weight:600[^}]*letter-spacing:0/, '费用和 Token 主指标必须使用紧凑等宽数字，不依赖第三方哈希类名')
+assert.match(sidebar, /\.dcu-footer-actions \[data-testid="billing-trigger-today"\]\{[^}]*color:var\(--dcu-sidebar-navigation\);font-size:12px/, '费用辅助文字必须与设置同色并保持可读字号')
+for (const suffix of ['>span', '>span:last-child']) {
+  assert.ok(sidebar.includes(`[data-testid="billing-trigger-icon"]+span>span:first-child${suffix}{color:var(--dcu-sidebar-navigation);`), '费用标签、币种和金额必须与辅助文字、设置保持同色')
+}
+assert.match(sidebar, /\[data-testid="billing-rail-button"\]\)\:focus-visible\{[^}]*outline:2px solid var\(--dcu-sidebar-icon\)/, '费用宽态和窄轨入口必须保留可见键盘焦点')
+assert.match(sidebar, /\.dcu-footer-actions \[data-testid="billing-rail-button"\]\{[^}]*width:36px;height:36px/, '费用窄轨入口必须与现有图标按钮尺寸一致')
+for (const marker of ['billing-trigger-icon', 'billing-rail-button']) {
+  assert.ok(sidebar.includes(`.dcu-footer-actions [data-testid="${marker}"] svg{flex:none;width:24px;height:24px;stroke-width:1.5px}`), '费用图形只占 24px 画布中的 16px，宽态与窄轨必须补偿画布留白且禁止 flex 压缩')
+}
+assert.ok(sidebar.includes('.dcu-settings-seat [data-slot="settings.trigger"]>svg{color:var(--dcu-sidebar-icon)}'), '设置与费用图标必须使用同一侧栏颜色，穿过宿主 slot 包装定位图标')
+assert.ok(sidebar.includes('.dcu-footer-actions [data-testid="billing-trigger-icon"]+span{min-width:0;gap:2px;margin-left:4px}'), '费用文字整体右移，保留两行左对齐')
+assert.ok(sidebar.includes('.dcu-root:not(.dcu-compact) .dcu-settings-seat [data-slot="settings.trigger"]>span{margin-left:4px}'), '设置文字必须同步右移，不能改变窄轨布局')
+
 assert.doesNotMatch(sidebar, /--dsh-chat-content-width:\s*800px/, '会话内容列必须保留宿主自适应和拖拽宽度')
 assert.match(sidebar, /--dsh-composer-card-max-width:calc\(var\(--dsh-chat-content-width\) \+ 32px\)/, '输入卡片必须继续从宿主会话宽度轴派生')
 assert.doesNotMatch(sidebar, /\[data-chat-flow\]\{gap:/, '不得在宿主逐行间距之外叠加旧版 flex gap')
@@ -65,6 +81,8 @@ assert.match(sidebar, /background:#eef7f5/, '浅色侧栏必须使用 Codex 风�
 assert.match(sidebar, /body\[data-ds-dark-theme\] \.dcu-root\{background:#1d2120/, '暗色侧栏必须使用 Codex 风格的深灰绿背景')
 assert.match(sidebar, /body\[data-we-sidebar-glass\] \.dcu-root::before\{[^}]*pointer-events:none[^}]*--we-sidebar-color[^}]*--we-sidebar-alpha[^}]*backdrop-filter:blur\(var\(--we-sidebar-blur/, 'Wallpaper Engine 玻璃必须在不拦截点击的独立背景层复用颜色、透明度和模糊变量')
 assert.doesNotMatch(sidebar, /\.dcu-root\{[^}]*(?:backdrop-filter|transform|contain):/, '侧栏根节点不得创建 fixed 包含块，否则设置和搜索弹窗会被限制在侧栏内')
+assert.doesNotMatch(sidebar, /\.dcu-root\s*\{(?:[^{}]*;)?\s*(?:-webkit-)?(?:filter|perspective)\s*:(?!\s*none\s*(?:!important\s*)?[;}])[^;}]+/i, '侧栏根节点不得通过非 none 的 filter 或 perspective 创建 fixed 包含块')
+assert.doesNotMatch(sidebar, /\.dcu-root\s*\{(?:[^{}]*;)?\s*will-change\s*:[^;}]*\b(?:transform|translate|rotate|scale|filter|backdrop-filter|perspective|contain)\b/i, '侧栏根节点不得通过 will-change 提前创建 fixed 包含块')
 assert.doesNotMatch(sidebar, /\.dcu-root\{[^}]*(?:isolation|z-index):/, '侧栏根节点不得隔离层叠上下文，否则弹窗会被主会话内容遮挡')
 assert.match(sidebar, /body\[data-ds-dark-theme\]\[data-we-sidebar-glass\] \.dcu-root::before\{[^}]*--we-sidebar-color[^}]*--we-sidebar-alpha/, '暗色侧栏必须单独降低 Wallpaper Engine 玻璃底色强度')
 assert.match(sidebar, /@supports not \(\(backdrop-filter:blur\(1px\)\) or \(-webkit-backdrop-filter:blur\(1px\)\)\)\{body\[data-we-sidebar-glass\] \.dcu-root\{background:#eef7f5/, '浏览器不支持毛玻璃时必须恢复浅色实底保证文字可读')
