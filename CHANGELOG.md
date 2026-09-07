@@ -4,6 +4,17 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## suite-installer-v0.1.29 - 2026-09-08
+
+- Updated the suite to Codex UI `0.2.111` and IM Connect `0.1.38`, keeping the channel sidebar compatible with the authenticated `/api/dsh-im-connect/channels` endpoint.
+- Refreshed exact member versions from the official npm registry for reproducible one-click installation.
+
+## 0.2.111 - 2026-09-08
+
+### Fixed
+
+- Updated the channel sidebar to use `/api/dsh-im-connect/channels`, matching IM Connect `0.1.38` after removal of the old management endpoint.
+
 ## suite-installer-v0.1.28 - 2026-09-08
 
 - Updated the bundled Codex UI to `0.2.110`, including standalone DSH Web plugin-update recovery guidance.

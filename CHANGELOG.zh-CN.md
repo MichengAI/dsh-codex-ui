@@ -4,6 +4,17 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## suite-installer-v0.1.29 - 2026-09-08
+
+- 将套件更新至 Codex UI `0.2.111` 和 IM Connect `0.1.38`，保证频道侧栏兼容已认证的 `/api/dsh-im-connect/channels` 接口。
+- 从官方 npm 刷新成员精确版本，保证一键安装可复现。
+
+## 0.2.111 - 2026-09-08
+
+### 修复
+
+- 频道侧栏改用 `/api/dsh-im-connect/channels`，与删除旧管理地址后的 IM Connect `0.1.38` 保持一致。
+
 ## suite-installer-v0.1.28 - 2026-09-08
 
 - 将套件中的 Codex UI 更新至 `0.2.110`，包含独立 DSH Web 的插件更新恢复指引。
