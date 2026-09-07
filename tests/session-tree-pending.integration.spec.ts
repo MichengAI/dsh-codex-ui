@@ -435,7 +435,49 @@ test('custom group menu renames without changing identity, membership, order or 
   } finally { await view.dispose() }
 })
 
-test('Host 读取失败时从同步缓存恢复分组并继续写回新操作', async () => {
+test.each(['create', 'rename'])('invalid group %s does not override a pending Host hydration', async action => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const workspaceGroups = [
+    { id: 'first', title: 'First', workspaceIds: [] },
+    { id: 'second', title: 'Second', workspaceIds: [] },
+  ]
+  const hostGroups = [{ ...workspaceGroups[0], title: 'Host title' }, workspaceGroups[1]]
+  let resolveHost!: (response: Response) => void
+  const hostResponse = new Promise<Response>(resolve => { resolveHost = resolve })
+  const fetcher = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => init?.method === 'PUT' ? Promise.resolve(new Response('{}')) : hostResponse)
+  vi.stubGlobal('fetch', fetcher)
+  window.localStorage.setItem(WORKSPACE_GROUPS_STORAGE_KEY, JSON.stringify({ version: 1, workspaceGroups, pendingHostSync: false }))
+  const workspaces = { baselinesReady: true, archivedSessionIds: [], items: [] }
+  const view = await render(createElement(CodexWorkspaceBrowser, {
+    ...sessionActions, wide: true, useSessions: createSessionStore(createSession('unused', 'unused', undefined)),
+    useSessionPendingInteraction: useEmptyPendingInteractions,
+    useWorkspaces: (selector: (snapshot: typeof workspaces) => unknown) => selector(workspaces), t,
+    deleteWorkspace: vi.fn(), insertSessionBefore: vi.fn(), insertWorkspaceBefore: vi.fn(), openPath: vi.fn(), renameWorkspace: vi.fn(), startSession: vi.fn(),
+  } as never))
+  try {
+    if (action === 'create') {
+      await act(async () => { view.container.querySelector<HTMLButtonElement>('[aria-label="workspace.createGroup"]')!.click() })
+    } else {
+      await act(async () => { view.container.querySelector<HTMLButtonElement>('.dcu-wb-collection button[aria-haspopup="menu"]')!.click() })
+      await act(async () => { [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(button => button.textContent === 'workspace.renameGroup')!.click() })
+    }
+    const input = document.querySelector<HTMLInputElement>('[role="dialog"] input')!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Second')
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () => { [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(button => button.textContent === 'sessions.save')!.click() })
+    expect(document.querySelector('[role="dialog"] [role="alert"]')).not.toBeNull()
+    await act(async () => { resolveHost(new Response(JSON.stringify({ exists: true, pinnedWorkspaceIds: [], workspaceGroups: hostGroups }))) })
+    const cache = JSON.parse(window.localStorage.getItem(WORKSPACE_GROUPS_STORAGE_KEY)!)
+    expect(cache.workspaceGroups).toEqual(hostGroups)
+    expect(cache.pendingHostSync).toBe(false)
+    expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(0)
+  } finally { await view.dispose() }
+})
+
+test.each([{ isComposing: true }, { keyCode: 229 }])('Host 读取失败时新建分组保护输入法 Enter（%j），普通 Enter 仍可保存', async composing => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const session = createSession('cached-workspace-session', '缓存任务会话', undefined)
   const useSessions = createSessionStore(session)
   const workspaces = {
@@ -480,11 +522,17 @@ test('Host 读取失败时从同步缓存恢复分组并继续写回新操作', 
       setValue?.call(input, '故障期间新建')
       input?.dispatchEvent(new Event('input', { bubbles: true }))
     })
-    const saveButton = [...document.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === 'sessions.save')
     await act(async () => {
-      saveButton?.click()
+      input?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, ...composing }))
+    })
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull()
+    expect(JSON.parse(window.localStorage.getItem(WORKSPACE_GROUPS_STORAGE_KEY) ?? '{}').workspaceGroups).toHaveLength(1)
+    expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(0)
+    await act(async () => {
+      input?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
       await Promise.resolve()
     })
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
     expect(fetcher.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(true)
     expect(JSON.parse(window.localStorage.getItem(WORKSPACE_GROUPS_STORAGE_KEY) ?? '{}').workspaceGroups).toHaveLength(2)
   } finally {
