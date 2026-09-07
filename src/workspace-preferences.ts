@@ -2,12 +2,12 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
-import { MAX_WORKSPACE_ID_LENGTH, parseWorkspaceGroups, type WorkspaceGroup } from './workspace-groups.ts'
+import { MAX_WORKSPACE_ID_LENGTH, parseStoredWorkspaceGroups, type WorkspaceGroup } from './workspace-groups.ts'
 
 export const WORKSPACE_PREFERENCES_FILE = '.dsh-codex-ui-preferences.json'
 export const WORKSPACE_PREFERENCES_VERSION = 2
 export const MAX_PINNED_WORKSPACE_IDS = 1_000
-export { MAX_WORKSPACE_ID_LENGTH, parseWorkspaceGroups, type WorkspaceGroup } from './workspace-groups.ts'
+export { MAX_WORKSPACE_ID_LENGTH, parseWorkspaceGroups, parseStoredWorkspaceGroups, type WorkspaceGroup } from './workspace-groups.ts'
 
 export type WorkspacePreferences = {
   version: typeof WORKSPACE_PREFERENCES_VERSION
@@ -36,7 +36,7 @@ function parseWorkspacePreferences(value: unknown): WorkspacePreferences | undef
   if (pinnedWorkspaceIds === undefined) return undefined
   if (record.version === 1) return { version: WORKSPACE_PREFERENCES_VERSION, pinnedWorkspaceIds, workspaceGroups: [] }
   if (record.version !== WORKSPACE_PREFERENCES_VERSION) return undefined
-  const workspaceGroups = parseWorkspaceGroups(record.workspaceGroups)
+  const workspaceGroups = parseStoredWorkspaceGroups(record.workspaceGroups)
   return workspaceGroups === undefined ? undefined : { version: WORKSPACE_PREFERENCES_VERSION, pinnedWorkspaceIds, workspaceGroups }
 }
 
@@ -62,7 +62,7 @@ let writeQueue: Promise<void> = Promise.resolve()
 /** 串行、原子保存，避免快速拖动排序产生乱序或半截 JSON。 */
 export function writeWorkspacePreferences(pinnedWorkspaceIds: readonly string[], workspaceGroups: readonly WorkspaceGroup[] = [], path = workspacePreferencesPath()): Promise<void> {
   const normalized = parsePinnedWorkspaceIds([...pinnedWorkspaceIds])
-  const normalizedGroups = parseWorkspaceGroups([...workspaceGroups])
+  const normalizedGroups = parseStoredWorkspaceGroups([...workspaceGroups])
   if (normalized === undefined || normalizedGroups === undefined) return Promise.reject(new Error('工作区偏好数据无效。'))
   const task = writeQueue.catch(() => undefined).then(async () => {
     await mkdir(dirname(path), { recursive: true })

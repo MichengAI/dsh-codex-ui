@@ -28,8 +28,8 @@ export class WorkspaceGroupError extends Error {
   }
 }
 
-/** 对持久化分组做严格校验，避免一个项目同时出现在多个分组。 */
-export function parseWorkspaceGroups(value: unknown): WorkspaceGroup[] | undefined {
+/** 校验结构和归属；存储兼容模式保留旧 locale 下合法的大小写变体名称。 */
+function parseGroups(value: unknown, preserveCaseVariants: boolean): WorkspaceGroup[] | undefined {
   if (!Array.isArray(value) || value.length > MAX_WORKSPACE_GROUPS) return undefined
   const groupIds = new Set<string>()
   const groupTitles = new Set<string>()
@@ -41,22 +41,34 @@ export function parseWorkspaceGroups(value: unknown): WorkspaceGroup[] | undefin
     const id = typeof group.id === 'string' ? group.id.trim() : ''
     const title = typeof group.title === 'string' ? group.title.trim() : ''
     if (id === '' || id.length > MAX_WORKSPACE_GROUP_ID_LENGTH || title === '' || title.length > MAX_WORKSPACE_GROUP_TITLE_LENGTH) return undefined
-    if (groupIds.has(id) || groupTitles.has(title.toLocaleLowerCase())) return undefined
+    const titleKey = preserveCaseVariants ? title : title.toLowerCase()
+    if (groupIds.has(id) || groupTitles.has(titleKey)) return undefined
     if (!Array.isArray(group.workspaceIds) || group.workspaceIds.length > MAX_GROUPED_WORKSPACE_IDS) return undefined
     const normalizedIds = [...new Set(group.workspaceIds)]
     if (!normalizedIds.every(workspaceId => typeof workspaceId === 'string' && workspaceId.trim() !== '' && workspaceId.length <= MAX_WORKSPACE_ID_LENGTH)) return undefined
     if (normalizedIds.some(workspaceId => workspaceIds.has(workspaceId))) return undefined
     groupIds.add(id)
-    groupTitles.add(title.toLocaleLowerCase())
+    groupTitles.add(titleKey)
     normalizedIds.forEach(workspaceId => workspaceIds.add(workspaceId))
     groups.push({ id, title, workspaceIds: normalizedIds })
   }
   return groups
 }
 
+/** 固定 Unicode 小写规则，不依赖浏览器或 Host 的默认 locale。 */
+export function parseWorkspaceGroups(value: unknown): WorkspaceGroup[] | undefined {
+  return parseGroups(value, false)
+}
+
+/** 旧数据可往返保存且不改名；新名称的大小写判重由创建、重命名操作执行。 */
+export function parseStoredWorkspaceGroups(value: unknown): WorkspaceGroup[] | undefined {
+  return parseGroups(value, true)
+}
+
 /** 新建空分组；项目只有被显式移动后才会进入其中。 */
 export function createWorkspaceGroup(groups: readonly WorkspaceGroup[], group: Pick<WorkspaceGroup, 'id' | 'title'>): WorkspaceGroup[] {
-  const next = parseWorkspaceGroups([...groups, { ...group, workspaceIds: [] }])
+  if (groups.some(existing => existing.title.toLowerCase() === group.title.trim().toLowerCase())) throw new WorkspaceGroupError('group-invalid')
+  const next = parseStoredWorkspaceGroups([...groups, { ...group, workspaceIds: [] }])
   if (next === undefined) throw new WorkspaceGroupError('group-invalid')
   return next
 }
@@ -66,7 +78,7 @@ export function renameWorkspaceGroup(groups: readonly WorkspaceGroup[], groupId:
   if (!groups.some(group => group.id === groupId)) throw new WorkspaceGroupError('group-missing')
   const normalizedTitle = title.trim()
   if (normalizedTitle === '' || normalizedTitle.length > MAX_WORKSPACE_GROUP_TITLE_LENGTH
-    || groups.some(group => group.id !== groupId && group.title.toLocaleLowerCase() === normalizedTitle.toLocaleLowerCase())) {
+    || groups.some(group => group.id !== groupId && group.title.toLowerCase() === normalizedTitle.toLowerCase())) {
     throw new WorkspaceGroupError('group-invalid')
   }
   return groups.map(group => group.id === groupId ? { ...group, title: normalizedTitle } : group)

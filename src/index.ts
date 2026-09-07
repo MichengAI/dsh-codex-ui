@@ -5,7 +5,7 @@ import { authorizedExplorerWorkspacePath } from './explorer-path-policy.ts'
 import { hostServices } from './host-services.ts'
 import { ForegroundExplorer } from './native-explorer.ts'
 import { moveSessionToWorkspace, SessionMoveError } from './session-migration.ts'
-import { parsePinnedWorkspaceIds, parseWorkspaceGroups, readWorkspacePreferences, WORKSPACE_PREFERENCES_VERSION, writeWorkspacePreferences } from './workspace-preferences.ts'
+import { parsePinnedWorkspaceIds, parseStoredWorkspaceGroups, readWorkspacePreferences, WORKSPACE_PREFERENCES_VERSION, writeWorkspacePreferences } from './workspace-preferences.ts'
 
 const connectorsEndpoint = '/api/michengai/codex-ui/connectors'
 const dependenciesEndpoint = '/api/michengai/codex-ui/dependencies'
@@ -233,9 +233,13 @@ export function apply(ctx: Context): void {
             const workspaceGroups = record === undefined
               ? undefined
               : 'workspaceGroups' in record
-                ? parseWorkspaceGroups(record.workspaceGroups)
+                ? parseStoredWorkspaceGroups(record.workspaceGroups)
                 : existing.workspaceGroups
-            if (pinnedWorkspaceIds === undefined || workspaceGroups === undefined) {
+            // 仅保留同一 ID 的既有名称冲突；新增或改名不能绕过固定大小写判重。
+            const introducesTitleConflict = workspaceGroups?.some(group =>
+              !existing.workspaceGroups.some(previous => previous.id === group.id && previous.title === group.title)
+              && workspaceGroups.some(other => other.id !== group.id && other.title.toLowerCase() === group.title.toLowerCase())) === true
+            if (pinnedWorkspaceIds === undefined || workspaceGroups === undefined || introducesTitleConflict) {
               response.writeHead(400, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
               response.end(JSON.stringify({ error: '工作区偏好格式无效。' }))
               return

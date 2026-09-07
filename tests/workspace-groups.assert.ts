@@ -38,6 +38,21 @@ assert.equal(parseWorkspaceGroups([{ id: 'one', title: '重复项目', workspace
 const created = createWorkspaceGroup(initial, { id: 'agent', title: '智能体与应用开发' })
 assert.deepEqual(created.at(-1), { id: 'agent', title: '智能体与应用开发', workspaceIds: [] })
 
+// 模拟运行环境采用土耳其语默认大小写规则，业务判重仍必须使用固定 Unicode 映射。
+const originalLocaleLowerCase = String.prototype.toLocaleLowerCase
+String.prototype.toLocaleLowerCase = function () { return originalLocaleLowerCase.call(this, 'tr') }
+try {
+  const turkishNames = ['I', 'İ', 'ı'].map((title, index) => ({ id: `letter-${index}`, title, workspaceIds: [] }))
+  assert.deepEqual(parseWorkspaceGroups(turkishNames), turkishNames)
+  assert.equal(parseWorkspaceGroups([...turkishNames, { id: 'lower-i', title: 'i', workspaceIds: [] }]), undefined)
+  assert.throws(() => createWorkspaceGroup(turkishNames, { id: 'lower-i', title: 'i' }), WorkspaceGroupError)
+  assert.throws(() => workspaceGroupActions.renameWorkspaceGroup(turkishNames, 'letter-2', 'i'), WorkspaceGroupError)
+  assert.equal(workspaceGroupActions.renameWorkspaceGroup(turkishNames, 'letter-0', 'i')[0].title, 'i')
+  assert.equal(parseWorkspaceGroups([{ id: 'one', title: 'İ', workspaceIds: [] }, { id: 'two', title: 'i\u0307', workspaceIds: [] }]), undefined)
+} finally {
+  String.prototype.toLocaleLowerCase = originalLocaleLowerCase
+}
+
 assert.deepEqual(
   assignWorkspaceToGroup(initial, 'archive', 'platform'),
   [

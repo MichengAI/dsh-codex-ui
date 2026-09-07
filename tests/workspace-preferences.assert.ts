@@ -3,6 +3,8 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { apply, RequestBodyTooLargeError, readRequestBody } from '../src/index.ts'
+import { readHostWorkspacePreferences, writeHostWorkspacePreferences, readWorkspaceGroupsCache, saveWorkspaceGroupsCache, WORKSPACE_GROUPS_STORAGE_KEY } from '../src/client/pinned-workspaces.ts'
+import { createWorkspaceGroup, renameWorkspaceGroup } from '../src/workspace-groups.ts'
 import {
   MAX_PINNED_WORKSPACE_IDS,
   MAX_WORKSPACE_ID_LENGTH,
@@ -15,6 +17,7 @@ import {
 
 const directory = await mkdtemp(join(tmpdir(), 'dcu-workspace-preferences-'))
 const path = join(directory, WORKSPACE_PREFERENCES_FILE)
+const legacyCaseGroups = [{ id: 'upper', title: 'I', workspaceIds: ['one'] }, { id: 'lower', title: 'i', workspaceIds: ['two'] }]
 
 try {
   assert.deepEqual(await readWorkspacePreferences(path), { version: 2, pinnedWorkspaceIds: [], workspaceGroups: [], exists: false })
@@ -35,6 +38,26 @@ try {
 
   await writeFile(path, JSON.stringify({ version: 1, pinnedWorkspaceIds: ['legacy'] }), 'utf8')
   assert.deepEqual(await readWorkspacePreferences(path), { version: 2, pinnedWorkspaceIds: ['legacy'], workspaceGroups: [], exists: true })
+
+  // 旧 locale 下合法的大小写冲突组必须保留 ID、标题、成员，不能因规则升级清空。
+  await writeFile(path, JSON.stringify({ version: 2, pinnedWorkspaceIds: [], workspaceGroups: legacyCaseGroups }), 'utf8')
+  assert.deepEqual((await readWorkspacePreferences(path)).workspaceGroups, legacyCaseGroups)
+  await writeWorkspacePreferences([], legacyCaseGroups, path)
+  assert.deepEqual((await readWorkspacePreferences(path)).workspaceGroups, legacyCaseGroups)
+  const cacheValues = new Map([[WORKSPACE_GROUPS_STORAGE_KEY, JSON.stringify({ version: 1, workspaceGroups: legacyCaseGroups, pendingHostSync: false })]])
+  const cacheStorage = { getItem: (key: string) => cacheValues.get(key) ?? null, setItem: (key: string, value: string) => { cacheValues.set(key, value) } } as Storage
+  assert.deepEqual(readWorkspaceGroupsCache(cacheStorage).workspaceGroups, legacyCaseGroups)
+  saveWorkspaceGroupsCache(cacheStorage, legacyCaseGroups, true)
+  assert.deepEqual(readWorkspaceGroupsCache(cacheStorage), { workspaceGroups: legacyCaseGroups, pendingHostSync: true })
+  const hostPayload = { exists: true, pinnedWorkspaceIds: [], workspaceGroups: legacyCaseGroups }
+  assert.deepEqual((await readHostWorkspacePreferences(async () => new Response(JSON.stringify(hostPayload)))).workspaceGroups, legacyCaseGroups)
+  await writeHostWorkspacePreferences([], legacyCaseGroups, async (_input, init) => {
+    assert.deepEqual(JSON.parse(String(init?.body)).workspaceGroups, legacyCaseGroups)
+    return new Response('{}')
+  })
+  assert.deepEqual(createWorkspaceGroup(legacyCaseGroups, { id: 'new', title: 'Other' }).slice(0, 2), legacyCaseGroups)
+  assert.throws(() => createWorkspaceGroup(legacyCaseGroups, { id: 'new', title: 'I' }))
+  assert.deepEqual(renameWorkspaceGroup(legacyCaseGroups, 'upper', 'Unique'), [{ ...legacyCaseGroups[0], title: 'Unique' }, legacyCaseGroups[1]])
 
   await writeFile(path, '{broken', 'utf8')
   await assert.rejects(readWorkspacePreferences(path), SyntaxError)
@@ -127,6 +150,23 @@ try {
 
   await invoke('PUT', [JSON.stringify({ pinnedWorkspaceIds: ['two'] })], { 'sec-fetch-site': 'same-origin' })
   assert.deepEqual((await readWorkspacePreferences(join(endpointDirectory, WORKSPACE_PREFERENCES_FILE))).workspaceGroups, [{ id: 'knowledge', title: '数据与知识管理', workspaceIds: ['one'] }], '旧客户端更新置顶时必须保留服务端已有分组')
+
+  assert.equal((await invoke('PUT', [JSON.stringify({ pinnedWorkspaceIds: [], workspaceGroups: legacyCaseGroups })])).status, 400, 'API must reject newly introduced case-insensitive duplicates')
+
+  await writeFile(join(endpointDirectory, WORKSPACE_PREFERENCES_FILE), JSON.stringify({ version: 2, pinnedWorkspaceIds: [], workspaceGroups: legacyCaseGroups }), 'utf8')
+  const legacySaved = await invoke('PUT', [JSON.stringify({ pinnedWorkspaceIds: ['one'], workspaceGroups: legacyCaseGroups })])
+  assert.equal(legacySaved.status, 200)
+  assert.deepEqual(JSON.parse((await invoke('GET')).body ?? '{}').workspaceGroups, legacyCaseGroups)
+  const newConflict = [...legacyCaseGroups, { id: 'another', title: ' I ', workspaceIds: [] }]
+  assert.equal((await invoke('PUT', [JSON.stringify({ pinnedWorkspaceIds: [], workspaceGroups: newConflict })])).status, 400)
+  const renamedConflict = legacyCaseGroups.map(group => group.id === 'upper' ? { ...group, title: 'i' } : group)
+  assert.equal((await invoke('PUT', [JSON.stringify({ pinnedWorkspaceIds: [], workspaceGroups: renamedConflict })])).status, 400)
+
+  const distinctGroups = [{ id: 'alpha', title: 'Alpha', workspaceIds: [] }, { id: 'other', title: 'Other', workspaceIds: [] }]
+  assert.equal((await invoke('PUT', [JSON.stringify({ pinnedWorkspaceIds: [], workspaceGroups: distinctGroups })])).status, 200)
+  const caseOnlyConflict = distinctGroups.map(group => group.id === 'other' ? { ...group, title: 'ALPHA' } : group)
+  assert.equal((await invoke('PUT', [JSON.stringify({ pinnedWorkspaceIds: [], workspaceGroups: caseOnlyConflict })])).status, 400, 'changed IDs/titles cannot acquire legacy conflict exemptions')
+  assert.deepEqual(JSON.parse((await invoke('GET')).body ?? '{}').workspaceGroups, distinctGroups)
 
   assert.equal((await invoke('PUT', ['{}'], { 'sec-fetch-site': 'cross-site' })).status, 403)
   assert.equal((await invoke('PUT', [], { 'content-length': String(33 * 1024) })).status, 413)

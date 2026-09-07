@@ -332,6 +332,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
   const [renameGroupDraft, setRenameGroupDraft] = useState('')
   const [renameGroupError, setRenameGroupError] = useState<string>()
   const groupActionTriggerRef = useRef<HTMLButtonElement>()
+  const projectsSectionButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => { writeTreeExpansionState(storage(), WORKSPACE_EXPANSION_STORAGE_KEY, expanded) }, [expanded])
 
@@ -548,7 +549,10 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
     setRenameGroupId(undefined)
     setRenameGroupDraft('')
     setRenameGroupError(undefined)
-    groupActionTriggerRef.current?.focus()
+    const trigger = groupActionTriggerRef.current
+    const focusTarget = trigger?.isConnected ? trigger : projectsSectionButtonRef.current
+    groupActionTriggerRef.current = undefined
+    focusTarget?.focus()
   }
   const submitRenameGroup = (): void => {
     if (renameGroupId === undefined || renameGroupDraft.trim() === '') return
@@ -815,7 +819,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
         <div className="dcu-wb-section-body" data-open={sectionOpen('pinned')}><div className="dcu-wb-pinned-list">{pinDragActive && pinnedGroups.length === 0 && <div className={`dcu-wb-pin-start${pinnedHeaderDrop?.kind === 'empty' ? ' dcu-wb-drop' : ''}`} onDragOver={(event) => { event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = 'move'; setWorkspaceDropTarget({ zone: 'pinned', beforeId: undefined }) }} />}{pinnedGroups.length === 0 && <div className="dcu-wb-empty">{t('workspace.pinnedEmpty')}</div>}{pinnedGroups.map(workspace => renderGroup(workspace, 'pinned'))}{pinDragActive && pinnedGroups.length > 0 && <div className={`dcu-wb-pin-end${workspaceDropTarget?.zone === 'pinned' && workspaceDropTarget.beforeId === undefined ? ' dcu-wb-drop' : ''}`} onDragOver={(event) => { if (!pinDragActive) return; event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = 'move'; const lastId = pinnedGroupIds[pinnedGroupIds.length - 1]; if (lastId === undefined || workspaceDragId === undefined) return; const beforeId = reorderDropBeforeId(pinnedGroupIds, workspaceDragId, lastId, true); setWorkspaceDropTarget(beforeId === null ? undefined : { zone: 'pinned', beforeId }) }} />}</div></div>
       </section>
       <section className="dcu-wb-section" aria-label={t('workspace.projects')} onDropCapture={(event) => { const dragged = readWorkspaceDrag(event.dataTransfer, workspaceDragId); if (dragged !== undefined && projectPinned(dragged)) setPinnedWorkspaceIds(ids => ids.filter(id => id !== dragged)) }}>
-        <div className="dcu-wb-section-head"><button type="button" className="dcu-wb-section-label" aria-expanded={sectionOpen('projects')} onClick={() => { toggleSection('projects') }}>{t('workspace.projects')}<span className="dcu-wb-section-caret" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="M6.25 4.25 10.25 8 6.25 11.75" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span></button><span className="dcu-wb-actions"><button type="button" className="dcu-wb-more" aria-label={t('workspace.createGroup')} title={t('workspace.createGroup')} onClick={(event) => { event.stopPropagation(); setGroupTitleDraft(''); setError(undefined); setCreateGroupOpen(true) }}><IconPlusOutline16 size={16} /></button></span></div>
+        <div className="dcu-wb-section-head"><button type="button" className="dcu-wb-section-label" ref={projectsSectionButtonRef} aria-expanded={sectionOpen('projects')} onClick={() => { toggleSection('projects') }}>{t('workspace.projects')}<span className="dcu-wb-section-caret" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="M6.25 4.25 10.25 8 6.25 11.75" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span></button><span className="dcu-wb-actions"><button type="button" className="dcu-wb-more" aria-label={t('workspace.createGroup')} title={t('workspace.createGroup')} onClick={(event) => { event.stopPropagation(); setGroupTitleDraft(''); setError(undefined); setCreateGroupOpen(true) }}><IconPlusOutline16 size={16} /></button></span></div>
         <div className="dcu-wb-section-body" data-open={sectionOpen('projects')}><div className="dcu-wb-collections">{workspaceGroups.map(renderWorkspaceCollection)}{workspaceGroups.length > 0 && renderUngroupedCollection()}{workspaceGroups.length === 0 && ungroupedGroups.map(workspace => renderGroup(workspace, 'projects'))}{workspaceGroups.length === 0 && ungroupedGroups.length === 0 && <div className="dcu-wb-empty">{t('workspace.empty')}</div>}</div></div>
       </section>
       <section className="dcu-wb-section" aria-label={t('workspace.recent')}>

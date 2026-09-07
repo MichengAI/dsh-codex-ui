@@ -435,6 +435,42 @@ test('custom group menu renames without changing identity, membership, order or 
   } finally { await view.dispose() }
 })
 
+test.each(['cancel', 'escape'])('rename dismissal via %s restores focus when Host hydration removes the trigger', async dismissal => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const workspaceGroups = [{ id: 'cached', title: 'Cached', workspaceIds: [] }]
+  let resolveHost!: (response: Response) => void
+  const hostResponse = new Promise<Response>(resolve => { resolveHost = resolve })
+  const fetcher = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => init?.method === 'PUT' ? Promise.resolve(new Response('{}')) : hostResponse)
+  vi.stubGlobal('fetch', fetcher)
+  window.localStorage.setItem(WORKSPACE_GROUPS_STORAGE_KEY, JSON.stringify({ version: 1, workspaceGroups, pendingHostSync: false }))
+  const workspaces = { baselinesReady: true, archivedSessionIds: [], items: [] }
+  const view = await render(createElement(CodexWorkspaceBrowser, {
+    ...sessionActions, wide: true, useSessions: createSessionStore(createSession('unused', 'unused', undefined)),
+    useSessionPendingInteraction: useEmptyPendingInteractions,
+    useWorkspaces: (selector: (snapshot: typeof workspaces) => unknown) => selector(workspaces), t,
+    deleteWorkspace: vi.fn(), insertSessionBefore: vi.fn(), insertWorkspaceBefore: vi.fn(), openPath: vi.fn(), renameWorkspace: vi.fn(), startSession: vi.fn(),
+  } as never))
+  try {
+    const trigger = view.container.querySelector<HTMLButtonElement>('.dcu-wb-collection button[aria-haspopup="menu"]')!
+    const fallbackButton = view.container.querySelector<HTMLButtonElement>('[aria-label="workspace.projects"] .dcu-wb-section-label')!
+    await act(async () => { trigger.click() })
+    await act(async () => { [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(button => button.textContent === 'workspace.renameGroup')!.click() })
+    const input = document.querySelector<HTMLInputElement>('[role="dialog"] input')!
+    expect(document.activeElement).toBe(input)
+    await act(async () => { resolveHost(new Response(JSON.stringify({ exists: true, pinnedWorkspaceIds: [], workspaceGroups: [] }))) })
+    expect(trigger.isConnected).toBe(false)
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull()
+    await act(async () => {
+      if (dismissal === 'escape') input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+      else [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(button => button.textContent === 'sessions.cancel')!.click()
+    })
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+    expect(document.activeElement).toBe(fallbackButton)
+    expect(JSON.parse(window.localStorage.getItem(WORKSPACE_GROUPS_STORAGE_KEY)!).workspaceGroups).toEqual([])
+    expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(0)
+  } finally { await view.dispose() }
+})
+
 test.each(['create', 'rename'])('invalid group %s does not override a pending Host hydration', async action => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const workspaceGroups = [

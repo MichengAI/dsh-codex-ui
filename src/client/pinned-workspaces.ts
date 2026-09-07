@@ -1,5 +1,5 @@
 /** 浏览器本地持久化键；用于工作区偏好的首帧恢复与 Host 故障兜底。 */
-import { parseWorkspaceGroups, pruneWorkspaceGroups, type WorkspaceGroup } from '../workspace-groups.ts'
+import { parseStoredWorkspaceGroups, pruneWorkspaceGroups, type WorkspaceGroup } from '../workspace-groups.ts'
 
 export const PINNED_WORKSPACES_STORAGE_KEY = 'dsh-codex-ui.pinned-workspace-ids'
 export const WORKSPACE_GROUPS_STORAGE_KEY = 'dsh-codex-ui.workspace-groups.v1'
@@ -79,7 +79,7 @@ export async function readHostWorkspacePreferences(fetcher: Fetcher = fetch): Pr
   if (payload === null || typeof payload !== 'object') throw new Error('置顶偏好响应格式无效。')
   const record = payload as Record<string, unknown>
   const workspaceGroupsSupported = Object.prototype.hasOwnProperty.call(record, 'workspaceGroups')
-  const workspaceGroups = workspaceGroupsSupported ? parseWorkspaceGroups(record.workspaceGroups) : []
+  const workspaceGroups = workspaceGroupsSupported ? parseStoredWorkspaceGroups(record.workspaceGroups) : []
   if (typeof record.exists !== 'boolean' || !Array.isArray(record.pinnedWorkspaceIds) || !record.pinnedWorkspaceIds.every(id => typeof id === 'string') || workspaceGroups === undefined) {
     throw new Error('置顶偏好响应格式无效。')
   }
@@ -87,7 +87,7 @@ export async function readHostWorkspacePreferences(fetcher: Fetcher = fetch): Pr
 }
 
 export async function writeHostWorkspacePreferences(pinnedWorkspaceIds: readonly string[], workspaceGroups: readonly WorkspaceGroup[], fetcher: Fetcher = fetch): Promise<void> {
-  const groups = parseWorkspaceGroups([...workspaceGroups])
+  const groups = parseStoredWorkspaceGroups([...workspaceGroups])
   if (groups === undefined) throw new Error('工作区分组数据无效。')
   const response = await fetcher(WORKSPACE_PREFERENCES_ENDPOINT, {
     method: 'PUT',
@@ -163,7 +163,7 @@ export function readWorkspaceGroupsCache(storage: Storage | undefined): Workspac
     const value: unknown = JSON.parse(storage.getItem(WORKSPACE_GROUPS_STORAGE_KEY) ?? '{"version":1,"workspaceGroups":[],"pendingHostSync":false}')
     if (value === null || typeof value !== 'object') return { workspaceGroups: [], pendingHostSync: false }
     const record = value as Record<string, unknown>
-    const workspaceGroups = record.version === 1 ? parseWorkspaceGroups(record.workspaceGroups) : undefined
+    const workspaceGroups = record.version === 1 ? parseStoredWorkspaceGroups(record.workspaceGroups) : undefined
     if (workspaceGroups === undefined || typeof record.pendingHostSync !== 'boolean') return { workspaceGroups: [], pendingHostSync: false }
     return { workspaceGroups, pendingHostSync: record.pendingHostSync }
   } catch {
@@ -173,7 +173,7 @@ export function readWorkspaceGroupsCache(storage: Storage | undefined): Workspac
 
 export function saveWorkspaceGroupsCache(storage: Storage | undefined, groups: readonly WorkspaceGroup[], pendingHostSync: boolean): void {
   if (storage === undefined) return
-  const workspaceGroups = parseWorkspaceGroups([...groups])
+  const workspaceGroups = parseStoredWorkspaceGroups([...groups])
   if (workspaceGroups === undefined) return
   try {
     storage.setItem(WORKSPACE_GROUPS_STORAGE_KEY, JSON.stringify({ version: 1, workspaceGroups, pendingHostSync }))
