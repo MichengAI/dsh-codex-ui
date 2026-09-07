@@ -4,6 +4,11 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## suite-installer-v0.1.28 - 2026-09-08
+
+- Updated the bundled Codex UI to `0.2.110`, including standalone DSH Web plugin-update recovery guidance.
+- Refreshed exact member versions from the official npm registry for reproducible one-click installation.
+
 ## 0.2.110 - 2026-09-08
 
 ### Fixed
