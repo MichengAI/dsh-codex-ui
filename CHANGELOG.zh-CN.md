@@ -4,6 +4,16 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## suite-installer-v0.1.25 - 2026-09-07
+
+- 将套件中的 Codex UI 更新至 `0.2.107`，并从官方 npm 刷新直装成员版本，保证安装可复现。
+
+## 0.2.107 - 2026-09-07
+
+- 在 Codex UI 大标题旁显示当前运行版本，并将频道、定时的会话分组布局与任务页对齐。
+- 将依赖更新请求限制为本机同源调用，并避免 Desktop 重复发送重载 IPC，同时保留独立 Web 的重载能力。
+- 统一包契约为 Node.js 22.19.0+ 与 pnpm 11.22.0。
+
 ## suite-installer-v0.1.24 — 2026-09-07
 
 - 套件新增 BTW 旁问和 Simplify 代码简化，一次安装八个配套插件。

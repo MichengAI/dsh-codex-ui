@@ -4,6 +4,16 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## suite-installer-v0.1.25 - 2026-09-07
+
+- Updated the bundled Codex UI to `0.2.107` and refreshed direct member versions from the official npm registry for reproducible installation.
+
+## 0.2.107 - 2026-09-07
+
+- Displayed the running Codex UI version beside the About title and aligned Channel and Schedule session-group layout with Tasks.
+- Restricted dependency update requests to loopback same-origin callers and avoided redundant Desktop reload IPC while preserving independent Web reloads.
+- Standardized the package contract on Node.js 22.19.0+ and pnpm 11.22.0.
+
 ## suite-installer-v0.1.24 — 2026-09-07
 
 - Added BTW side questions and Simplify code cleanup to the Suite, installing all eight companion plugins together.
