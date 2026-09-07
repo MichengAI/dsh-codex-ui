@@ -4,6 +4,17 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## suite-installer-v0.1.27 - 2026-09-07
+
+- Updated the bundled Codex UI to `0.2.108`, including group rename/delete menus and aligned group counts; refreshed exact member versions from the official npm registry.
+
+## 0.2.108 - 2026-09-07
+
+- Added rename and delete actions to each custom workspace group; the Projects header now keeps only the create-group button. Renaming preserves group membership, ordering, and expansion.
+- Aligned custom-group and Ungrouped counts, kept long names from crowding menu buttons, and improved keyboard focus recovery after renaming.
+- Prevented IME confirmation from submitting new groups and kept rejected names from interfering with preference synchronization.
+- Made case-insensitive name checks independent of system locale while preserving legacy stored group names and memberships.
+
 ## suite-installer-v0.1.26 - 2026-09-07
 
 - Refreshed direct member pins from the official npm registry, including IM Connect `0.1.37`, which withdraws its unfinished proactive delivery feature.

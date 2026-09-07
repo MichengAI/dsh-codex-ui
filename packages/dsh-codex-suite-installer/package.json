@@ -27,7 +27,7 @@
   "dshCodexSuite": {
     "members": {
       "@michengai/dsh-archive-manager": "0.1.31",
-      "@michengai/dsh-codex-ui": "0.2.107",
+      "@michengai/dsh-codex-ui": "0.2.108",
       "@michengai/dsh-skills-manager": "0.1.42",
       "@michengai/dsh-agency-agents": "0.1.33",
       "@michengai/dsh-im-connect": "0.1.37",
