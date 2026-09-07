@@ -4,7 +4,7 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
-## 0.2.109 - 2026-09-08
+## 0.2.110 - 2026-09-08
 
 ### 修复
 

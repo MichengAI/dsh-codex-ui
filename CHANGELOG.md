@@ -4,7 +4,7 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
-## 0.2.109 - 2026-09-08
+## 0.2.110 - 2026-09-08
 
 ### Fixed
 
