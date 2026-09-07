@@ -3,6 +3,14 @@ import { readFileSync } from 'node:fs'
 
 const browser = readFileSync(new URL('../src/client/CodexWorkspaceBrowser.tsx', import.meta.url), 'utf8')
 const locales = readFileSync(new URL('../src/client/locales.ts', import.meta.url), 'utf8')
+assert.match(browser, /\.dcu-wb-collection-head \.dcu-wb-more\{opacity:0;pointer-events:none\}/, 'group actions must be hidden while idle without reserving extra layout changes')
+assert.match(browser, /\.dcu-wb-collection-head:hover \.dcu-wb-more/, 'group actions must be visible on hover')
+assert.match(browser, /\.dcu-wb-collection-head:focus-within \.dcu-wb-more/, 'group actions must be visible with keyboard focus')
+assert.match(browser, /@media \(pointer:coarse\).*\.dcu-wb-collection-head \.dcu-wb-more/, 'touch users must see group actions')
+assert.doesNotMatch(browser, /workspace\.manageGroups/, 'Projects header must not have manage groups menu')
+assert.match(browser, /\.dcu-wb-collection-title\{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\}/, 'long group names must not push actions offscreen')
+assert.match(browser, /\.dcu-wb-collection-actions\{flex-shrink:0;width:20px\}/, 'group action column must reserve a fixed width')
+assert.match(browser, /ungroupedGroups\.length\}<\/span>[\s\S]*?<\/button>\s*<span className="dcu-wb-collection-actions" aria-hidden="true" \/>/, 'ungrouped count must align with custom groups without adding an interactive action')
 
 assert.match(browser, /workspaceGroups\.map\(renderWorkspaceCollection\)/, '项目区必须按集合标题渲染持久化分组')
 assert.match(browser, /initialWorkspaceGroups = useMemo\(\(\) => readWorkspaceGroupsCache\(storage\(\)\), \[\]\)/, '分组首帧必须从浏览器同步缓存恢复')

@@ -336,6 +336,105 @@ test('项目跨分组拖动时高亮整个目标分组并保留精确插入', as
   }
 })
 
+test('custom group menu renames without changing identity, membership, order or expansion', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  vi.stubGlobal('matchMedia', () => ({ matches: true }))
+  const workspaceGroups = [
+    { id: 'first', title: 'First', workspaceIds: ['b', 'a'] },
+    { id: 'second', title: 'Second', workspaceIds: [] },
+  ]
+  const workspaces = { baselinesReady: true, archivedSessionIds: [], items: ['a', 'b', 'c'].map(id => ({ workspaceId: id, title: id, path: `D:/${id}`, sessionIds: [] })) }
+  const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => new Response(JSON.stringify(init?.method === 'PUT' ? {} : { exists: true, pinnedWorkspaceIds: [], workspaceGroups }), { status: 200 }))
+  vi.stubGlobal('fetch', fetcher)
+  window.localStorage.setItem(WORKSPACE_GROUPS_STORAGE_KEY, JSON.stringify({ version: 1, workspaceGroups, pendingHostSync: false }))
+  const view = await render(createElement(CodexWorkspaceBrowser, {
+    ...sessionActions, wide: true, useSessions: createSessionStore(createSession('unused', 'unused', undefined)),
+    useSessionPendingInteraction: useEmptyPendingInteractions,
+    useWorkspaces: (selector: (snapshot: typeof workspaces) => unknown) => selector(workspaces), t,
+    deleteWorkspace: vi.fn(), insertSessionBefore: vi.fn(), insertWorkspaceBefore: vi.fn(), openPath: vi.fn(), renameWorkspace: vi.fn(), startSession: vi.fn(),
+  } as never))
+  const clickText = async (text: string) => {
+    const button = [...document.querySelectorAll<HTMLElement>('button, [role="menuitem"]')].find(node => node.textContent === text)
+    expect(button, text).toBeDefined()
+    await act(async () => { button!.click() })
+  }
+  const cache = () => JSON.parse(window.localStorage.getItem(WORKSPACE_GROUPS_STORAGE_KEY)!).workspaceGroups
+  const edit = async (value: string) => {
+    const input = document.querySelector<HTMLInputElement>('[role="dialog"] input')!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value)
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    return input
+  }
+  try {
+    const projects = view.container.querySelector('[aria-label="workspace.projects"]')!
+    expect(projects.querySelector('.dcu-wb-section-head [aria-label="workspace.manageGroups"]')).toBeNull()
+    expect(projects.querySelector('.dcu-wb-section-head [aria-label="workspace.createGroup"]')).not.toBeNull()
+    expect(projects.querySelector('.dcu-wb-ungrouped [aria-haspopup]')).toBeNull()
+    const first = projects.querySelector('.dcu-wb-collection')!
+    const label = first.querySelector<HTMLButtonElement>('.dcu-wb-collection-label')!
+    await act(async () => { label.click() })
+    const menu = first.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]')!
+    expect(menu).not.toBeNull()
+    const transfer = createDataTransfer()
+    await act(async () => { dispatchDrag(menu, 'dragstart', transfer); menu.click() })
+    expect(transfer.effectAllowed).toBe('uninitialized')
+    expect(label.getAttribute('aria-expanded')).toBe('false')
+    const menuItem = document.querySelector<HTMLElement>('[role="menuitem"]')!
+    await act(async () => { menuItem.focus(); menuItem.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })) })
+    expect(document.querySelector('[role="menu"]')).toBeNull()
+    expect(label.getAttribute('aria-expanded')).toBe('false')
+    await act(async () => { menu.click() })
+    await clickText('workspace.renameGroup')
+    const input = document.querySelector<HTMLInputElement>('[role="dialog"] input')!
+    expect(input.value).toBe('First')
+    expect(document.activeElement).toBe(input)
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, 5])
+    await edit('  Renamed  ')
+    await act(async () => { input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true })) })
+    expect(cache()).toEqual(workspaceGroups)
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull()
+    await act(async () => { input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 229, bubbles: true })) })
+    expect(cache()).toEqual(workspaceGroups)
+    await act(async () => { input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })) })
+    const expected = [{ ...workspaceGroups[0], title: 'Renamed' }, workspaceGroups[1]]
+    expect(cache()).toEqual(expected)
+    expect(label.textContent).toContain('Renamed')
+    expect(label.getAttribute('aria-expanded')).toBe('false')
+    expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'PUT').map(([, init]) => JSON.parse(String(init!.body))).at(-1)?.workspaceGroups).toEqual(expected)
+    await act(async () => { menu.click() })
+    await clickText('workspace.renameGroup')
+    await edit('Cancelled')
+    await clickText('sessions.cancel')
+    expect(cache()).toEqual(expected)
+    expect(document.activeElement).toBe(menu)
+    const writesBeforeNoop = fetcher.mock.calls.filter(([, init]) => init?.method === 'PUT').length
+    await act(async () => { menu.click() })
+    await clickText('workspace.renameGroup')
+    await clickText('sessions.save')
+    expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(writesBeforeNoop)
+    expect(document.activeElement).toBe(menu)
+    await act(async () => { menu.click() })
+    await clickText('workspace.renameGroup')
+    await edit('second')
+    await clickText('sessions.save')
+    expect(document.querySelector('[role="dialog"] [role="alert"]')).not.toBeNull()
+    expect(cache()).toEqual(expected)
+    await clickText('sessions.cancel')
+    await act(async () => { menu.click() })
+    await clickText('workspace.deleteGroupAction')
+    expect(cache()).toEqual(expected)
+    await clickText('sessions.cancel')
+    expect(cache()).toEqual(expected)
+    await act(async () => { menu.click() })
+    await clickText('workspace.deleteGroupAction')
+    await clickText('workspace.deleteGroupAction')
+    expect(cache()).toEqual([workspaceGroups[1]])
+    expect([...projects.querySelectorAll('.dcu-wb-ungrouped .dcu-wb-project-title')].map(node => node.textContent)).toEqual(['a', 'b', 'c'])
+  } finally { await view.dispose() }
+})
+
 test('Host 读取失败时从同步缓存恢复分组并继续写回新操作', async () => {
   const session = createSession('cached-workspace-session', '缓存任务会话', undefined)
   const useSessions = createSessionStore(session)

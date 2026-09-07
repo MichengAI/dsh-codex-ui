@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import * as workspaceGroupActions from '../src/workspace-groups.ts'
 import {
   assignWorkspaceToGroup,
   createWorkspaceGroup,
@@ -18,6 +19,17 @@ const initial = [
 ]
 
 assert.deepEqual(parseWorkspaceGroups(initial), initial)
+assert.equal(typeof workspaceGroupActions.renameWorkspaceGroup, 'function', 'rename action must exist')
+const renamed = workspaceGroupActions.renameWorkspaceGroup(initial, 'knowledge', '  Knowledge  ')
+assert.deepEqual(renamed, [{ ...initial[0], title: 'Knowledge' }, initial[1]])
+assert.equal(initial[0].title, '数据与知识管理', 'rename must not mutate the original')
+assert.deepEqual(workspaceGroupActions.renameWorkspaceGroup(renamed, 'knowledge', 'KNOWLEDGE'), [{ ...initial[0], title: 'KNOWLEDGE' }, initial[1]])
+for (const title of ['', '   ', 'a'.repeat(81), '平台与基础设施']) {
+  assert.throws(() => workspaceGroupActions.renameWorkspaceGroup(initial, 'knowledge', title), error => error instanceof WorkspaceGroupError && error.code === 'group-invalid')
+}
+assert.throws(() => workspaceGroupActions.renameWorkspaceGroup(renamed, 'platform', 'knowledge'), error => error instanceof WorkspaceGroupError && error.code === 'group-invalid')
+assert.throws(() => workspaceGroupActions.renameWorkspaceGroup(initial, 'missing', 'Name'), error => error instanceof WorkspaceGroupError && error.code === 'group-missing')
+assert.equal(workspaceGroupActions.renameWorkspaceGroup(initial, 'knowledge', 'a'.repeat(80))[0].title.length, 80)
 assert.equal(parseWorkspaceGroups([{ id: '', title: '无效', workspaceIds: [] }]), undefined)
 assert.equal(parseWorkspaceGroups([{ id: 'one', title: '', workspaceIds: [] }]), undefined)
 assert.equal(parseWorkspaceGroups([{ id: 'one', title: '重复', workspaceIds: [] }, { id: 'two', title: '重复', workspaceIds: [] }]), undefined)

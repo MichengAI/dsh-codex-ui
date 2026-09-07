@@ -61,6 +61,17 @@ export function createWorkspaceGroup(groups: readonly WorkspaceGroup[], group: P
   return next
 }
 
+/** 仅更改名称，保留分组标识、成员及其顺序。 */
+export function renameWorkspaceGroup(groups: readonly WorkspaceGroup[], groupId: string, title: string): WorkspaceGroup[] {
+  if (!groups.some(group => group.id === groupId)) throw new WorkspaceGroupError('group-missing')
+  const normalizedTitle = title.trim()
+  if (normalizedTitle === '' || normalizedTitle.length > MAX_WORKSPACE_GROUP_TITLE_LENGTH
+    || groups.some(group => group.id !== groupId && group.title.toLocaleLowerCase() === normalizedTitle.toLocaleLowerCase())) {
+    throw new WorkspaceGroupError('group-invalid')
+  }
+  return groups.map(group => group.id === groupId ? { ...group, title: normalizedTitle } : group)
+}
+
 /** 将项目放入指定分组；未传分组时退回未分组区。 */
 export function assignWorkspaceToGroup(groups: readonly WorkspaceGroup[], workspaceId: string, groupId?: string): WorkspaceGroup[] {
   if (workspaceId.trim() === '' || workspaceId.length > MAX_WORKSPACE_ID_LENGTH) throw new WorkspaceGroupError('workspace-invalid')
