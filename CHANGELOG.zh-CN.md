@@ -4,6 +4,17 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 0.2.109 - 2026-09-08
+
+### 修复
+
+- 区分独立 DSH Web 与 Desktop 的插件安装失败：Web 环境将提示停止并重启当前 Web 宿主，不再错误要求退出 DSH Desktop。
+- 为被占用的插件文件、pnpm 仓库不一致和未识别的 DSH Web 安装失败提供本地化恢复指引。
+
+### 测试
+
+- 新增 Web 专属安装错误及其简体中文、英文文案的回归覆盖。
+
 ## suite-installer-v0.1.27 - 2026-09-07
 
 - 将套件中的 Codex UI 更新至 `0.2.108`，包含分组重命名、删除菜单和数量对齐优化；从官方 npm 刷新并锁定成员版本。

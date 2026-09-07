@@ -4,6 +4,17 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 0.2.109 - 2026-09-08
+
+### Fixed
+
+- Distinguished standalone DSH Web installation failures from Desktop errors, directing users to stop and restart the current Web host instead of quitting DSH Desktop.
+- Added localized recovery guidance for locked plugin files, pnpm store conflicts, and otherwise unrecognized DSH Web installation failures.
+
+### Tests
+
+- Added regression coverage for Web-specific installer errors and their Simplified Chinese and English localization.
+
 ## suite-installer-v0.1.27 - 2026-09-07
 
 - Updated the bundled Codex UI to `0.2.108`, including group rename/delete menus and aligned group counts; refreshed exact member versions from the official npm registry.

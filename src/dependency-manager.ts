@@ -582,13 +582,21 @@ async function waitUntilPluginMounted(
   throw pluginUnchangedError()
 }
 
-export function pluginCommandError(stderr: string): Error {
+export function pluginCommandError(
+  stderr: string,
+  environmentKind: DependencyRuntime['environmentKind'] = 'desktop',
+): Error {
   const detail = stderr.replace(/\s+/g, ' ').trim()
+  const isWeb = environmentKind === 'cli'
   if (/EPERM|EBUSY|EACCES|unable to unlink|ERR_PNPM_LOCKED|Lock/i.test(detail)) {
-    return new Error('无法覆盖正在运行的插件文件。请先完全退出桌面端，再重新打开后更新。')
+    return new Error(isWeb
+      ? '无法覆盖正在运行的插件文件。请停止当前 DSH Web 后，在终端更新插件，再重新启动 DSH Web。'
+      : '无法覆盖正在运行的插件文件。请先完全退出桌面端，再重新打开后更新。')
   }
   if (/UNEXPECTED_STORE|Unexpected store location/i.test(detail)) {
-    return new Error('插件目录和 pnpm 仓库不一致。请完全退出桌面端后再更新。')
+    return new Error(isWeb
+      ? '插件目录与 pnpm 仓库不一致。请停止当前 DSH Web 后重试；仍失败时重新安装该 Profile 的依赖。'
+      : '插件目录和 pnpm 仓库不一致。请完全退出桌面端后再更新。')
   }
   if (/ERR_PNPM_IGNORED_BUILDS|Ignored build scripts/i.test(detail)) {
     return new Error('插件依赖的 pnpm 构建脚本策略尚未确认。请更新 Profile 的 allowBuilds 配置后重试。')
@@ -596,7 +604,9 @@ export function pluginCommandError(stderr: string): Error {
   if (/pnpm not found|未找到 pnpm/i.test(detail)) {
     return new Error('当前环境找不到 pnpm。请确认已安装 pnpm 后重启 DSH 再试。')
   }
-  return new Error('无法在应用运行时更新插件。请先完全退出桌面端，再重新打开后更新。')
+  return new Error(isWeb
+    ? '插件更新失败。请查看 DSH Web 终端输出后重试。'
+    : '无法在应用运行时更新插件。请先完全退出桌面端，再重新打开后更新。')
 }
 
 /**
@@ -697,7 +707,11 @@ export function disposeDependencyInstaller(): void {
   for (const handle of activeDesktopPluginHandles) handle.cancel()
 }
 
-export function monitorPluginChild(child: ChildProcess, timeoutMs = PLUGIN_INSTALL_TIMEOUT_MS): Promise<void> {
+export function monitorPluginChild(
+  child: ChildProcess,
+  timeoutMs = PLUGIN_INSTALL_TIMEOUT_MS,
+  environmentKind: DependencyRuntime['environmentKind'] = 'cli',
+): Promise<void> {
   return new Promise((resolvePromise, reject) => {
     activePluginChildren.add(child)
     let output = ''
@@ -717,7 +731,7 @@ export function monitorPluginChild(child: ChildProcess, timeoutMs = PLUGIN_INSTA
     child.stdout?.on('data', collect)
     child.stderr?.on('data', collect)
     child.once('error', () => { finish(new Error('无法启动 DSH 插件安装命令。请确认 Node.js 与 pnpm 可用后重试。')) })
-    child.once('exit', code => { finish(code === 0 ? undefined : pluginCommandError(output)) })
+    child.once('exit', code => { finish(code === 0 ? undefined : pluginCommandError(output, environmentKind)) })
     const timeout = setTimeout(() => {
       terminatePluginChild(child)
       finish(new Error('插件安装超时，已终止安装进程。请检查网络后重试。'))
@@ -748,8 +762,8 @@ function monitorDesktopPlugin(handle: DesktopPnpmHandle, timeoutMs = PLUGIN_INST
     handle.stdout?.once('error', () => { handle.cancel(); finish(new Error('无法读取 DSH Desktop 插件安装输出。')) })
     handle.stderr?.once('error', () => { handle.cancel(); finish(new Error('无法读取 DSH Desktop 插件安装输出。')) })
     void handle.done.then(
-      outcome => { finish(outcome.exitCode === 0 && outcome.signal === null ? undefined : pluginCommandError(output)) },
-      () => { finish(pluginCommandError(output)) },
+      outcome => { finish(outcome.exitCode === 0 && outcome.signal === null ? undefined : pluginCommandError(output, 'desktop')) },
+      () => { finish(pluginCommandError(output, 'desktop')) },
     )
     const timeout = setTimeout(() => {
       handle.cancel()
@@ -772,7 +786,7 @@ export function runDshPlugin(args: readonly string[], runtime: DependencyRuntime
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
   })
-  return monitorPluginChild(child, timeoutMs)
+  return monitorPluginChild(child, timeoutMs, runtime.environmentKind)
 }
 
 /** 并发安装互斥：pnpm 锁文件竞争会触发 EPERM/EBUSY，同一时间只允许一个安装进程。 */

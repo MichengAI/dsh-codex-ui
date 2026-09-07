@@ -35,7 +35,10 @@ const HOST_ACTION_ERROR_KEYS: Readonly<Record<HostAction, Readonly<Record<string
 
 const INSTALL_ERROR_KEYS: readonly [RegExp, CodexUiKey][] = [
   [/没有进入当前 Profile|did not enter this profile/i, 'about.installUnchanged'],
+  [/pnpm 仓库不一致.*停止当前 DSH Web|pnpm store do not match.*stop the current DSH Web/i, 'about.installStoreMismatchWeb'],
+  [/停止当前 DSH Web|stop the current DSH Web/i, 'about.installExitWeb'],
   [/完全退出桌面端|无法覆盖正在运行的插件文件|running plugin files|quit DSH Desktop/i, 'about.installExitDesktop'],
+  [/DSH Web 终端输出|DSH Web terminal/i, 'about.installWebFailed'],
   [/pnpm 仓库不一致|pnpm store do not match/i, 'about.installStoreMismatch'],
   [/构建脚本策略|build-script policy/i, 'about.installBuildPolicy'],
   [/找不到 pnpm|pnpm (?:is )?not (?:available|found)/i, 'about.installPnpmMissing'],

@@ -360,9 +360,24 @@ assert.match(
   '文件占用必须提示先退出桌面端',
 )
 assert.match(
+  pluginCommandError('EPERM: unlink failed', 'cli').message,
+  /停止当前 DSH Web/,
+  'Web 文件占用不得提示退出 Desktop',
+)
+assert.match(
   pluginCommandError('ERR_PNPM_UNEXPECTED_STORE Unexpected store location').message,
   /pnpm 仓库不一致/,
   'store 不一致必须给出明确原因',
+)
+assert.match(
+  pluginCommandError('ERR_PNPM_UNEXPECTED_STORE Unexpected store location', 'cli').message,
+  /停止当前 DSH Web/,
+  'Web store 不一致不得提示退出 Desktop',
+)
+assert.match(
+  pluginCommandError('unrecognized installer failure', 'cli').message,
+  /DSH Web 终端输出/,
+  'Web 未识别安装失败必须提示检查 Web 终端',
 )
 assert.match(
   pluginCommandError('ERR_PNPM_IGNORED_BUILDS Ignored build scripts: protobufjs').message,
