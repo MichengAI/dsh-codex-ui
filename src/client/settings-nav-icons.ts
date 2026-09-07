@@ -32,7 +32,7 @@ const LABEL_ALIASES: ReadonlyArray<readonly [readonly string[], SettingsNavIconI
   [['连接器', 'Connectors'], 'connectors'],
   [['定时任务', 'Scheduled tasks'], 'schedule'],
   [['IM助理', 'IM Assistant'], 'assistant'],
-  [['已归档', 'Archived'], 'archive'],
+  [['已归档', '归档会话', 'Archived', 'Archived sessions'], 'archive'],
   [['Codex UI'], 'about'],
 ]
 

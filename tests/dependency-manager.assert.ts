@@ -7,7 +7,7 @@ import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { PassThrough } from 'node:stream'
 import { pathToFileURL } from 'node:url'
-import { applyRequiredBuildPolicies, beginInstallProgress, dependencyStatuses, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, PLUGIN_MOUNT_TIMEOUT_MS, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, supportsOfficialTurnNavigator, updatableDependencyIds, withPnpmEntry } from '../src/dependency-manager.ts'
+import { applyRequiredBuildPolicies, beginInstallProgress, canRequestParentReload, dependencyStatuses, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, PLUGIN_MOUNT_TIMEOUT_MS, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, supportsOfficialTurnNavigator, updatableDependencyIds, withPnpmEntry } from '../src/dependency-manager.ts'
 import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
 
 const sourceRoot = resolve('fixtures', 'deepseek-harness')
@@ -209,18 +209,18 @@ assert.equal(
 // 必须按 Sec-Fetch-Site / Origin 与 Host 的比对阻断。
 assert.equal(
   crossSiteRequest({ method: 'POST', url: '/api/x?dependency=ui' }),
-  false,
-  '无 headers 的非浏览器请求必须放行',
+  true,
+  '无来源信息的写请求必须拒绝',
 )
 assert.equal(
-  crossSiteRequest({ method: 'POST', url: '/api/x', headers: { 'sec-fetch-site': 'same-origin' } }),
-  false,
-  '同源 fetch 必须放行',
+  crossSiteRequest({ method: 'POST', url: '/api/x', headers: { 'sec-fetch-site': 'same-origin' }, socket: { remoteAddress: '127.0.0.1' } }),
+  true,
+  '缺少 Origin 的写请求不能只凭 Sec-Fetch-Site 放行',
 )
 assert.equal(
   crossSiteRequest({ method: 'POST', url: '/api/x', headers: { 'sec-fetch-site': 'none' } }),
-  false,
-  '地址栏直达等非页面发起的请求必须放行',
+  true,
+  '缺少 Origin 的非页面写请求也必须拒绝',
 )
 assert.equal(
   crossSiteRequest({ method: 'POST', url: '/api/x', headers: { 'sec-fetch-site': 'cross-site' } }),
@@ -237,9 +237,20 @@ assert.equal(
     method: 'POST',
     url: '/api/x?dependency=ui',
     headers: { origin: 'http://localhost:3080', host: 'localhost:3080' },
+    socket: { remoteAddress: '::1' },
   }),
   false,
   '老浏览器同源 POST（Origin 与 Host 一致）必须放行',
+)
+assert.equal(
+  crossSiteRequest({
+    method: 'POST',
+    url: '/api/x?dependency=ui',
+    headers: { origin: 'http://localhost:3080', host: 'localhost:3080' },
+    socket: { remoteAddress: '192.168.1.8' },
+  }),
+  true,
+  '非回环客户端即使伪造同源头也必须拦截',
 )
 assert.equal(
   crossSiteRequest({
@@ -450,6 +461,8 @@ assert.deepEqual(
 
 assert.ok(PLUGIN_MOUNT_TIMEOUT_MS >= 15_000, '等待 Desktop 写入 bundles 至少保留 15 秒')
 assert.equal(requestDesktopHotUpdate(undefined), false)
+assert.equal(canRequestParentReload(desktopRuntime, () => true), false, 'Desktop 包管理服务负责重载，插件不得重复发送 IPC')
+assert.equal(canRequestParentReload(customRuntime, () => true), true, '独立 Web 子进程可以请求父进程重载')
 let sent
 assert.equal(requestDesktopHotUpdate((message) => { sent = message; return true }), true)
 assert.equal(sent, 'apply-plugin-updates')

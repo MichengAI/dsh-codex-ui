@@ -138,14 +138,14 @@ function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkS
               anchor={<button type="button" className="dcu-wb-more" aria-label={t('schedule.groupActions', { name: group.label })} onClick={(event) => { event.stopPropagation(); setMenu(undefined); setGroupMenu(current => current === group.id ? undefined : group.id) }}><IconEllipsisOutline16 size={16} /></button>}
             />}
           />
-          {isExpanded && group.sessions.map(session => {
+          {isExpanded && <div className="dcu-wb-project-body">{group.sessions.map(session => {
             const id = session.id
             const title = session.title
             const unread = flags.unreadSessionIds.includes(id)
             const pendingInteraction = pendingInteractionForSession(id, pendingInteractions, sessions.byId[id]?.pendingInteraction)
             const moveTargets = moveSession === undefined ? undefined : sessionMoveTargets(workspaces.items ?? [], id).map(target => ({ ...target, id: moveSessionActionId(target.id) }))
             return <SessionRow key={id} id={id} title={title} selected={sessions.current === id} menuOpen={menu?.id === id} unread={unread} running={session.running} pendingInteraction={pendingInteraction} t={t} menuItems={sessionMenuItems(t, { unread, moveTargets })} menuPoint={menu?.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { flags.setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id } : undefined) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ title, project: group.label, time: session.updatedAt === undefined ? undefined : formatHoverTime(session.updatedAt, t), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => { if (busy !== undefined) return; const targetWorkspaceId = parseMoveSessionActionId(action); if (targetWorkspaceId !== undefined && moveSession !== undefined) { setMenu(undefined); void run('session-move', () => moveSession(id as SessionId, targetWorkspaceId as WorkspaceId)); return }; dialogs.handleAction(action, id, title) }} />
-          })}
+          })}</div>}
         </div>
       })}
     </div>

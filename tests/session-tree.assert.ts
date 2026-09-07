@@ -45,6 +45,8 @@ assert.match(locales, /'sessions\.waitingAnswer': 'Waiting for answer'/, '等待
 assert.match(locales, /'sessions\.waitingApproval': 'Waiting for approval'/, '等待审批英文文案必须与官方一致')
 assert.match(locales, /'sessions\.planReview': 'Plan awaiting review'/, '计划待审英文文案必须与归档插件一致')
 assert.match(channel, /<GroupHead /, '频道分组行必须走共用头部')
+assert.match(channel, /<div className="dcu-wb-project-body">[\s\S]*?<SessionRow /, '频道会话必须放入任务树同款项目内容容器，保留首行胶囊间距')
+assert.match(schedule, /<div className="dcu-wb-project-body">[\s\S]*?<SessionRow /, '定时会话必须放入任务树同款项目内容容器，保留首行胶囊间距')
 assert.doesNotMatch(channel, /showTip\(\{ title: group/, '频道项目行不得显示悬停卡片')
 assert.doesNotMatch(schedule, /showTip\(\{ title: group/, '定时项目行不得显示悬停卡片')
 assert.match(workspace, /showTip\(\{ kind: 'workspace'/, '任务项目文件夹悬停必须显示卡片')

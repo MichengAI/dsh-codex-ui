@@ -1,6 +1,6 @@
 /** 浏览器客户端插件的 Host 入口；客户端逻辑由 dsh.client 加载。 */
 import type { Context } from '@deepseek-ai/cordis'
-import { dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, requestDesktopHotUpdate, resolveDependencyRuntime, runtimeSupportsOfficialTurnNavigator, updateAllDependencies } from './dependency-manager.ts'
+import { canRequestParentReload, dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, requestDesktopHotUpdate, resolveDependencyRuntime, runtimeSupportsOfficialTurnNavigator, updateAllDependencies } from './dependency-manager.ts'
 import { authorizedExplorerWorkspacePath } from './explorer-path-policy.ts'
 import { hostServices } from './host-services.ts'
 import { ForegroundExplorer } from './native-explorer.ts'
@@ -18,7 +18,14 @@ type HostRequest = {
   method?: string
   url?: string
   headers?: Record<string, string | string[] | undefined>
+  socket?: { remoteAddress?: string }
   [Symbol.asyncIterator]?: () => AsyncIterator<Uint8Array | string>
+}
+
+function isLoopbackAddress(value: string | undefined): boolean {
+  const address = value?.toLowerCase().replace(/^\[|\]$/g, '')
+  return address === 'localhost' || address === 'localhost.' || address === '::1'
+    || address?.startsWith('127.') === true || address?.startsWith('::ffff:127.') === true
 }
 
 function headerValue(headers: Record<string, string | string[] | undefined>, name: string): string | undefined {
@@ -29,23 +36,21 @@ function headerValue(headers: Record<string, string | string[] | undefined>, nam
 }
 
 /**
- * 判断浏览器请求是否跨站。依赖安装会改写用户配置并拉起子进程，
- * 恶意网页只需一个表单就能跨站触发，必须先按 Sec-Fetch-Site（优先，
- * 且无法被页面伪造）再按 Origin 与 Host 的比对阻断；无这些头的
- * 非浏览器客户端（curl、CLI）仍然放行。
+ * 依赖安装会改写用户配置并拉起子进程，只允许回环地址上的同源浏览器请求。
+ * Origin、Host 和 Sec-Fetch-Site 都可被非浏览器客户端伪造，不能单独作为授权依据。
  */
 export function crossSiteRequest(request: HostRequest): boolean {
+  if (!isLoopbackAddress(request.socket?.remoteAddress)) return true
   const headers = request.headers
-  if (headers === undefined) return false
+  if (headers === undefined) return true
   const site = headerValue(headers, 'sec-fetch-site')
-  if (site === 'same-origin' || site === 'none') return false
-  if (site !== undefined) return true
+  if (site !== undefined && site !== 'same-origin') return true
   const origin = headerValue(headers, 'origin')
-  if (origin === undefined) return false
   const host = headerValue(headers, 'host')
-  if (host === undefined) return true
+  if (origin === undefined || host === undefined) return true
   try {
-    return new URL(origin).host !== host
+    const url = new URL(origin)
+    return (url.protocol !== 'http:' && url.protocol !== 'https:') || !isLoopbackAddress(url.hostname) || url.host !== host
   } catch {
     return true
   }
@@ -165,29 +170,33 @@ export function apply(ctx: Context): void {
           if (request.method === 'POST') {
             if (crossSiteRequest(request)) {
               response.writeHead(403, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-              response.end(JSON.stringify({ error: '已拒绝跨站请求。' }))
+              response.end(JSON.stringify({ error: '已拒绝非本机同源请求。' }))
               return
             }
             if (url.searchParams.get('action') === 'update-all') {
-              const autoReload = typeof process.send === 'function'
+              const runtime = resolveDependencyRuntime(ctx)
+              const notifyParent = canRequestParentReload(runtime)
+              const autoReload = runtime.environmentKind === 'desktop' || notifyParent
               let restartAfterResponse = false
               const { dependencies, updatedCount } = await updateAllDependencies(() => {
-                restartAfterResponse = autoReload
+                restartAfterResponse = notifyParent
                 return restartAfterResponse
-              }, resolveDependencyRuntime(ctx))
+              }, runtime)
               response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-              response.end(JSON.stringify({ dependencies, restartRequired: updatedCount > 0, autoReload: typeof process.send === 'function' }))
+              response.end(JSON.stringify({ dependencies, restartRequired: updatedCount > 0, autoReload }))
               if (restartAfterResponse) setTimeout(() => { requestDesktopHotUpdate() }, 150).unref?.()
               return
             }
-            const autoReload = typeof process.send === 'function'
+            const runtime = resolveDependencyRuntime(ctx)
+            const notifyParent = canRequestParentReload(runtime)
+            const autoReload = runtime.environmentKind === 'desktop' || notifyParent
             let restartAfterResponse = false
             const dependencies = await installDependency(url.searchParams.get('dependency'), () => {
-              restartAfterResponse = autoReload
+              restartAfterResponse = notifyParent
               return restartAfterResponse
-            }, resolveDependencyRuntime(ctx))
+            }, runtime)
             response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-            response.end(JSON.stringify({ dependencies, restartRequired: true, autoReload: typeof process.send === 'function' }))
+            response.end(JSON.stringify({ dependencies, restartRequired: true, autoReload }))
             if (restartAfterResponse) setTimeout(() => { requestDesktopHotUpdate() }, 150).unref?.()
             return
           }

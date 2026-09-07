@@ -17,6 +17,9 @@
   "homepage": "https://github.com/MichengAI/dsh-codex-ui#readme",
   "type": "module",
   "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
   "main": "lib/index.mjs",
   "types": "lib/index.d.mts",
   "exports": {

@@ -384,6 +384,11 @@ export function requestDesktopHotUpdate(send: NodeJS.Process['send'] = process.s
   return true
 }
 
+/** Desktop 的包管理服务会自行安排重载；只有独立 Web 子进程需要通知父进程。 */
+export function canRequestParentReload(runtime: DependencyRuntime, send: NodeJS.Process['send'] = process.send): boolean {
+  return runtime.environmentKind === 'cli' && typeof send === 'function'
+}
+
 export function isRestartableInstallError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error)
   return /完全退出桌面端|正在运行的插件|pnpm 仓库不一致/.test(message)

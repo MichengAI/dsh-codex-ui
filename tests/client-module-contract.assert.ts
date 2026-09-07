@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs'
 const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
   main?: string
   types?: string
+  packageManager?: string
+  engines?: { node?: string }
   exports?: Record<string, unknown>
   files?: string[]
   dsh?: { client?: { inject?: string[] } }
@@ -19,6 +21,8 @@ const staticWebModules = [
 ].sort()
 
 assert.deepEqual(runtimeRequires, staticWebModules, '客户端 bundle 只能要求 DSH Web 启动器稳定提供的静态模块')
+assert.equal(manifest.packageManager, 'pnpm@11.22.0', '仓库固定使用统一 pnpm 版本')
+assert.equal(manifest.engines?.node, '^22.19.0 || >=24.0.0', '仓库使用统一 Node LTS 基线')
 assert.doesNotMatch(bundle, /createLucideIcon\("alarm-clock"/, '客户端 bundle 不得包含未使用的 Lucide 图标')
 assert.equal(manifest.main, 'lib/index.mjs', '服务端入口必须从 lib 发布目录加载')
 assert.equal(manifest.types, 'lib/index.d.mts', '类型声明必须从 lib 发布目录加载')

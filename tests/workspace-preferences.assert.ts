@@ -43,7 +43,8 @@ try {
 }
 
 const request = (chunks: Array<string | Uint8Array>, headers: Record<string, string> = {}) => ({
-  headers,
+  headers: { origin: 'http://localhost:3080', host: 'localhost:3080', 'sec-fetch-site': 'same-origin', ...headers },
+  socket: { remoteAddress: '127.0.0.1' },
   async *[Symbol.asyncIterator](): AsyncGenerator<string | Uint8Array> {
     for (const chunk of chunks) yield chunk
   },
@@ -141,7 +142,7 @@ try {
   }
   const crossSiteDependency = await invokeDependencies('POST', `${dependenciesRoute?.path}?dependency=ui`, { 'sec-fetch-site': 'cross-site' })
   assert.equal(crossSiteDependency.status, 403, '依赖安装路由必须拒绝跨站 POST')
-  assert.equal(JSON.parse(crossSiteDependency.body ?? '{}').error, '已拒绝跨站请求。')
+  assert.equal(JSON.parse(crossSiteDependency.body ?? '{}').error, '已拒绝非本机同源请求。')
 
   services.desktopProfiles = {
     get current(): never { throw new Error('无法读取 D:\\Users\\demo\\secret-profile') },

@@ -27,6 +27,8 @@ assert.equal(settingsNavIconId('关于'), undefined, '旧中文入口不再识�
 assert.equal(settingsNavIconId('About'), undefined, '旧英文入口不再识别为 Codex UI')
 assert.equal(settingsNavIconId('已归档'), 'archive')
 assert.equal(settingsNavIconId('Archived'), 'archive')
+assert.equal(settingsNavIconId('归档会话'), 'archive')
+assert.equal(settingsNavIconId('Archived sessions'), 'archive')
 assert.equal(SETTINGS_NAV_ICON_HTML.experts.includes('M11.0307 5.46369'), true, '专家必须使用侧栏用户图标')
 assert.equal(SETTINGS_NAV_ICON_HTML.skills.includes('M12.5113 15.4067'), true, '技能必须使用侧栏技能图标')
 assert.equal(SETTINGS_NAV_ICON_HTML.plugins.includes('translate(1.292 1.3)'), true, '插件必须使用侧栏个性化图标')
