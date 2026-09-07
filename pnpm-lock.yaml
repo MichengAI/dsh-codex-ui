@@ -124,8 +124,8 @@ importers:
   packages/dsh-codex-suite:
     dependencies:
       '@michengai/dsh-agency-agents':
-        specifier: 0.1.33
-        version: 0.1.33(42d7b166453b4994a595fb2af1b2cf3e)
+        specifier: 0.1.34
+        version: 0.1.34(42d7b166453b4994a595fb2af1b2cf3e)
       '@michengai/dsh-archive-manager':
         specifier: 0.1.32
         version: 0.1.32(c67afbb0f8075c10b144b3880f70874c)
@@ -765,8 +765,8 @@ packages:
       typescript:
         optional: true
 
-  '@michengai/dsh-agency-agents@0.1.33':
-    resolution: {integrity: sha512-uw1UlJ+u0Fj4sO4W57QVG/nlImfHTa2yhx/gppy3vKGVKbYDLlyJEtYbm7T+zsfCpq4iDDAbrWw8vt5KOPK79w==}
+  '@michengai/dsh-agency-agents@0.1.34':
+    resolution: {integrity: sha512-SdadV/rdmLcVryCwEpULgn4nEkGtTZua0YQwhITcqMcnbJZ7BpxkMcSqcETk3uI71+Sy5qDFuB8CbB9+WrtJ0w==}
     engines: {node: ^22.19.0 || >=24.0.0}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.2
@@ -2970,7 +2970,7 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
-  '@michengai/dsh-agency-agents@0.1.33(42d7b166453b4994a595fb2af1b2cf3e)':
+  '@michengai/dsh-agency-agents@0.1.34(42d7b166453b4994a595fb2af1b2cf3e)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.2
       '@deepseek-ai/dsh-client-connection': 0.1.2-rc.1(@deepseek-ai/cordis@4.0.2)
