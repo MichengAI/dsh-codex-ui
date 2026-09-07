@@ -1,4 +1,4 @@
-export const CHANNELS_ENDPOINT = '/dsh-im-connect/api/channels'
+export const CHANNELS_ENDPOINT = '/api/dsh-im-connect/channels'
 export const CHANNEL_SESSION_PREFIX = 'im:'
 
 export type ChannelSession = {
