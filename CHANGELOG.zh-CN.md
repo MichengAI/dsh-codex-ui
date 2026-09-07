@@ -4,6 +4,10 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## suite-installer-v0.1.26 - 2026-09-07
+
+- 从官方 npm 刷新直装成员版本，包含 IM Connect `0.1.37`，该版本已撤回未完成的主动投递功能。
+
 ## suite-installer-v0.1.25 - 2026-09-07
 
 - 将套件中的 Codex UI 更新至 `0.2.107`，并从官方 npm 刷新直装成员版本，保证安装可复现。

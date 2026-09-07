@@ -4,6 +4,10 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## suite-installer-v0.1.26 - 2026-09-07
+
+- Refreshed direct member pins from the official npm registry, including IM Connect `0.1.37`, which withdraws its unfinished proactive delivery feature.
+
 ## suite-installer-v0.1.25 - 2026-09-07
 
 - Updated the bundled Codex UI to `0.2.107` and refreshed direct member versions from the official npm registry for reproducible installation.
