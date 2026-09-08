@@ -18,7 +18,7 @@ await openPathInHost(connection, 'D:\\Repository\\project', async (input, init) 
   foregroundCalls.push({ input, init })
   return new Response(JSON.stringify({ opened: true, foreground: true }), { status: 200 })
 })
-assert.equal(foregroundCalls[0]?.input, '/api/michengai/codex-ui/open-in-explorer', 'Windows 前台打开必须优先经过本插件 Host 端点')
+assert.equal(foregroundCalls[0]?.input, '/api/dsh-codex-ui/open-in-explorer', 'Windows 前台打开必须优先经过本插件 Host 端点')
 assert.deepEqual(JSON.parse(String(foregroundCalls[0]?.init?.body)), { path: 'D:\\Repository\\project' })
 assert.deepEqual(calls, [], '前台端点成功时不得再次调用通用 Host 打开，避免重复窗口')
 

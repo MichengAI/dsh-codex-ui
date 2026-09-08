@@ -61,5 +61,6 @@ assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-runtime'], sup
 assert.equal(manifest.devDependencies?.['@deepseek-ai/dsh-client-runtime'], '0.1.1-rc.2', '客户端运行时必须使用其已发布最高版本')
 assert.equal(manifest.devDependencies?.['@deepseek-ai/dsh-client-test-runtime'], latestSupportedDshVersion, '客户端测试运行时必须对齐最高支持版本')
 assert.equal(manifest.devDependencies?.['@deepseek-ai/dsh-client-ui-renderer'], latestSupportedDshVersion, '客户端测试渲染器必须对齐最高支持版本')
-assert.equal(manifest.peerDependencies?.['@deepseek-ai/cordis'], '>=4.0.1 <5.0.0', 'Cordis 必须覆盖声明的 DSH 兼容范围')
+assert.equal(manifest.peerDependencies?.['@deepseek-ai/cordis'], '>=4.0.2 <5.0.0', 'Cordis 必须覆盖宿主认证服务的兼容范围')
+assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-connection'], '>=0.1.2-rc.1 <0.2.0', '业务 REST 必须声明提供 requestRejection 的最低宿主版本')
 assert.equal(manifest.devDependencies?.['@deepseek-ai/cordis'], '4.0.2', 'Cordis 编译版本必须对齐当前 DSH 开发依赖')

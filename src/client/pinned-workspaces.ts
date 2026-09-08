@@ -1,9 +1,10 @@
 /** 浏览器本地持久化键；用于工作区偏好的首帧恢复与 Host 故障兜底。 */
+import { CODEX_UI_API_ENDPOINTS } from '../business-api.ts'
 import { parseStoredWorkspaceGroups, pruneWorkspaceGroups, type WorkspaceGroup } from '../workspace-groups.ts'
 
 export const PINNED_WORKSPACES_STORAGE_KEY = 'dsh-codex-ui.pinned-workspace-ids'
 export const WORKSPACE_GROUPS_STORAGE_KEY = 'dsh-codex-ui.workspace-groups.v1'
-export const WORKSPACE_PREFERENCES_ENDPOINT = '/api/michengai/codex-ui/preferences'
+export const WORKSPACE_PREFERENCES_ENDPOINT = CODEX_UI_API_ENDPOINTS.preferences
 
 export type HostPinnedWorkspacePreferences = {
   exists: boolean

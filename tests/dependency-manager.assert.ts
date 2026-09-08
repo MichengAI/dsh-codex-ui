@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { PassThrough } from 'node:stream'
 import { pathToFileURL } from 'node:url'
 import { applyRequiredBuildPolicies, beginInstallProgress, canRequestParentReload, dependencyStatuses, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, PLUGIN_MOUNT_TIMEOUT_MS, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, supportsOfficialTurnNavigator, updatableDependencyIds, withPnpmEntry } from '../src/dependency-manager.ts'
-import { crossSiteRequest, publicDependencyError } from '../src/index.ts'
+import { publicDependencyError } from '../src/index.ts'
 
 const sourceRoot = resolve('fixtures', 'deepseek-harness')
 const sourceEntry = join(sourceRoot, 'apps', 'cli', 'src', 'bin.ts')
@@ -205,71 +205,6 @@ assert.equal(
   'pnpm 占位值与重复项必须规范化成确定策略',
 )
 
-// 依赖安装 POST 端点的跨站请求判定：浏览器恶意网页可用表单跨站触发安装，
-// 必须按 Sec-Fetch-Site / Origin 与 Host 的比对阻断。
-assert.equal(
-  crossSiteRequest({ method: 'POST', url: '/api/x?dependency=ui' }),
-  true,
-  '无来源信息的写请求必须拒绝',
-)
-assert.equal(
-  crossSiteRequest({ method: 'POST', url: '/api/x', headers: { 'sec-fetch-site': 'same-origin' }, socket: { remoteAddress: '127.0.0.1' } }),
-  true,
-  '缺少 Origin 的写请求不能只凭 Sec-Fetch-Site 放行',
-)
-assert.equal(
-  crossSiteRequest({ method: 'POST', url: '/api/x', headers: { 'sec-fetch-site': 'none' } }),
-  true,
-  '缺少 Origin 的非页面写请求也必须拒绝',
-)
-assert.equal(
-  crossSiteRequest({ method: 'POST', url: '/api/x', headers: { 'sec-fetch-site': 'cross-site' } }),
-  true,
-  '跨站请求必须拦截',
-)
-assert.equal(
-  crossSiteRequest({ method: 'POST', url: '/api/x', headers: { 'sec-fetch-site': 'same-site' } }),
-  true,
-  '同站不同源端口也必须拦截',
-)
-assert.equal(
-  crossSiteRequest({
-    method: 'POST',
-    url: '/api/x?dependency=ui',
-    headers: { origin: 'http://localhost:3080', host: 'localhost:3080' },
-    socket: { remoteAddress: '::1' },
-  }),
-  false,
-  '老浏览器同源 POST（Origin 与 Host 一致）必须放行',
-)
-assert.equal(
-  crossSiteRequest({
-    method: 'POST',
-    url: '/api/x?dependency=ui',
-    headers: { origin: 'http://localhost:3080', host: 'localhost:3080' },
-    socket: { remoteAddress: '192.168.1.8' },
-  }),
-  true,
-  '非回环客户端即使伪造同源头也必须拦截',
-)
-assert.equal(
-  crossSiteRequest({
-    method: 'POST',
-    url: '/api/x?dependency=ui',
-    headers: { origin: 'https://evil.example', host: 'localhost:3080' },
-  }),
-  true,
-  'Origin 与 Host 不一致的请求必须拦截',
-)
-assert.equal(
-  crossSiteRequest({
-    method: 'POST',
-    url: '/api/x?dependency=ui',
-    headers: { origin: 'null', host: 'localhost:3080' },
-  }),
-  true,
-  'Origin 为 null 的沙盒页面请求必须拦截',
-)
 
 assert.equal(
   publicDependencyError(new Error('从 npm 安装或更新依赖失败。请检查网络或 npm registry 后重试。')),

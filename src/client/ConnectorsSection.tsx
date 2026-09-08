@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { IconLinkOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import { CODEX_UI_API_ENDPOINTS } from '../business-api.ts'
 import { NS } from './locales.ts'
 import { userErrorText } from './user-error.ts'
 
@@ -95,7 +96,7 @@ function NativeConnectorList({ sessionStore, t }: Pick<ConnectorsSectionProps, '
     if (sessionId === undefined) { setConnectors([]); setState('ready'); return }
     const controller = new AbortController()
     setState('loading')
-    void fetch(`/api/michengai/codex-ui/connectors?sessionId=${encodeURIComponent(sessionId)}`, { signal: controller.signal })
+    void fetch(`${CODEX_UI_API_ENDPOINTS.connectors}?sessionId=${encodeURIComponent(sessionId)}`, { signal: controller.signal })
       .then(async response => {
         if (!response.ok) throw new Error('连接器目录暂不可用。')
         const payload = await response.json() as { connectors?: unknown }

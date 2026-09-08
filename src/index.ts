@@ -1,5 +1,6 @@
 /** 浏览器客户端插件的 Host 入口；客户端逻辑由 dsh.client 加载。 */
 import type { Context } from '@deepseek-ai/cordis'
+import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
 import { canRequestParentReload, dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, requestDesktopHotUpdate, resolveDependencyRuntime, runtimeSupportsOfficialTurnNavigator, updateAllDependencies } from './dependency-manager.ts'
 import { authorizedExplorerWorkspacePath } from './explorer-path-policy.ts'
 import { hostServices } from './host-services.ts'
@@ -7,25 +8,18 @@ import { ForegroundExplorer } from './native-explorer.ts'
 import { moveSessionToWorkspace, SessionMoveError } from './session-migration.ts'
 import { parsePinnedWorkspaceIds, parseStoredWorkspaceGroups, readWorkspacePreferences, WORKSPACE_PREFERENCES_VERSION, writeWorkspacePreferences } from './workspace-preferences.ts'
 
-const connectorsEndpoint = '/api/michengai/codex-ui/connectors'
-const dependenciesEndpoint = '/api/michengai/codex-ui/dependencies'
-const explorerEndpoint = '/api/michengai/codex-ui/open-in-explorer'
-const preferencesEndpoint = '/api/michengai/codex-ui/preferences'
-const sessionMoveEndpoint = '/api/michengai/codex-ui/session-move'
+const connectorsEndpoint = CODEX_UI_API_ENDPOINTS.connectors
+const dependenciesEndpoint = CODEX_UI_API_ENDPOINTS.dependencies
+const explorerEndpoint = CODEX_UI_API_ENDPOINTS.openInExplorer
+const preferencesEndpoint = CODEX_UI_API_ENDPOINTS.preferences
+const sessionMoveEndpoint = CODEX_UI_API_ENDPOINTS.sessionMove
 const maxPreferencesBodyBytes = 32 * 1024
 
 type HostRequest = {
   method?: string
   url?: string
   headers?: Record<string, string | string[] | undefined>
-  socket?: { remoteAddress?: string }
   [Symbol.asyncIterator]?: () => AsyncIterator<Uint8Array | string>
-}
-
-function isLoopbackAddress(value: string | undefined): boolean {
-  const address = value?.toLowerCase().replace(/^\[|\]$/g, '')
-  return address === 'localhost' || address === 'localhost.' || address === '::1'
-    || address?.startsWith('127.') === true || address?.startsWith('::ffff:127.') === true
 }
 
 function headerValue(headers: Record<string, string | string[] | undefined>, name: string): string | undefined {
@@ -33,27 +27,6 @@ function headerValue(headers: Record<string, string | string[] | undefined>, nam
   if (typeof value === 'string') return value
   if (Array.isArray(value)) return value[0]
   return undefined
-}
-
-/**
- * 依赖安装会改写用户配置并拉起子进程，只允许回环地址上的同源浏览器请求。
- * Origin、Host 和 Sec-Fetch-Site 都可被非浏览器客户端伪造，不能单独作为授权依据。
- */
-export function crossSiteRequest(request: HostRequest): boolean {
-  if (!isLoopbackAddress(request.socket?.remoteAddress)) return true
-  const headers = request.headers
-  if (headers === undefined) return true
-  const site = headerValue(headers, 'sec-fetch-site')
-  if (site !== undefined && site !== 'same-origin') return true
-  const origin = headerValue(headers, 'origin')
-  const host = headerValue(headers, 'host')
-  if (origin === undefined || host === undefined) return true
-  try {
-    const url = new URL(origin)
-    return (url.protocol !== 'http:' && url.protocol !== 'https:') || !isLoopbackAddress(url.hostname) || url.host !== host
-  } catch {
-    return true
-  }
 }
 
 /** 把安装错误收成可给浏览器看的文案：我们自己的中文说明保留，带本地路径的底层错误脱敏。 */
@@ -79,6 +52,46 @@ export async function readRequestBody(request: HostRequest, maxBytes = maxPrefer
     chunks.push(buffer)
   }
   return Buffer.concat(chunks).toString('utf8')
+}
+
+type HostResponse = {
+  writeHead(status: number, headers?: Record<string, string>): void
+  end(body?: string): void
+}
+
+type AuthenticationStatus = 401 | 403 | 503
+type AuthenticationErrorBody = (status: AuthenticationStatus, message: string) => Record<string, unknown>
+
+/** 所有手写业务 REST 都委托当前宿主的浏览器信任与登录认证。 */
+function authenticateBusinessRequest(
+  ctx: Context,
+  request: HostRequest,
+  response: HostResponse,
+  errorBody: AuthenticationErrorBody = (_status, message) => ({ error: message }),
+): boolean {
+  const reject = (status: AuthenticationStatus, message: string): false => {
+    response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+    response.end(JSON.stringify(errorBody(status, message)))
+    return false
+  }
+  try {
+    const connection = ctx.get('connection') as {
+      requestRejection?: (request: { headers?: HostRequest['headers'] }) => 401 | 403 | undefined
+    } | undefined
+    if (typeof connection?.requestRejection !== 'function') {
+      ctx.logger.warn('Codex UI 业务 REST 认证不可用：缺少 connection.requestRejection。')
+      return reject(503, '宿主认证服务暂不可用。')
+    }
+    const rejection = connection.requestRejection(request)
+    if (rejection !== undefined) {
+      return reject(rejection, rejection === 401 ? '请先登录 DSH。' : '已拒绝不可信或跨站请求。')
+    }
+    return true
+  } catch (error) {
+    const reason = error instanceof Error ? `${error.name}: ${error.message}` : typeof error
+    ctx.logger.warn('Codex UI 业务 REST 认证调用失败：%s', reason)
+    return reject(503, '宿主认证服务暂不可用。')
+  }
 }
 
 export const inject = ['webServer', 'agents', 'tools', 'workspaceRegistry', 'sessions', 'sessionPersistence']
@@ -110,6 +123,13 @@ function publicSessionMoveError(error: unknown): { code: string; error: string }
   return { code, error: messages[code] ?? '暂时无法移动该会话，请稍后重试。' }
 }
 
+function sessionMoveAuthenticationError(status: AuthenticationStatus, error: string): Record<string, unknown> {
+  const code = status === 401
+    ? 'session-move/unauthorized'
+    : status === 403 ? 'session-move/forbidden' : 'session-move/service-unavailable'
+  return { ok: false, code, error }
+}
+
 /** 提供不泄露地址、命令和凭证的连接器目录。 */
 export function apply(ctx: Context): void {
   const host = hostServices(ctx)
@@ -120,6 +140,7 @@ export function apply(ctx: Context): void {
       kind: 'exact',
       path: connectorsEndpoint,
       handler: async (request, response) => {
+        if (!authenticateBusinessRequest(ctx, request, response)) return
         if (request.method !== 'GET' && request.method !== 'HEAD') { response.writeHead(405); response.end(); return }
         try {
           const sessionId = new URL(request.url ?? '/', 'http://localhost').searchParams.get('sessionId')
@@ -146,6 +167,7 @@ export function apply(ctx: Context): void {
       kind: 'exact',
       path: dependenciesEndpoint,
       handler: async (request, response) => {
+        if (!authenticateBusinessRequest(ctx, request, response)) return
         const url = new URL(request.url ?? '/', 'http://localhost')
         try {
           if (request.method === 'GET') {
@@ -168,11 +190,6 @@ export function apply(ctx: Context): void {
             return
           }
           if (request.method === 'POST') {
-            if (crossSiteRequest(request)) {
-              response.writeHead(403, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-              response.end(JSON.stringify({ error: '已拒绝非本机同源请求。' }))
-              return
-            }
             if (url.searchParams.get('action') === 'update-all') {
               const runtime = resolveDependencyRuntime(ctx)
               const notifyParent = canRequestParentReload(runtime)
@@ -213,6 +230,7 @@ export function apply(ctx: Context): void {
       kind: 'exact',
       path: preferencesEndpoint,
       handler: async (request, response) => {
+        if (!authenticateBusinessRequest(ctx, request, response)) return
         try {
           if (request.method === 'GET' || request.method === 'HEAD') {
             const preferences = await readWorkspacePreferences()
@@ -221,11 +239,6 @@ export function apply(ctx: Context): void {
             return
           }
           if (request.method === 'PUT') {
-            if (crossSiteRequest(request)) {
-              response.writeHead(403, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-              response.end(JSON.stringify({ error: '已拒绝跨站请求。' }))
-              return
-            }
             const body = JSON.parse(await readRequestBody(request)) as unknown
             const record = body !== null && typeof body === 'object' ? body as Record<string, unknown> : undefined
             const pinnedWorkspaceIds = record === undefined ? undefined : parsePinnedWorkspaceIds(record.pinnedWorkspaceIds)
@@ -272,12 +285,8 @@ export function apply(ctx: Context): void {
       kind: 'exact',
       path: sessionMoveEndpoint,
       handler: async (request, response) => {
+        if (!authenticateBusinessRequest(ctx, request, response, sessionMoveAuthenticationError)) return
         if (request.method !== 'POST') { response.writeHead(405, { allow: 'POST' }); response.end(); return }
-        if (crossSiteRequest(request)) {
-          response.writeHead(403, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-          response.end(JSON.stringify({ ok: false, code: 'session-move/cross-site', error: '已拒绝跨站请求。' }))
-          return
-        }
         try {
           const body = JSON.parse(await readRequestBody(request)) as unknown
           const record = body !== null && typeof body === 'object' ? body as Record<string, unknown> : undefined
@@ -308,12 +317,8 @@ export function apply(ctx: Context): void {
       kind: 'exact',
       path: explorerEndpoint,
       handler: async (request, response) => {
+        if (!authenticateBusinessRequest(ctx, request, response)) return
         if (request.method !== 'POST') { response.writeHead(405, { allow: 'POST' }); response.end(); return }
-        if (crossSiteRequest(request)) {
-          response.writeHead(403, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-          response.end(JSON.stringify({ error: '已拒绝跨站请求。' }))
-          return
-        }
         if (process.platform !== 'win32') {
           response.writeHead(501, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
           response.end(JSON.stringify({ error: '当前平台使用系统默认打开方式。' }))

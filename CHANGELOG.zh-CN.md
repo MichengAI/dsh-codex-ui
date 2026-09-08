@@ -4,6 +4,20 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 未发布
+
+### 变更
+
+- 将 Codex UI 自有业务 REST 从 `/api/michengai/codex-ui/*` 统一迁移到 `/api/dsh-codex-ui/*`，与 Skills Manager 和 IM Connect 的业务 endpoint 命名保持一致；旧地址不再注册。宿主依赖基线相应要求 `@deepseek-ai/dsh-client-connection >=0.1.2-rc.1` 与 Cordis `>=4.0.2`。
+
+### 安全
+
+- 五个业务 REST 全部委托 DSH 宿主 `requestRejection()` 校验可信 Host、Origin 和登录 Cookie；认证服务不可用时关闭失败，不再用仅限回环地址的判断阻断合法反向代理访问。
+
+### 测试
+
+- 新增业务路由注册和认证回归测试，覆盖新旧路径、401、403、认证不可用、请求头原样转交及宿主认证放行的外部 Origin 写请求。
+
 ## suite-installer-v0.1.29 - 2026-09-08
 
 - 将套件更新至 Codex UI `0.2.111` 和 IM Connect `0.1.38`，保证频道侧栏兼容已认证的 `/api/dsh-im-connect/channels` 接口。

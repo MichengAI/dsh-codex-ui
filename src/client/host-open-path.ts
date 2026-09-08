@@ -1,10 +1,12 @@
+import { CODEX_UI_API_ENDPOINTS } from '../business-api.ts'
+
 type HostOpenPathResponse = {
   result:
     | { ok: true, value: unknown }
     | { ok: false, error: { message: string } }
 }
 
-export const OPEN_IN_EXPLORER_ENDPOINT = '/api/michengai/codex-ui/open-in-explorer'
+export const OPEN_IN_EXPLORER_ENDPOINT = CODEX_UI_API_ENDPOINTS.openInExplorer
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 

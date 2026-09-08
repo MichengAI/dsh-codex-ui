@@ -87,13 +87,14 @@ let sessionMoveRoute: Route | undefined
 let disposeEffect: (() => void) | undefined
 const webServer = {
   register: (route: Route) => {
-    if (route.path === '/api/michengai/codex-ui/preferences') preferencesRoute = route
-    if (route.path === '/api/michengai/codex-ui/dependencies') dependenciesRoute = route
-    if (route.path === '/api/michengai/codex-ui/open-in-explorer') explorerRoute = route
-    if (route.path === '/api/michengai/codex-ui/session-move') sessionMoveRoute = route
+    if (route.path === '/api/dsh-codex-ui/preferences') preferencesRoute = route
+    if (route.path === '/api/dsh-codex-ui/dependencies') dependenciesRoute = route
+    if (route.path === '/api/dsh-codex-ui/open-in-explorer') explorerRoute = route
+    if (route.path === '/api/dsh-codex-ui/session-move') sessionMoveRoute = route
     return () => {}
   },
 }
+let authenticationRejection: 401 | 403 | undefined
 const services: Record<string, unknown> = {
   webServer,
   agents: { get: () => undefined },
@@ -111,6 +112,7 @@ const services: Record<string, unknown> = {
   },
   tools: { schemas: () => [] },
   workspaceRegistry: { list: () => [{ path: 'D:\\Repository\\known-workspace' }] },
+  connection: { requestRejection: () => authenticationRejection },
 }
 const context = {
   get: (key: string) => services[key],
@@ -168,7 +170,9 @@ try {
   assert.equal((await invoke('PUT', [JSON.stringify({ pinnedWorkspaceIds: [], workspaceGroups: caseOnlyConflict })])).status, 400, 'changed IDs/titles cannot acquire legacy conflict exemptions')
   assert.deepEqual(JSON.parse((await invoke('GET')).body ?? '{}').workspaceGroups, distinctGroups)
 
+  authenticationRejection = 403
   assert.equal((await invoke('PUT', ['{}'], { 'sec-fetch-site': 'cross-site' })).status, 403)
+  authenticationRejection = undefined
   assert.equal((await invoke('PUT', [], { 'content-length': String(33 * 1024) })).status, 413)
   assert.equal((await invoke('POST')).status, 405)
 
@@ -180,9 +184,11 @@ try {
     await dependenciesRoute?.handler({ ...request([], headers), method, url }, response)
     return response
   }
+  authenticationRejection = 403
   const crossSiteDependency = await invokeDependencies('POST', `${dependenciesRoute?.path}?dependency=ui`, { 'sec-fetch-site': 'cross-site' })
   assert.equal(crossSiteDependency.status, 403, '依赖安装路由必须拒绝跨站 POST')
-  assert.equal(JSON.parse(crossSiteDependency.body ?? '{}').error, '已拒绝非本机同源请求。')
+  assert.equal(JSON.parse(crossSiteDependency.body ?? '{}').error, '已拒绝不可信或跨站请求。')
+  authenticationRejection = undefined
 
   services.desktopProfiles = {
     get current(): never { throw new Error('无法读取 D:\\Users\\demo\\secret-profile') },
@@ -208,9 +214,11 @@ try {
     await sessionMoveRoute?.handler({ ...request(chunks, headers), method: 'POST', url: sessionMoveRoute.path }, response)
     return response
   }
+  authenticationRejection = 403
   const crossSiteMove = await invokeSessionMove([JSON.stringify({ sessionId: 'one', targetWorkspaceId: 'two' })], { 'sec-fetch-site': 'cross-site' })
   assert.equal(crossSiteMove.status, 403)
-  assert.equal(JSON.parse(crossSiteMove.body ?? '{}').code, 'session-move/cross-site')
+  assert.deepEqual(JSON.parse(crossSiteMove.body ?? '{}'), { ok: false, code: 'session-move/forbidden', error: '已拒绝不可信或跨站请求。' })
+  authenticationRejection = undefined
   const invalidMove = await invokeSessionMove([JSON.stringify({ sessionId: '', targetWorkspaceId: '' })], { 'sec-fetch-site': 'same-origin' })
   assert.equal(invalidMove.status, 400)
   assert.equal(JSON.parse(invalidMove.body ?? '{}').code, 'session-move/invalid-request')

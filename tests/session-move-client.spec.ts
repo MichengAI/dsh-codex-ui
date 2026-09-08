@@ -38,6 +38,8 @@ test('Host 拒绝迁移时保留结构化错误码', async () => {
 })
 
 test('迁移错误码映射为准确的客户端文案键', () => {
+  expect(sessionMoveErrorKey('session-move/unauthorized')).toBe('sessions.moveUnauthorized')
+  expect(sessionMoveErrorKey('session-move/forbidden')).toBe('sessions.moveForbidden')
   expect(sessionMoveErrorKey('session-move/rollback-failed')).toBe('sessions.moveRollbackFailed')
   expect(sessionMoveErrorKey('session-move/service-unavailable')).toBe('sessions.moveUnavailable')
   expect(sessionMoveErrorKey('session-move/session-not-found')).toBe('sessions.moveNotFound')

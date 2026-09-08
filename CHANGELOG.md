@@ -4,6 +4,20 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## Unreleased
+
+### Changed
+
+- Moved Codex UI's business REST routes from `/api/michengai/codex-ui/*` to `/api/dsh-codex-ui/*`, aligning their naming with the Skills Manager and IM Connect business endpoints; the old routes are no longer registered. The host baseline now requires `@deepseek-ai/dsh-client-connection >=0.1.2-rc.1` and Cordis `>=4.0.2`.
+
+### Security
+
+- Delegated all five business REST routes to the DSH host's `requestRejection()` checks for trusted hosts, origins, and login cookies. Requests now fail closed when authentication is unavailable without blocking legitimate reverse-proxy origins through a loopback-only check.
+
+### Tests
+
+- Added business-route registration and authentication regression coverage for the new and removed paths, 401, 403, unavailable authentication, unchanged request-header forwarding, and an external-origin write authorized by the host boundary.
+
 ## suite-installer-v0.1.29 - 2026-09-08
 
 - Updated the suite to Codex UI `0.2.111` and IM Connect `0.1.38`, keeping the channel sidebar compatible with the authenticated `/api/dsh-im-connect/channels` endpoint.

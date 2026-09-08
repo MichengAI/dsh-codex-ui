@@ -1,4 +1,6 @@
-export const SESSION_MOVE_ENDPOINT = '/api/michengai/codex-ui/session-move'
+import { CODEX_UI_API_ENDPOINTS } from '../business-api.ts'
+
+export const SESSION_MOVE_ENDPOINT = CODEX_UI_API_ENDPOINTS.sessionMove
 const MOVE_ACTION_PREFIX = 'move-session:'
 
 type WorkspaceSummary = {
@@ -17,6 +19,8 @@ type SessionMoveCompletionOptions = {
 
 export type SessionMoveErrorKey =
   | 'sessions.moveUnavailable'
+  | 'sessions.moveUnauthorized'
+  | 'sessions.moveForbidden'
   | 'sessions.moveNotFound'
   | 'sessions.moveSubagent'
   | 'sessions.moveBusy'
@@ -26,6 +30,8 @@ export type SessionMoveErrorKey =
 const SESSION_MOVE_ERROR_KEYS: Readonly<Record<string, SessionMoveErrorKey>> = {
   'session-move/unavailable': 'sessions.moveUnavailable',
   'session-move/service-unavailable': 'sessions.moveUnavailable',
+  'session-move/unauthorized': 'sessions.moveUnauthorized',
+  'session-move/forbidden': 'sessions.moveForbidden',
   'session-move/session-not-found': 'sessions.moveNotFound',
   'session-move/workspace-not-found': 'sessions.moveNotFound',
   'session-move/subagent-unsupported': 'sessions.moveSubagent',
