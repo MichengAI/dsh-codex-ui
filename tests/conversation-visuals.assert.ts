@@ -5,6 +5,7 @@ import { tickMarkSize } from '../src/client/TurnNavigator.tsx'
 const sidebar = readFileSync(new URL('../src/client/CodexSidebar.tsx', import.meta.url), 'utf8')
 const navigator = readFileSync(new URL('../src/client/TurnNavigator.tsx', import.meta.url), 'utf8')
 const client = readFileSync(new URL('../src/client/index.ts', import.meta.url), 'utf8')
+const settings = readFileSync(new URL('../src/client/settings-page-styles.ts', import.meta.url), 'utf8')
 
 assert.match(sidebar, /\.dcu-footer-actions \[data-testid="billing-trigger"\]\{[^}]*border:0[^}]*background:transparent[^}]*box-shadow:none[^}]*transform:none/, '费用入口必须融入侧栏，不保留独立卡片的边框、阴影和抬升')
 assert.match(sidebar, /\.dcu-footer-actions \[data-testid="billing-trigger-icon"\]\{[^}]*width:16px;height:20px[^}]*border:0/, '费用图标必须去掉方框并与侧栏图标同宽')
@@ -20,7 +21,8 @@ for (const marker of ['billing-trigger-icon', 'billing-rail-button']) {
 }
 assert.ok(sidebar.includes('.dcu-settings-seat [data-slot="settings.trigger"]>svg{color:var(--dcu-sidebar-icon)}'), '设置与费用图标必须使用同一侧栏颜色，穿过宿主 slot 包装定位图标')
 assert.ok(sidebar.includes('.dcu-footer-actions [data-testid="billing-trigger-icon"]+span{min-width:0;gap:2px;margin-left:4px}'), '费用文字整体右移，保留两行左对齐')
-assert.ok(sidebar.includes('.dcu-root:not(.dcu-compact) .dcu-settings-seat [data-slot="settings.trigger"]>span{margin-left:4px}'), '设置文字必须同步右移，不能改变窄轨布局')
+assert.match(settings, /\.dcu-settings-trigger-content\{[^}]*grid-template-columns:20px minmax\(0,1fr\);column-gap:8px/, '设置入口通过固定图标列对齐文字，不再叠加旧的文字偏移')
+assert.match(settings, /\.dcu-settings-trigger\[data-wide=false\] \.dcu-settings-trigger-content\{grid-template-columns:16px;justify-content:center\}/, '窄轨设置图标必须独立居中')
 
 assert.doesNotMatch(sidebar, /--dsh-chat-content-width:\s*800px/, '会话内容列必须保留宿主自适应和拖拽宽度')
 assert.match(sidebar, /--dsh-composer-card-max-width:calc\(var\(--dsh-chat-content-width\) \+ 32px\)/, '输入卡片必须继续从宿主会话宽度轴派生')

@@ -6,6 +6,13 @@ This changelog records recent releases of DSH Codex UI and its one-click install
 
 ## Unreleased
 
+## 0.2.114 - 2026-09-08
+
+- Replace the settings dialog with a Codex-style standalone view, category search, grouped preferences, and focus restoration when returning to the app.
+- Fix duplicate settings-shell registration, settings entry alignment and transitions, search focus, repeated headings, and content spacing.
+- Give the plugin marketplace and side cards distinct store and sidebar-layout icons instead of the generic box.
+- Preserve host configuration, onboarding, connection recovery, and installed plugin functionality; community plugin internal styling remains outside this change.
+
 ## suite-installer-v0.1.31 - 2026-09-08
 
 Resolved and pinned the following member versions from the official npm registry:

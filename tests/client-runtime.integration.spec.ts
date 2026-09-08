@@ -36,6 +36,8 @@ class ClientApplyHarness {
   }
 
   readonly ctx = {
+    // 此夹具不提供可选的配置文件服务。
+    inject: () => () => {},
     slots: this.slots,
     locale: {
       register: () => () => {},

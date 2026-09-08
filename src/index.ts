@@ -1,5 +1,6 @@
 /** 浏览器客户端插件的 Host 入口；客户端逻辑由 dsh.client 加载。 */
 import type { Context } from '@deepseek-ai/cordis'
+import { apply as registerSettingsSchema } from '@deepseek-ai/dsh-client-ui-settings-general'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
 import { canRequestParentReload, dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, requestDesktopHotUpdate, resolveDependencyRuntime, runtimeSupportsOfficialTurnNavigator, updateAllDependencies } from './dependency-manager.ts'
 import { authorizedExplorerWorkspacePath } from './explorer-path-policy.ts'
@@ -136,6 +137,8 @@ function sessionMoveAuthenticationError(status: AuthenticationStatus, error: str
 
 /** 提供不泄露地址、命令和凭证的连接器目录。 */
 export function apply(ctx: Context): void {
+  // 原设置壳停用后，继续注册其公开的持久化引导 schema。
+  registerSettingsSchema(ctx)
   const host = hostServices(ctx)
   ctx.effect(() => {
     const foregroundExplorer = new ForegroundExplorer()

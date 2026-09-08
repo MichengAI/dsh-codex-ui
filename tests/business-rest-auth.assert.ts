@@ -72,6 +72,7 @@ const services: Record<string, unknown> = {
   },
 }
 const context = {
+  inject() {},
   get(key: string) { return key === 'connection' && !connectionAvailable ? undefined : services[key] },
   effect(effect: () => void | (() => void)) {
     const dispose = effect()

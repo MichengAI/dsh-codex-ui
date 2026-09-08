@@ -1,5 +1,7 @@
-# 由本插件接管 sidebar 的子插槽声明，原设置面板仍通过 sidebar.settings 挂载。
+# 由本插件统一声明侧栏和设置子插槽，避免与原壳重复声明。
 - id: ui-sidebar
+  disabled: true
+- id: ui-settings-general
   disabled: true
 - insert:
     - id: codex-ui

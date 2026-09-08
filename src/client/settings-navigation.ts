@@ -33,14 +33,14 @@ export const SETTINGS_NAVIGATION_TIMEOUT_MS = 4_000
 
 export function openSettingsSection(root: HTMLElement | null, label: string | readonly string[], onMissing?: () => void, onSelected?: () => void): void {
   const labels = typeof label === 'string' ? [label] : label
-  const trigger = root?.querySelector<HTMLButtonElement>('[aria-haspopup="dialog"]')
+  const trigger = root?.querySelector<HTMLButtonElement>('[data-dcu-settings-trigger],[aria-haspopup="dialog"]')
   if (trigger === null || trigger === undefined) {
     onMissing?.()
     return
   }
   const opening = cancelPendingNavigation !== undefined
   cancelPendingNavigation?.()
-  if (!opening && document.querySelector('[role="dialog"]') === null) trigger.click()
+  if (!opening && document.querySelector('[data-dcu-settings-page],[role="dialog"]') === null) trigger.click()
   let frame: number | undefined
   let finished = false
   const observer = new MutationObserver(() => { schedule() })
@@ -53,7 +53,7 @@ export function openSettingsSection(root: HTMLElement | null, label: string | re
     if (cancelPendingNavigation === cleanup) cancelPendingNavigation = undefined
   }
   const select = (): boolean => {
-    const buttons = [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] nav button')]
+    const buttons = [...document.querySelectorAll<HTMLButtonElement>('[data-dcu-settings-page] nav button,[role="dialog"] nav button')]
     const target = pickSettingsSectionButton(buttons, labels)
     if (target === undefined) return false
     cleanup()

@@ -115,6 +115,7 @@ const services: Record<string, unknown> = {
   connection: { requestRejection: () => authenticationRejection },
 }
 const context = {
+  inject() {},
   get: (key: string) => services[key],
   effect: (effect: () => void | (() => void)) => { disposeEffect = effect() ?? undefined },
   logger: { warn: () => {} },

@@ -1,6 +1,6 @@
 {
   "name": "@michengai/dsh-codex-ui",
-  "version": "0.2.113",
+  "version": "0.2.114",
   "description": "以 Codex 风格重构 DSH Web 侧栏的独立客户端插件",
   "license": "Apache-2.0",
   "publishConfig": {
@@ -54,7 +54,8 @@
         "@deepseek-ai/dsh-client-ui-conversation",
         "@deepseek-ai/dsh-client-ui-input-trigger",
         "@deepseek-ai/dsh-client-ui-workspace",
-        "@deepseek-ai/dsh-client-ui-settings-general"
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-connection"
       ],
       "platform": "web"
     }

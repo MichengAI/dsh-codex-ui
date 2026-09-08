@@ -19,6 +19,7 @@ import { en, NS, zh } from './locales.ts'
 import { createCompanionTabSource } from './companion-slots.ts'
 import { openPathInHost, type HostOpenPathConnection } from './host-open-path.ts'
 import { observeSettingsNavIcons } from './settings-nav-icons.ts'
+import { registerSettingsPage } from './settings-page-registration.ts'
 import { observePermissionLabels } from './permission-labels.ts'
 import { observeSlimSidebar } from './sidebar-width.ts'
 import { observeConversationHeader } from './conversation-header.ts'
@@ -113,6 +114,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'michengai-codex-ui: dictionaries')
   const t = ctx.locale.bind(NS)
   registerInputHistory(ctx)
+  registerSettingsPage(ctx)
   // Host 与客户端共用 Cordis 的服务名；此处读取的是客户端 RPC 外观，而非 HostConnectionService。
   const connectionService: unknown = ctx.get('connection')
   const connection = connectionService as HostOpenPathConnection
