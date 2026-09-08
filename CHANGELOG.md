@@ -4,8 +4,6 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
-## Unreleased
-
 ## 0.2.114 - Unreleased
 
 - Fix global settings search, onboarding and keyboard focus isolation, Escape handling for hidden dialogs, and configuration-file error feedback; retain the host settings shell when it is already active.

@@ -107,3 +107,18 @@ test.each([false, true])('真实 Cordis 注入生命周期：loopback=%s 的配�
     await vi.waitFor(()=>expect(ctx.slots.entriesOfSlot('settings.action')).toHaveLength(0))
   }finally{await removeRemoteSettings();await removeRemote();await removeScope();removeRoot();await removeConnection();await removeLocale()}
 })
+
+
+test('配套插件先注入时等待设置树声明，不会误判为旧壳', () => {
+  const { slots, ctx, declare, dispose } = setup()
+  const row = () => null
+  ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'early-plugin' }, row))
+  ctx.slots.inject('settings.general.item', () => ctx.slots.register({ name: 'settings.general.item', id: 'early-item' }, row))
+  const removeRoot = declare()
+  registerSettingsPage(ctx)
+  expect(slots.entriesOfSlot('sidebar.settings')[0]?.component).toBe(CodexSettingsPage)
+  expect(slots.entriesOfSlot('settings.section').some(entry => entry.options.id === 'early-plugin')).toBe(true)
+  expect(slots.entriesOfSlot('settings.general.item')[0]?.component).toBe(row)
+  dispose()
+  removeRoot()
+})

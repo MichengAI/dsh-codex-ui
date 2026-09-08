@@ -4,8 +4,6 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
-## 未发布
-
 ## 0.2.114 - 待发布
 
 - 修复全局搜索设置入口、引导与键盘焦点隔离、隐藏弹窗对 Escape 的影响及配置文件失败反馈；旧设置壳并存时保留宿主入口。

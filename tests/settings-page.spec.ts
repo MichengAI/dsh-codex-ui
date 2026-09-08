@@ -130,7 +130,7 @@ test('Shift+Tab 在设置内部循环，隐藏的迟挂载 dialog 不拦截 Esca
 })
 
 test('已有引导 portal 保留交互，设置退出不改写原始 inert 状态', async () => {
- const overlay=document.createElement('div');overlay.setAttribute('role','dialog');const next=document.createElement('button');overlay.append(next);document.body.append(overlay)
+ const overlay=document.createElement('div');overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');const next=document.createElement('button');overlay.append(next);document.body.append(overlay)
  const background=document.createElement('div');background.inert=true;document.body.append(background)
  const {container}=await mount({onboarding:source([{id:'portal-step'}])})
  expect(overlay.inert).not.toBe(true)
@@ -147,4 +147,62 @@ test('搜索弹窗尚未卸载也能从快捷入口打开设置分区', async ()
  await act(async()=>{openSettingsSection(container,'模型')})
  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,50))})
  expect(container.querySelector('[data-section=models]')).not.toBeNull()
+})
+
+
+test('引导只保留模态区域，同包装的背景菜单仍被隔离', async () => {
+  const branch = document.createElement('div')
+  const dialog = document.createElement('div')
+  dialog.setAttribute('role', 'dialog')
+  dialog.setAttribute('aria-modal', 'true')
+  const next = document.createElement('button')
+  dialog.append(next)
+  const menu = document.createElement('div')
+  menu.setAttribute('role', 'menu')
+  branch.append(dialog, menu)
+  document.body.append(branch)
+  const { container } = await mount({ onboarding: source([{ id: 'guide' }]) })
+  expect(dialog.inert).not.toBe(true)
+  expect(menu.inert).toBe(true)
+  next.focus()
+  expect(document.activeElement).toBe(next)
+  await act(async () => { container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click() })
+  expect(menu.inert).not.toBe(true)
+})
+
+test.each(['menu', 'listbox'])('Escape 只关闭 %s，下一次才退出设置', async role => {
+  const { container } = await mount()
+  const popup = document.createElement('div')
+  popup.setAttribute('role', role)
+  document.body.append(popup)
+  const dismiss = () => popup.remove()
+  document.addEventListener('keydown', dismiss, { once: true })
+  await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })) })
+  expect(popup.isConnected).toBe(false)
+  expect(container.querySelector('[data-dcu-settings-page]')).not.toBeNull()
+  await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })) })
+  expect(container.querySelector('[data-dcu-settings-page]')).toBeNull()
+})
+
+test('过滤提示随匹配与选择变化，过滤本身不卸载当前正文', async () => {
+  const { container } = await mount()
+  const original = container.querySelector('[data-section=general]')
+  const input = container.querySelector<HTMLInputElement>('input[type=search]')!
+  const search = async (value: string) => {
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value)
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+  }
+  await search('第三方')
+  expect(container.querySelector('[role=status]')?.textContent).toBe(zh['settings.filterHint'])
+  expect(container.querySelector('[data-section=general]')).toBe(original)
+  await act(async () => { container.querySelector<HTMLButtonElement>('.dcu-settings-link')!.click() })
+  expect(container.querySelector('[role=status]')).toBeNull()
+  expect(container.querySelector('[data-section=third-party]')).not.toBeNull()
+  await search('不存在')
+  expect(container.querySelector('[role=status]')?.textContent).toBe(zh['settings.noResults'])
+  expect(container.querySelector('[data-section=third-party]')).not.toBeNull()
+  await search('')
+  expect(container.querySelector('[role=status]')).toBeNull()
 })

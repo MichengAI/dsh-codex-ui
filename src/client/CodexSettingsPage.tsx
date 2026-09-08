@@ -87,21 +87,29 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     if (settingsElementAvailable(page.current) && settingsOverlays().length === 0) back.current?.focus()
     // 只隔离被设置页覆盖的分支，不卸载会话，也不移动宿主 React 节点。
     const hidden = new Map<HTMLElement, boolean>()
+    // 只为活动引导保留模态区域，不把无关菜单或其整棵包装子树一并放行。
+    const guideModals = step === undefined ? [] : settingsOverlays('[role="dialog"][aria-modal="true"],[role="alertdialog"][aria-modal="true"]')
+    const isolate = (element: HTMLElement) => {
+      if (element === onboardingRoot.current || guideModals.includes(element)) return
+      if (guideModals.some(modal => element.contains(modal))) {
+        for (const child of element.children) if (child instanceof HTMLElement && !/^(STYLE|SCRIPT|LINK)$/.test(child.tagName)) isolate(child)
+        return
+      }
+      hidden.set(element, element.inert)
+      element.inert = true
+    }
     let branch: HTMLElement = page.current
     while (branch.parentElement !== null) {
       for (const sibling of branch.parentElement.children) {
         if (!(sibling instanceof HTMLElement) || sibling === branch || /^(STYLE|SCRIPT|LINK)$/.test(sibling.tagName)) continue
-        // 引导可能是内联内容，也可能由官方 Modal portal 承载并自行管理根节点隔离。
-        if (sibling === onboardingRoot.current || (step !== undefined && settingsOverlays().some(overlay => sibling === overlay || sibling.contains(overlay)))) continue
-        hidden.set(sibling, sibling.inert)
-        sibling.inert = true
+        isolate(sibling)
       }
       branch = branch.parentElement
       if (branch === document.body) break
     }
     const onKeyDown = (event: KeyboardEvent) => {
-      // 内层确认框拥有 Escape；不能连带退出设置并丢失当前表单。
-      if (event.key === 'Escape' && !event.defaultPrevented && settingsOverlays('[role="dialog"],[role="alertdialog"]').length === 0) {
+      // 捕获阶段先检查浮层，避免它关闭后同一次 Escape 又退出设置；不阻止其自身处理事件。
+      if (event.key === 'Escape' && !event.defaultPrevented && settingsOverlays().length === 0) {
         event.preventDefault()
         close()
       }
@@ -125,11 +133,11 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
         next?.focus()
       }
     }
-    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('keydown', onKeyDown, true)
     document.addEventListener('keydown', wrapFocus)
     document.addEventListener('focusin', keepFocus)
     return () => {
-      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('keydown', onKeyDown, true)
       document.removeEventListener('keydown', wrapFocus)
       document.removeEventListener('focusin', keepFocus)
       for (const [element, inert] of hidden) element.inert = inert
