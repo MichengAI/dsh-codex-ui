@@ -6,6 +6,13 @@ This changelog records recent releases of DSH Codex UI and its one-click install
 
 ## Unreleased
 
+## 0.2.112 - 2026-09-08
+
+### Release automation
+
+- Fixed Chromium installation steps in release workflows and added YAML structure and prerequisite validation.
+- Installer releases now generate and commit bilingual CHANGELOG entries before extracting release notes; missing either language blocks publication.
+
 ### Breaking changes
 
 - Removed the public `crossSiteRequest` export. Consumers must use the host connection’s `requestRejection()` contract. Business GET routes now require authentication, including loopback requests (401 when signed out); missing authentication services return 503. The old REST paths have no compatibility aliases. Requires `@deepseek-ai/dsh-client-connection >=0.1.2-rc.1` and Cordis `>=4.0.2`.

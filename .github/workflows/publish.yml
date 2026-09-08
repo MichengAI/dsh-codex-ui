@@ -1,8 +1,5 @@
 name: 发布 npm 包
 
-      - name: 安装 Chromium 测试运行时
-        run: pnpm exec playwright install --with-deps chromium
-
 on:
   push:
     tags:
@@ -31,6 +28,9 @@ jobs:
 
       - name: 安装依赖
         run: pnpm install --frozen-lockfile
+
+      - name: 安装 Chromium 测试运行时
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: 运行完整测试
         run: pnpm test

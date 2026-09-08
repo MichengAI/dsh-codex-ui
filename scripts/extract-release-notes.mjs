@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { bilingualReleaseNotes } from './release-changelog.mjs'
 
 const tag = process.argv[2] || process.env.GITHUB_REF_NAME
 const outputPath = process.argv[3] || 'release-notes.md'
@@ -40,13 +41,5 @@ if (!chinese && !english) {
   throw new Error(`No changelog section found for ${tag}`)
 }
 
-const sections = []
-if (chinese && english) {
-  sections.push(`## 中文说明\n\n${chinese}`)
-  sections.push(`## English\n\n${english}`)
-} else {
-  sections.push(chinese || english)
-}
-
-writeFileSync(outputPath, `${sections.join('\n\n---\n\n')}\n`)
+writeFileSync(outputPath, bilingualReleaseNotes(chinese, english))
 console.log(`Wrote release notes for ${tag} to ${outputPath}`)

@@ -1,8 +1,5 @@
 name: 发布 Suite Installer
 
-      - name: 安装 Chromium 测试运行时
-        run: pnpm exec playwright install --with-deps chromium
-
 on:
   workflow_dispatch:
     inputs:
@@ -66,6 +63,9 @@ jobs:
       - name: 更新锁定文件
         run: pnpm install --lockfile-only
 
+      - name: 安装 Chromium 测试运行时
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: 运行完整测试
         run: pnpm test
 
@@ -76,7 +76,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add packages/dsh-codex-suite-installer/package.json packages/dsh-codex-suite/package.json pnpm-lock.yaml pnpm-workspace.yaml
+          git add packages/dsh-codex-suite-installer/package.json packages/dsh-codex-suite/package.json pnpm-lock.yaml pnpm-workspace.yaml CHANGELOG.md CHANGELOG.zh-CN.md
           if git diff --cached --quiet; then
             echo "No installer manifest changes to commit."
           else

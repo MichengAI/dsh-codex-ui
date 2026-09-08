@@ -6,6 +6,13 @@
 
 ## 未发布
 
+## 0.2.112 - 2026-09-08
+
+### 发布流程
+
+- 修复发布工作流的 Chromium 安装步骤位置，增加 YAML 结构及测试前置条件校验。
+- 安装器自动发布先生成并提交双语 CHANGELOG，再提取 Release 说明；缺少任一语言时阻止发布。
+
 ### 不兼容变更
 
 - 移除公共导出 `crossSiteRequest`，调用方应改用宿主 connection 的 `requestRejection()` 契约。业务 GET 现在必须认证，包括回环请求（未登录返回 401）；缺少认证服务返回 503。旧 REST 地址没有兼容入口。要求 `@deepseek-ai/dsh-client-connection >=0.1.2-rc.1` 与 Cordis `>=4.0.2`。

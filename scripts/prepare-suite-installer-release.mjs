@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { MEMBER_PACKAGES } from '../packages/dsh-codex-suite-installer/installer.mjs'
+import { bilingualReleaseNotes, installerReleaseBodies, upsertChangelog } from './release-changelog.mjs'
 
 const installerPath = new URL('../packages/dsh-codex-suite-installer/package.json', import.meta.url)
 const compatibilitySuitePath = new URL('../packages/dsh-codex-suite/package.json', import.meta.url)
@@ -48,20 +49,6 @@ async function resolveLatest(packageName) {
   return version
 }
 
-function renderReleaseNotes(version, members) {
-  const lines = [
-    `# DSH Codex Suite Installer v${version}`,
-    '',
-    'Resolved the following exact member versions from the official npm registry at release time:',
-    '',
-    ...MEMBER_PACKAGES.map((packageName) => `- \`${packageName}@${members[packageName]}\``),
-    '',
-    'The installer records these exact versions and installs them with `--save-exact`, so end-user installs remain reproducible.',
-    '',
-  ]
-  return lines.join('\n')
-}
-
 const options = parseArgs(process.argv.slice(2))
 const manifest = JSON.parse(readFileSync(installerPath, 'utf8'))
 const compatibilitySuite = JSON.parse(readFileSync(compatibilitySuitePath, 'utf8'))
@@ -86,9 +73,17 @@ for (const packageName of Object.keys(compatibilitySuite.dependencies)) {
   compatibilitySuite.dependencies[packageName] = members[packageName]
 }
 
-const releaseNotes = renderReleaseNotes(version, members)
+const { chinese, english } = installerReleaseBodies(members)
+const releaseNotes = bilingualReleaseNotes(chinese, english)
+const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+// 全部读取与生成成功后再写入，避免缺少语言文件时留下半份版本清单。
+const changelogs = [['CHANGELOG.zh-CN.md', chinese], ['CHANGELOG.md', english]].map(([name, body]) => {
+  const path = new URL(`../${name}`, import.meta.url)
+  return { path, content: upsertChangelog(readFileSync(path, 'utf8'), `suite-installer-v${version}`, body, date) }
+})
 if (options.releaseNotes !== undefined) writeFileSync(resolve(options.releaseNotes), releaseNotes, 'utf8')
 if (!options.dryRun) {
+  for (const { path, content } of changelogs) writeFileSync(path, content, 'utf8')
   writeFileSync(installerPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
   writeFileSync(compatibilitySuitePath, `${JSON.stringify(compatibilitySuite, null, 2)}\n`, 'utf8')
 }
