@@ -6,8 +6,19 @@ This changelog records recent releases of DSH Codex UI and its one-click install
 
 ## Unreleased
 
+### Fixed
+
+- Made empty-group vertical padding symmetric at 8px and standardized the Chinese empty-conversation label to "暂无聊天".
+- Aligned empty-group text with the group title without changing project or conversation indentation.
+- Matched the Codex sidebar reorder marker's 8px hollow ring and 2px rounded stroke, extending the line toward its start and removing the ring-to-line gap.
+- Unified group, project, and conversation reorder indicators around the midpoint between visible rows, including scrolling and collapsed content, instead of fixed offsets from wrapper elements.
+- Added 4px below each project's conversation list, matching its top gap so the last conversation no longer touches the next project row; the spacing collapses with the list.
+- Prevented the group reorder indicator above the first sidebar group from being clipped by the expanded Projects section.
+
 ### Changed
 
+- Increased group labels to 14px/600 with 32px rows and 12px spacing; project folders now switch between equally sized open and closed icons according to expansion state.
+- Strengthened sidebar groups with persistent disclosure indicators, medium-weight labels, subtle backgrounds, and spacing while preserving existing project and conversation indentation and row widths. Expansion uses the arrow state without resembling a selected conversation; improved group touch targets and keyboard focus styling.
 - Moved Codex UI's business REST routes from `/api/michengai/codex-ui/*` to `/api/dsh-codex-ui/*`, aligning their naming with the Skills Manager and IM Connect business endpoints; the old routes are no longer registered. The host baseline now requires `@deepseek-ai/dsh-client-connection >=0.1.2-rc.1` and Cordis `>=4.0.2`.
 
 ### Security

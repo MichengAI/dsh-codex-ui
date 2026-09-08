@@ -40,6 +40,7 @@ import { userErrorText } from './user-error.ts'
 import { moveSessionActionId, parseMoveSessionActionId, sessionMoveTargets } from './session-move.ts'
 import { archiveWorkspaceSessions } from './workspace-archive.ts'
 import { SquarePen } from 'lucide-react'
+import { mountWorkspaceDropIndicator } from './workspace-drop-indicator.ts'
 
 type BrowserInjected = {
   archiveSession: (sessionId: SessionId) => Promise<void>
@@ -210,7 +211,36 @@ const runningStyles = `.dcu-wb-running{position:absolute;right:10px;top:50%;flex
 
 const typographyStyles = `.dcu-wb{--dcu-wb-disclosure-duration:180ms;--dcu-wb-disclosure-ease:cubic-bezier(.16,1,.3,1);font:14px/20px var(--dcu-font,var(--dsw-font-family))}.dcu-wb-section-label{color:var(--dcu-sidebar-secondary);font:13px/20px var(--dcu-font,var(--dsw-font-family));font-weight:400;letter-spacing:0;padding-left:0}.dcu-wb-section-caret{transition:opacity var(--dcu-wb-disclosure-duration) var(--dcu-wb-disclosure-ease),transform var(--dcu-wb-disclosure-duration) var(--dcu-wb-disclosure-ease)}.dcu-wb-section-head .dcu-wb-section-caret{position:static;left:auto;top:auto;opacity:.78}.dcu-wb-section-body,.dcu-wb-project-body,.dcu-wb-collection-body{display:block;min-height:0;height:auto;overflow:clip;opacity:1;transform:none;visibility:visible}.dcu-wb-section-body[data-open=false],.dcu-wb-project-body[data-open=false],.dcu-wb-collection-body[data-open=false]{display:block;height:0;opacity:0;transform:translateY(-2px);pointer-events:none}.dcu-wb-section-body[data-open=true]:has(.dcu-wb-drop),.dcu-wb-project-body[data-open=true]:has(.dcu-wb-drop),.dcu-wb-collection-body[data-open=true]:has(.dcu-wb-drop){overflow:visible}.dcu-wb-section-body[data-open=true]>div{animation:none}@media (prefers-reduced-motion:reduce){.dcu-wb-section-caret{transition:none}}.dcu-wb-project-title{font-size:14px;line-height:20px;font-weight:400;color:var(--dcu-sidebar-primary)}.dcu-wb-session-title{font-size:14px;line-height:20px;font-weight:400;color:var(--dcu-sidebar-secondary)}.dcu-wb-session.dcu-wb-selected .dcu-wb-session-title,.dcu-wb-session:hover .dcu-wb-session-title{color:var(--dcu-sidebar-primary)}.dcu-wb-empty{color:var(--dcu-sidebar-tertiary);font-size:13px;line-height:18px}.dcu-wb-nochat{padding:0 8px 4px 28px;color:var(--dcu-sidebar-tertiary);font-size:14px;line-height:20px}`
 
-const collectionLayoutStyles = `.dcu-wb-collection-body{padding-left:0}.dcu-wb-collection-body .dcu-wb-project-head{padding-left:8px}.dcu-wb-collection-body::before,.dcu-wb-group-member::after{display:none}.dcu-wb-collection-head,.dcu-wb-collection-head:focus-within{background:color-mix(in srgb,var(--dcu-sidebar-hover) 28%,transparent)}.dcu-wb-collection-head:hover{background:var(--dcu-sidebar-hover)}.dcu-wb-collection-head.dcu-wb-group-drop{background:var(--dcu-sidebar-hover)}.dcu-wb-workspace-move-drop>.dcu-wb-collection-head{background:transparent}`
+// 分组通过标题底带和字重区分层级；项目与会话保留原有胶囊位置和宽度。
+const collectionLayoutStyles = `
+.dcu-wb-tree{position:relative}
+.dcu-wb-tree[data-drop-indicator=measured] .dcu-wb-drop::before,.dcu-wb-tree[data-drop-indicator=measured] .dcu-wb-group-order-drop::before{display:none}
+.dcu-wb-drop-indicator{position:absolute;z-index:3;height:8px;pointer-events:none;color:var(--dsw-alias-state-business-primary)}
+.dcu-wb-drop-indicator::before{content:"";position:absolute;left:6px;right:0;top:3px;height:2px;border-radius:999px;background:currentColor}
+.dcu-wb-drop-indicator::after{content:"";position:absolute;box-sizing:border-box;left:0;top:0;width:8px;height:8px;border:2px solid currentColor;border-radius:50%}
+.dcu-wb-project-body:has(>.dcu-wb-session)::after{content:"";display:block;height:4px;pointer-events:none}
+.dcu-wb-section-body[data-open=true]:has(.dcu-wb-group-order-drop){overflow:visible}
+.dcu-wb-collection-body{padding-left:0}
+.dcu-wb-collection-body>.dcu-wb-group-member:first-child{padding-top:4px}
+.dcu-wb-collection-body .dcu-wb-project-head{padding-left:8px}
+.dcu-wb-collection-body>.dcu-wb-empty{padding:8px 8px 8px 26px;font-size:13px}
+.dcu-wb-collection-body::before,.dcu-wb-group-member::after{display:none}
+.dcu-wb-collections{gap:12px}
+.dcu-wb-collection-head{min-height:32px}
+.dcu-wb-collection-head:hover{background:var(--dcu-sidebar-hover)}
+.dcu-wb-collection-head.dcu-wb-group-drop{background:var(--dcu-sidebar-hover)}
+.dcu-wb-collection-head{background:color-mix(in srgb,var(--dcu-sidebar-hover) 55%,transparent)}
+.dcu-wb-collection-label{gap:4px;min-height:32px;font-size:14px;font-weight:600}
+.dcu-wb-collection-label .dcu-wb-section-caret{width:14px;height:14px;opacity:1;color:var(--dcu-sidebar-primary)}
+.dcu-wb-collection-label .dcu-wb-section-caret svg{width:14px;height:14px}
+.dcu-wb-collection-label .dcu-wb-section-caret svg path{stroke-width:2}
+.dcu-wb-collection-count{flex:none;font-size:12px;font-weight:400;padding-left:8px}
+.dcu-wb-ungrouped .dcu-wb-collection-label{color:var(--dcu-sidebar-secondary)}
+.dcu-wb-collection-head:focus-within,.dcu-wb-collection-head:has(.dcu-wb-more[aria-expanded=true]){background:var(--dcu-sidebar-hover)}
+.dcu-wb-workspace-move-drop>.dcu-wb-collection-head{background:transparent}
+.dcu-wb-collection-label:focus-visible,.dcu-wb-project-head:focus-visible,.dcu-wb-session:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:-2px;border-radius:6px}
+@media (pointer:coarse){.dcu-wb-collection-head,.dcu-wb-collection-label{min-height:36px}.dcu-wb-collection-actions{width:28px}.dcu-wb-collection-actions .dcu-wb-more{width:28px;height:28px}}
+`
 
 export const WORKSPACE_TREE_STYLE = stylesheet + runningStyles + typographyStyles + collectionLayoutStyles
 
@@ -724,7 +754,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
     }
     return <div className={`dcu-wb-project${isPinnedHeaderDrop || dropsBefore ? ' dcu-wb-drop' : ''}${dropsAfterLast ? ' dcu-wb-drop dcu-wb-drop-after' : ''}${projectSessionDrop ? ' dcu-wb-session-drop' : ''}${projectSessionMoveDrop ? ' dcu-wb-session-move-drop' : ''}`} key={workspace.workspaceId} onDragOver={handleProjectDragOver} onDragLeave={(event) => { if (event.currentTarget.contains(event.relatedTarget as Node)) return; setWorkspaceDropTarget(undefined); setSessionDropTarget(undefined) }} onDrop={handleProjectDrop}>
       <div className={`dcu-wb-project-head${menuOpen ? ' dcu-wb-menu-open' : ''}${workspaceDragId === workspaceId ? ' dcu-wb-dragging' : ''}`} role="treeitem" aria-expanded={isExpanded} tabIndex={0} draggable onDragStart={(event) => { event.stopPropagation(); setSessionDrag(undefined); setSessionDropTarget(undefined); setWorkspaceGroupDragId(undefined); setWorkspaceGroupDropTarget(undefined); writeWorkspaceDrag(event.dataTransfer, workspaceId, workspace.title); setDragPreview(event.dataTransfer, workspace.title, event.currentTarget.querySelector('.dcu-wb-folder')); setWorkspaceDragId(workspaceId) }} onDragEnd={() => { setWorkspaceDragId(undefined); setWorkspaceDropTarget(undefined); setWorkspaceGroupDropTarget(undefined) }} onClick={() => { toggleGroup(expandKey, true) }} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id: workspace.workspaceId, type: 'workspace', x: event.clientX, y: event.clientY }) }} onMouseEnter={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ kind: 'workspace', id: workspace.workspaceId, title: workspace.title, path: workspace.path, count: workspace.visibleIds.length, unreadCount: workspace.visibleIds.filter(id => unreadSessionIds.includes(String(id))).length, pinned: projectPinned(workspace.workspaceId), left: box.left, top: box.top }) }} onMouseLeave={hideTip} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleGroup(expandKey, true) } }}>
-        <span className="dcu-wb-folder" onClick={(event) => { event.stopPropagation(); const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); if (isShowing('workspace', workspace.workspaceId)) { dismissTip(); return } showTip({ kind: 'workspace', id: workspace.workspaceId, title: workspace.title, path: workspace.path, count: workspace.visibleIds.length, unreadCount: workspace.visibleIds.filter(id => unreadSessionIds.includes(String(id))).length, pinned: projectPinned(workspace.workspaceId), left: box.left, top: box.top }, { immediate: true }) }}><IconFolderClose16 size={16} /></span><span className="dcu-wb-project-title">{workspace.title}</span><span className="dcu-wb-actions"><Menu open={menuOpen} onClose={() => { setMenu(undefined) }} items={projectMenu(workspace)} onSelect={(id) => { handleProjectMenuAction(workspace, id) }} portal dense compact getAnchorRect={menuAt === undefined ? undefined : () => pointerMenuRect(menuAt.x, menuAt.y)} anchor={<button type="button" className="dcu-wb-more" aria-label={t('workspace.actions', { name: workspace.title })} onClick={(event) => { event.stopPropagation(); dismissTip(); setMenu(current => current?.id === workspace.workspaceId && current?.type === 'workspace' ? undefined : { id: workspace.workspaceId, type: 'workspace' }) }}><IconEllipsisOutline16 size={16} /></button>} /></span><span className="dcu-wb-actions"><button type="button" className="dcu-wb-more" aria-label={t('workspace.newSession')} onClick={(event) => { event.stopPropagation(); startSession(workspace.workspaceId) }}><NewSessionIcon /></button></span>
+        <span className="dcu-wb-folder" onClick={(event) => { event.stopPropagation(); const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); if (isShowing('workspace', workspace.workspaceId)) { dismissTip(); return } showTip({ kind: 'workspace', id: workspace.workspaceId, title: workspace.title, path: workspace.path, count: workspace.visibleIds.length, unreadCount: workspace.visibleIds.filter(id => unreadSessionIds.includes(String(id))).length, pinned: projectPinned(workspace.workspaceId), left: box.left, top: box.top }, { immediate: true }) }}>{isExpanded ? <IconFolderOpenOutline16 size={16} /> : <IconFolderClose16 size={16} />}</span><span className="dcu-wb-project-title">{workspace.title}</span><span className="dcu-wb-actions"><Menu open={menuOpen} onClose={() => { setMenu(undefined) }} items={projectMenu(workspace)} onSelect={(id) => { handleProjectMenuAction(workspace, id) }} portal dense compact getAnchorRect={menuAt === undefined ? undefined : () => pointerMenuRect(menuAt.x, menuAt.y)} anchor={<button type="button" className="dcu-wb-more" aria-label={t('workspace.actions', { name: workspace.title })} onClick={(event) => { event.stopPropagation(); dismissTip(); setMenu(current => current?.id === workspace.workspaceId && current?.type === 'workspace' ? undefined : { id: workspace.workspaceId, type: 'workspace' }) }}><IconEllipsisOutline16 size={16} /></button>} /></span><span className="dcu-wb-actions"><button type="button" className="dcu-wb-more" aria-label={t('workspace.newSession')} onClick={(event) => { event.stopPropagation(); startSession(workspace.workspaceId) }}><NewSessionIcon /></button></span>
       </div>
       <DisclosureBody className="dcu-wb-project-body" open={isExpanded}>
       {shownIds.length === 0 && <div className="dcu-wb-nochat">{t('workspace.noChat')}</div>}
@@ -808,6 +838,11 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
 
   const treeRef = useRef<HTMLDivElement>(null)
   useSectionDisclosureMotion(treeRef)
+  const sorting = workspaceDragId !== undefined || workspaceGroupDragId !== undefined || sessionDrag !== undefined
+  useLayoutEffect(() => {
+    if (!wide || !sorting || treeRef.current === null) return
+    return mountWorkspaceDropIndicator(treeRef.current)
+  }, [wide, sorting])
 
   if (!wide) return <div className="dcu-wb dcu-wb-rail"><style>{stylesheet}</style></div>
   return <section className="dcu-wb" aria-label={t('workspace.label')}>

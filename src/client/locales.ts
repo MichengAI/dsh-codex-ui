@@ -65,7 +65,7 @@ export const zh = {
   'workspace.renameGroup': '重命名分组',
   'workspace.recent': '最近',
   'workspace.recentEmpty': '无聊天',
-  'workspace.noChat': '没有聊天',
+  'workspace.noChat': '暂无聊天',
   'workspace.empty': '暂无项目',
   'workspace.newSession': '新建会话',
   'workspace.rename': '重命名项目',
