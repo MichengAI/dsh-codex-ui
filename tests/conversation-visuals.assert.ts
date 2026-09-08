@@ -27,7 +27,7 @@ assert.match(settings, /\.dcu-settings-trigger\[data-wide=false\] \.dcu-settings
 assert.doesNotMatch(sidebar, /--dsh-chat-content-width:\s*800px/, '会话内容列必须保留宿主自适应和拖拽宽度')
 assert.match(sidebar, /--dsh-composer-card-max-width:calc\(var\(--dsh-chat-content-width\) \+ 32px\)/, '输入卡片必须继续从宿主会话宽度轴派生')
 assert.doesNotMatch(sidebar, /\[data-chat-flow\]\{gap:/, '不得在宿主逐行间距之外叠加旧版 flex gap')
-assert.match(sidebar, /\[data-composer-card\]\{min-height:96px/, '空输入卡片高度必须介于过矮和过高之间')
+assert.doesNotMatch(sidebar, /\[data-composer-card\]\{[^}]*min-height:/, '输入卡片由编辑区和工具栏自然撑高，不额外强制整卡最小高度')
 assert.match(sidebar, /\[data-input-mirror\]\{min-height:44px/, '空输入镜像高度必须接近 Codex 单行区')
 assert.match(client, /conversation\.session\.header\.utilities/, '轮次导航必须挂在原生会话扩展位')
 assert.doesNotMatch(client, /shell\.overlay/, '展开按钮不得再覆盖到会话标题上')
