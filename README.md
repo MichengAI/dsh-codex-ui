@@ -6,9 +6,9 @@
 
   # DSH Codex UI
 
-  **Rebuild the DeepSeek Harness Web sidebar, workspace tree, search, and turn navigation in a Codex-style layout**
+  **Organize projects, find conversations, and revisit long chats more easily in DSH Web**
 
-  [简体中文](README.zh-CN.md) · [项目交接](docs/00-交接入口/00-阅读导航.md) · [Changelog](CHANGELOG.md) · [Apache-2.0](LICENSE)
+  [简体中文](README.zh-CN.md) · [Changelog](CHANGELOG.md) · [Apache-2.0](LICENSE)
 
   [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
   [![npm package](https://img.shields.io/npm/v/%40michengai%2Fdsh-codex-ui.svg?label=npm%20package)](https://www.npmjs.com/package/@michengai/dsh-codex-ui)
@@ -18,18 +18,18 @@
 
 </div>
 
-> DSH Codex UI is a community-maintained DeepSeek Harness (DSH) plugin, not an official DeepSeek AI product. It uses public DSH slots only and does not modify host source code or conversation data.
+> DSH Codex UI is a community-maintained interface plugin for DeepSeek Harness (DSH), not an official DeepSeek AI product.
 
-## Features
+Working across several projects and conversations in DSH Web? DSH Codex UI helps you organize the sidebar, find tasks quickly, and jump back to earlier questions in long chats. It offers a Codex-style interface with light and dark themes.
 
-- Replace the default sidebar through the official `sidebar` slot and keep `sidebar.workspaces`, `sidebar.settings`, and `sidebar.footer.action`.
-- Provide a Codex-style header with brand wordmark, sidebar collapse, and global search.
-- List workspaces and conversations with expand/collapse, drag reorder, project pinning, unread dots, and running-state indicators.
-- Add project and conversation menus for rename, pin, unread, archive, fork, open folder, copy, and delete.
-- Restyle the conversation column and composer card, and add a compact turn navigator on the current session.
-- Recall submitted text with Up/Down from an empty composer, with workspace isolation and guards for drafts, IME, and candidate menus. BTW is not required.
-- Capture ordinary messages only from live events while the input extension is mounted. Opening or reloading conversations and loading older messages do not backfill history; input sent while the extension is unmounted is not imported.
-- Show companion-plugin status in **Settings → About**, and install the missing pieces from npm.
+## What you can do
+
+- **Organize projects and conversations**: expand or collapse projects, drag to reorder, pin frequently used projects, and see unread and running indicators.
+- **Find things quickly**: search for conversations, settings, and quick actions from the header.
+- **Manage everyday tasks**: rename, archive, or fork conversations, and open project folders from their menus.
+- **Revisit long chats**: select a turn marker to jump directly to the corresponding question.
+- **Reuse earlier input**: press Up/Down in an empty composer to recall text submitted in the current workspace.
+- **Add features as needed**: check companion plugins in **Settings → About** and install or update the ones you need.
 
 ## Screenshots
 
@@ -37,7 +37,7 @@ Light theme: Codex-style sidebar, workspace tree, and conversation column.
 
 ![Light theme conversation](assets/screenshots/conversation-light.png)
 
-Dark theme: the same layout with Codex dark tokens.
+Dark theme: for users who prefer a darker interface.
 
 ![Dark theme conversation](assets/screenshots/conversation.png)
 
@@ -53,37 +53,38 @@ Conversation menu: rename, pin, unread, archive, fork, copy, and delete.
 
 - A working DeepSeek Harness Web installation with `dsh` available in PowerShell.
 - Examples use the `web` profile; replace it with the target profile.
-- Source installation and development require Node.js 22+ and pnpm. Installing from npm does not require running `pnpm install` in an arbitrary directory.
+- Node.js must satisfy `^22.19.0 || >=24.0.0`. Installing from source also requires pnpm.
 
 ## DSH product ecosystem
 
-Codex UI can be installed independently or used through the desktop app. They share the same DSH core but serve different ways of working:
+For a ready-to-use workbench, download [DSH Codex Desktop](https://github.com/MichengAI/dsh-codex-desktop/releases). If you already use [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), install any of these eight plugins individually. The desktop app includes all eight.
 
-| Product | Relationship to Codex UI |
+| Plugin | What you can do |
 | --- | --- |
-| [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) | The host runtime that provides models, sessions, tools, and the plugin system |
-| [DSH Codex Desktop](https://github.com/MichengAI/dsh-codex-desktop) | A ready-to-install desktop product with Codex UI and the other five feature products built in |
-| Six feature products | [Codex UI](https://github.com/MichengAI/dsh-codex-ui) · [IM Connect](https://github.com/MichengAI/dsh-im-connect) · [Automation](https://github.com/MichengAI/dsh-automation) · [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) · [Archive Manager](https://github.com/MichengAI/dsh-archive-manager) · [Agency Agents](https://github.com/MichengAI/dsh-agency-agents) |
+| [Codex UI](https://github.com/MichengAI/dsh-codex-ui) | Organize projects and conversations, search tasks, and navigate chat turns |
+| [IM Connect](https://github.com/MichengAI/dsh-im-connect) | Send tasks and receive replies through your usual messenger |
+| [Automation](https://github.com/MichengAI/dsh-automation) | Schedule tasks and review each run |
+| [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) | Find, enable, create, and import local skills |
+| [Archive Manager](https://github.com/MichengAI/dsh-archive-manager) | Search, restore, or clean up archived conversations |
+| [Agency Agents](https://github.com/MichengAI/dsh-agency-agents) | Choose and summon specialists for your task |
+| [BTW](https://github.com/MichengAI/dsh-btw) | Ask side questions without interrupting the main task |
+| [Simplify](https://github.com/MichengAI/dsh-simplify) | Use /simplify to improve code within your Git changes |
+
+The desktop introduction and download site is maintained in the [website repository](https://github.com/MichengAI/dsh-codex-desktop-website).
 
 ## Installation
 
-`dsh plugin add` forwards to `pnpm add` in the profile directory. Without a version and official registry, a local mirror or minimum-release-age policy can leave you on an older build.
+Choose agent-assisted or manual installation below. Both use the same command, requesting the latest version from the official npm registry.
 
-### Ask another agent to install Codex UI
+### Ask an agent to install it (recommended)
 
-Copy the sentence below into DSH, Codex, or WorkBuddy and let that agent install Codex UI into your local `web` profile.
+Send the prompt below to any agent that can run terminal commands on your computer. Replace `web` with your actual profile. Once installed, use the plugin in DSH.
 
 ```text
-Install the latest DSH plugin @michengai/dsh-codex-ui into my local web profile using the official npm registry: dsh plugin --profile web add @michengai/dsh-codex-ui@latest --registry=https://registry.npmjs.org/. Then run dsh --profile web --dump-config, confirm codex-ui is mounted, and remind me to restart DSH Web and hard-refresh the browser.
+Install the DSH plugin @michengai/dsh-codex-ui into my local web profile by running: dsh plugin --profile web add @michengai/dsh-codex-ui@latest --registry=https://registry.npmjs.org/. Then run dsh --profile web --dump-config, confirm the configuration includes codex-ui, and explain how to reload DSH and start using the plugin.
 ```
 
-| Product | How to use it |
-| --- | --- |
-| DSH | Send the sentence above to the current session. |
-| Codex | Send the sentence above to Codex and let it install locally. |
-| WorkBuddy | Send the sentence above to WorkBuddy. |
-
-### Install Codex UI only
+### Install manually
 
 ```powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -92,7 +93,45 @@ dsh plugin --profile web add @michengai/dsh-codex-ui@latest --registry=https://r
 dsh --profile web --dump-config
 ```
 
-The plugin takes over the default sidebar through `cordis.patch.yml`. Uninstalling restores the default sidebar.
+Restart DSH Web and hard-refresh the browser (usually `Ctrl+Shift+R`). Once the new sidebar appears, you are ready to use it. Uninstalling the plugin restores the default sidebar.
+
+## Usage
+
+Open DSH Web. The left navigation is rendered by this plugin.
+
+| Goal | Action |
+| --- | --- |
+| Start a conversation | Select **New task**, or use a workspace **+** / **New conversation** action. |
+| Find a conversation or setting | Use the header search field and choose a session, Settings page, or quick action. |
+| Collapse the sidebar | Use the header panel button. The expand control stays on the collapsed rail. |
+| Pin a workspace | Drag it into **Pinned**, or use **Pin project** in the project menu. |
+| Manage a conversation | Open the conversation menu to rename, pin, mark unread, archive, fork, copy, or delete. |
+| Reuse input | Press Up/Down in an empty composer to recall text submitted in the current workspace. |
+| Jump between turns | Use the turn marks on the left of the current conversation. |
+| Inspect connectors | Open **Settings → Connectors**. Addresses, commands, and credentials are never shown. |
+| Check companion plugins | Open **Settings → About** to install or update individual companion plugins. |
+
+## FAQ
+
+### Do pinned projects and unread markers persist?
+
+Pinned projects are saved in your DSH configuration and survive restarts. Unread markers are stored only in the current browser and do not sync across browsers.
+
+### Why is my earlier input missing?
+
+Input history is stored in the current browser, separately for each workspace, with up to 200 entries per workspace. It records new input while the feature is active and does not import existing conversations. When browser storage is unavailable, history is kept temporarily in memory. The BTW plugin is not required.
+
+### Does removing a project delete local files?
+
+Removing a workspace registration does not delete its folder or conversation records. Permanent deletion of archived conversations is provided by the companion Archive Manager plugin.
+
+### What if nothing changes after installation?
+
+Check that the installation profile matches the one running DSH Web, then restart DSH Web and hard-refresh the browser. Run `dsh --profile web --dump-config` to check that `codex-ui` is mounted.
+
+## Development and contributing
+
+You do not need to read the source to install or use the plugin. Developers can start with the [project handoff guide](docs/00-交接入口/00-阅读导航.md) (Chinese) for conventions and current status.
 
 ### Install from source
 
@@ -112,38 +151,6 @@ dsh --profile web --dump-config
 
 Restart DSH Web and hard-refresh the browser. Do not copy `lib` manually; local installation reads both package metadata and `cordis.patch.yml`.
 
-## Usage
-
-Open DSH Web. The left navigation is rendered by this plugin.
-
-| Goal | Action |
-| --- | --- |
-| Start a conversation | Select **New task**, or use a workspace **+** / **New conversation** action. |
-| Find a conversation or setting | Use the header search field and choose a session, Settings page, or quick action. |
-| Collapse the sidebar | Use the header panel button. The expand control stays on the collapsed rail. |
-| Pin a workspace | Drag it into **Pinned**, or use **Pin project** in the project menu. |
-| Manage a conversation | Open the conversation menu to rename, pin, mark unread, archive, fork, copy, or delete. |
-| Jump between turns | Use the turn marks on the left of the current conversation. |
-| Inspect connectors | Open **Settings → Connectors**. Addresses, commands, and credentials are never shown. |
-| Check companion plugins | Open **Settings → About** to install or update individual companion plugins. |
-
-Deleting a workspace registration does not delete its folder or conversation records. Pinned and unread state is stored only in the current browser.
-
-## Persistence and safety limits
-
-| Data | Storage | Scope |
-| --- | --- | --- |
-| Pinned workspaces | Host profile file with a `localStorage` cache | Survives DSH restarts and Desktop tray reloads |
-| Unread conversations | `localStorage` key `dsh.session-unread.v1` | Current browser only |
-| Conversation records | DSH host services | Unchanged by this plugin |
-
-- The plugin uses only public DSH slots and services.
-- It does not modify host source code or the conversation data model.
-- Permanent deletion of archived conversations is provided by `@michengai/dsh-archive-manager`.
-- The Connectors directory never exposes addresses, commands, or credentials.
-
-## Secondary development
-
 - [src\index.ts](src/index.ts): host entry and the non-sensitive Connectors directory endpoint.
 - [src\client\index.ts](src/client/index.ts): client entry for sidebar, workspace tree, turn navigation, and Settings sections.
 - [src\client\CodexSidebar.tsx](src/client/CodexSidebar.tsx): sidebar shell, search panel, and visual styles.
@@ -161,15 +168,6 @@ dsh plugin --profile web add .
 ```
 
 New features should reuse existing DSH slots and public services. Do not depend on private host DOM or write conversation records.
-
-## Verification
-
-```powershell
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
-pnpm build
-pnpm test
-```
 
 ## License
 
