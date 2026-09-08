@@ -37,6 +37,7 @@ import { expandedForSessionMove, moveBefore, orderByIds, pinnedHeaderDropIndicat
 import { browserStorage, readTreeExpansionState, WORKSPACE_EXPANSION_STORAGE_KEY, writeTreeExpansionState } from './tree-expansion.ts'
 import { workspaceBaselinesReady } from './workspace-compat.ts'
 import { userErrorText } from './user-error.ts'
+import { businessRequestErrorKey } from './business-request-error.ts'
 import { moveSessionActionId, parseMoveSessionActionId, sessionMoveTargets } from './session-move.ts'
 import { archiveWorkspaceSessions } from './workspace-archive.ts'
 import { SquarePen } from 'lucide-react'
@@ -209,7 +210,7 @@ const stylesheet = `
 
 const runningStyles = `.dcu-wb-running{position:absolute;right:10px;top:50%;flex:none;width:12px;height:12px;margin-top:-6px;border:2px solid color-mix(in srgb,var(--dcu-sidebar-secondary) 25%,transparent);border-top-color:var(--dcu-sidebar-secondary);border-radius:50%;animation:dcu-wb-spin .8s linear infinite}@keyframes dcu-wb-spin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.dcu-wb-running{animation:none}}`
 
-const typographyStyles = `.dcu-wb{--dcu-wb-disclosure-duration:180ms;--dcu-wb-disclosure-ease:cubic-bezier(.16,1,.3,1);font:14px/20px var(--dcu-font,var(--dsw-font-family))}.dcu-wb-section-label{color:var(--dcu-sidebar-secondary);font:13px/20px var(--dcu-font,var(--dsw-font-family));font-weight:400;letter-spacing:0;padding-left:0}.dcu-wb-section-caret{transition:opacity var(--dcu-wb-disclosure-duration) var(--dcu-wb-disclosure-ease),transform var(--dcu-wb-disclosure-duration) var(--dcu-wb-disclosure-ease)}.dcu-wb-section-head .dcu-wb-section-caret{position:static;left:auto;top:auto;opacity:.78}.dcu-wb-section-body,.dcu-wb-project-body,.dcu-wb-collection-body{display:block;min-height:0;height:auto;overflow:clip;opacity:1;transform:none;visibility:visible}.dcu-wb-section-body[data-open=false],.dcu-wb-project-body[data-open=false],.dcu-wb-collection-body[data-open=false]{display:block;height:0;opacity:0;transform:translateY(-2px);pointer-events:none}.dcu-wb-section-body[data-open=true]:has(.dcu-wb-drop),.dcu-wb-project-body[data-open=true]:has(.dcu-wb-drop),.dcu-wb-collection-body[data-open=true]:has(.dcu-wb-drop){overflow:visible}.dcu-wb-section-body[data-open=true]>div{animation:none}@media (prefers-reduced-motion:reduce){.dcu-wb-section-caret{transition:none}}.dcu-wb-project-title{font-size:14px;line-height:20px;font-weight:400;color:var(--dcu-sidebar-primary)}.dcu-wb-session-title{font-size:14px;line-height:20px;font-weight:400;color:var(--dcu-sidebar-secondary)}.dcu-wb-session.dcu-wb-selected .dcu-wb-session-title,.dcu-wb-session:hover .dcu-wb-session-title{color:var(--dcu-sidebar-primary)}.dcu-wb-empty{color:var(--dcu-sidebar-tertiary);font-size:13px;line-height:18px}.dcu-wb-nochat{padding:0 8px 4px 28px;color:var(--dcu-sidebar-tertiary);font-size:14px;line-height:20px}`
+const typographyStyles = `.dcu-wb{--dcu-wb-disclosure-duration:180ms;--dcu-wb-disclosure-ease:cubic-bezier(.16,1,.3,1);font:14px/20px var(--dcu-font,var(--dsw-font-family))}.dcu-wb-section-label{color:var(--dcu-sidebar-secondary);font:13px/20px var(--dcu-font,var(--dsw-font-family));font-weight:400;letter-spacing:0;padding-left:0}.dcu-wb-section-caret{transition:opacity var(--dcu-wb-disclosure-duration) var(--dcu-wb-disclosure-ease),transform var(--dcu-wb-disclosure-duration) var(--dcu-wb-disclosure-ease)}.dcu-wb-section-head .dcu-wb-section-caret{position:static;left:auto;top:auto;opacity:.78}.dcu-wb-section-body,.dcu-wb-project-body,.dcu-wb-collection-body{display:block;min-height:0;height:auto;overflow:clip;opacity:1;transform:none;visibility:visible}.dcu-wb-section-body[data-open=false],.dcu-wb-project-body[data-open=false],.dcu-wb-collection-body[data-open=false]{display:block;height:0;opacity:0;transform:translateY(-2px);pointer-events:none}.dcu-wb-section-body[data-open=true]:has(.dcu-wb-drop),.dcu-wb-project-body[data-open=true]:has(.dcu-wb-drop),.dcu-wb-collection-body[data-open=true]:has(.dcu-wb-drop){overflow:visible}.dcu-wb-section-body[data-open=true]>div{animation:none}@media (prefers-reduced-motion:reduce){.dcu-wb-section-caret{transition:none}}.dcu-wb-project-title{font-size:14px;line-height:20px;font-weight:400;color:var(--dcu-sidebar-primary)}.dcu-wb-session-title{font-size:14px;line-height:20px;font-weight:400;color:var(--dcu-sidebar-secondary)}.dcu-wb-session.dcu-wb-selected .dcu-wb-session-title,.dcu-wb-session:hover .dcu-wb-session-title{color:var(--dcu-sidebar-primary)}.dcu-wb-empty{color:var(--dcu-sidebar-tertiary);font-size:13px;line-height:18px}`
 
 // 分组通过标题底带和字重区分层级；项目与会话保留原有胶囊位置和宽度。
 // 空分组的下方另有 12px 组间距，用 14px/2px 内留白平衡两侧；空聊天缩小行高后补齐原高度。
@@ -226,7 +227,7 @@ const collectionLayoutStyles = `
 .dcu-wb-collection-body .dcu-wb-project-head{padding-left:8px}
 .dcu-wb-collection-body>.dcu-wb-empty{padding:8px 8px 8px 26px}
 .dcu-wb-collection-body>.dcu-wb-empty,.dcu-wb-nochat{font-size:13px;line-height:18px;color:var(--dcu-sidebar-tertiary)}
-.dcu-wb-nochat{padding-top:1px;padding-bottom:5px}
+.dcu-wb-nochat{padding:1px 8px 5px 28px}
 .dcu-wb-collection:has(+.dcu-wb-collection)>.dcu-wb-collection-body>.dcu-wb-empty,.dcu-wb-collection:has(+.dcu-wb-ungrouped)>.dcu-wb-collection-body>.dcu-wb-empty{padding-top:14px;padding-bottom:2px}
 .dcu-wb-collection-body::before,.dcu-wb-group-member::after{display:none}
 .dcu-wb-collections{gap:12px}
@@ -287,6 +288,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
   const pinnedHostDirtyRef = useRef(false)
   const pinnedHostSkipWriteRef = useRef<{ pinnedWorkspaceIds: string[]; workspaceGroups: WorkspaceGroup[] }>()
   const pinnedHostWriteRef = useRef<Promise<void>>(Promise.resolve())
+  const [preferencesFailure, setPreferencesFailure] = useState<unknown>()
   const workspaceBaselineRef = useRef<{ ready: boolean; validIds: string[] }>({ ready: false, validIds: [] })
   workspaceBaselineRef.current = {
     ready: baselinesReady,
@@ -296,12 +298,13 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
     const snapshot = { pinnedWorkspaceIds: [...ids], workspaceGroups: groups.map(group => ({ ...group, workspaceIds: [...group.workspaceIds] })) }
     const pending = pinnedHostWriteRef.current.then(async () => {
       await writeHostWorkspacePreferences(snapshot.pinnedWorkspaceIds, snapshot.workspaceGroups)
+      setPreferencesFailure(undefined)
       if (!pinnedHostSupportsWorkspaceGroupsRef.current) return
       if (!sameIds(pinnedWorkspaceIdsRef.current, snapshot.pinnedWorkspaceIds) || !sameWorkspaceGroups(workspaceGroupsRef.current, snapshot.workspaceGroups)) return
       workspaceGroupsPendingHostSyncRef.current = false
       saveWorkspaceGroupsCache(storage(), snapshot.workspaceGroups, false)
     })
-    pinnedHostWriteRef.current = pending.catch(() => undefined)
+    pinnedHostWriteRef.current = pending.catch(reason => { setPreferencesFailure(reason) })
   }
   const setPinnedWorkspaceIds = (update: string[] | ((current: string[]) => string[])): void => {
     pinnedHostDirtyRef.current = true
@@ -410,7 +413,9 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
       }
       savePinnedWorkspaceIds(storage(), ids)
       if (writeHost) queuePinnedHostWrite(ids, groups)
-    }).catch(() => {
+    }).catch(reason => {
+      if (!alive) return
+      setPreferencesFailure(reason)
       // 旧 Host 或临时不可用时保留当前 origin 的缓存；下次加载再尝试迁移。
       pinnedHostHydratedRef.current = true
     })
@@ -852,6 +857,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
   if (!wide) return <div className="dcu-wb dcu-wb-rail"><style>{stylesheet}</style></div>
   return <section className="dcu-wb" aria-label={t('workspace.label')}>
     <style>{stylesheet}{runningStyles}{typographyStyles}{collectionLayoutStyles}</style>
+    {preferencesFailure !== undefined && <div className="dcu-wb-error" role="status">{t('workspace.preferencesLocalOnly')}{businessRequestErrorKey(preferencesFailure) !== undefined && <> {userErrorText(preferencesFailure, t)}</>}</div>}
     {error !== undefined && <div className="dcu-wb-error" role="alert">{t('sessions.failed', { message: error })}</div>}
     <div ref={treeRef} className="dcu-wb-tree" role="tree">
       <section className="dcu-wb-section" aria-label={t('workspace.pinned')} onDragOver={(event) => { if (!pinDragActive) return; event.preventDefault(); event.dataTransfer.dropEffect = 'move'; if (pinnedGroups.length === 0 || event.target === event.currentTarget || (event.target instanceof Element && event.target.closest('.dcu-wb-section-head') !== null)) { const firstId = pinnedGroupIds[0]; const beforeId = firstId === undefined ? undefined : reorderDropBeforeId(pinnedGroupIds, workspaceDragId, firstId, false); setWorkspaceDropTarget(beforeId === null ? undefined : { zone: 'pinned', beforeId }) } }} onDrop={(event) => { event.preventDefault(); const draggedWorkspace = readWorkspaceDrag(event.dataTransfer, workspaceDragId); const target = workspaceDropTargetRef.current; setWorkspaceDragId(undefined); setWorkspaceDropTarget(undefined); if (draggedWorkspace !== undefined && target?.zone === 'pinned') pinWorkspaceAt(draggedWorkspace, target.beforeId) }} onDragLeave={(event) => { if (event.currentTarget.contains(event.relatedTarget as Node)) return; setWorkspaceDropTarget(undefined) }}>

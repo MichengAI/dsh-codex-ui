@@ -73,7 +73,7 @@ function createDataTransfer(): DataTransfer {
   } as unknown as DataTransfer
 }
 
-function dispatchDrag(target: Element, type: 'dragstart' | 'dragover' | 'drop', dataTransfer: DataTransfer): void {
+function dispatchDrag(target: Element, type: 'dragstart' | 'dragover' | 'dragleave' | 'dragend' | 'drop', dataTransfer: DataTransfer): void {
   const event = new Event(type, { bubbles: true, cancelable: true })
   Object.defineProperty(event, 'dataTransfer', { value: dataTransfer })
   Object.defineProperty(event, 'clientY', { value: 0 })
@@ -97,6 +97,60 @@ async function render(node: ReactNode) {
     },
   }
 }
+
+test('跨置顶、分组与未分组悬停不依赖 dragleave，结束清空所有落点', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const workspaceGroups = [{ id: 'first', title: 'First', workspaceIds: ['a', 'b'] }]
+  const workspaces = { baselinesReady: true, archivedSessionIds: [], items: ['a', 'b', 'c'].map(id => ({ workspaceId: id, title: id, path: `D:/${id}`, sessionIds: [] })) }
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ exists: true, pinnedWorkspaceIds: ['a', 'c'], workspaceGroups }))))
+  const view = await render(createElement(CodexWorkspaceBrowser, {
+    ...sessionActions, wide: true, useSessions: createSessionStore(createSession('unused', 'unused', undefined)),
+    useSessionPendingInteraction: useEmptyPendingInteractions,
+    useWorkspaces: (selector: (snapshot: typeof workspaces) => unknown) => selector(workspaces), t,
+    deleteWorkspace: vi.fn(), insertSessionBefore: vi.fn(), insertWorkspaceBefore: vi.fn(), openPath: vi.fn(), renameWorkspace: vi.fn(), startSession: vi.fn(),
+  } as never))
+  try {
+    const pinned = view.container.querySelectorAll('.dcu-wb-pinned-list .dcu-wb-project-head')
+    const group = view.container.querySelector('.dcu-wb-collection')!
+    const ungrouped = view.container.querySelector('.dcu-wb-ungrouped')!
+    const transfer = createDataTransfer()
+    const markers = () => view.container.querySelectorAll('.dcu-wb-drop,.dcu-wb-group-order-drop,.dcu-wb-workspace-move-drop')
+    await act(async () => { dispatchDrag(pinned[1]!, 'dragstart', transfer) })
+    await act(async () => { dispatchDrag(pinned[0]!, 'dragover', transfer) })
+    expect(markers()).toHaveLength(1)
+    await act(async () => { dispatchDrag(group, 'dragover', transfer) })
+    expect(markers()).toHaveLength(1)
+    expect(group.classList.contains('dcu-wb-workspace-move-drop')).toBe(true)
+    await act(async () => { dispatchDrag(pinned[0]!, 'dragover', transfer) })
+    expect(markers()).toHaveLength(1)
+    expect(group.classList.contains('dcu-wb-workspace-move-drop')).toBe(false)
+    await act(async () => { dispatchDrag(ungrouped, 'dragover', transfer) })
+    expect(markers().length).toBeLessThanOrEqual(1)
+    await act(async () => { dispatchDrag(pinned[1]!, 'dragend', transfer) })
+    expect(markers()).toHaveLength(0)
+    expect(view.container.querySelector('.dcu-wb-drop-indicator')).toBeNull()
+  } finally { await view.dispose() }
+})
+
+test.each([401, 403, 503])('偏好读取 HTTP %s 保留本地分组并提示尚未同步', async status => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const workspaceGroups = [{ id: 'cached', title: '本地分组', workspaceIds: [] }]
+  window.localStorage.setItem(WORKSPACE_GROUPS_STORAGE_KEY, JSON.stringify({ version: 1, workspaceGroups, pendingHostSync: false }))
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status })))
+  const workspaces = { baselinesReady: true, archivedSessionIds: [], items: [] }
+  const view = await render(createElement(CodexWorkspaceBrowser, {
+    ...sessionActions, wide: true, useSessions: createSessionStore(createSession('unused', 'unused', undefined)),
+    useSessionPendingInteraction: useEmptyPendingInteractions,
+    useWorkspaces: (selector: (snapshot: typeof workspaces) => unknown) => selector(workspaces), t,
+    deleteWorkspace: vi.fn(), insertSessionBefore: vi.fn(), insertWorkspaceBefore: vi.fn(), openPath: vi.fn(), renameWorkspace: vi.fn(), startSession: vi.fn(),
+  } as never))
+  try {
+    expect(view.container.querySelector('.dcu-wb-collection-title')?.textContent).toBe('本地分组')
+    const message = view.container.querySelector('.dcu-wb-error[role="status"]')?.textContent
+    expect(message).toContain('workspace.preferencesLocalOnly')
+    expect(message).toContain(status === 401 ? 'errors.unauthorized' : status === 403 ? 'errors.forbidden' : 'errors.serviceUnavailable')
+  } finally { await view.dispose() }
+})
 
 function expectPendingState(container: Element, title: string, kind: PendingInteractionKind, label: string): void {
   const row = [...container.querySelectorAll<HTMLElement>('.dcu-wb-session')]

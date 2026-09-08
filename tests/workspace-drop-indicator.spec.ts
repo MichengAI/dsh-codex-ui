@@ -15,6 +15,30 @@ function fixture(html: string) {
 }
 
 describe('统一排序线几何', () => {
+  it('多落点冲突只在变化时告警，嵌套同一位置不重复计数', () => {
+    const { root, box } = fixture('<div class="dcu-wb-drop" id="wrapper"><div class="dcu-wb-session dcu-wb-drop" id="a"></div></div><div class="dcu-wb-session dcu-wb-drop" id="b"></div>')
+    box('#a', 20, 30); const b = box('#b', 60, 30)
+    let nextFrame!: FrameRequestCallback
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => { nextFrame = callback; return 1 })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const dispose = mountWorkspaceDropIndicator(root)
+    try {
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn).toHaveBeenLastCalledWith(expect.any(String), { count: 2 })
+      nextFrame(0); nextFrame(1)
+      expect(warn).toHaveBeenCalledTimes(1)
+      b.classList.remove('dcu-wb-drop'); nextFrame(2)
+      expect(warn).toHaveBeenCalledTimes(1)
+      b.classList.add('dcu-wb-drop'); nextFrame(3)
+      expect(warn).toHaveBeenCalledTimes(2)
+    } finally { dispose() }
+  })
+
+  it('无可见行的旧标记不遮蔽后面的有效落点', () => {
+    const { root, box } = fixture('<div class="dcu-wb-drop"></div><div class="dcu-wb-session dcu-wb-drop" id="a"></div>')
+    box('#a', 20, 30)
+    expect(measureWorkspaceDropIndicator(root)).toBeDefined()
+  })
   it('12px 分组间距取中点，不使用固定上移4px', () => {
     const { root, box } = fixture('<div class="dcu-wb-collection-head" id="a"></div><div class="dcu-wb-group-order-drop"><div class="dcu-wb-collection-head" id="b"></div></div>')
     box('#a', 20, 32); box('#b', 64, 32)

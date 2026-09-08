@@ -193,7 +193,7 @@ assert.match(workspaceBrowser, /\.dcu-wb-project-head,\.dcu-wb-session\{[^}]*bor
 assert.match(workspaceBrowser, /\.dcu-wb-project-head\{height:30px/, '项目文件夹胶囊必须使用 Codex 的 30px 高度')
 assert.match(workspaceBrowser, /\.dcu-wb-session\{[^}]*min-height:30px/, '会话胶囊必须与项目文件夹保持相同高度')
 assert.match(workspaceBrowser, /\.dcu-wb-project-body>\.dcu-wb-session:first-child,\.dcu-wb-project-body>\.dcu-wb-nochat:first-child\{margin-top:4px\}/, '项目与首个会话或空态之间必须保留层级间距')
-assert.match(workspaceBrowser, /\.dcu-wb-nochat\{padding:0 8px 4px 28px/, '空项目提示必须与普通会话使用相同的紧凑起始间距')
+assert.match(workspaceBrowser, /\.dcu-wb-nochat\{padding:1px 8px 5px 28px\}/, '空聊天必须完整声明四边间距，避免依赖旧样式补齐')
 assert.match(workspaceBrowser, /dcu-wb-quick-actions"><button[^]*<QuickArchiveIcon \/>/, '会话悬停快捷操作必须保留 Codex 风格的归档图标')
 assert.doesNotMatch(workspaceBrowser, /pinnedSessionIds|setPinnedSessionIds|SESSION_PINS_STORAGE_KEY|QuickPinIcon|dcu-wb-quick-pin|sessions\.(?:pin|unpin|pinned)/, '任务树必须彻底移除会话置顶能力')
 assert.match(workspaceBrowser, /\.dcu-wb-context-anchor\{opacity:0;pointer-events:none\}/, '右键菜单锚点必须隐藏三点图标')

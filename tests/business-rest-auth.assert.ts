@@ -3,6 +3,8 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { apply, inject } from '../src/index.ts'
+import { Context } from '@deepseek-ai/cordis'
+import { HostConnectionService } from '@deepseek-ai/dsh-client-connection'
 
 const expectedPaths = [
   '/api/dsh-codex-ui/connectors',
@@ -148,6 +150,38 @@ try {
   rejection = undefined
   const saved = await invoke(expectedPaths[3], 'PUT', [JSON.stringify({ pinnedWorkspaceIds: [], workspaceGroups: [] })])
   assert.equal(saved.status, 200, '宿主已认证的外部 Origin 不应再被旧 loopback-only 判断拒绝')
+
+  // 使用锁文件中的真实宿主信任检查，仅将登录层固定为已登录，证明跨站拒绝不依赖 401。
+  const hostContext = new Context()
+  const hostConnection = new HostConnectionService(hostContext, ['dsh.example.test'], {
+    isAuthenticated: () => true,
+  } as never)
+  services.connection = hostConnection
+  try {
+    const trusted = createRequest('POST')
+    assert.equal(hostConnection.requestRejection(trusted), undefined, '正对照：已登录的可信来源必须放行')
+    for (const headers of [
+      { origin: 'https://evil.example' },
+      { 'sec-fetch-site': 'cross-site' },
+      { origin: 'null' },
+      { host: 'evil.example', origin: 'https://evil.example' },
+    ]) {
+      for (const [path, method] of [[`${expectedPaths[1]}?action=update-all`, 'POST'], [expectedPaths[3], 'PUT'], [expectedPaths[2], 'POST']] as const) {
+        let bodyRead = false
+        const response: ResponseRecorder = {
+          writeHead(status) { response.status = status },
+          end(body) { response.body = body },
+        }
+        await routes.get(path.split('?')[0]!)!.handler({
+          ...trusted, method, url: path,
+          headers: { ...trusted.headers, ...headers, 'content-type': 'application/x-www-form-urlencoded' },
+          async *[Symbol.asyncIterator]() { bodyRead = true; yield 'action=update-all' },
+        }, response)
+        assert.equal(response.status, 403, `${path} 跨站请求必须被真实宿主契约拒绝`)
+        assert.equal(bodyRead, false, '必须在读取表单及进入业务操作前拒绝')
+      }
+    }
+  } finally { await hostContext.fiber.dispose() }
 } finally {
   for (const dispose of disposers.reverse()) dispose()
   if (previousProfileDir === undefined) delete process.env.DSH_PROFILE_DIR

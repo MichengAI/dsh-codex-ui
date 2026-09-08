@@ -44,6 +44,32 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+test.each([401, 403, 503])('依赖读取 HTTP %s 显示专属提示而非通用失败', async status => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status })))
+  const container = document.createElement('div')
+  const root = createRoot(container)
+  try {
+    await act(async () => { root.render(createElement(AboutSection, { t: ((key: string) => key) as never })) })
+    await flush()
+    expect(container.textContent).toContain(status === 401 ? 'errors.unauthorized' : status === 403 ? 'errors.forbidden' : 'errors.serviceUnavailable')
+  } finally { await act(async () => { root.unmount() }) }
+})
+
+test.each([401, 403, 503])('连接器读取 HTTP %s 显示专属提示', async status => {
+  vi.stubGlobal('fetch', vi.fn(async input => new Response('', { status: input === '/mcp-connector/ui/' ? 404 : status })))
+  const container = document.createElement('div')
+  const root = createRoot(container)
+  const snapshot = { current: 'session-a', ids: [], byId: {} }
+  try {
+    await act(async () => { root.render(createElement(ConnectorsSection, {
+      sessionStore: { getSnapshot: () => snapshot, subscribe: () => () => {} } as never,
+      startPromptSession: async () => {}, t: ((key: string) => key) as never,
+    })) })
+    await flush()
+    expect(container.textContent).toContain(status === 401 ? 'errors.unauthorized' : status === 403 ? 'errors.forbidden' : 'errors.serviceUnavailable')
+  } finally { await act(async () => { root.unmount() }) }
+})
+
 test('关于页已有数据刷新失败时保留内容并显示非阻断提示', async () => {
   vi.stubGlobal('IntersectionObserver', TestIntersectionObserver)
   const fetcher = vi.fn()

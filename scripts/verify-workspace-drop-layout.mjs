@@ -1,4 +1,4 @@
-/** 输出浏览器几何验收脚本；通过 agent-browser eval --stdin 执行，不接入用户数据。 */
+/** 默认输出独立验收脚本；--run 在无截图的 Chromium 中执行，供本地与 CI 共用。 */
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 
@@ -70,7 +70,7 @@ const verify = async () => {
       }
       await new Promise(requestAnimationFrame)
       results.push({ name: test.name, width, theme, error, scrollError, gap: lower - upper })
-      // 保留静态截图证据，同时结束持续帧监听。
+      // 保留测量布局，同时结束持续帧监听。
       const copy = line.cloneNode(true)
       dispose()
       root.dataset.dropIndicator = 'measured'
@@ -94,6 +94,9 @@ const verify = async () => {
     const below = host.querySelector('#next-group>.dcu-wb-collection-head').getBoundingClientRect().top - lineBottom
     if (Math.abs(above - below) > 0.1) throw new Error(`空分组未居中: ${above}/${below}`)
     if (style.fontSize !== '13px' || style.lineHeight !== '18px' || style.fontSize !== chatStyle.fontSize || style.lineHeight !== chatStyle.lineHeight || style.color !== chatStyle.color) throw new Error('空状态字体不统一')
+    const expectedColor = theme === 'dark' ? 'rgb(112, 120, 116)' : 'rgb(118, 126, 122)'
+    if (style.color !== expectedColor || chatStyle.color !== expectedColor) throw new Error('空状态未使用三级灰 token')
+    if (chatStyle.padding !== '1px 8px 5px 28px') throw new Error('空聊天四边间距不符')
     const body = empty.parentElement
     body.dataset.open = 'false'
     if (body.getBoundingClientRect().height !== 0) throw new Error('空分组收起残留间距')
@@ -117,4 +120,13 @@ const verify = async () => {
   }
   return results
 }
-console.log(`(async()=>{document.head.innerHTML='<meta charset="utf-8">';const style=document.createElement('style');style.textContent=${JSON.stringify(styles.join('\n') + '\nbody{margin:0;font-family:Arial;background:#ddd}h3{font-size:13px}.dark{--dcu-sidebar-primary:#b9bab9;--dcu-sidebar-secondary:#909191;--dcu-sidebar-hover:#303432;background:#1d2120;color:#b9bab9}.light{--dcu-sidebar-primary:#303432;--dcu-sidebar-secondary:#606563;--dcu-sidebar-hover:#dfe8e5;background:#eef7f5;color:#303432}.dcu-wb{--dsw-alias-state-business-primary:#69a7ff}')} ;document.head.append(style);${implementation};return (${verify.toString()})();})()`)
+const script = `(async()=>{document.head.innerHTML='<meta charset="utf-8">';const style=document.createElement('style');style.textContent=${JSON.stringify(styles.join('\n') + '\nbody{margin:0;font-family:Arial;background:#ddd}h3{font-size:13px}.dark{--dcu-sidebar-primary:#b9bab9;--dcu-sidebar-secondary:#909191;--dcu-sidebar-tertiary:#707874;--dcu-sidebar-hover:#303432;background:#1d2120;color:#b9bab9}.light{--dcu-sidebar-primary:#303432;--dcu-sidebar-secondary:#606563;--dcu-sidebar-tertiary:#767e7a;--dcu-sidebar-hover:#dfe8e5;background:#eef7f5;color:#303432}.dcu-wb{--dsw-alias-state-business-primary:#69a7ff}')} ;document.head.append(style);${implementation};return (${verify.toString()})();})()`
+if (process.argv.includes('--run')) {
+  const { chromium } = await import('playwright')
+  const browser = await chromium.launch({ headless: true })
+  try {
+    const page = await browser.newPage()
+    const results = await page.evaluate(script)
+    console.log(`工作区布局：${results.length} 组 Chromium 几何与样式检查通过（无截图）。`)
+  } finally { await browser.close() }
+} else console.log(script)

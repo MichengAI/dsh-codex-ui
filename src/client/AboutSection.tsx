@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { BusinessRequestError, businessRequestErrorKey } from './business-request-error.ts'
 import { IconCheckOutline16, IconDownloadOutline16, IconListPenOutline16, IconLoadingOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { CODEX_UI_API_ENDPOINTS } from '../business-api.ts'
@@ -80,6 +81,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
   const [progress, setProgress] = useState<InstallProgress>()
   const [message, setMessage] = useState<{ error: boolean; text: string }>()
   const [refreshFailed, setRefreshFailed] = useState(false)
+  const [loadFailure, setLoadFailure] = useState<unknown>()
   const alive = useRef(true)
   const root = useRef<HTMLElement>(null)
   const stateRef = useRef<LoadState>('loading')
@@ -92,14 +94,17 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
     if (stateRef.current !== 'ready') setState('loading')
     try {
       const response = await fetch(endpoint, { cache: 'no-store', signal })
+      if (!response.ok) throw new BusinessRequestError(response.status)
       const payload = await response.json() as { dependencies?: unknown }
       if (signal?.aborted || currentRequest !== requestId.current) return
-      if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) throw new Error()
+      if (!Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) throw new Error()
       setDependencies(payload.dependencies)
       setState('ready')
       setRefreshFailed(false)
+      setLoadFailure(undefined)
     } catch (error) {
       if (signal?.aborted || (error instanceof DOMException && error.name === 'AbortError') || currentRequest !== requestId.current) return
+      setLoadFailure(error)
       if (stateRef.current === 'ready') setRefreshFailed(true)
       else setState('failed')
     }
@@ -156,6 +161,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
     setMessage(undefined)
     try {
       const response = await fetch(`${endpoint}?dependency=${encodeURIComponent(id)}`, { method: 'POST' })
+      if ([401, 403, 503].includes(response.status)) throw new BusinessRequestError(response.status)
       const payload = await response.json() as { dependencies?: unknown; error?: unknown; autoReload?: unknown }
       if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) throw new Error(typeof payload.error === 'string' ? payload.error : t('about.installFailed'))
       if (!alive.current) return
@@ -178,6 +184,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
     setMessage(undefined)
     try {
       const response = await fetch(`${endpoint}?action=update-all`, { method: 'POST' })
+      if ([401, 403, 503].includes(response.status)) throw new BusinessRequestError(response.status)
       const payload = await response.json() as { dependencies?: unknown; error?: unknown; restartRequired?: unknown; autoReload?: unknown }
       if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) throw new Error(typeof payload.error === 'string' ? payload.error : t('about.installFailed'))
       if (!alive.current) return
@@ -213,10 +220,10 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
     <div className="dcu-about-dependencies-heading"><h3>{t('about.dependencies')}</h3>{state === 'ready' && actionableCount > 0 && <button className="dcu-about-install dcu-about-update-all" type="button" aria-busy={installing === 'all'} disabled={installing !== undefined} onClick={() => { void updateAll() }}>{installing === 'all' ? <IconLoadingOutline16 size={14} /> : <IconDownloadOutline16 size={14} />}{installing === 'all' ? t('about.updatingAll') : t('about.updateAll')}</button>}</div>
     <p className="dcu-about-intro">{t('about.dependenciesDescription')}</p>
     {state === 'loading' ? <div className="dcu-about-message" role="status">{t('about.loading')}</div>
-      : state === 'failed' ? <div className="dcu-about-message" data-error="true" role="alert">{t('about.statusFailed')}</div>
+      : state === 'failed' ? <div className="dcu-about-message" data-error="true" role="alert">{t(businessRequestErrorKey(loadFailure) ?? 'about.statusFailed')}</div>
         : <div className="dcu-about-dependencies" aria-busy={installing !== undefined}>{dependencies.map(dependency => <article className="dcu-about-dependency" key={dependency.id}><div className="dcu-about-copy"><div className="dcu-about-name">{title(dependency.id)}</div><div className="dcu-about-package">{dependency.packageName}{dependency.version === undefined ? '' : ` · ${dependency.version}`}{dependency.updateAvailable && dependency.latestVersion !== undefined ? ` → ${dependency.latestVersion}` : ''}</div></div><div className="dcu-about-status" data-installed={dependency.installed} data-update={dependency.updateAvailable}>{dependency.installed && !dependency.updateAvailable && <IconCheckOutline16 size={14} />}{dependency.updateAvailable ? t('about.updateAvailable') : dependency.installed ? t('about.installed') : t('about.missing')}</div>{(!dependency.installed || dependency.updateAvailable) && <button className="dcu-about-install" type="button" disabled={installing !== undefined} onClick={() => { void install(dependency.id) }}>{installing === dependency.id ? <IconLoadingOutline16 size={14} /> : <IconDownloadOutline16 size={14} />}{installing === dependency.id ? t('about.installing') : dependency.updateAvailable ? t('about.update') : t('about.install')}</button>}</article>)}</div>}
     {installing !== undefined && <div className="dcu-about-progress" role="status"><span><IconLoadingOutline16 size={14} /></span><code>{progress === undefined ? t('about.progressHint') : progressLabel(progress, t)}</code>{progress?.percent !== null && progress?.percent !== undefined && <span className="dcu-about-progress-pct">{progress.percent}%</span>}<div className="dcu-about-progress-bar"><div className="dcu-about-progress-fill" data-wave={progress?.percent === null || progress?.percent === undefined} style={progress?.percent === null || progress?.percent === undefined ? undefined : { width: `${progress.percent}%` }} /></div></div>}
-    {refreshFailed && state === 'ready' && <div className="dcu-about-message" data-error="true" role="status">{t('about.refreshFailed')}</div>}
+    {refreshFailed && state === 'ready' && <div className="dcu-about-message" data-error="true" role="status">{t(businessRequestErrorKey(loadFailure) ?? 'about.refreshFailed')}</div>}
     {message !== undefined && <div className="dcu-about-message" data-error={message.error} role={message.error ? 'alert' : 'status'}>{message.text}</div>}
   </section>
 }

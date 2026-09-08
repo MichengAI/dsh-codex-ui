@@ -62,7 +62,11 @@ type HostResponse = {
 type AuthenticationStatus = 401 | 403 | 503
 type AuthenticationErrorBody = (status: AuthenticationStatus, message: string) => Record<string, unknown>
 
-/** 所有手写业务 REST 都委托当前宿主的浏览器信任与登录认证。 */
+/**
+ * 所有业务 REST 依赖 connection >=0.1.2-rc.1 的 Host/Origin/Fetch Metadata 与登录检查。
+ * 必须在读取请求体及执行副作用前调用；不得将 undefined 以外的拒绝结果当作放行。
+ * 发布包信任边界由 tests/business-rest-auth.assert.ts 的真实宿主契约用例验证。
+ */
 function authenticateBusinessRequest(
   ctx: Context,
   request: HostRequest,

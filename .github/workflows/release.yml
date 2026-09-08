@@ -1,5 +1,8 @@
 name: 同步 GitHub Release 说明
 
+      - name: 安装 Chromium 测试运行时
+        run: pnpm exec playwright install --with-deps chromium
+
 on:
   push:
     tags:

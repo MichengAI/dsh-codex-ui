@@ -4,10 +4,19 @@ const TARGETS = '.dcu-wb-drop,.dcu-wb-group-order-drop'
 
 export type DropIndicatorRect = { top: number; left: number; width: number }
 
-export function measureWorkspaceDropIndicator(root: HTMLElement): DropIndicatorRect | undefined {
-  const target = Array.from(root.querySelectorAll<HTMLElement>(TARGETS))
-    .find(node => node.closest('[data-open=false]') === null)
-  if (target === undefined) return undefined
+export function measureWorkspaceDropIndicator(root: HTMLElement, onTargets?: (targets: HTMLElement[]) => void): DropIndicatorRect | undefined {
+  const measured = Array.from(root.querySelectorAll<HTMLElement>(TARGETS))
+    .filter(node => node.closest('[data-open=false]') === null)
+    .map(target => ({ target, rect: measureTarget(root, target) }))
+    .filter(item => item.rect !== undefined)
+  // 同一落点可能同时标记包装节点与行；按绘制位置去重，避免把嵌套标记误报为冲突。
+  const unique = measured.filter((item, index) => !measured.slice(0, index).some(previous =>
+    previous.rect!.top === item.rect!.top && previous.rect!.left === item.rect!.left && previous.rect!.width === item.rect!.width))
+  onTargets?.(unique.map(item => item.target))
+  return unique[0]?.rect
+}
+
+function measureTarget(root: HTMLElement, target: HTMLElement): DropIndicatorRect | undefined {
   const section = target.closest('.dcu-wb-section') ?? root
   const rows = Array.from(section.querySelectorAll<HTMLElement>(ROWS))
     .filter(node => node.closest('[data-open=false]') === null)
@@ -25,6 +34,7 @@ export function measureWorkspaceDropIndicator(root: HTMLElement): DropIndicatorR
     upper = after ? edge.rect.bottom : rows[index - 1]?.rect.bottom
     lower = after ? rows[index + 1]?.rect.top : edge.rect.top
   } else if (target.matches('.dcu-wb-pin-start,.dcu-wb-pin-end')) {
+    if (anchor.width <= 0 || anchor.height <= 0) return undefined
     // 空列表和列表末尾已有专用槽；有相邻行时仍按两行的边界居中。
     upper = rows.filter(row => row.rect.bottom <= anchor.top).at(-1)?.rect.bottom
     lower = rows.find(row => row.rect.top >= anchor.bottom)?.rect.top
@@ -50,8 +60,15 @@ export function mountWorkspaceDropIndicator(root: HTMLElement): () => void {
   const view = root.ownerDocument.defaultView!
   let frame = 0
   let previous = ''
+  let previousConflict: HTMLElement[] = []
   const update = () => {
-    const rect = measureWorkspaceDropIndicator(root)
+    const rect = measureWorkspaceDropIndicator(root, targets => {
+      const conflict = targets.length > 1 ? targets : []
+      if (conflict.length > 1 && (conflict.length !== previousConflict.length || conflict.some((target, index) => target !== previousConflict[index]))) {
+        console.warn('Codex UI 拖拽存在多个有效落点，请检查跨区状态清理。', { count: conflict.length })
+      }
+      previousConflict = conflict
+    })
     const next = rect === undefined ? '' : `${rect.top},${rect.left},${rect.width}`
     line.hidden = rect === undefined
     if (rect !== undefined && next !== previous) {

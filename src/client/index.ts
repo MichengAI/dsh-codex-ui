@@ -113,7 +113,9 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'michengai-codex-ui: dictionaries')
   const t = ctx.locale.bind(NS)
   registerInputHistory(ctx)
-  const connection = ctx.get('connection') as HostOpenPathConnection
+  // Host 与客户端共用 Cordis 的服务名；此处读取的是客户端 RPC 外观，而非 HostConnectionService。
+  const connectionService: unknown = ctx.get('connection')
+  const connection = connectionService as HostOpenPathConnection
   const openPath = (path: string): Promise<void> => openPathInHost(connection, path)
   ctx.effect(() => observeSlimSidebar(), 'michengai-codex-ui: slim sidebar')
   ctx.effect(() => observeSettingsNavIcons(), 'michengai-codex-ui: settings nav icons')

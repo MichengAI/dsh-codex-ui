@@ -6,7 +6,14 @@ This changelog records recent releases of DSH Codex UI and its one-click install
 
 ## Unreleased
 
+### Breaking changes
+
+- Removed the public `crossSiteRequest` export. Consumers must use the host connection’s `requestRejection()` contract. Business GET routes now require authentication, including loopback requests (401 when signed out); missing authentication services return 503. The old REST paths have no compatibility aliases. Requires `@deepseek-ai/dsh-client-connection >=0.1.2-rc.1` and Cordis `>=4.0.2`.
+
 ### Fixed
+
+- Added localized 401/403/503 feedback for business requests and an explicit local-cache notice when workspace preferences cannot sync.
+- Consolidated empty-chat padding and ignored stale invisible drop markers; conflicting distinct drop positions now emit a deduplicated diagnostic.
 
 - Stopped applying custom-group spacing between projects in an ungrouped project list, keeping the empty-conversation label vertically centered between project rows.
 - Centered empty-group text between adjacent group headers, accounting for the external group gap, and unified both empty-state labels at 13px/18px with the same muted color.
@@ -28,6 +35,8 @@ This changelog records recent releases of DSH Codex UI and its one-click install
 - Delegated all five business REST routes to the DSH host's `requestRejection()` checks for trusted hosts, origins, and login cookies. Requests now fail closed when authentication is unavailable without blocking legitimate reverse-proxy origins through a loopback-only check.
 
 ### Tests
+
+- Run Chromium layout checks in `pnpm test` and CI without screenshots, including exact tertiary colors and empty-state padding. Added cross-section drag cleanup and pinned-host-package trust-boundary regression coverage with login stubbed as authenticated.
 
 - Added business-route registration and authentication regression coverage for the new and removed paths, 401, 403, unavailable authentication, unchanged request-header forwarding, and an external-origin write authorized by the host boundary.
 

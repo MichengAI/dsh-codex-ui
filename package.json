@@ -62,7 +62,8 @@
   "scripts": {
     "build": "tsc --noEmit && tsdown",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm run typecheck && vitest run && tsdown && node tests/run-assertions.mjs"
+    "test": "pnpm run typecheck && vitest run && tsdown && node tests/run-assertions.mjs && pnpm run test:layout",
+    "test:layout": "node scripts/verify-workspace-drop-layout.mjs --run"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": ">=4.0.2 <5.0.0",
@@ -120,6 +121,7 @@
     "@types/node": "^26.0.0",
     "@types/react": "~18.3.1",
     "jsdom": "^29.1.1",
+    "playwright": "1.63.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tsdown": "^0.22.2",

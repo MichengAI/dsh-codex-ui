@@ -5,6 +5,7 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { CODEX_UI_API_ENDPOINTS } from '../business-api.ts'
 import { NS } from './locales.ts'
 import { userErrorText } from './user-error.ts'
+import { BusinessRequestError, businessRequestErrorKey } from './business-request-error.ts'
 
 type SnapshotStore<T> = { getSnapshot: () => T; subscribe: (listener: () => void) => () => void }
 type Connector = { name: string; tools: readonly { name: string; description: string }[] }
@@ -92,24 +93,25 @@ function NativeConnectorList({ sessionStore, t }: Pick<ConnectorsSectionProps, '
   const sessionId = useSyncExternalStore(sessionStore.subscribe, () => sessionStore.getSnapshot().current)
   const [connectors, setConnectors] = useState<readonly Connector[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading')
+  const [failure, setFailure] = useState<unknown>()
   useEffect(() => {
     if (sessionId === undefined) { setConnectors([]); setState('ready'); return }
     const controller = new AbortController()
     setState('loading')
     void fetch(`${CODEX_UI_API_ENDPOINTS.connectors}?sessionId=${encodeURIComponent(sessionId)}`, { signal: controller.signal })
       .then(async response => {
-        if (!response.ok) throw new Error('连接器目录暂不可用。')
+        if (!response.ok) throw new BusinessRequestError(response.status)
         const payload = await response.json() as { connectors?: unknown }
         if (!Array.isArray(payload.connectors) || !payload.connectors.every(isConnector)) throw new Error('连接器目录返回格式无效。')
         if (!controller.signal.aborted) setConnectors(payload.connectors)
       })
       .then(() => { if (!controller.signal.aborted) setState('ready') })
-      .catch(() => { if (!controller.signal.aborted) setState('failed') })
+      .catch(error => { if (!controller.signal.aborted) { setFailure(error); setState('failed') } })
     return () => { controller.abort() }
   }, [sessionId])
   if (sessionId === undefined) return <div className="dcu-connector-empty">{t('connectors.openSession')}</div>
   if (state === 'loading') return <div className="dcu-connector-empty">{t('connectors.loading')}</div>
-  if (state === 'failed') return <div className="dcu-connector-empty">{t('connectors.failed')}</div>
+  if (state === 'failed') return <div className="dcu-connector-empty" role="alert">{t(businessRequestErrorKey(failure) ?? 'connectors.failed')}</div>
   return <div className="dcu-connector-list">{connectors.map(connector => <article className="dcu-connector" key={connector.name}><div className="dcu-connector-head"><IconLinkOutline16 size={16} />{connector.name}</div><div className="dcu-connector-meta">{t('connectors.toolCount', { count: connector.tools.length })}</div>{connector.tools.map(tool => <div className="dcu-connector-tool" key={tool.name}>{tool.name}{tool.description !== '' && <span>{tool.description}</span>}</div>)}</article>)}{connectors.length === 0 && <div className="dcu-connector-empty">{t('connectors.empty')}</div>}</div>
 }
 

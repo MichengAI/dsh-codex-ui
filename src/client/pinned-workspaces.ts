@@ -1,5 +1,6 @@
 /** 浏览器本地持久化键；用于工作区偏好的首帧恢复与 Host 故障兜底。 */
 import { CODEX_UI_API_ENDPOINTS } from '../business-api.ts'
+import { BusinessRequestError } from './business-request-error.ts'
 import { parseStoredWorkspaceGroups, pruneWorkspaceGroups, type WorkspaceGroup } from '../workspace-groups.ts'
 
 export const PINNED_WORKSPACES_STORAGE_KEY = 'dsh-codex-ui.pinned-workspace-ids'
@@ -75,7 +76,7 @@ export async function readHostWorkspacePreferences(fetcher: Fetcher = fetch): Pr
     cache: 'no-store',
     signal: AbortSignal.timeout(5_000),
   })
-  if (!response.ok) throw new Error(`读取置顶偏好失败：HTTP ${response.status}`)
+  if (!response.ok) throw new BusinessRequestError(response.status)
   const payload: unknown = await response.json()
   if (payload === null || typeof payload !== 'object') throw new Error('置顶偏好响应格式无效。')
   const record = payload as Record<string, unknown>
@@ -97,7 +98,7 @@ export async function writeHostWorkspacePreferences(pinnedWorkspaceIds: readonly
     body: JSON.stringify({ pinnedWorkspaceIds: normalizePinnedWorkspaceIds(pinnedWorkspaceIds), workspaceGroups: groups }),
     signal: AbortSignal.timeout(5_000),
   })
-  if (!response.ok) throw new Error(`保存置顶偏好失败：HTTP ${response.status}`)
+  if (!response.ok) throw new BusinessRequestError(response.status)
 }
 
 /** 兼容旧调用方；新代码应同时写入分组。 */
@@ -113,7 +114,7 @@ export async function writeHostPinnedWorkspaceIds(ids: readonly string[], fetche
     body: JSON.stringify({ pinnedWorkspaceIds: normalizePinnedWorkspaceIds(ids) }),
     signal: AbortSignal.timeout(5_000),
   })
-  if (!response.ok) throw new Error(`保存置顶偏好失败：HTTP ${response.status}`)
+  if (!response.ok) throw new BusinessRequestError(response.status)
 }
 
 /** 在置顶列表中切换一个工作区。 */

@@ -33,5 +33,8 @@ jobs:
       - name: 安装依赖
         run: pnpm install --frozen-lockfile
 
-      - name: 运行完整测试
+      - name: 安装 Chromium 测试运行时
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: 运行单元、集成与浏览器布局测试
         run: pnpm test

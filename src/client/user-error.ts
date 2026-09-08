@@ -1,5 +1,6 @@
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { NS, type CodexUiKey } from './locales.ts'
+import { businessRequestErrorKey } from './business-request-error.ts'
 import { WorkspaceGroupError, type WorkspaceGroupErrorCode } from '../workspace-groups.ts'
 
 type Translator = TranslateNS<typeof NS>
@@ -94,6 +95,8 @@ function hostActionErrorKey(error: HostActionError): CodexUiKey {
 
 /** 将业务错误映射为当前语言，未知底层错误统一脱敏。 */
 export function userErrorText(error: unknown, t: Translator): string {
+  const requestKey = businessRequestErrorKey(error)
+  if (requestKey !== undefined) return t(requestKey)
   if (error instanceof UserFacingError) return error.message
   if (error instanceof WorkspaceGroupError) return t(WORKSPACE_GROUP_ERROR_KEYS[error.code])
   if (error instanceof HostActionError) return t(hostActionErrorKey(error))
@@ -102,6 +105,8 @@ export function userErrorText(error: unknown, t: Translator): string {
 
 /** 安装错误保留用户可执行的处理建议，但不直接展示 Host 原文。 */
 export function installErrorText(error: unknown, t: Translator): string {
+  const requestKey = businessRequestErrorKey(error)
+  if (requestKey !== undefined) return t(requestKey)
   const message = error instanceof Error ? error.message : String(error)
   const match = INSTALL_ERROR_KEYS.find(([pattern]) => pattern.test(message))
   return t(match?.[1] ?? 'about.installFailed')

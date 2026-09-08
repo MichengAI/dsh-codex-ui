@@ -1,4 +1,5 @@
 import { CODEX_UI_API_ENDPOINTS } from '../business-api.ts'
+import { BusinessRequestError } from './business-request-error.ts'
 
 type HostOpenPathResponse = {
   result:
@@ -30,6 +31,7 @@ export async function openPathInHost(connection: HostOpenPathConnection, path: s
     })
   } catch {}
   if (foregroundResponse?.ok) return
+  if (foregroundResponse !== undefined && [401, 403, 503].includes(foregroundResponse.status)) throw new BusinessRequestError(foregroundResponse.status)
   if (foregroundResponse !== undefined && foregroundResponse.status !== 404 && foregroundResponse.status !== 501) {
     const payload = await foregroundResponse.json().catch(() => ({})) as { error?: unknown }
     throw new Error(typeof payload.error === 'string' ? payload.error : '无法在前台打开资源管理器。')

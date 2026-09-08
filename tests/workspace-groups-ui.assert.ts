@@ -16,7 +16,7 @@ assert.match(browser, /workspaceGroups\.map\(renderWorkspaceCollection\)/, '项�
 assert.match(browser, /initialWorkspaceGroups = useMemo\(\(\) => readWorkspaceGroupsCache\(storage\(\)\), \[\]\)/, '分组首帧必须从浏览器同步缓存恢复')
 assert.match(browser, /useState<WorkspaceGroup\[\]>\(\(\) => initialWorkspaceGroups\.workspaceGroups\)/, '分组状态必须使用同步缓存作为初始值')
 assert.match(browser, /saveWorkspaceGroupsCache\(storage\(\), workspaceGroups, workspaceGroupsPendingHostSyncRef\.current\)/, '分组变化必须同步写入浏览器缓存')
-assert.match(browser, /\.catch\(\(\) => \{[\s\S]{0,160}pinnedHostHydratedRef\.current = true/, 'Host 读取失败后不得永久阻断后续偏好写回')
+// Host 读取失败后继续写回，由 session-tree-pending.integration.spec.ts 的真实交互验证。
 assert.match(browser, /writeWorkspaceGroupDrag\(event\.dataTransfer, groupId, group\.title\)/, '分组标题必须写入独立的分组拖拽载荷')
 assert.match(browser, /className=\{`dcu-wb-collection-head[^`]*`\} draggable onDragStart=/, '分组标题容器必须作为唯一的原生拖拽源')
 assert.doesNotMatch(browser, /className="dcu-wb-collection-label" draggable/, '分组标题按钮不得抢占 Chrome 的原生拖拽手势')
