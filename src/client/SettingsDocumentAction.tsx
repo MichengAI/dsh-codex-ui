@@ -12,8 +12,13 @@ export function SettingsDocumentAction({ describe, openDocument, t }: PropsLocal
   const busy = useRef(false)
   const [opening, setOpening] = useState(false)
   const [error, setError] = useState(false)
-  useEffect(() => { void describe.ensure().catch(() => { setError(true) }) }, [describe])
-  if (!snapshot.view?.hasDocument) return null
+  useEffect(() => {
+    let active = true
+    setError(false)
+    void describe.ensure().catch(() => { if (active) setError(true) })
+    return () => { active = false }
+  }, [describe])
+  if (!snapshot.view?.hasDocument) return error ? <span role="alert">{t('settings.openDocumentError')}</span> : null
   const open = async () => {
     if (busy.current) return
     busy.current = true

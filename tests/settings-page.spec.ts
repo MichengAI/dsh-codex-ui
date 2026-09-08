@@ -76,3 +76,75 @@ test('搜索保留未知插件，空结果不会误选页面，条目分组覆�
   expect(generalItemGroup('composer-enter')).toBe('editor')
   expect(generalItemGroup('new-preference')).toBe('general')
 })
+
+
+test('隐藏或已隔离的无关对话框不阻止 Escape 返回', async () => {
+  const dialog = document.createElement('div')
+  dialog.setAttribute('role', 'dialog')
+  document.body.append(dialog)
+  const { container, trigger } = await mount()
+  expect(trigger.inert).toBe(true)
+  expect(dialog.inert).toBe(true)
+  await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })) })
+  expect(container.querySelector('[data-dcu-settings-page]')).toBeNull()
+})
+
+test('设置打开时内联引导仍可完成，迟挂载背景不能抢走焦点', async () => {
+  const { container } = await mount({
+    onboarding: source([{ id: 'first-run' }]),
+    renderSlot: ((name: string, owner: { complete?: () => void }) => name === 'settings.onboarding'
+      ? createElement('button', { 'data-onboarding-test': true, onClick: owner.complete }, '完成引导') : null) as CodexSettingsPageProps['renderSlot'],
+  })
+  const onboarding = container.querySelector<HTMLButtonElement>('[data-onboarding-test]')!
+  expect(onboarding.closest('[inert]')).toBeNull()
+  expect(onboarding.inert).not.toBe(true)
+  const late = document.createElement('button')
+  document.body.append(late)
+  late.focus()
+  expect(document.activeElement).toBe(container.querySelector('.dcu-settings-back'))
+  await act(async () => { onboarding.click() })
+  expect(container.querySelector('[data-onboarding-test]')).toBeNull()
+})
+
+test('新设置页直接提供互不重复的社区插件图标', async () => {
+  const { container } = await mount({ sections: source([
+    ...rows, {id:'market',label:'插件市场',order:3}, {id:'better-sidebar',label:'侧边卡片',order:4},
+  ]) })
+  expect(container.querySelector('.dcu-settings-nav .lucide-store')).not.toBeNull()
+  expect(container.querySelector('.dcu-settings-nav .lucide-panel-right')).not.toBeNull()
+})
+
+
+test('Shift+Tab 在设置内部循环，隐藏的迟挂载 dialog 不拦截 Escape', async () => {
+ const {container}=await mount()
+ const back=container.querySelector<HTMLButtonElement>('.dcu-settings-back')!
+ const last=container.querySelector<HTMLButtonElement>('[data-section]')!
+ back.focus()
+ document.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',shiftKey:true,bubbles:true,cancelable:true}))
+ expect(document.activeElement).toBe(last)
+ document.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true}))
+ expect(document.activeElement).toBe(back)
+ const hidden=document.createElement('div');hidden.setAttribute('role','dialog');hidden.style.display='none';document.body.append(hidden)
+ await act(async()=>{document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))})
+ expect(container.querySelector('[data-dcu-settings-page]')).toBeNull()
+})
+
+test('已有引导 portal 保留交互，设置退出不改写原始 inert 状态', async () => {
+ const overlay=document.createElement('div');overlay.setAttribute('role','dialog');const next=document.createElement('button');overlay.append(next);document.body.append(overlay)
+ const background=document.createElement('div');background.inert=true;document.body.append(background)
+ const {container}=await mount({onboarding:source([{id:'portal-step'}])})
+ expect(overlay.inert).not.toBe(true)
+ next.focus();expect(document.activeElement).toBe(next)
+ await act(async()=>{container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click()})
+ expect(background.inert).toBe(true)
+})
+
+
+test('搜索弹窗尚未卸载也能从快捷入口打开设置分区', async () => {
+ const {container}=await mount()
+ await act(async()=>{container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click()})
+ const search=document.createElement('div');search.setAttribute('role','dialog');document.body.append(search)
+ await act(async()=>{openSettingsSection(container,'模型')})
+ await act(async()=>{await new Promise(resolve=>setTimeout(resolve,50))})
+ expect(container.querySelector('[data-section=models]')).not.toBeNull()
+})

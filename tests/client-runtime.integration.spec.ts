@@ -17,6 +17,7 @@ class ClientApplyHarness {
   private readonly disposers: Array<() => void> = []
 
   readonly slots = {
+    snapshot: () => [],
     inject: (_name: string, mount: () => (() => void) | void): void => {
       const dispose = mount()
       if (typeof dispose === 'function') this.disposers.push(dispose)
@@ -373,4 +374,23 @@ test('连接器设置页嵌入可用的市场并只接受该 iframe 的 Prompt �
     await act(async () => { root.unmount() })
     container.remove()
   }
+})
+
+
+test('全局搜索设置根条目可以打开新的设置触发器', async () => {
+ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
+ const container=document.createElement('div');document.body.append(container);const root=createRoot(container)
+ const opened=vi.fn();const sessions={ids:[],byId:{}};const workspaces={archivedSessionIds:[],items:[]}
+ try{
+ await act(async()=>{root.render(createElement(CodexSidebar,{
+ width:240,collapsed:false,t:(key:string)=>key,
+ useSessions:(f:(s:typeof sessions)=>unknown)=>f(sessions),useWorkspaces:(f:(s:typeof workspaces)=>unknown)=>f(workspaces),
+ renderSlot:(name:string)=>name==='sidebar.settings'?createElement('button',{'data-dcu-settings-trigger':true,onClick:opened}):null,
+ openSession:()=>{},startSession:()=>{},toggleSidebar:()=>{},archiveSession:async()=>{},deleteSession:async()=>{},forkSession:async()=>{},renameSession:async()=>{},openPath:()=>{},
+ } as never))})
+ await act(async()=>{container.querySelector<HTMLButtonElement>('[aria-label="sidebar.search"]')!.click()})
+ const entry=[...container.querySelectorAll<HTMLButtonElement>('.dcu-search-row')].find(button=>button.textContent?.includes('search.settings'))!
+ expect(entry).toBeDefined();await act(async()=>{entry.click()})
+ expect(opened).toHaveBeenCalledTimes(1)
+ }finally{await act(async()=>{root.unmount()});container.remove()}
 })

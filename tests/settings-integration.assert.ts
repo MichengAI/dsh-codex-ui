@@ -222,7 +222,7 @@ assert.doesNotMatch(client, /observePermissionMenus|permission-i18n/, '权限菜
 assert.doesNotMatch(locales, /permission.read-only.title/, '官方已提供权限文案，插件不得重复维护')
 
 assert.match(client, /observeSlimSidebar/, '展开侧栏必须收到接近 Codex 的列宽')
-assert.match(client, /observeSettingsNavIcons/, '设置导航必须改用侧栏同款图标')
+assert.match(client, /observeSettingsNavIcons/, '旧宿主 dialog 设置仍保留兼容图标观察；新页图标由行为测试验证')
 
 assert.match(client, /registrant: 'michengai-codex-ui'/, '侧栏注册必须带可识别的 Codex UI id，避免 IM 再包一层页签')
 assert.match(sidebar, /ima-tabs/, '配套插件内层任务/频道页签必须隐藏')

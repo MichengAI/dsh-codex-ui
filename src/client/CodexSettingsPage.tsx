@@ -6,6 +6,7 @@ import type { ConnectionState } from '@deepseek-ai/dsh-client-connection/client'
 import { NS } from './locales.ts'
 import { filterSettingsRows, generalItemGroup, settingsGroup, type SettingsRow } from './settings-page-model.ts'
 import { settingsPageStyles } from './settings-page-styles.ts'
+import { settingsElementAvailable, settingsOverlays } from './settings-focus.ts'
 
 const groupLabels = { personal: 'settings.personal', integrations: 'settings.integrations', records: 'settings.records', permissions: 'settings.permissions', general: 'settings.general', editor: 'settings.editor' } as const
 
@@ -51,6 +52,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
   const trigger = useRef<HTMLButtonElement>(null)
   const page = useRef<HTMLDivElement>(null)
   const back = useRef<HTMLButtonElement>(null)
+  const onboardingRoot = useRef<HTMLDivElement>(null)
   const main = useRef<HTMLDivElement>(null)
   const wasOpen = useRef(false)
   const exitAnimation = useRef<Animation | null>(null)
@@ -82,13 +84,15 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     if (wasOpen.current && !open) trigger.current?.focus()
     wasOpen.current = open
     if (!open || page.current === null) return
-    back.current?.focus()
+    if (settingsElementAvailable(page.current) && settingsOverlays().length === 0) back.current?.focus()
     // 只隔离被设置页覆盖的分支，不卸载会话，也不移动宿主 React 节点。
     const hidden = new Map<HTMLElement, boolean>()
     let branch: HTMLElement = page.current
     while (branch.parentElement !== null) {
       for (const sibling of branch.parentElement.children) {
         if (!(sibling instanceof HTMLElement) || sibling === branch || /^(STYLE|SCRIPT|LINK)$/.test(sibling.tagName)) continue
+        // 引导可能是内联内容，也可能由官方 Modal portal 承载并自行管理根节点隔离。
+        if (sibling === onboardingRoot.current || (step !== undefined && settingsOverlays().some(overlay => sibling === overlay || sibling.contains(overlay)))) continue
         hidden.set(sibling, sibling.inert)
         sibling.inert = true
       }
@@ -97,17 +101,40 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     }
     const onKeyDown = (event: KeyboardEvent) => {
       // 内层确认框拥有 Escape；不能连带退出设置并丢失当前表单。
-      if (event.key === 'Escape' && !event.defaultPrevented && document.querySelector('[role="dialog"],[role="alertdialog"]') === null) {
+      if (event.key === 'Escape' && !event.defaultPrevented && settingsOverlays('[role="dialog"],[role="alertdialog"]').length === 0) {
         event.preventDefault()
         close()
       }
     }
+    const keepFocus = (event: FocusEvent) => {
+      const target = event.target
+      if (!(target instanceof Node) || page.current === null || !settingsElementAvailable(page.current)) return
+      if (page.current.contains(target) || onboardingRoot.current?.contains(target)
+        || settingsOverlays().some(overlay => overlay.contains(target))) return
+      back.current?.focus()
+    }
+    const wrapFocus = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || event.defaultPrevented || page.current === null
+        || !settingsElementAvailable(page.current) || settingsOverlays().length > 0) return
+      const roots = [page.current, onboardingRoot.current].filter((root): root is HTMLDivElement => root !== null)
+      const items = roots.flatMap(root => [...root.querySelectorAll<HTMLElement>('button,input,select,textarea,a[href],[tabindex]')])
+        .filter(element => element.tabIndex >= 0 && !element.matches(':disabled') && settingsElementAvailable(element))
+      const next = event.shiftKey ? items.at(-1) : items[0]
+      if (document.activeElement === (event.shiftKey ? items[0] : items.at(-1))) {
+        event.preventDefault()
+        next?.focus()
+      }
+    }
     document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('keydown', wrapFocus)
+    document.addEventListener('focusin', keepFocus)
     return () => {
       document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('keydown', wrapFocus)
+      document.removeEventListener('focusin', keepFocus)
       for (const [element, inert] of hidden) element.inert = inert
     }
-  }, [open, close])
+  }, [open, close, step?.id])
   useEffect(() => { if (main.current !== null) main.current.scrollTop = 0 }, [active?.id])
 
   const visible = filterSettingsRows(rows, query)
@@ -120,7 +147,8 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     <ConnectionIndicator state={wide ? connectionIndicator : undefined} disconnectedLabel={t('settings.disconnected')} reconnectLabel={t('settings.reconnect')} connectingLabel={t('settings.connecting')} recoveredLabel={t('settings.recovered')} reconnectActionLabel={t('settings.reconnect')} restartActionLabel={t('settings.reconnect')} onReconnect={reconnect}/>
     {open && <div ref={page} className="dcu-settings-page" data-dcu-settings-page role="region" aria-label={t('settings.title')}>
       <nav className="dcu-settings-nav" aria-label={t('settings.title')}>
-        <button ref={back} type="button" className="dcu-settings-back" onClick={close}><ArrowLeft size={16}/>{t('settings.back')}</button>
+        <button ref={back} type="button" className="dcu-settings-back" onClick={close}><ArrowLeft size={16}/>{renderSlot('settings.close', {}) ?? t('settings.back')}</button>
+        {renderSlot('settings.header', {})}
         <label className="dcu-settings-search"><Search size={15} aria-hidden="true"/><input type="search" value={query} aria-label={t('settings.search')} placeholder={t('settings.search')} onChange={event => { setQuery(event.target.value) }}/></label>
         <div className="dcu-settings-groups">
           {(['personal', 'integrations', 'records'] as const).map(group => {
@@ -131,6 +159,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
             </section>
           })}
         </div>
+        {visible.length > 0 && !visible.some(row => row.id === active?.id) && <p className="dcu-settings-empty" role="status">{t('settings.filterHint')}</p>}
         {visible.length === 0 && <p className="dcu-settings-empty" role="status">{t('settings.noResults')}</p>}
       </nav>
       <div ref={main} className="dcu-settings-main">
@@ -140,7 +169,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
         </div>
       </div>
     </div>}
-    {step !== undefined && renderSlot('settings.onboarding', { stepId: step.id, complete: () => { setCompleted(previous => new Set([...previous, step.id])) }, openSection }, { only: step.id })}
+    <div ref={onboardingRoot} style={{ display: 'contents' }}>{step !== undefined && renderSlot('settings.onboarding', { stepId: step.id, complete: () => { setCompleted(previous => new Set([...previous, step.id])) }, openSection }, { only: step.id })}</div>
   </>
 }
 

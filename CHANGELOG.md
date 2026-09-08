@@ -6,8 +6,9 @@ This changelog records recent releases of DSH Codex UI and its one-click install
 
 ## Unreleased
 
-## 0.2.114 - 2026-09-08
+## 0.2.114 - Unreleased
 
+- Fix global settings search, onboarding and keyboard focus isolation, Escape handling for hidden dialogs, and configuration-file error feedback; retain the host settings shell when it is already active.
 - Replace the settings dialog with a Codex-style standalone view, category search, grouped preferences, and focus restoration when returning to the app.
 - Fix duplicate settings-shell registration, settings entry alignment and transitions, search focus, repeated headings, and content spacing.
 - Give the plugin marketplace and side cards distinct store and sidebar-layout icons instead of the generic box.

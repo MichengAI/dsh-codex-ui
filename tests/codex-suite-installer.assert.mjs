@@ -35,7 +35,16 @@ assert.equal(installerManifest.bin?.['dsh-codex-suite-installer'], 'bin.mjs', '�
 assert.equal(installerManifest.dependencies, undefined, '轻量 npx 安装器不能安装成员的传递依赖树')
 assert.deepEqual(Object.keys(installerManifest.dshCodexSuite?.members ?? {}), MEMBER_PACKAGES)
 assert.match(rootManifest.version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/, '根包必须使用发布版 semver')
-assert.equal(installerManifest.dshCodexSuite.members['@michengai/dsh-codex-ui'], rootManifest.version, '安装器必须锁定与根包相同的 UI 版本')
+// 安装器是独立发布快照；工作区 UI 可先进入下一待发布版本，不能迫使安装器引用未发布包。
+for (const file of ['CHANGELOG.md', 'CHANGELOG.zh-CN.md']) {
+  const log = readFileSync(new URL('../' + file, import.meta.url), 'utf8')
+  const heading = '## suite-installer-v' + installerManifest.version + ' - '
+  const section = log.split(heading)[1]?.split('\n## ')[0]
+  assert.ok(section, '安装器版本必须有对应双语发布记录')
+  for (const [name, version] of Object.entries(installerManifest.dshCodexSuite.members)) {
+    assert.ok(section.includes(name + '@' + version), '安装器成员必须与自身发布快照一致：' + name)
+  }
+}
 for (const packageName of MEMBER_PACKAGES) {
   assert.match(installerManifest.dshCodexSuite.members[packageName], /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/, `安装器必须锁定 ${packageName} 的精确发布版 semver`)
 }
