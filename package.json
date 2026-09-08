@@ -64,7 +64,7 @@
     "build": "tsc --noEmit && tsdown",
     "typecheck": "tsc --noEmit",
     "test": "pnpm run typecheck && vitest run && tsdown && node tests/run-assertions.mjs && pnpm run test:layout",
-    "test:layout": "node scripts/verify-workspace-drop-layout.mjs --run && node scripts/verify-sidebar-transition.mjs"
+    "test:layout": "node scripts/verify-workspace-drop-layout.mjs --run && node scripts/verify-sidebar-transition.mjs && node scripts/verify-settings-exit.mjs"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": ">=4.0.2 <5.0.0",

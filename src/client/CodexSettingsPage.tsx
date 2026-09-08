@@ -63,8 +63,8 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     const finish = () => { exitAnimation.current = null; setOpen(false); setQuery('') }
     const element = page.current
     if (element?.animate === undefined || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { finish(); return }
-    // 退出动画完成后再卸载，保持表单、焦点隔离和返回行为的同一生命周期。
-    const animation = element.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, easing: 'ease-out' })
+    // 保留透明末帧直到 React 卸载，避免动画结束与提交之间闪回；入场中退出从当前透明度接续。
+    const animation = element.animate([{ opacity: getComputedStyle(element).opacity }, { opacity: 0 }], { duration: 140, easing: 'ease-out', fill: 'forwards' })
     exitAnimation.current = animation
     animation.onfinish = finish
   }, [])
