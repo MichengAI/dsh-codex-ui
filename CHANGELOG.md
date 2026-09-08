@@ -6,6 +6,14 @@ This changelog records recent releases of DSH Codex UI and its one-click install
 
 ## Unreleased
 
+## 0.2.113 - 2026-09-08
+
+### Fixed
+
+- Fixed Chinese text wrapping into vertical columns and misaligned menu and footer text while collapsing the sidebar.
+- Restored sidebar expand and collapse transitions when used alongside `dsh-better-sidebar`, while preserving right-panel animations.
+- Synchronized sidebar width and content fades, removed redundant width updates, and kept rapid toggling and dragging responsive.
+
 ## suite-installer-v0.1.30 - 2026-09-08
 
 Resolved and pinned the following member versions from the official npm registry:

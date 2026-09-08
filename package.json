@@ -1,6 +1,6 @@
 {
   "name": "@michengai/dsh-codex-ui",
-  "version": "0.2.112",
+  "version": "0.2.113",
   "description": "以 Codex 风格重构 DSH Web 侧栏的独立客户端插件",
   "license": "Apache-2.0",
   "publishConfig": {
@@ -63,7 +63,7 @@
     "build": "tsc --noEmit && tsdown",
     "typecheck": "tsc --noEmit",
     "test": "pnpm run typecheck && vitest run && tsdown && node tests/run-assertions.mjs && pnpm run test:layout",
-    "test:layout": "node scripts/verify-workspace-drop-layout.mjs --run"
+    "test:layout": "node scripts/verify-workspace-drop-layout.mjs --run && node scripts/verify-sidebar-transition.mjs"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": ">=4.0.2 <5.0.0",

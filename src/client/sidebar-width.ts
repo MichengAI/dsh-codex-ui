@@ -36,8 +36,13 @@ export function applySidebarWidth(frame: HTMLElement, width: number): boolean {
   const next = `${width}px ${tracks.middle} ${tracks.details}px`
   const changed = frame.style.gridTemplateColumns !== next
   if (changed) frame.style.gridTemplateColumns = next
+  // 保存展开宽度，让内容在宿主网格动画中只被裁切，不逐帧重排。
+  const contentWidth = `${width}px`
+  if (frame.style.getPropertyValue('--dcu-sidebar-expanded-width') !== contentWidth) {
+    frame.style.setProperty('--dcu-sidebar-expanded-width', contentWidth)
+  }
   const handle = frame.querySelector<HTMLElement>('[data-side="sidebar"]')
-  if (handle !== null) handle.style.left = `${width}px`
+  if (handle !== null && handle.style.left !== contentWidth) handle.style.left = contentWidth
   return changed
 }
 
@@ -47,7 +52,8 @@ export function applySlimSidebar(frame: HTMLElement): boolean {
   const initialized = frame.hasAttribute('data-dcu-codex-sidebar-initialized')
   const width = initialized ? visibleSidebarWidths.get(frame) ?? CODEX_SIDEBAR_MIN_PX : CODEX_SIDEBAR_MIN_PX
   const changed = applySidebarWidth(frame, width)
-  frame.setAttribute('data-dcu-codex-sidebar-initialized', '')
+  // 相同值的 setAttribute 也会触发 MutationObserver，必须保持写入幂等。
+  if (!initialized) frame.setAttribute('data-dcu-codex-sidebar-initialized', '')
   return changed
 }
 
@@ -75,7 +81,8 @@ export function observeSlimSidebar(): () => void {
     frameObserver?.disconnect()
     frame = next
     if (frame === undefined) return
-    frameObserver = new MutationObserver(schedule)
+    // 在下一次绘制前修正宿主宽度，避免先向宿主默认值展开一帧再重启动画。
+    frameObserver = new MutationObserver(apply)
     frameObserver.observe(frame, { attributes: true, attributeFilter: ['style', 'data-sidebar-collapsed', 'data-dragging', 'data-dcu-codex-sidebar-initialized'] })
   }
   const apply = (): void => {
