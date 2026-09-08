@@ -70,8 +70,6 @@
 | [BTW](https://github.com/MichengAI/dsh-btw) | 在当前上下文中临时旁问，不打断主任务 |
 | [Simplify](https://github.com/MichengAI/dsh-simplify) | 用 /simplify 整理 Git 改动范围内的代码 |
 
-桌面端介绍与下载站的源码见[官网仓库](https://github.com/MichengAI/dsh-codex-desktop-website)。
-
 ## 安装
 
 下面提供 Agent 代装和手动安装两种方式，使用同一条安装命令。示例指定最新版和官方 npm 源。

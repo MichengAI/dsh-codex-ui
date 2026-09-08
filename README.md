@@ -70,8 +70,6 @@ For a ready-to-use workbench, download [DSH Codex Desktop](https://github.com/Mi
 | [BTW](https://github.com/MichengAI/dsh-btw) | Ask side questions without interrupting the main task |
 | [Simplify](https://github.com/MichengAI/dsh-simplify) | Use /simplify to improve code within your Git changes |
 
-The desktop introduction and download site is maintained in the [website repository](https://github.com/MichengAI/dsh-codex-desktop-website).
-
 ## Installation
 
 Choose agent-assisted or manual installation below. Both use the same command, requesting the latest version from the official npm registry.
