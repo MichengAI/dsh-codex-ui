@@ -176,4 +176,4 @@ pnpm test
 
 ## 许可证
 
-本项目采用 [Apache License 2.0](LICENSE)。会话管理工作流参考 [Semidia/dsh-session-manager](https://github.com/Semidia/dsh-session-manager)，但本插件独立通过 DSH 公开插槽和服务实现。
+本项目采用 [Apache License 2.0](LICENSE)。

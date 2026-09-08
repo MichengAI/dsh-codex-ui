@@ -173,4 +173,4 @@ pnpm test
 
 ## License
 
-This project is licensed under [Apache License 2.0](LICENSE). Conversation-management workflow is informed by [Semidia/dsh-session-manager](https://github.com/Semidia/dsh-session-manager), but this plugin is implemented independently through public DSH slots and services.
+This project is licensed under [Apache License 2.0](LICENSE).
