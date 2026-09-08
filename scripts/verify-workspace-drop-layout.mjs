@@ -77,6 +77,44 @@ const verify = async () => {
       root.append(copy)
     }
   }
+  for (const theme of ['dark', 'light']) for (const width of [240, 275, 520]) {
+    const host = document.createElement('div')
+    host.className = theme
+    host.style.cssText = `width:${width}px;display:inline-block;vertical-align:top;margin:8px`
+    host.innerHTML = `<div class="dcu-wb"><div class="dcu-wb-collections">${group('empty-group', '<div class="dcu-wb-empty">暂无项目</div>')}${group('next-group', project('empty-project', '<div class="dcu-wb-nochat">暂无聊天</div>'))}</div></div>`
+    document.body.append(host)
+    const empty = host.querySelector('.dcu-wb-empty')
+    const chat = host.querySelector('.dcu-wb-nochat')
+    const style = getComputedStyle(empty)
+    const chatStyle = getComputedStyle(chat)
+    const rect = empty.getBoundingClientRect()
+    const lineTop = rect.top + parseFloat(style.paddingTop)
+    const lineBottom = lineTop + parseFloat(style.lineHeight)
+    const above = lineTop - host.querySelector('#empty-group>.dcu-wb-collection-head').getBoundingClientRect().bottom
+    const below = host.querySelector('#next-group>.dcu-wb-collection-head').getBoundingClientRect().top - lineBottom
+    if (Math.abs(above - below) > 0.1) throw new Error(`空分组未居中: ${above}/${below}`)
+    if (style.fontSize !== '13px' || style.lineHeight !== '18px' || style.fontSize !== chatStyle.fontSize || style.lineHeight !== chatStyle.lineHeight || style.color !== chatStyle.color) throw new Error('空状态字体不统一')
+    const body = empty.parentElement
+    body.dataset.open = 'false'
+    if (body.getBoundingClientRect().height !== 0) throw new Error('空分组收起残留间距')
+    body.dataset.open = 'true'
+    results.push({ name: '空状态居中与排版', width, theme, error: Math.abs(above - below), scrollError: 0, above, below })
+  }
+  for (const layout of ['pinned', 'grouped', 'flat']) {
+    const host = document.createElement('div')
+    host.className = 'dark'
+    host.style.cssText = 'width:275px;display:inline-block;vertical-align:top;margin:8px'
+    const items = '<div class="dcu-wb-project" id="chat-project"><div class="dcu-wb-project-head">dsh-im-connect</div><div class="dcu-wb-project-body" data-open="true"><div class="dcu-wb-nochat">暂无聊天</div></div></div><div class="dcu-wb-project" id="next-project"><div class="dcu-wb-project-head">dsh-automation</div></div>'
+    host.innerHTML = `<h3>${layout}</h3><div class="dcu-wb"><div class="${layout === 'pinned' ? 'dcu-wb-pinned-list' : layout === 'flat' ? 'dcu-wb-collections' : 'dcu-wb-collection-body'}" data-open="true">${items}</div></div>`
+    document.body.append(host)
+    const chat = host.querySelector('.dcu-wb-nochat')
+    const style = getComputedStyle(chat)
+    const lineTop = chat.getBoundingClientRect().top + parseFloat(style.paddingTop)
+    const above = lineTop - host.querySelector('#chat-project>.dcu-wb-project-head').getBoundingClientRect().bottom
+    const below = host.querySelector('#next-project>.dcu-wb-project-head').getBoundingClientRect().top - lineTop - parseFloat(style.lineHeight)
+    if (Math.abs(above - below) > 0.1) throw new Error(`暂无聊天 ${layout} 未居中: ${above}/${below}`)
+    results.push({ name: `暂无聊天-${layout}`, above, below, error: Math.abs(above - below), scrollError: 0 })
+  }
   return results
 }
 console.log(`(async()=>{document.head.innerHTML='<meta charset="utf-8">';const style=document.createElement('style');style.textContent=${JSON.stringify(styles.join('\n') + '\nbody{margin:0;font-family:Arial;background:#ddd}h3{font-size:13px}.dark{--dcu-sidebar-primary:#b9bab9;--dcu-sidebar-secondary:#909191;--dcu-sidebar-hover:#303432;background:#1d2120;color:#b9bab9}.light{--dcu-sidebar-primary:#303432;--dcu-sidebar-secondary:#606563;--dcu-sidebar-hover:#dfe8e5;background:#eef7f5;color:#303432}.dcu-wb{--dsw-alias-state-business-primary:#69a7ff}')} ;document.head.append(style);${implementation};return (${verify.toString()})();})()`)

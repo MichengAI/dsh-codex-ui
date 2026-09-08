@@ -8,7 +8,9 @@ This changelog records recent releases of DSH Codex UI and its one-click install
 
 ### Fixed
 
-- Made empty-group vertical padding symmetric at 8px and standardized the Chinese empty-conversation label to "暂无聊天".
+- Stopped applying custom-group spacing between projects in an ungrouped project list, keeping the empty-conversation label vertically centered between project rows.
+- Centered empty-group text between adjacent group headers, accounting for the external group gap, and unified both empty-state labels at 13px/18px with the same muted color.
+- Standardized the Chinese empty-conversation label to "暂无聊天".
 - Aligned empty-group text with the group title without changing project or conversation indentation.
 - Matched the Codex sidebar reorder marker's 8px hollow ring and 2px rounded stroke, extending the line toward its start and removing the ring-to-line gap.
 - Unified group, project, and conversation reorder indicators around the midpoint between visible rows, including scrolling and collapsed content, instead of fixed offsets from wrapper elements.

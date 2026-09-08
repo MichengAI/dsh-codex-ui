@@ -212,6 +212,7 @@ const runningStyles = `.dcu-wb-running{position:absolute;right:10px;top:50%;flex
 const typographyStyles = `.dcu-wb{--dcu-wb-disclosure-duration:180ms;--dcu-wb-disclosure-ease:cubic-bezier(.16,1,.3,1);font:14px/20px var(--dcu-font,var(--dsw-font-family))}.dcu-wb-section-label{color:var(--dcu-sidebar-secondary);font:13px/20px var(--dcu-font,var(--dsw-font-family));font-weight:400;letter-spacing:0;padding-left:0}.dcu-wb-section-caret{transition:opacity var(--dcu-wb-disclosure-duration) var(--dcu-wb-disclosure-ease),transform var(--dcu-wb-disclosure-duration) var(--dcu-wb-disclosure-ease)}.dcu-wb-section-head .dcu-wb-section-caret{position:static;left:auto;top:auto;opacity:.78}.dcu-wb-section-body,.dcu-wb-project-body,.dcu-wb-collection-body{display:block;min-height:0;height:auto;overflow:clip;opacity:1;transform:none;visibility:visible}.dcu-wb-section-body[data-open=false],.dcu-wb-project-body[data-open=false],.dcu-wb-collection-body[data-open=false]{display:block;height:0;opacity:0;transform:translateY(-2px);pointer-events:none}.dcu-wb-section-body[data-open=true]:has(.dcu-wb-drop),.dcu-wb-project-body[data-open=true]:has(.dcu-wb-drop),.dcu-wb-collection-body[data-open=true]:has(.dcu-wb-drop){overflow:visible}.dcu-wb-section-body[data-open=true]>div{animation:none}@media (prefers-reduced-motion:reduce){.dcu-wb-section-caret{transition:none}}.dcu-wb-project-title{font-size:14px;line-height:20px;font-weight:400;color:var(--dcu-sidebar-primary)}.dcu-wb-session-title{font-size:14px;line-height:20px;font-weight:400;color:var(--dcu-sidebar-secondary)}.dcu-wb-session.dcu-wb-selected .dcu-wb-session-title,.dcu-wb-session:hover .dcu-wb-session-title{color:var(--dcu-sidebar-primary)}.dcu-wb-empty{color:var(--dcu-sidebar-tertiary);font-size:13px;line-height:18px}.dcu-wb-nochat{padding:0 8px 4px 28px;color:var(--dcu-sidebar-tertiary);font-size:14px;line-height:20px}`
 
 // 分组通过标题底带和字重区分层级；项目与会话保留原有胶囊位置和宽度。
+// 空分组的下方另有 12px 组间距，用 14px/2px 内留白平衡两侧；空聊天缩小行高后补齐原高度。
 const collectionLayoutStyles = `
 .dcu-wb-tree{position:relative}
 .dcu-wb-tree[data-drop-indicator=measured] .dcu-wb-drop::before,.dcu-wb-tree[data-drop-indicator=measured] .dcu-wb-group-order-drop::before{display:none}
@@ -223,9 +224,13 @@ const collectionLayoutStyles = `
 .dcu-wb-collection-body{padding-left:0}
 .dcu-wb-collection-body>.dcu-wb-group-member:first-child{padding-top:4px}
 .dcu-wb-collection-body .dcu-wb-project-head{padding-left:8px}
-.dcu-wb-collection-body>.dcu-wb-empty{padding:8px 8px 8px 26px;font-size:13px}
+.dcu-wb-collection-body>.dcu-wb-empty{padding:8px 8px 8px 26px}
+.dcu-wb-collection-body>.dcu-wb-empty,.dcu-wb-nochat{font-size:13px;line-height:18px;color:var(--dcu-sidebar-tertiary)}
+.dcu-wb-nochat{padding-top:1px;padding-bottom:5px}
+.dcu-wb-collection:has(+.dcu-wb-collection)>.dcu-wb-collection-body>.dcu-wb-empty,.dcu-wb-collection:has(+.dcu-wb-ungrouped)>.dcu-wb-collection-body>.dcu-wb-empty{padding-top:14px;padding-bottom:2px}
 .dcu-wb-collection-body::before,.dcu-wb-group-member::after{display:none}
 .dcu-wb-collections{gap:12px}
+.dcu-wb-collections:has(>.dcu-wb-project){gap:0}
 .dcu-wb-collection-head{min-height:32px}
 .dcu-wb-collection-head:hover{background:var(--dcu-sidebar-hover)}
 .dcu-wb-collection-head.dcu-wb-group-drop{background:var(--dcu-sidebar-hover)}
