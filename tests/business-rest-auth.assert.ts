@@ -12,6 +12,10 @@ const expectedPaths = [
   '/api/dsh-codex-ui/open-in-explorer',
   '/api/dsh-codex-ui/preferences',
   '/api/dsh-codex-ui/session-move',
+  '/api/dsh-codex-ui/usage/frame',
+  '/api/dsh-codex-ui/usage/frame.js',
+  '/api/dsh-codex-ui/usage/frame.css',
+  '/api/dsh-codex-ui/usage/plugin.js',
 ]
 const oldPrefix = '/api/michengai/codex-ui/'
 
@@ -120,6 +124,7 @@ try {
     [expectedPaths[2], 'POST'],
     [expectedPaths[3], 'GET'],
     [expectedPaths[4], 'POST'],
+    ...expectedPaths.slice(5).map(path => [path, 'GET'] as const),
   ] as const) {
     const response = await invoke(path, method)
     assert.equal(response.status, 401, `${path} 必须拒绝未登录请求`)

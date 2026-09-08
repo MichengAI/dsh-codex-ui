@@ -43,5 +43,29 @@ try {
   await page.locator('[data-dcu-settings-trigger]').click()
   await page.keyboard.press('Escape')
   await page.locator('[data-dcu-settings-page]').waitFor({ state: 'detached' })
-  console.log('设置退出：返回按钮、Escape、入场中退出、减少动态效果均通过。')
+  for (const dark of [false, true]) {
+    await page.evaluate(dark => {
+      document.body.toggleAttribute('data-ds-dark-theme', dark)
+      document.getElementById('root').classList.add('dcu-root')
+      document.documentElement.dataset.dshNativeBackdrop = 'mica'
+    }, dark)
+    await page.locator('[data-dcu-settings-trigger]').click()
+    const native = await page.evaluate(() => ({
+      root: getComputedStyle(document.getElementById('root')).backgroundColor,
+      nav: getComputedStyle(document.querySelector('.dcu-settings-nav')).backgroundColor,
+      main: getComputedStyle(document.querySelector('.dcu-settings-main')).backgroundColor,
+      behind: getComputedStyle(document.querySelector('.preview-app')).visibility,
+    }))
+    assert.equal(native.root, 'rgba(0, 0, 0, 0)', '原生材质上不叠加两层侧栏背景')
+    assert.equal(native.nav, dark ? 'rgba(20, 23, 22, 0.18)' : 'rgba(255, 255, 255, 0.18)')
+    assert.equal(native.main, dark ? 'rgb(24, 24, 24)' : 'rgb(255, 255, 255)', '正文保持实色')
+    assert.equal(native.behind, 'hidden', '设置侧栏不能透出首页文字')
+    await page.evaluate(() => { delete document.documentElement.dataset.dshNativeBackdrop })
+    const fallback = await page.locator('.dcu-settings-nav').evaluate(el => getComputedStyle(el).backgroundColor)
+    assert.equal(fallback, dark ? 'rgb(29, 33, 32)' : 'rgb(238, 247, 245)', '普通浏览器使用实色回退')
+    await page.keyboard.press('Escape')
+    await page.locator('[data-dcu-settings-page]').waitFor({ state: 'detached' })
+    assert.equal(await page.locator('.preview-app').evaluate(el => getComputedStyle(el).visibility), 'visible')
+  }
+  console.log('设置退出：4 条交互检查及深浅主题原生表面／浏览器回退检查通过。')
 } finally { await browser.close() }

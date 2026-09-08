@@ -1,6 +1,7 @@
 /** 浏览器客户端插件的 Host 入口；客户端逻辑由 dsh.client 加载。 */
 import type { Context } from '@deepseek-ai/cordis'
 import { apply as registerSettingsSchema } from '@deepseek-ai/dsh-client-ui-settings-general'
+import { USAGE_FRAME_ROUTES, usageFrameAsset } from './usage-frame-routes.ts'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
 import { canRequestParentReload, dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, requestDesktopHotUpdate, resolveDependencyRuntime, runtimeSupportsOfficialTurnNavigator, updateAllDependencies } from './dependency-manager.ts'
 import { authorizedExplorerWorkspacePath } from './explorer-path-policy.ts'
@@ -140,6 +141,19 @@ export function apply(ctx: Context): void {
   // 原设置壳停用后，继续注册其公开的持久化引导 schema。
   registerSettingsSchema(ctx)
   const host = hostServices(ctx)
+  ctx.effect(() => {
+    const disposers = USAGE_FRAME_ROUTES.map(path => host.webServer.register({ kind: 'exact', path, handler: async (request, response) => {
+      if (!authenticateBusinessRequest(ctx, request, response)) return
+      if (request.method !== 'GET' && request.method !== 'HEAD') { response.writeHead(405); response.end(); return }
+      try {
+        const asset = await usageFrameAsset(path, resolveDependencyRuntime(ctx).profileDir)
+        response.writeHead(200, { 'content-type': asset.contentType, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
+          'content-security-policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'" })
+        response.end(request.method === 'HEAD' ? undefined : asset.body)
+      } catch { response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }); response.end('费用插件或承载资源不可用。') }
+    } }))
+    return () => disposers.forEach(dispose => dispose())
+  }, 'michengai-codex-ui: usage frame')
   ctx.effect(() => {
     const foregroundExplorer = new ForegroundExplorer()
     void foregroundExplorer.warmup().catch(error => ctx.logger.warn('foreground explorer warmup failed: %s', error))

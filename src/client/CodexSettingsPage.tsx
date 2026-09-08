@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { ArrowLeft, Archive, Box, CircleHelp, Clock, Cpu, Link, MessageSquare, PanelRight, Search, Settings, SlidersHorizontal, Sparkles, Store, User } from 'lucide-react'
+import { ArrowLeft, Archive, BarChart3, Box, CircleHelp, Clock, Cpu, Link, MessageSquare, PanelRight, Search, Settings, SlidersHorizontal, Sparkles, Store, User } from 'lucide-react'
 import type { PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { ConnectionIndicator } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ConnectionState } from '@deepseek-ai/dsh-client-connection/client'
@@ -7,6 +7,7 @@ import { NS } from './locales.ts'
 import { filterSettingsRows, generalItemGroup, settingsGroup, type SettingsRow } from './settings-page-model.ts'
 import { settingsPageStyles } from './settings-page-styles.ts'
 import { settingsElementAvailable, settingsOverlays } from './settings-focus.ts'
+import { SETTINGS_OPEN_SECTION_EVENT } from './settings-navigation.ts'
 
 const groupLabels = { personal: 'settings.personal', integrations: 'settings.integrations', records: 'settings.records', permissions: 'settings.permissions', general: 'settings.general', editor: 'settings.editor' } as const
 
@@ -22,6 +23,7 @@ export type CodexSettingsPageProps = PropsRuntime<'sidebar.settings'>
   & PropsLocale<typeof NS> & SettingsPageInjected
 
 function sectionIcon(id: string) {
+  if (id === 'usage-statistics') return BarChart3
   if (id === 'market' || id === 'plugin-marketplace') return Store
   if (id === 'better-sidebar' || id === 'sidebar-cards') return PanelRight
   if (/model/.test(id)) return Cpu
@@ -69,6 +71,20 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     animation.onfinish = finish
   }, [])
   const openSection = useCallback((id: string) => { exitAnimation.current?.cancel(); exitAnimation.current = null; setActiveId(id); setOpen(true) }, [])
+  useEffect(() => {
+    const element = trigger.current
+    const navigate = (event: Event) => {
+      const labels: unknown = (event as CustomEvent).detail?.labels
+      if (!Array.isArray(labels)) return
+      const row = labels.flatMap(label => rows.filter(item => (item.id === 'general' ? t('settings.general') : item.label) === label))[0]
+      if (!row) return
+      event.preventDefault()
+      setQuery('')
+      openSection(row.id)
+    }
+    element?.addEventListener(SETTINGS_OPEN_SECTION_EVENT, navigate)
+    return () => element?.removeEventListener(SETTINGS_OPEN_SECTION_EVENT, navigate)
+  }, [rows, t, openSection])
   useEffect(() => () => { exitAnimation.current?.cancel() }, [])
 
   useEffect(() => { if (!onboardingActive) setCompleted(new Set()) }, [onboardingActive])
@@ -149,7 +165,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
   const connectionIndicator = connection === 'disconnected' ? 'disconnected' : connection === 'connecting' ? 'connecting' : recovered ? 'recovered' : undefined
   return <>
     <style>{settingsPageStyles}</style>
-    <button ref={trigger} type="button" className="dcu-settings-trigger" data-dcu-settings-trigger data-wide={wide} aria-expanded={open} aria-label={t('settings.title')} onClick={() => { setOpen(true) }}>
+    <button ref={trigger} type="button" className="dcu-settings-trigger" data-dcu-settings-trigger data-wide={wide} aria-expanded={open} aria-label={t('settings.title')} onClick={() => { openSection('general') }}>
       {renderSlot('settings.trigger', { wide })}
     </button>
     <ConnectionIndicator state={wide ? connectionIndicator : undefined} disconnectedLabel={t('settings.disconnected')} reconnectLabel={t('settings.reconnect')} connectingLabel={t('settings.connecting')} recoveredLabel={t('settings.recovered')} reconnectActionLabel={t('settings.reconnect')} restartActionLabel={t('settings.reconnect')} onReconnect={reconnect}/>
@@ -187,7 +203,7 @@ export function CodexGeneralSettings({ items, renderSlot, t }: { items: Settings
   return <div className="dcu-settings-general">
     {(['permissions', 'general', 'editor'] as const).map(group => {
       const entries = rows.filter(row => generalItemGroup(row.id) === group)
-      return entries.length > 0 && <section className="dcu-settings-general-group" key={group}><h2>{t(groupLabels[group])}</h2><div className="dcu-settings-card">{entries.map(row => <div className="dcu-settings-row" key={row.id}>{renderSlot('settings.general.item', {}, { only: row.id })}</div>)}</div></section>
+      return entries.length > 0 && <section className="dcu-settings-general-group" key={group}><h2>{t(groupLabels[group])}</h2><div className="dcu-settings-card">{entries.map(row => <div className="dcu-settings-row" data-dcu-settings-item={row.id} key={row.id}>{renderSlot('settings.general.item', {}, { only: row.id })}</div>)}</div></section>
     })}
   </div>
 }

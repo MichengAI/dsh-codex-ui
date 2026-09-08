@@ -43,6 +43,7 @@ class ClientApplyHarness {
     locale: {
       register: () => () => {},
       bind: () => (key: string) => key,
+      subscribe: () => () => {},
     },
     layout: { toggleSidebar: () => {} },
     sessions: {

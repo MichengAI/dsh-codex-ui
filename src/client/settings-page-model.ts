@@ -3,7 +3,7 @@ export type SettingsRow = { id: string; label: string; order: number }
 export type SettingsGroup = 'personal' | 'integrations' | 'records'
 
 export function settingsGroup(id: string): SettingsGroup {
-  if (/archive|about/.test(id)) return 'records'
+  if (/archive|about|^usage-statistics$/.test(id)) return 'records'
   if (/^(general|appearance|theme|language|shortcuts|voice|account)$/.test(id)) return 'personal'
   return 'integrations'
 }

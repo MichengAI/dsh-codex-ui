@@ -13,4 +13,5 @@ const server = createServer((request, response) => {
   else if (request.url === '/preview.css') { response.setHeader('Content-Type', 'text/css; charset=utf-8'); response.end(css) }
   else { response.setHeader('Content-Type', 'text/html; charset=utf-8'); response.end(html) }
 })
-server.listen(4317, '127.0.0.1', () => { console.log('设置预览：http://127.0.0.1:4317') })
+const port = Number(process.env.DCU_PREVIEW_PORT ?? 4317)
+server.listen(port, '127.0.0.1', () => { console.log(`设置预览：http://127.0.0.1:${port}`) })

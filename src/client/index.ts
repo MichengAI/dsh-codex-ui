@@ -19,8 +19,10 @@ import { en, NS, zh } from './locales.ts'
 import { createCompanionTabSource } from './companion-slots.ts'
 import { openPathInHost, type HostOpenPathConnection } from './host-open-path.ts'
 import { observeSettingsNavIcons } from './settings-nav-icons.ts'
+import { registerUsageStatistics } from './usage-statistics.ts'
 import { registerSettingsPage } from './settings-page-registration.ts'
 import { observePermissionLabels } from './permission-labels.ts'
+import { observeHostCopy } from './host-copy.ts'
 import { observeSlimSidebar } from './sidebar-width.ts'
 import { observeConversationHeader } from './conversation-header.ts'
 import { observeOfficialTurnNavigators } from './official-turn-navigator.ts'
@@ -115,6 +117,7 @@ export function apply(ctx: ClientContext): void {
   const t = ctx.locale.bind(NS)
   registerInputHistory(ctx)
   registerSettingsPage(ctx)
+  registerUsageStatistics(ctx)
   // Host 与客户端共用 Cordis 的服务名；此处读取的是客户端 RPC 外观，而非 HostConnectionService。
   const connectionService: unknown = ctx.get('connection')
   const connection = connectionService as HostOpenPathConnection
@@ -122,6 +125,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => observeSlimSidebar(), 'michengai-codex-ui: slim sidebar')
   ctx.effect(() => observeSettingsNavIcons(), 'michengai-codex-ui: settings nav icons')
   ctx.effect(() => observePermissionLabels(ctx.locale), 'michengai-codex-ui: permission labels')
+  ctx.effect(() => observeHostCopy(ctx.locale, t), 'michengai-codex-ui: host copy')
   ctx.effect(() => observeConversationHeader(), 'michengai-codex-ui: conversation header')
   ctx.effect(() => observeOfficialTurnNavigators(), 'michengai-codex-ui: official turn navigator')
   const companionSlots = createCompanionTabSource(ctx.slots)

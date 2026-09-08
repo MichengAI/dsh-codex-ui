@@ -32,6 +32,30 @@ async function mount(extra: Partial<CodexSettingsPageProps> = {}) {
   return { container, trigger }
 }
 
+test('关闭后普通入口回到常规，快捷入口仍能指定分区', async () => {
+  const { container, trigger } = await mount()
+  await act(async () => { openSettingsSection(container, '模型'); await new Promise(resolve => setTimeout(resolve, 50)) })
+  await act(async () => { container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click() })
+  await act(async () => { trigger.click() })
+  expect(container.querySelector('[aria-current="page"]')?.textContent).toBe('常规')
+  await act(async () => { container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click() })
+  await act(async () => { openSettingsSection(container, '模型') })
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 50)) })
+  expect(container.querySelector('[aria-current="page"]')?.textContent).toBe('模型')
+})
+
+test('关闭状态的快捷入口首次渲染就是目标分区，不闪过常规', async () => {
+  const rendered: string[] = []
+  const { container } = await mount({ renderSlot: ((name: string, _owner: unknown, options?: { only?: string }) => {
+    if (name === 'settings.section' && options?.only) rendered.push(options.only)
+    return null
+  }) as CodexSettingsPageProps['renderSlot'] })
+  await act(async () => { container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click() })
+  rendered.length = 0
+  await act(async () => { openSettingsSection(container, '模型') })
+  expect(rendered).toEqual(['models'])
+})
+
 test('退出设置恢复焦点和被覆盖分支，保留底层会话 DOM', async () => {
   const conversation = document.createElement('textarea')
   conversation.value = '尚未发送的内容'

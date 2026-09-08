@@ -61,9 +61,9 @@
     }
   },
   "scripts": {
-    "build": "tsc --noEmit && tsdown",
+    "build": "tsc --noEmit && tsdown && node scripts/build-usage-frame.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm run typecheck && vitest run && tsdown && node tests/run-assertions.mjs && pnpm run test:layout",
+    "test": "pnpm run typecheck && vitest run && tsdown && node scripts/build-usage-frame.mjs && node tests/run-assertions.mjs && pnpm run test:layout",
     "test:layout": "node scripts/verify-workspace-drop-layout.mjs --run && node scripts/verify-sidebar-transition.mjs && node scripts/verify-settings-exit.mjs"
   },
   "peerDependencies": {
@@ -121,6 +121,7 @@
     "@types/jsdom": "^30.0.0",
     "@types/node": "^26.0.0",
     "@types/react": "~18.3.1",
+    "@types/react-dom": "^18.3.7",
     "jsdom": "^29.1.1",
     "playwright": "1.63.0",
     "react": "^18.3.1",

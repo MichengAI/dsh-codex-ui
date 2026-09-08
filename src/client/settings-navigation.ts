@@ -31,6 +31,7 @@ export function routeOptionalSettingsSection(
 let cancelPendingNavigation: (() => void) | undefined
 export const SETTINGS_NAVIGATION_TIMEOUT_MS = 4_000
 export const SETTINGS_TRIGGER_SELECTOR = '[data-dcu-settings-trigger],[aria-haspopup="dialog"]'
+export const SETTINGS_OPEN_SECTION_EVENT = 'dcu-settings-open-section'
 
 /** 根入口与分区跳转使用同一触发器合约，兼容保留的宿主设置壳。 */
 export function openSettingsRoot(root: HTMLElement | null): void {
@@ -46,6 +47,9 @@ export function openSettingsSection(root: HTMLElement | null, label: string | re
   }
   const opening = cancelPendingNavigation !== undefined
   cancelPendingNavigation?.()
+  // 自有设置壳在一次状态提交中打开目标分区；旧壳仍走下方 DOM 导航。
+  const request = new CustomEvent(SETTINGS_OPEN_SECTION_EVENT, { detail: { labels }, cancelable: true })
+  if (!trigger.dispatchEvent(request)) { onSelected?.(); return }
   const pageSelector = trigger.hasAttribute('data-dcu-settings-trigger') ? '[data-dcu-settings-page]' : '[role="dialog"]'
   if (!opening && document.querySelector(pageSelector) === null) trigger.click()
   let frame: number | undefined

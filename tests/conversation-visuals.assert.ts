@@ -80,7 +80,7 @@ assert.match(sidebar, /\.dcu-compact-shell\{display:none;width:56px\}/, '窄轨�
 assert.match(sidebar, /dcu-search-dialog-in 180ms cubic-bezier/, '搜索弹窗必须保留轻量淡入缩放动画')
 assert.doesNotMatch(sidebar, /transition:none!important/, '不得再关闭宿主侧栏的宽度动画')
 assert.match(sidebar, /background:#eef7f5/, '浅色侧栏必须使用 Codex 风格的浅青灰背景')
-assert.match(sidebar, /body\[data-ds-dark-theme\] \.dcu-root\{background:#1d2120/, '暗色侧栏必须使用 Codex 风格的深灰绿背景')
+assert.match(sidebar, /body\[data-ds-dark-theme\] \.dcu-root\{--dcu-sidebar-background:#1d2120/, '暗色侧栏必须使用 Codex 风格的深灰绿背景')
 assert.match(sidebar, /body\[data-we-sidebar-glass\] \.dcu-root::before\{[^}]*pointer-events:none[^}]*--we-sidebar-color[^}]*--we-sidebar-alpha[^}]*backdrop-filter:blur\(var\(--we-sidebar-blur/, 'Wallpaper Engine 玻璃必须在不拦截点击的独立背景层复用颜色、透明度和模糊变量')
 assert.doesNotMatch(sidebar, /\.dcu-root\{[^}]*(?:backdrop-filter|transform|contain):/, '侧栏根节点不得创建 fixed 包含块，否则设置和搜索弹窗会被限制在侧栏内')
 assert.doesNotMatch(sidebar, /\.dcu-root\s*\{(?:[^{}]*;)?\s*(?:-webkit-)?(?:filter|perspective)\s*:(?!\s*none\s*(?:!important\s*)?[;}])[^;}]+/i, '侧栏根节点不得通过非 none 的 filter 或 perspective 创建 fixed 包含块')

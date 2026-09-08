@@ -4,6 +4,19 @@ import type {} from '@deepseek-ai/dsh-client-ui-slots'
 export const NS = 'michengai.codexUi'
 
 export const zh = {
+  'host.transcript.normal': '标准',
+  'host.transcript.compact': '紧凑',
+  'host.command.compact': '压缩较早的对话历史',
+  'host.command.export': '将当前会话日志下载为 ZIP 压缩包',
+  'host.command.feedback': '记录对当前会话的反馈',
+  'host.command.goal': '设置或查看长时间任务的目标',
+  'host.command.permission': '切换权限预设（沙箱模式与审批策略）',
+  'host.command.plan': '进入或退出计划模式',
+  'usage.title': '使用统计',
+  'usage.loading': '正在加载费用面板…',
+  'usage.failed': '费用面板暂时无法嵌入，可重试或打开原弹窗。',
+  'usage.retry': '重试',
+  'usage.original': '打开原弹窗',
   'settings.title': '设置',
   'settings.back': '返回应用',
   'settings.openDocument': '打开配置文件',
@@ -234,6 +247,19 @@ export const zh = {
 } as const
 
 export const en: Record<keyof typeof zh, string> = {
+  'host.transcript.normal': 'Normal',
+  'host.transcript.compact': 'Compact',
+  'host.command.compact': 'Compact older conversation history',
+  'host.command.export': 'Download this Session log as a ZIP archive',
+  'host.command.feedback': 'record feedback about this session',
+  'host.command.goal': 'set or view the goal for a long-running task',
+  'host.command.permission': 'Switch the permission preset (sandbox mode + approval policy)',
+  'host.command.plan': 'Enter or leave plan mode',
+  'usage.title': 'Usage statistics',
+  'usage.loading': 'Loading billing dashboard…',
+  'usage.failed': 'The embedded dashboard is unavailable. Retry or open the original dialog.',
+  'usage.retry': 'Retry',
+  'usage.original': 'Open original dialog',
   'settings.title': 'Settings',
   'settings.back': 'Back to app',
   'settings.openDocument': 'Open configuration file',
