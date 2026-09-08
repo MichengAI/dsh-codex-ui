@@ -4,6 +4,21 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## suite-installer-v1.0.0 - 2026-09-08
+
+Resolved and pinned the following member versions from the official npm registry:
+
+- `@michengai/dsh-archive-manager@0.1.33`
+- `@michengai/dsh-codex-ui@1.0.0`
+- `@michengai/dsh-skills-manager@0.1.43`
+- `@michengai/dsh-agency-agents@0.1.34`
+- `@michengai/dsh-im-connect@0.1.38`
+- `@michengai/dsh-automation@0.1.34`
+- `@michengai/dsh-btw@0.1.4`
+- `@michengai/dsh-simplify@0.1.2`
+
+The installer uses these exact versions for reproducible installation.
+
 ## 1.0.0 - 2026-09-08
 
 - Release 1.0.0, bringing project and conversation navigation, plugin entry points, and standalone settings together in a cohesive Codex-style experience.
