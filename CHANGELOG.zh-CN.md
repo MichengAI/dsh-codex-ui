@@ -6,6 +6,21 @@
 
 ## 未发布
 
+## suite-installer-v0.1.30 - 2026-09-08
+
+从官方 npm 解析并锁定以下成员版本：
+
+- `@michengai/dsh-archive-manager@0.1.32`
+- `@michengai/dsh-codex-ui@0.2.112`
+- `@michengai/dsh-skills-manager@0.1.43`
+- `@michengai/dsh-agency-agents@0.1.34`
+- `@michengai/dsh-im-connect@0.1.38`
+- `@michengai/dsh-automation@0.1.34`
+- `@michengai/dsh-btw@0.1.4`
+- `@michengai/dsh-simplify@0.1.2`
+
+安装器使用这些精确版本执行安装，确保可复现。
+
 ## 0.2.112 - 2026-09-08
 
 ### 发布流程
