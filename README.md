@@ -129,8 +129,6 @@ Check that the installation profile matches the one running DSH Web, then restar
 
 ## Development and contributing
 
-You do not need to read the source to install or use the plugin. Developers can start with the [project handoff guide](docs/00-交接入口/00-阅读导航.md) (Chinese) for conventions and current status.
-
 ### Install from source
 
 Use this for debugging or unpublished changes. The cloned directory becomes the plugin source path:
