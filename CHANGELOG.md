@@ -4,8 +4,11 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
-## 0.2.114 - Unreleased
+## 1.0.0 - 2026-09-08
 
+- Release 1.0.0, bringing project and conversation navigation, plugin entry points, and standalone settings together in a cohesive Codex-style experience.
+- Fix flashing when returning to the app or pressing Escape; let menus handle Escape first and preserve the current settings form while filtering navigation.
+- Upgrade notes: the standalone settings view requires the bundle patch that disables ui-settings-general. If an existing settings shell is detected, its entry is retained. Replacing client files alone is not a complete upgrade; reload DSH after upgrading. Existing business configuration and conversations require no migration.
 - Fix global settings search, onboarding and keyboard focus isolation, Escape handling for hidden dialogs, and configuration-file error feedback; retain the host settings shell when it is already active.
 - Replace the settings dialog with a Codex-style standalone view, category search, grouped preferences, and focus restoration when returning to the app.
 - Fix duplicate settings-shell registration, settings entry alignment and transitions, search focus, repeated headings, and content spacing.
