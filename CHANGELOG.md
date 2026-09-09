@@ -9,6 +9,7 @@ This changelog records recent releases of DSH Codex UI and its one-click install
 - Add Codex Pet below scheduled tasks in About, with version checks and installation/update actions.
 - Enlarge the welcome logo to 46px and the headline to 34px.
 - Hide descendants of isolated branches beneath transparent Desktop settings, preventing explicit `visibility:visible` rules from showing conversation text through the page. Restore normal visibility when settings close.
+- Hide background portals explicitly isolated by settings, including those mounted under body, and restore their original isolation state on exit while preserving onboarding dialogs.
 
 ## suite-installer-v1.0.1 - 2026-09-09
 

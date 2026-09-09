@@ -102,7 +102,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     if (!open || page.current === null) return
     if (settingsElementAvailable(page.current) && settingsOverlays().length === 0) back.current?.focus()
     // 只隔离被设置页覆盖的分支，不卸载会话，也不移动宿主 React 节点。
-    const hidden = new Map<HTMLElement, boolean>()
+    const hidden = new Map<HTMLElement, { inert: boolean; marker: string | null }>()
     // 只为活动引导保留模态区域，不把无关菜单或其整棵包装子树一并放行。
     const guideModals = step === undefined ? [] : settingsOverlays('[role="dialog"][aria-modal="true"],[role="alertdialog"][aria-modal="true"]')
     const isolate = (element: HTMLElement) => {
@@ -111,8 +111,9 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
         for (const child of element.children) if (child instanceof HTMLElement && !/^(STYLE|SCRIPT|LINK)$/.test(child.tagName)) isolate(child)
         return
       }
-      hidden.set(element, element.inert)
+      hidden.set(element, { inert: element.inert, marker: element.getAttribute('data-dcu-settings-isolated') })
       element.inert = true
+      element.setAttribute('data-dcu-settings-isolated', '')
     }
     let branch: HTMLElement = page.current
     while (branch.parentElement !== null) {
@@ -156,7 +157,11 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
       document.removeEventListener('keydown', onKeyDown, true)
       document.removeEventListener('keydown', wrapFocus)
       document.removeEventListener('focusin', keepFocus)
-      for (const [element, inert] of hidden) element.inert = inert
+      for (const [element, previous] of hidden) {
+        element.inert = previous.inert
+        if (previous.marker === null) element.removeAttribute('data-dcu-settings-isolated')
+        else element.setAttribute('data-dcu-settings-isolated', previous.marker)
+      }
     }
   }, [open, close, step?.id])
   useEffect(() => { if (main.current !== null) main.current.scrollTop = 0 }, [active?.id])

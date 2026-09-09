@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
 import { tsImport } from 'tsx/esm/api'
+import ts from 'typescript'
 
 const require = createRequire(import.meta.url)
 const { createElement } = require('react')
@@ -22,6 +23,18 @@ function moduleStyle(name) {
 }
 const modules = ['ConversationRoot', 'HeroShell', 'InputBar'].map(moduleStyle)
 const [r, h, i] = modules.map(m => m.classes)
+// 只读取宿主发布包中的图形常量，避免在 Node 中加载浏览器 CSS 模块。
+const primitives = ts.createSourceFile('primitives.js', readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-primitives'), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
+const declarations = primitives.statements.filter(ts.isVariableStatement).flatMap(statement => [...statement.declarationList.declarations])
+const fishPath = declarations.find(declaration => declaration.name.getText(primitives) === 'FISH_LOGO_PATH')?.initializer
+const fishViewBox = declarations.find(declaration => declaration.name.getText(primitives) === 'FISH_LOGO_VIEWBOX')?.initializer
+assert.ok(fishPath && ts.isStringLiteral(fishPath) && fishViewBox && ts.isObjectLiteralExpression(fishViewBox), '宿主鲸鱼图形常量发生变化，需重新核对')
+const fishDimensions = Object.fromEntries(fishViewBox.properties.map(property => {
+  assert.ok(ts.isPropertyAssignment(property) && ts.isNumericLiteral(property.initializer))
+  return [property.name.getText(primitives), Number(property.initializer.text)]
+}))
+assert.ok(fishDimensions.width > 0 && fishDimensions.height > 0)
+const fish = renderToStaticMarkup(createElement('svg', { className: h.fish, width: 34, height: 34 * fishDimensions.height / fishDimensions.width, viewBox: `0 0 ${fishDimensions.width} ${fishDimensions.height}`, fill: 'none', 'aria-hidden': true }, createElement('path', { d: fishPath.text, fill: 'currentColor' })))
 const skin = readFileSync('src/client/CodexSidebar.tsx', 'utf8').match(/const stylesheet = `([\s\S]*?)`/)[1]
 const heroSkin = readFileSync('src/client/new-conversation-style.ts', 'utf8').match(/NEW_CONVERSATION_STYLE = `([\s\S]*?)`/)[1]
 const browser = await chromium.launch({ headless: true })
@@ -31,7 +44,7 @@ try {
     await page.setViewportSize({ width, height })
     await page.setContent(`<style>*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;--dsw-alias-bg-base:${dark ? '#181818' : '#fff'};--dsw-specific-input-major:${dark ? '#242424' : '#fff'};--dsw-alias-bg-layer-2:#242424;--dsw-alias-label-primary:${dark ? '#ddd' : '#262626'};--dsw-alias-label-secondary:#888;color:var(--dsw-alias-label-primary)}#app{height:100svh}#metrics{text-align:center;line-height:24px;padding-bottom:16px}button{font:inherit}</style>
       <div id="app"><div class="${r.root}" data-phase="hero"><div class="${r.body}"><div data-conversation-scroll class="${r.scrollBody}"><div data-composer-seat class="${r.composerSeat}"><div class="${r.composerStack} ${r.composerHero}">
-      <div class="${h.root}"><div class="${h.stack}"><div class="${h.headline}"><span class="${h.fishHitbox}">🐋</span><span class="${h.headlineText}">探索未知之境</span><span class="${h.previewBadge}">预览版</span></div>${cards}</div></div>
+      <div class="${h.root}"><div class="${h.stack}"><div class="${h.headline}"><span class="${h.fishHitbox}">${fish}</span><span class="${h.headlineText}">探索未知之境</span><span class="${h.previewBadge}">预览版</span></div>${cards}</div></div>
       <div class="${r.heroWorkspaceRow}"><button class="${h.workspace}"><span class="${h.workspaceLabel}">我的工作区</span></button><button>专家预设</button></div>
       <div class="${i.root} ${i.hero}"><div data-composer-card class="${i.card}"><div data-input-scroll class="${i.scroll}"><div class="${i.grow}"><div data-lexical-editor="true" contenteditable="true" class="${i.input}"><p><br></p></div></div></div><div class="${i.row}"><div class="${i.tools}"><button class="${i.add}">+</button></div><div class="${i.trailing}"><button class="${i.primary}">↑</button></div></div></div></div>
       </div><div id="metrics">耗时 2.4秒 · 费用 ¥0.030<br>输入 19.7K tok · 输出 161 tok</div></div></div></div></div></div>`)
@@ -39,6 +52,10 @@ try {
     await page.addStyleTag({ content: skin })
     await page.evaluate(dark => document.body.toggleAttribute('data-ds-dark-theme', dark), dark)
     const style = await page.addStyleTag({ content: heroSkin })
+    const logoBox = await page.locator(`.${h.fish}`).boundingBox()
+    assert.ok(logoBox && Math.abs(logoBox.width - 46) < .1, '真实 LOGO 宽度必须为 46px')
+    assert.ok(Math.abs(logoBox.height - 46 * fishDimensions.height / fishDimensions.width) < .1, 'LOGO 必须保持宿主原始比例')
+    assert.equal(await page.locator(`.${h.headlineText}`).evaluate(node => getComputedStyle(node).fontSize), '34px', '标题必须继承 34px 字号')
     const geometry = () => page.evaluate(() => {
       const box = selector => { const b = document.querySelector(selector).getBoundingClientRect(); return { x: b.x, y: b.y, width: b.width, height: b.height, bottom: b.bottom } }
       return { hero: box('[class*="_composerHero"]>:first-child'), guide: box('[class*="_composerHero"]>:first-child>[class$="_stack"]'), card: box('[data-composer-card]'), title: box('[class$="_headline"]'), workspace: box('[class*="_heroWorkspaceRow"]'), metrics: box('#metrics'), overflow: document.documentElement.scrollWidth > innerWidth }

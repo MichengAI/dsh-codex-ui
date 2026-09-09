@@ -155,12 +155,13 @@ test('Shift+Tab 在设置内部循环，隐藏的迟挂载 dialog 不拦截 Esca
 
 test('已有引导 portal 保留交互，设置退出不改写原始 inert 状态', async () => {
  const overlay=document.createElement('div');overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');const next=document.createElement('button');overlay.append(next);document.body.append(overlay)
- const background=document.createElement('div');background.inert=true;document.body.append(background)
+ const background=document.createElement('div');background.inert=true;background.setAttribute('data-dcu-settings-isolated','previous');document.body.append(background)
  const {container}=await mount({onboarding:source([{id:'portal-step'}])})
  expect(overlay.inert).not.toBe(true)
  next.focus();expect(document.activeElement).toBe(next)
  await act(async()=>{container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click()})
  expect(background.inert).toBe(true)
+ expect(background.getAttribute('data-dcu-settings-isolated')).toBe('previous')
 })
 
 
@@ -188,10 +189,13 @@ test('引导只保留模态区域，同包装的背景菜单仍被隔离', async
   const { container } = await mount({ onboarding: source([{ id: 'guide' }]) })
   expect(dialog.inert).not.toBe(true)
   expect(menu.inert).toBe(true)
+  expect(dialog.hasAttribute('data-dcu-settings-isolated')).toBe(false)
+  expect(menu.hasAttribute('data-dcu-settings-isolated')).toBe(true)
   next.focus()
   expect(document.activeElement).toBe(next)
   await act(async () => { container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click() })
   expect(menu.inert).not.toBe(true)
+  expect(menu.hasAttribute('data-dcu-settings-isolated')).toBe(false)
 })
 
 test.each(['menu', 'listbox'])('Escape 只关闭 %s，下一次才退出设置', async role => {

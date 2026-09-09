@@ -75,6 +75,8 @@ html[data-dsh-native-backdrop=mica] :is(.dcu-root,.dcu-settings-nav){background:
 html[data-dsh-native-backdrop=mica] body[data-ds-dark-theme] :is(.dcu-root,.dcu-settings-nav){background:rgba(20,23,22,.18)}
 /* 会话折叠容器显式设了 visible，必须同时隐藏隔离分支的后代，避免穿透透明设置页。 */
 html[data-dsh-native-backdrop=mica] .dcu-root:has(.dcu-settings-page) :is([inert],[inert] *){visibility:hidden!important}
+/* 同步隐藏本设置页隔离的外部 portal，保留引导模态及其他组件自己的 inert 语义。 */
+body:has(.dcu-settings-page) :is([data-dcu-settings-isolated],[data-dcu-settings-isolated] *){visibility:hidden!important}
 html[data-dsh-native-backdrop=mica] .dcu-settings-page,html[data-dsh-native-backdrop=mica] .dcu-root:has(.dcu-settings-page){background:transparent}
 
 .dcu-settings-inner:has(.dcu-usage-section){width:100%;height:100%;max-width:1280px;display:flex;flex-direction:column;padding-bottom:0}
