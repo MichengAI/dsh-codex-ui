@@ -28,3 +28,18 @@ test('无配置文件时隐藏入口，打开失败展示反馈，重试成功�
  for(let i=0;i<3;i++){await act(async()=>{container.querySelector('button')!.click()});expect(container.querySelector('[role=alert]')!==null).toBe(i<2)}
  expect(open).toHaveBeenCalledTimes(3)
 })
+
+test('高级配置行展示说明，打开期间阻止重复请求', async () => {
+ let finish!: (value: {ok:boolean}) => void
+ const open = vi.fn(() => new Promise<{ok:boolean}>(resolve => { finish = resolve }))
+ const {container} = await mount(true, async()=>{}, open)
+ expect(container.querySelector('h2')?.textContent).toBe(zh['settings.advanced'])
+ expect(container.textContent).toContain(zh['settings.documentDescription'])
+ const button = container.querySelector('button')!
+ await act(async()=>{button.click()})
+ expect(button.disabled).toBe(true)
+ expect(button.textContent).toBe(zh['settings.documentOpening'])
+ await act(async()=>{button.click();finish({ok:true})})
+ expect(open).toHaveBeenCalledTimes(1)
+ expect(button.disabled).toBe(false)
+})

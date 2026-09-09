@@ -17,6 +17,8 @@ const runtimeRequires = [...new Set([...bundle.matchAll(/\brequire\("([^"]+)"\)/
 const staticWebModules = [
   '@deepseek-ai/dsh-client-ui-primitives',
   'react',
+  // DSH Web 启动器静态表包含 react-dom；新建页 portal 复用同一宿主渲染器。
+  'react-dom',
   'react/jsx-runtime',
 ].sort()
 

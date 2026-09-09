@@ -28,5 +28,13 @@ export function SettingsDocumentAction({ describe, openDocument, t }: PropsLocal
     catch { setError(true) }
     finally { busy.current = false; setOpening(false) }
   }
-  return <div>{error && <span role="alert">{t('settings.openDocumentError')}</span>}<button type="button" disabled={opening} onClick={() => { void open() }}>{t('settings.openDocument')}</button></div>
+  return <section className="dcu-settings-general-group">
+    <h2>{t('settings.advanced')}</h2>
+    <div className="dcu-settings-card">
+      <div className="dcu-settings-document">
+        <div className="dcu-settings-document-copy"><div>{t('settings.documentTitle')}</div><p>{t('settings.documentDescription')}</p>{error && <p role="alert">{t('settings.openDocumentError')}</p>}</div>
+        <button type="button" aria-label={t('settings.openDocument')} aria-busy={opening} disabled={opening} onClick={() => { void open() }}>{t(opening ? 'settings.documentOpening' : 'settings.documentOpen')}</button>
+      </div>
+    </div>
+  </section>
 }

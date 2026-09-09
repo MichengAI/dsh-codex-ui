@@ -7,6 +7,12 @@ import { createElement } from 'react'
 import { Settings } from 'lucide-react'
 import { SettingsDocumentAction } from './SettingsDocumentAction.tsx'
 
+declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface SlotMap {
+    'settings.general.footer': { kind: 'list'; scope: 'root'; owner: {} }
+  }
+}
+
 /** 用公开插槽替换设置壳，保留宿主的设置写入、连接恢复和首次使用引导。 */
 export function registerSettingsPage(ctx: Context): void {
   const children = ['settings.trigger', 'settings.header', 'settings.action', 'settings.close', 'settings.section', 'settings.onboarding', 'settings.general.item']
@@ -49,8 +55,8 @@ export function registerSettingsPage(ctx: Context): void {
     const remote = service as { $host: { isLoopback: boolean }; settings: { openSettingsDocument: () => Promise<{ ok: boolean }> } }
     if (!remote.$host.isLoopback) return
     const describe = settingsCtx.settingsScope.describe()
-    settingsCtx.slots.inject('settings.action', () => !owned ? () => {} : settingsCtx.slots.register({
-      name: 'settings.action', id: 'open-document', locale: NS,
+    settingsCtx.slots.inject('settings.general.footer', () => !owned ? () => {} : settingsCtx.slots.register({
+      name: 'settings.general.footer', id: 'open-document', locale: NS,
       inject: () => ({ describe, openDocument: () => remote.settings.openSettingsDocument() }),
     }, SettingsDocumentAction))
   })
@@ -73,7 +79,7 @@ export function registerSettingsPage(ctx: Context): void {
   })
   ctx.slots.inject('settings.section', () => !owned ? () => {} : ctx.slots.register({
     name: 'settings.section', id: 'general', priority: -1, order: 0, locale: NS, label: () => t('settings.general'),
-    children: { 'settings.general.item': { kind: 'list', scope: 'root' } },
+    children: { 'settings.general.item': { kind: 'list', scope: 'root' }, 'settings.general.footer': { kind: 'list', scope: 'root' } },
     inject: () => ({ items }),
   }, CodexGeneralSettings))
 }

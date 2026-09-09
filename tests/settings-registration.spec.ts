@@ -85,7 +85,7 @@ test.each([false, true])('真实 Cordis 注入生命周期：loopback=%s 的配�
   const removeConnection=ctx.provide('connection',{state:{getSnapshot:()=> 'connected',subscribe:()=>()=>{}},reconnect:()=>{}} as never)
   const removeRoot=ctx.slots.register({name:'root',children:{'sidebar.settings':{kind:'single',scope:'root'}}},(_props: PropsRenderSlots<'sidebar.settings'>)=>null)
   registerSettingsPage(ctx)
-  expect(ctx.slots.entriesOfSlot('settings.action')).toHaveLength(0)
+  expect(ctx.slots.entriesOfSlot('settings.general.footer')).toHaveLength(0)
   const describe={getSnapshot:()=>({view:{hasDocument:true}}),subscribe:()=>()=>{},ensure:async()=>{}}
   const openSettingsDocument=vi.fn(async()=>({ok:true}))
   const removeScope=ctx.provide('settingsScope',{describe:()=>describe} as never)
@@ -93,18 +93,18 @@ test.each([false, true])('真实 Cordis 注入生命周期：loopback=%s 的配�
   const removeRemoteSettings=ctx.provide('remote.settings',{} as never)
   try {
     if(loopback){
-      await vi.waitFor(()=>expect(ctx.slots.entriesOfSlot('settings.action')).toHaveLength(1))
-      const entry=ctx.slots.entriesOfSlot('settings.action')[0]!
+      await vi.waitFor(()=>expect(ctx.slots.entriesOfSlot('settings.general.footer')).toHaveLength(1))
+      const entry=ctx.slots.entriesOfSlot('settings.general.footer')[0]!
       const injected=(entry.inject as unknown as ()=>{describe:unknown;openDocument:()=>Promise<{ok:boolean}>})()
       expect(injected.describe).toBe(describe)
       expect(await injected.openDocument()).toEqual({ok:true})
       expect(openSettingsDocument).toHaveBeenCalledTimes(1)
     }else{
       await new Promise(resolve=>setTimeout(resolve,30))
-      expect(ctx.slots.entriesOfSlot('settings.action')).toHaveLength(0)
+      expect(ctx.slots.entriesOfSlot('settings.general.footer')).toHaveLength(0)
     }
     await removeRemoteSettings()
-    await vi.waitFor(()=>expect(ctx.slots.entriesOfSlot('settings.action')).toHaveLength(0))
+    await vi.waitFor(()=>expect(ctx.slots.entriesOfSlot('settings.general.footer')).toHaveLength(0))
   }finally{await removeRemoteSettings();await removeRemote();await removeScope();removeRoot();await removeConnection();await removeLocale()}
 })
 

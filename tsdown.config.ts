@@ -19,7 +19,7 @@ export default [
     target: 'es2022',
     // React 由 DSH 的客户端模块表提供；内联会生成第二份 React 实例，导致 Hooks 失效。
     deps: {
-      neverBundle: ['react', 'react/jsx-runtime', '@deepseek-ai/dsh-client-ui-primitives'],
+      neverBundle: ['react', 'react-dom', 'react/jsx-runtime', '@deepseek-ai/dsh-client-ui-primitives'],
       alwaysBundle: ['lucide-react'],
       onlyBundle: ['lucide-react'],
     },

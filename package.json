@@ -64,7 +64,7 @@
     "build": "tsc --noEmit && tsdown && node scripts/build-usage-frame.mjs",
     "typecheck": "tsc --noEmit",
     "test": "pnpm run typecheck && vitest run && tsdown && node scripts/build-usage-frame.mjs && node tests/run-assertions.mjs && pnpm run test:layout",
-    "test:layout": "node scripts/verify-workspace-drop-layout.mjs --run && node scripts/verify-sidebar-transition.mjs && node scripts/verify-settings-exit.mjs && node scripts/verify-composer-style.mjs"
+    "test:layout": "node scripts/verify-workspace-drop-layout.mjs --run && node scripts/verify-sidebar-transition.mjs && node scripts/verify-settings-exit.mjs && node scripts/verify-composer-style.mjs && node scripts/verify-new-conversation.mjs && node scripts/verify-composer-tools.mjs"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": ">=4.0.2 <5.0.0",
@@ -82,7 +82,8 @@
     "@deepseek-ai/dsh-client-ui-workspace": ">=0.1.0-rc.5 <0.2.0",
     "@michengai/dsh-agency-agents": ">=0.1.3 <0.2.0",
     "@michengai/dsh-skills-manager": ">=0.1.7 <0.2.0",
-    "react": "^18.2.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "peerDependenciesMeta": {
     "@michengai/dsh-agency-agents": {

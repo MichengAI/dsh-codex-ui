@@ -28,6 +28,8 @@ import { observeConversationHeader } from './conversation-header.ts'
 import { observeOfficialTurnNavigators } from './official-turn-navigator.ts'
 import { TurnNavigator } from './TurnNavigator.tsx'
 import { registerInputHistory } from './InputHistoryDock.tsx'
+import { prefillNewConversation, createDraftPresenceSource } from './new-conversation-draft.ts'
+import { observeComposerToolMenus } from './composer-tool-menus.ts'
 import { hasConnectWorkspace, hasStartSession, recentWorkspaceId, workspaceBaselinesReady } from './workspace-compat.ts'
 import { HostActionError, type HostAction, UserFacingError } from './user-error.ts'
 import { finishSessionMove, requestSessionMove, sessionMoveErrorKey, SessionMoveRequestError } from './session-move.ts'
@@ -125,9 +127,15 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => observeSlimSidebar(), 'michengai-codex-ui: slim sidebar')
   ctx.effect(() => observeSettingsNavIcons(), 'michengai-codex-ui: settings nav icons')
   ctx.effect(() => observePermissionLabels(ctx.locale), 'michengai-codex-ui: permission labels')
+  ctx.effect(() => observeComposerToolMenus({ search: t('home.projectSearch'), empty: t('home.projectEmpty') }), 'michengai-codex-ui: composer tool menus')
   ctx.effect(() => observeHostCopy(ctx.locale, t), 'michengai-codex-ui: host copy')
   ctx.effect(() => observeConversationHeader(), 'michengai-codex-ui: conversation header')
   ctx.effect(() => observeOfficialTurnNavigators(), 'michengai-codex-ui: official turn navigator')
+  const newConversationDraft = createDraftPresenceSource(ctx.sessions.list, () => {
+    const id = ctx.sessions.list.getSnapshot().current
+    const binding = id === undefined ? undefined : ctx.sessions.binding(id)
+    return binding === undefined ? undefined : ctx.conversation.input.for(binding.ctx).state
+  })
   const companionSlots = createCompanionTabSource(ctx.slots)
   ctx.slots.inject('sidebar', () => ctx.slots.register({
     name: 'sidebar',
@@ -141,6 +149,12 @@ export function apply(ctx: ClientContext): void {
       'sidebar.schedule': { kind: 'single', scope: 'root' },
     },
     inject: () => ({
+      newConversationDraft,
+      prefillNewConversation: (text: string) => {
+        const id = ctx.sessions.list.getSnapshot().current
+        const binding = id === undefined ? undefined : ctx.sessions.binding(id)
+        return prefillNewConversation(binding === undefined ? undefined : ctx.conversation.input.for(binding.ctx), text)
+      },
       openSession: (sessionId: SessionId) => { ctx.sessions.open(sessionId) },
       startSession: (workspaceId?: WorkspaceId) => { startWorkspaceSession(ctx, workspaceId) },
       toggleSidebar: () => { ctx.layout.toggleSidebar() },

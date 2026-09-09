@@ -187,7 +187,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
         {visible.length === 0 && <p className="dcu-settings-empty" role="status">{t('settings.noResults')}</p>}
       </nav>
       <div ref={main} className="dcu-settings-main">
-        <div className="dcu-settings-inner">
+        <div className="dcu-settings-inner" data-settings-section={active?.id}>
           <header className="dcu-settings-heading" data-own-title={active?.id === 'general'}>{active?.id === 'general' && <h1>{t('settings.general')}</h1>}<div className="dcu-settings-actions">{renderSlot('settings.action', {})}</div></header>
           {active !== undefined && renderSlot('settings.section', { close }, { only: active.id })}
         </div>
@@ -198,12 +198,13 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
 }
 
 /** 每条偏好仍由原插件渲染和保存，只为公共条目添加可扩展的分组容器。 */
-export function CodexGeneralSettings({ items, renderSlot, t }: { items: SettingsSource<{ id: string }> } & PropsRenderSlots<'settings.general.item'> & PropsLocale<typeof NS>) {
+export function CodexGeneralSettings({ items, renderSlot, t }: { items: SettingsSource<{ id: string }> } & PropsRenderSlots<'settings.general.item' | 'settings.general.footer'> & PropsLocale<typeof NS>) {
   const rows = useSyncExternalStore(items.subscribe, items.getSnapshot)
   return <div className="dcu-settings-general">
     {(['permissions', 'general', 'editor'] as const).map(group => {
       const entries = rows.filter(row => generalItemGroup(row.id) === group)
       return entries.length > 0 && <section className="dcu-settings-general-group" key={group}><h2>{t(groupLabels[group])}</h2><div className="dcu-settings-card">{entries.map(row => <div className="dcu-settings-row" data-dcu-settings-item={row.id} key={row.id}>{renderSlot('settings.general.item', {}, { only: row.id })}</div>)}</div></section>
     })}
+    {renderSlot('settings.general.footer', {})}
   </div>
 }

@@ -19,6 +19,10 @@ import { isTaskSession } from './workspace-browser.ts'
 import { clearAutomationTaskSettingsRequest, requestAutomationTaskSettings } from './automation-task-settings.ts'
 import type { UseSessionPendingInteraction } from './session-pending.ts'
 import { browserStorage, readTreeExpansionState, writeTreeExpansionState } from './tree-expansion.ts'
+import { NEW_CONVERSATION_STYLE } from './new-conversation-style.ts'
+import { COMPOSER_TOOL_MENU_STYLE } from './composer-tool-menus.ts'
+import type { DraftPresenceSource } from './new-conversation-draft.ts'
+import { NewConversationSuggestions, type PrefillResult } from './NewConversationSuggestions.tsx'
 
 type CompanionTabSource = {
   getSnapshot: () => CompanionTabAvailability
@@ -42,6 +46,8 @@ function writeExtensionsOpen(open: boolean): void {
 }
 
 type CodexSidebarInjected = {
+  newConversationDraft?: DraftPresenceSource
+  prefillNewConversation?: (text: string) => PrefillResult
   openSession: (sessionId: SessionId) => void
   startSession: (workspaceId?: WorkspaceId) => void
   toggleSidebar: () => void
@@ -234,7 +240,7 @@ const SidebarSearch = forwardRef<SidebarSearchHandle, SidebarSearchProps>(functi
 })
 
 /** Codex 风格的 DSH 侧栏，只替换导航外观，项目浏览和设置仍由 DSH 官方组件提供。 */
-export function CodexSidebar({ collapsed, width, openSession, startSession, toggleSidebar, archiveSession, deleteSession, forkSession, moveSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useSessionPendingInteraction, useWorkspaces }: CodexSidebarProps) {
+export function CodexSidebar({ collapsed, width, openSession, startSession, toggleSidebar, archiveSession, deleteSession, forkSession, moveSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useSessionPendingInteraction, useWorkspaces, prefillNewConversation, newConversationDraft }: CodexSidebarProps) {
   const compact = collapsed || width < 80
   const [visualCompact, setVisualCompact] = useState(compact)
   const [collapsing, setCollapsing] = useState(false)
@@ -387,6 +393,9 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
 
   return <aside className={`dcu-root${visualCompact ? ' dcu-compact' : ''}${collapsing ? ' dcu-collapsing' : ''}`} aria-label={t('sidebar.label')}>
     <style>{stylesheet}</style>
+    <style>{NEW_CONVERSATION_STYLE}</style>
+    <style>{COMPOSER_TOOL_MENU_STYLE}</style>
+    <NewConversationSuggestions t={t} prefill={prefillNewConversation} draftSource={newConversationDraft} />
     <div className="dcu-expanded-shell">
     <header className="dcu-head"><button type="button" className="dcu-brand" aria-label={t('sidebar.newTask')} onClick={() => { startSession() }}><BrandWordmark size={24} /></button><div className="dcu-head-actions"><button type="button" className="dcu-icon" aria-label={t('sidebar.collapse')} onClick={toggleSidebar}><IconPanelLeftOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.search')} onClick={() => { search.current?.open() }}><IconSearchOutline16 size={16} /></button></div></header>
     <nav className="dcu-menu" aria-label={t('sidebar.mainMenu')}>

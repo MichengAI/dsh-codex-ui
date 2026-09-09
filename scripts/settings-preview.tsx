@@ -30,7 +30,7 @@ function App() {
   const renderSlot: CodexSettingsPageProps['renderSlot'] = (name, owner, options) => {
     if (name === 'settings.trigger') return <span className="dcu-settings-trigger-content"><Settings size={16} strokeWidth={1.6}/><span>设置</span></span>
     if (name !== 'settings.section') return null
-    if (options?.only === 'general') return <CodexGeneralSettings items={source(items)} t={t} renderSlot={(_name, _owner, item) => <div data-slot="settings.general.item"><PreviewRow id={item!.only!}/></div>}/>
+    if (options?.only === 'general') return <CodexGeneralSettings items={source(items)} t={t} renderSlot={(name, _owner, item) => name === 'settings.general.item' ? <div data-slot="settings.general.item"><PreviewRow id={item!.only!}/></div> : null}/>
     if (options?.only === 'models') return <section className="dcu-settings-general-group"><h2>默认模型</h2><div className="dcu-settings-card"><div className="preview-row"><div><strong>模型</strong><p>用于新会话的默认模型。</p></div><select aria-label="模型"><option>deepseek-chat</option><option>deepseek-reasoner</option></select></div><div className="preview-row"><div><strong>配置状态</strong><p>{saved ? '已保存到当前预览' : '仅预览，不连接模型服务'}</p></div><button onClick={() => { setSaved(true) }}>保存</button></div></div></section>
     return <section className="dcu-settings-general-group"><h2>{rows.find(row => row.id === options?.only)?.label}</h2><div className="dcu-settings-card"><div className="preview-row"><div><strong>此页面由对应插件提供</strong><p>当前为布局预览，实际应用会加载已安装插件的原有功能。</p></div></div></div></section>
   }
