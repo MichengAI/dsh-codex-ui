@@ -9,7 +9,9 @@ export interface UsageFrameBridge {
   checkModels: () => Promise<unknown>
   publishCosts: (costs: { todayCost: number; monthCost: number }) => void
   close: () => void
+  dismissed: () => void
+  focusOutside: (backward: boolean) => void
   ready: () => void
   failed: (message: string) => void
 }
-export type UsageFrameWindow = Window & { dcuUsageHost?: UsageFrameBridge }
+export type UsageFrameWindow = Window & { dcuUsageRuntimeReady?: boolean; dcuUsageHost?: UsageFrameBridge }

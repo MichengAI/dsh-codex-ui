@@ -1,5 +1,7 @@
+import { createRequire } from 'node:module'
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { initializeComposerWidth } from '../src/client/composer-width.ts'
+import { initializeComposerWidth, COMPOSER_MIN_WIDTH, COMPOSER_EDGE_BUDGET } from '../src/client/composer-width.ts'
 
 describe('输入区初始宽度', () => {
   for (const initial of [null, '', 'invalid', '-1']) {
@@ -16,4 +18,10 @@ describe('输入区初始宽度', () => {
     initializeComposerWidth(storage)
     expect(saved).toBe('860')
   })
+})
+
+it('宿主拖拽边界变更时明确失败，避免两套宽度规则漂移', () => {
+  const host = readFileSync(createRequire(import.meta.url).resolve('@deepseek-ai/dsh-client-ui-conversation/client'), 'utf8')
+  expect(Number(host.match(/const CONTENT_MIN = (\d+);/)?.[1])).toBe(COMPOSER_MIN_WIDTH)
+  expect(Number(host.match(/const CONTENT_EDGE_BUDGET = (\d+);/)?.[1])).toBe(COMPOSER_EDGE_BUDGET)
 })

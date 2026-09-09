@@ -1,10 +1,12 @@
-/** 沿用宿主的宽度偏好，让初始宽度和首次拖拽起点一致。 */
+export const COMPOSER_MIN_WIDTH = 640
+export const COMPOSER_EDGE_BUDGET = 176
+/** 按用户要求用最窄宽度替代宿主自适应默认；已有有效偏好不重置，拖拽起点沿用宿主存储。 */
 export function initializeComposerWidth(storage: Pick<Storage, 'getItem' | 'setItem'>): void {
   const key = 'dsh.conversation.contentWidth'
   try {
     const saved = Number(storage.getItem(key))
     if (Number.isFinite(saved) && saved > 0) return
-    storage.setItem(key, '640')
+    storage.setItem(key, String(COMPOSER_MIN_WIDTH))
   } catch (error) {
     console.warn('[codex-ui] 无法初始化输入区宽度，将使用宿主默认值。', error)
   }
@@ -13,7 +15,7 @@ export function initializeComposerWidth(storage: Pick<Storage, 'getItem' | 'setI
 export function observeHeroWidthHandles(label: string): () => void {
   const mounted = new Map<HTMLElement, () => void>()
   const style = document.createElement('style')
-  style.textContent = `[data-dcu-width-handle]{position:absolute;top:0;bottom:0;width:32px;padding:0;border:0;background:transparent;cursor:col-resize;touch-action:none;z-index:8;outline-offset:-5px}[data-dcu-width-handle=left]{right:calc(50% + var(--dsh-chat-content-width) / 2 + 16px)}[data-dcu-width-handle=right]{left:calc(50% + var(--dsh-chat-content-width) / 2 + 16px)}[data-dcu-width-handle]::after{content:'';position:absolute;top:calc(var(--dcu-pointer-y,50%) - 50px);height:100px;width:3px;left:14px;border-radius:3px;background:linear-gradient(transparent,var(--dsw-alias-scrollbar-hover-l1,#888),transparent);opacity:0}[data-dcu-width-handle]:hover::after,[data-dcu-width-handle]:focus-visible::after,[data-dcu-width-handle][data-dragging]::after{opacity:1}[data-phase=hero]:has([data-conversation-composer-overlay]) [data-dcu-width-handle]{display:none}`
+  style.textContent = `[data-phase=hero]:has([data-conversation-scroll]){position:relative}[data-dcu-width-handle]{position:absolute;top:0;bottom:0;width:32px;padding:0;border:0;background:transparent;cursor:col-resize;touch-action:none;z-index:8;outline-offset:-5px}[data-dcu-width-handle=left]{right:calc(50% + var(--dsh-chat-content-width) / 2 + 16px)}[data-dcu-width-handle=right]{left:calc(50% + var(--dsh-chat-content-width) / 2 + 16px)}[data-dcu-width-handle]::after{content:'';position:absolute;top:calc(var(--dcu-pointer-y,50%) - 50px);height:100px;width:3px;left:14px;border-radius:3px;background:linear-gradient(transparent,var(--dsw-alias-scrollbar-hover-l1,#888),transparent);opacity:0}[data-dcu-width-handle]:hover::after,[data-dcu-width-handle]:focus-visible::after,[data-dcu-width-handle][data-dragging]::after{opacity:1}[data-phase=hero]:has([data-conversation-composer-overlay]) [data-dcu-width-handle]{display:none}`
   document.head.append(style)
   const sync = () => {
     for (const [root, dispose] of mounted) {
@@ -21,10 +23,10 @@ export function observeHeroWidthHandles(label: string): () => void {
     }
     for (const root of document.querySelectorAll<HTMLElement>('[data-phase=hero]')) {
       if (mounted.has(root) || !root.querySelector('[data-conversation-scroll]')) continue
-      const clamp = (value: number) => Math.min(Math.max(640, value), Math.max(640, root.clientWidth - 176))
+      const clamp = (value: number) => Math.min(Math.max(COMPOSER_MIN_WIDTH, value), Math.max(COMPOSER_MIN_WIDTH, root.clientWidth - COMPOSER_EDGE_BUDGET))
       const current = () => {
         const raw = getComputedStyle(root).getPropertyValue('--dsh-chat-user-width')
-        return clamp(parseFloat(raw) || 640)
+        return clamp(parseFloat(raw) || COMPOSER_MIN_WIDTH)
       }
       const publish = (width: number, save: boolean) => {
         const value = clamp(width)
@@ -40,7 +42,7 @@ export function observeHeroWidthHandles(label: string): () => void {
         handle.dataset.dcuWidthHandle = side
         handle.setAttribute('aria-label', label)
         let origin = 0
-        let initial = 640
+        let initial = COMPOSER_MIN_WIDTH
         let dragging = false
         handle.addEventListener('pointerdown', event => {
           if (event.button !== 0) return
@@ -71,7 +73,7 @@ export function observeHeroWidthHandles(label: string): () => void {
           if (!['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) return
           event.preventDefault()
           const delta = (event.key === 'ArrowRight' ? 1 : -1) * (side === 'right' ? 1 : -1) * 20
-          publish(event.key === 'Home' ? 640 : current() + delta, true)
+          publish(event.key === 'Home' ? COMPOSER_MIN_WIDTH : current() + delta, true)
         })
         root.append(handle)
         return handle

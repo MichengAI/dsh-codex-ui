@@ -6,6 +6,12 @@ This changelog records recent releases of DSH Codex UI and its one-click install
 
 ## Unreleased
 
+- Embed the original billing component in a same-origin usage statistics frame, preserving its statistics and configuration behavior.
+- Rework the new conversation page with centered branding and task suggestions above a separate bottom toolbar and composer, preserving drafts and footer metrics.
+- Refine composer corners, shadows, spacing, and controls; unify settings headings and spacing, move the configuration action into General advanced settings, and fill host localization gaps.
+- Add companion Desktop material support with an opaque browser fallback; full Desktop material combinations still require acceptance testing.
+- Harden the production billing frame with post-handshake loading, immediate resource errors, separate panel and settings close semantics, and layered Escape and cross-frame Tab handling.
+- Scope text translation observers to settings and menus and verify mirrored width constants against the host.
 - Add draggable width handles to new conversations with shared width preferences and a 640px default; keep guide cards independent of composer resizing.
 - Hide the task sidebar scrollbar while preserving scrolling, and fix downward Git menus and first-frame style changes.
 

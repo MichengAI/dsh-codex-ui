@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 import { observeHostCopy } from '../src/client/host-copy.ts'
 import { en, zh } from '../src/client/locales.ts'
 
@@ -63,4 +63,14 @@ test('六条官方命令说明补译，保留名称、自定义描述、正文�
   dict = en; changed(); await settle()
   expect(first.lastChild!.textContent).toBe(en['host.command.compact'])
   stop()
+})
+
+ test('会话流式正文更新不触发补译扫描', async () => {
+  document.body.innerHTML = '<div data-conversation-scroll><p>正文</p></div>'
+  const stop = observeHostCopy({ subscribe: () => () => {} }, key => zh[key])
+  const scan = vi.spyOn(document, 'querySelectorAll')
+  const text = document.querySelector('p')!.firstChild!
+  for (let i = 0; i < 5; i++) { text.nodeValue += '续'; await settle() }
+  expect(scan).not.toHaveBeenCalled()
+  scan.mockRestore(); stop()
 })

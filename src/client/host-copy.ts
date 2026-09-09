@@ -55,12 +55,30 @@ export function observeHostCopy(locale: Locale, t: Translate): () => void {
       replace(spans[1], original, key)
     }
   }
-  const observer = new MutationObserver(apply)
-  apply()
-  observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-expanded'] })
+  const scope = '[data-trigger-menu],[data-dcu-settings-item="transcript-view"],[role="menu"]'
+  const roots = new Map<Element, MutationObserver>()
+  const discover = () => {
+    for (const [element, observer] of roots) if (!element.isConnected) { observer.disconnect(); roots.delete(element) }
+    for (const element of document.querySelectorAll(scope)) {
+      if (roots.has(element)) continue
+      const observer = new MutationObserver(apply)
+      observer.observe(element, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-expanded'] })
+      roots.set(element, observer)
+    }
+    apply()
+  }
+  // 全局仅发现控件挂载；字符变化只在已知设置项和菜单内观察。
+  const observer = new MutationObserver(records => {
+    if (records.some(record => [...record.addedNodes, ...record.removedNodes].some(node =>
+      node instanceof Element && (node.matches(scope) || node.querySelector(scope) !== null)))) discover()
+  })
+  discover()
+  observer.observe(document.body, { subtree: true, childList: true })
   const unsubscribe = locale.subscribe(apply)
   return () => {
     observer.disconnect()
+    roots.forEach(observer => observer.disconnect())
+    roots.clear()
     unsubscribe()
     for (const [node, state] of owned) if (node.data === state.rendered) node.data = state.original
     owned.clear()

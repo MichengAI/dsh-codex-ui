@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { USAGE_FRAME_PATH } from './usage-frame/contract.ts'
 export const USAGE_FRAME_ROUTES = [USAGE_FRAME_PATH, `${USAGE_FRAME_PATH}.js`, `${USAGE_FRAME_PATH}.css`, '/api/dsh-codex-ui/usage/plugin.js'] as const
 export async function usageFrameAsset(path: string, profileDir: string): Promise<{ contentType: string; body: string }> {
+  // JS/CSS 相对路径以构建后的 lib 为基准；tsx 直接运行源码不能替代先执行构建。
   const files: Record<string, [string, string]> = {
     [USAGE_FRAME_PATH]: ['text/html; charset=utf-8', fileURLToPath(new URL('../assets/usage-frame.html', import.meta.url))],
     [`${USAGE_FRAME_PATH}.js`]: ['text/javascript; charset=utf-8', fileURLToPath(new URL('./usage-frame.js', import.meta.url))],

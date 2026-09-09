@@ -18,7 +18,7 @@ export function UsageStatisticsSection({ useStore, actions, billing, close, open
   const listeners = useRef(new Set<() => void>())
   const frame = useRef<HTMLIFrameElement>(null)
   const [attempt, setAttempt] = useState(0)
-  const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading')
+  const [state, setState] = useState<'loading' | 'ready' | 'failed' | 'closed'>('loading')
   const disposeTheme = useRef<() => void>(() => {})
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useEffect(() => { latest.current = snapshot; listeners.current.forEach(listener => listener()) }, [snapshot])
@@ -27,13 +27,18 @@ export function UsageStatisticsSection({ useStore, actions, billing, close, open
     timer.current = setTimeout(() => { setState('failed') }, 15000)
     return () => { clearTimeout(timer.current); disposeTheme.current(); listeners.current.clear() }
   }, [attempt])
+  useEffect(() => {
+    if ((state === 'closed' || state === 'failed') && document.activeElement === frame.current) {
+      frame.current?.parentElement?.querySelector<HTMLButtonElement>('button')?.focus()
+    }
+  }, [state])
   const connect = () => {
     const target = frame.current?.contentWindow as UsageFrameWindow | null
     if (!target) return
     try {
       if (target.location.origin !== location.origin || target.location.pathname !== USAGE_FRAME_PATH) throw new Error('费用承载页地址不匹配')
       const document = target.document
-      if (!document.getElementById('billing-root')) throw new Error('费用承载页未正确加载')
+      if (!target.dcuUsageRuntimeReady || !document.getElementById('billing-root')) throw new Error('费用承载页未正确加载')
       const sync = () => {
         document.body.toggleAttribute('data-ds-dark-theme', window.document.body.hasAttribute('data-ds-dark-theme'))
         document.documentElement.lang = window.document.documentElement.lang
@@ -45,7 +50,17 @@ export function UsageStatisticsSection({ useStore, actions, billing, close, open
       observer.observe(window.document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme', 'class', 'style'] })
       disposeTheme.current = () => observer.disconnect()
       target.dcuUsageHost = { getSnapshot: () => latest.current, subscribe: listener => { listeners.current.add(listener); return () => { listeners.current.delete(listener) } },
-        actions, ...billing, close, ready: () => { clearTimeout(timer.current); setState('ready') },
+        actions, ...billing, close,
+        dismissed: () => { clearTimeout(timer.current); setState('closed') },
+        focusOutside: backward => {
+          const page = frame.current?.closest('[data-dcu-settings-page]')
+          if (!page || !frame.current) return
+          const controls = [...page.querySelectorAll<HTMLElement>('button,input,select,textarea,a[href],[tabindex]')]
+            .filter(element => element.tabIndex >= 0 && !element.matches(':disabled') && !element.closest('[inert]') && element.getClientRects().length > 0)
+          const index = controls.indexOf(frame.current)
+          controls[(index + (backward ? -1 : 1) + controls.length) % controls.length]?.focus()
+        },
+        ready: () => { clearTimeout(timer.current); setState('ready') },
         failed: message => { console.warn('[michengai-codex-ui] 费用承载失败：%s', message); clearTimeout(timer.current); setState('failed') } }
       target.postMessage({ type: 'dcu-usage-init' }, location.origin)
     } catch (error) { console.warn('[michengai-codex-ui] 无法连接费用承载页', error); clearTimeout(timer.current); setState('failed') }
@@ -54,6 +69,7 @@ export function UsageStatisticsSection({ useStore, actions, billing, close, open
     <h1>{t('usage.title')}</h1>
     <div className="dcu-usage-stage" aria-busy={state === 'loading'}>
       {state === 'loading' && <p className="dcu-usage-loading" role="status">{t('usage.loading')}</p>}
+      {state === 'closed' && <div role="status"><p>{t('usage.closed')}</p><button onClick={() => setAttempt(value => value + 1)}>{t('usage.reopen')}</button></div>}
       {state === 'failed' && <div role="alert"><p>{t('usage.failed')}</p><button onClick={() => { setAttempt(value => value + 1) }}>{t('usage.retry')}</button><button onClick={() => { close(); requestAnimationFrame(openOriginal) }}>{t('usage.original')}</button></div>}
       <iframe key={attempt} ref={frame} title={t('usage.title')} src={USAGE_FRAME_PATH} onLoad={connect} aria-hidden={state !== 'ready'} tabIndex={state === 'ready' ? 0 : -1} style={{ visibility: state === 'ready' ? 'visible' : 'hidden' }} className="dcu-usage-frame"/>
     </div>
