@@ -4,6 +4,11 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## Unreleased
+
+- Add draggable width handles to new conversations with shared width preferences and a 640px default; keep guide cards independent of composer resizing.
+- Hide the task sidebar scrollbar while preserving scrolling, and fix downward Git menus and first-frame style changes.
+
 ## suite-installer-v1.0.0 - 2026-09-08
 
 Resolved and pinned the following member versions from the official npm registry:

@@ -44,9 +44,11 @@ try {
       return { hero: box('[class*="_composerHero"]>:first-child'), guide: box('[class*="_composerHero"]>:first-child>[class$="_stack"]'), card: box('[data-composer-card]'), title: box('[class$="_headline"]'), workspace: box('[class*="_heroWorkspaceRow"]'), metrics: box('#metrics'), overflow: document.documentElement.scrollWidth > innerWidth }
     })
     if (width >= 1280) {
+      const guideBeforeResize = (await geometry()).guide
       for (const savedWidth of [560, 960]) {
         await page.locator('[data-phase]').evaluate((el, value) => el.style.setProperty('--dsh-chat-user-width', `${value}px`), savedWidth)
         assert.equal(Math.round((await geometry()).card.width), savedWidth + 32, '新建输入框必须继承宿主保存的拖拽宽度')
+        assert.deepEqual((await geometry()).guide, guideBeforeResize, '拖拽输入区不能改变中间引导区的宽度或位置')
       }
       await page.locator('[data-phase]').evaluate(el => el.style.removeProperty('--dsh-chat-user-width'))
     }

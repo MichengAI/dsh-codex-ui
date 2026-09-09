@@ -72,5 +72,21 @@ try {
     await page.evaluate(() => window.disposeMenus())
     if (await page.locator('[data-dcu-tool-menu],[data-dcu-tool-filter]').count()) throw new Error('卸载没有恢复菜单')
   }
+  // Git 数据异步返回时可能错过观察窗口；方向不能依赖观察器补写属性。
+  await page.setContent('<div class="host_heroWorkspaceRow" style="position:fixed;bottom:100px;left:30px"><div style="position:relative"><button>main</button><div data-gitgraph-popover role="listbox" style="position:absolute;top:100%;bottom:auto;width:260px;height:140px">分支</div></div></div>')
+  await page.addScriptTag({ content: script })
+  await page.addStyleTag({ content: await page.evaluate(() => window.menuStyle) })
+  const branch = await page.locator('[data-gitgraph-popover]').boundingBox()
+  const trigger = await page.locator('button').boundingBox()
+  if (branch.y + branch.height > trigger.y) throw new Error('未被观察器标记的 Git 分支菜单仍向下展开')
+  // 比较观察器标记前后的首帧外观，防止菜单先以插件原样式显示再跳变。
+  await page.locator('[data-gitgraph-popover]').evaluate(el => el.style.removeProperty('width'))
+  const appearance = () => page.locator('[data-gitgraph-popover]').evaluate(el => {
+    const s = getComputedStyle(el)
+    return [s.width, s.padding, s.borderRadius, s.backgroundColor]
+  })
+  const initialAppearance = await appearance()
+  await page.locator('[data-gitgraph-popover]').evaluate(el => el.setAttribute('data-dcu-tool-menu', 'inline'))
+  if (JSON.stringify(initialAppearance) !== JSON.stringify(await appearance())) throw new Error('Git 菜单在观察器标记后改变尺寸或外观，存在首帧闪烁')
   console.log('工具菜单：项目/模式/分支/权限/模型 × 深浅主题 × 两视口，定位、搜索、原回调及隔离清理检查通过。')
 } finally { await browser.close() }

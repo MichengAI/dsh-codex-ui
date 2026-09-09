@@ -1,3 +1,5 @@
+import { initializeComposerWidth, observeHeroWidthHandles } from './composer-width.ts'
+import { browserStorage } from './tree-expansion.ts'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
@@ -115,8 +117,11 @@ export function startWorkspaceSession(ctx: ClientContext, workspaceId?: Workspac
 
 /** 替换 DSH 的官方 sidebar 插槽，不修改 DSH 源码或会话数据。 */
 export function apply(ctx: ClientContext): void {
+  const widthStorage = browserStorage()
+  if (widthStorage) initializeComposerWidth(widthStorage)
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'michengai-codex-ui: dictionaries')
   const t = ctx.locale.bind(NS)
+  ctx.effect(() => observeHeroWidthHandles(t('home.resizeInput')), 'michengai-codex-ui: hero width handles')
   registerInputHistory(ctx)
   registerSettingsPage(ctx)
   registerUsageStatistics(ctx)
