@@ -1,18 +1,17 @@
-/** 使用生产设置组件验证退出末帧，避免淡出后在卸载前恢复不透明。 */
+/** 在实际 DSH 页面验证退出末帧；需通过 DCU_DSH_URL 指定已安装插件的宿主。 */
 import assert from 'node:assert/strict'
-import { createRequire } from 'node:module'
 import { chromium } from 'playwright'
-const require = createRequire(import.meta.url)
-const { build } = createRequire(require.resolve('tsx/package.json'))('esbuild')
-const output = await build({ entryPoints: ['scripts/settings-preview.tsx'], bundle: true, write: false, outdir: 'preview', format: 'iife', platform: 'browser', jsx: 'automatic', loader: { '.css': 'local-css', '.woff': 'dataurl', '.woff2': 'dataurl', '.ttf': 'dataurl' }, define: { 'process.env.NODE_ENV': '"development"' } })
+const target = process.env.DCU_DSH_URL
+if (!target) throw new Error('请设置 DCU_DSH_URL 为实际 DSH 页面地址；本检查不使用预览或模拟页面。')
+const url = new URL(target)
+if (!['http:', 'https:'].includes(url.protocol)) throw new Error('DCU_DSH_URL 必须是 HTTP(S) 地址')
 const browser = await chromium.launch({ headless: true })
 try {
   const page = await browser.newPage()
-  await page.setContent('<body data-ds-dark-theme><div id="root"></div></body>')
-  for (const file of output.outputFiles) {
-    if (file.path.endsWith('.css')) await page.addStyleTag({ content: file.text })
-    if (file.path.endsWith('.js')) await page.addScriptTag({ content: file.text })
-  }
+  await page.goto(url.href)
+  const trigger = page.locator('[data-dcu-settings-trigger]')
+  await trigger.waitFor({ timeout: 30000 })
+  await trigger.click()
   await page.locator('[data-dcu-settings-page]').waitFor()
   for (const mode of ['back', 'escape', 'early']) {
     if (mode !== 'back') await page.locator('[data-dcu-settings-trigger]').click()
@@ -43,29 +42,5 @@ try {
   await page.locator('[data-dcu-settings-trigger]').click()
   await page.keyboard.press('Escape')
   await page.locator('[data-dcu-settings-page]').waitFor({ state: 'detached' })
-  for (const dark of [false, true]) {
-    await page.evaluate(dark => {
-      document.body.toggleAttribute('data-ds-dark-theme', dark)
-      document.getElementById('root').classList.add('dcu-root')
-      document.documentElement.dataset.dshNativeBackdrop = 'mica'
-    }, dark)
-    await page.locator('[data-dcu-settings-trigger]').click()
-    const native = await page.evaluate(() => ({
-      root: getComputedStyle(document.getElementById('root')).backgroundColor,
-      nav: getComputedStyle(document.querySelector('.dcu-settings-nav')).backgroundColor,
-      main: getComputedStyle(document.querySelector('.dcu-settings-main')).backgroundColor,
-      behind: getComputedStyle(document.querySelector('.preview-app')).visibility,
-    }))
-    assert.equal(native.root, 'rgba(0, 0, 0, 0)', '原生材质上不叠加两层侧栏背景')
-    assert.equal(native.nav, dark ? 'rgba(20, 23, 22, 0.18)' : 'rgba(255, 255, 255, 0.18)')
-    assert.equal(native.main, dark ? 'rgb(24, 24, 24)' : 'rgb(255, 255, 255)', '正文保持实色')
-    assert.equal(native.behind, 'hidden', '设置侧栏不能透出首页文字')
-    await page.evaluate(() => { delete document.documentElement.dataset.dshNativeBackdrop })
-    const fallback = await page.locator('.dcu-settings-nav').evaluate(el => getComputedStyle(el).backgroundColor)
-    assert.equal(fallback, dark ? 'rgb(29, 33, 32)' : 'rgb(238, 247, 245)', '普通浏览器使用实色回退')
-    await page.keyboard.press('Escape')
-    await page.locator('[data-dcu-settings-page]').waitFor({ state: 'detached' })
-    assert.equal(await page.locator('.preview-app').evaluate(el => getComputedStyle(el).visibility), 'visible')
-  }
-  console.log('设置退出：4 条交互检查及深浅主题原生表面／浏览器回退检查通过。')
+  console.log('实际 DSH 设置页：返回、Escape、进入中退出、减少动态效果四条交互检查通过。')
 } finally { await browser.close() }

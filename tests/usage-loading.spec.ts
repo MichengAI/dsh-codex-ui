@@ -37,6 +37,23 @@ test('费用 iframe 就绪前不可见且不参与焦点，加载提示不改变
     expect(props.close).not.toHaveBeenCalled()
     expect(container.textContent).toContain(zh['usage.closed'])
     expect(frame.style.visibility).toBe('hidden')
+    await act(async () => { target.dcuUsageHost!.ready() })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      await act(async () => {
+        target.dcuUsageHost!.failed('render crashed')
+        target.dcuUsageHost!.dismissed()
+        target.dcuUsageHost!.ready()
+      })
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain(zh['usage.failed'])
+      expect(frame.style.visibility).toBe('hidden')
+      const retry = [...container.querySelectorAll('button')].find(button => button.textContent === zh['usage.retry'])!
+      await act(async () => { retry.click() })
+      expect(container.querySelector('[role="alert"]')).toBeNull()
+      expect(container.querySelector('[role="status"]')?.textContent).toContain(zh['usage.loading'])
+      expect(container.querySelector('iframe')).not.toBe(frame)
+    } finally { warn.mockRestore() }
+
   } finally {
     await act(async () => { root.unmount() })
     container.remove()

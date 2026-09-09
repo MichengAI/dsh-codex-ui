@@ -4,7 +4,11 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
-## Unreleased
+## 1.1.0 - 2026-09-09
+
+- Update product screenshots and remove temporary design previews and QA records; settings exit checks now target an actual DSH host via `test:host`.
+
+- Preserve billing failure feedback after a ready dashboard crashes, until the user retries.
 
 - Embed the original billing component in a same-origin usage statistics frame, preserving its statistics and configuration behavior.
 - Rework the new conversation page with centered branding and task suggestions above a separate bottom toolbar and composer, preserving drafts and footer metrics.

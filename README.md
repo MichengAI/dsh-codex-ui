@@ -33,19 +33,23 @@ Working across several projects and conversations in DSH Web? DSH Codex UI helps
 
 ## Screenshots
 
-Light theme: Codex-style sidebar, workspace tree, and conversation column.
+Light theme: workspace tree, new conversation suggestions, and bottom composer.
 
-![Light theme conversation](assets/screenshots/conversation-light.png)
+![Light theme new conversation](assets/screenshots/conversation-light.png)
 
-Dark theme: for users who prefer a darker interface.
+Dark theme: scheduled task overview and new conversation page.
 
-![Dark theme conversation](assets/screenshots/conversation.png)
+![Dark theme new conversation](assets/screenshots/conversation.png)
+
+General settings: dedicated settings page with section navigation in the light theme.
+
+![Light theme general settings](assets/screenshots/settings-general-light.png)
 
 Conversation menu: rename, pin, unread, archive, fork, copy, and delete.
 
 ![Conversation menu](assets/screenshots/session-menu.png)
 
-**Settings → About** lists the companion plugins and their install state.
+**Settings → Codex UI** lists the companion plugins and their install state.
 
 ![About page and companion plugins](assets/screenshots/settings-about.png)
 

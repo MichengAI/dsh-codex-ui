@@ -51,7 +51,7 @@ export function UsageStatisticsSection({ useStore, actions, billing, close, open
       disposeTheme.current = () => observer.disconnect()
       target.dcuUsageHost = { getSnapshot: () => latest.current, subscribe: listener => { listeners.current.add(listener); return () => { listeners.current.delete(listener) } },
         actions, ...billing, close,
-        dismissed: () => { clearTimeout(timer.current); setState('closed') },
+        dismissed: () => { clearTimeout(timer.current); setState(current => current === 'failed' ? current : 'closed') },
         focusOutside: backward => {
           const page = frame.current?.closest('[data-dcu-settings-page]')
           if (!page || !frame.current) return
@@ -60,7 +60,7 @@ export function UsageStatisticsSection({ useStore, actions, billing, close, open
           const index = controls.indexOf(frame.current)
           controls[(index + (backward ? -1 : 1) + controls.length) % controls.length]?.focus()
         },
-        ready: () => { clearTimeout(timer.current); setState('ready') },
+        ready: () => { clearTimeout(timer.current); setState(current => current === 'failed' ? current : 'ready') },
         failed: message => { console.warn('[michengai-codex-ui] 费用承载失败：%s', message); clearTimeout(timer.current); setState('failed') } }
       target.postMessage({ type: 'dcu-usage-init' }, location.origin)
     } catch (error) { console.warn('[michengai-codex-ui] 无法连接费用承载页', error); clearTimeout(timer.current); setState('failed') }

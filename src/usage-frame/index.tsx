@@ -52,6 +52,8 @@ const start = () => {
       publishCosts={host.publishCosts} renderSlot={() => null} registerOpen={(open: () => void) => { queueMicrotask(open); return () => {} }}/></FrameBoundary>)
     let opened = false
     const observer = new MutationObserver(() => {
+      // 渲染失败也会移除仪表盘，不能把失败降级成正常关闭。
+      if (pendingFailure !== undefined) return
       const exists = document.querySelector('[data-testid="billing-dashboard"]') !== null
       if (exists && !opened) { opened = true; host.ready() }
       else if (!exists && opened) { opened = false; host.dismissed() }

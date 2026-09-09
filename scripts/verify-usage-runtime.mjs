@@ -7,7 +7,7 @@ const assets = new Map([
   ['/api/dsh-codex-ui/usage/frame.js', ['text/javascript', readFileSync('lib/usage-frame.js', 'utf8')]],
   ['/api/dsh-codex-ui/usage/frame.css', ['text/css', readFileSync('lib/usage-frame.css', 'utf8')]],
 ])
-const plugin = `window.__ModuleLoader__.load({factory(require){const R=require('react'),{Modal}=require('@deepseek-ai/dsh-client-ui-primitives');const h=R.createElement;return {UsageBilling:function P(props){const [open,setOpen]=R.useState(false),[nested,setNested]=R.useState(false),[menu,setMenu]=R.useState(false);R.useEffect(()=>{if(!menu)return;const close=e=>{if(e.key==='Escape')setMenu(false)};document.addEventListener('keydown',close);return()=>document.removeEventListener('keydown',close)},[menu]);R.useEffect(()=>props.registerOpen(()=>setOpen(true)),[]);return h(Modal,{open,onClose:()=>setOpen(false),className:'dsh-billing-modal',headless:true,title:'Dashboard'},h('div',{'data-testid':'billing-dashboard'},h('button',{id:'first',onClick:()=>setNested(true)},'Nested'),h('button',{id:'dismiss',onClick:()=>setOpen(false)},'Close panel'),h('button',{id:'menu-open',onClick:()=>setMenu(true)},'Menu'),menu&&h('div',{role:'menu',id:'menu'},h('button',{},'Option')),h('button',{id:'last'},'Last'),h(Modal,{open:nested,onClose:()=>setNested(false),title:'Nested'},h('button',{id:'nested'},'Inner'))))}}}})`
+const plugin = `window.__ModuleLoader__.load({factory(require){const R=require('react'),{Modal}=require('@deepseek-ai/dsh-client-ui-primitives');const h=R.createElement;return {UsageBilling:function P(props){const [open,setOpen]=R.useState(false),[nested,setNested]=R.useState(false),[menu,setMenu]=R.useState(false),[crashed,setCrashed]=R.useState(false);R.useEffect(()=>{if(!menu)return;const close=e=>{if(e.key==='Escape')setMenu(false)};document.addEventListener('keydown',close);return()=>document.removeEventListener('keydown',close)},[menu]);R.useEffect(()=>props.registerOpen(()=>setOpen(true)),[]);if(crashed)throw new Error('test render crash');return h(Modal,{open,onClose:()=>setOpen(false),className:'dsh-billing-modal',headless:true,title:'Dashboard'},h('div',{'data-testid':'billing-dashboard'},h('button',{id:'first',onClick:()=>setNested(true)},'Nested'),h('button',{id:'dismiss',onClick:()=>setOpen(false)},'Close panel'),h('button',{id:'menu-open',onClick:()=>setMenu(true)},'Menu'),menu&&h('div',{role:'menu',id:'menu'},h('button',{},'Option')),h('button',{id:'crash',onClick:()=>setCrashed(true)},'Crash'),h('button',{id:'last'},'Last'),h(Modal,{open:nested,onClose:()=>setNested(false),title:'Nested'},h('button',{id:'nested'},'Inner'))))}}}})`
 const browser = await chromium.launch()
 try {
   const page = await browser.newPage()
@@ -49,10 +49,20 @@ try {
   await frame.locator('#dismiss').click()
   await page.waitForFunction(() => window.events.includes('dismissed'))
   assert.equal(await page.evaluate(() => window.events.filter(e => e === 'close').length), 1)
+  await page.reload()
+  await page.evaluate(() => window.connect())
+  await page.waitForFunction(() => window.events.includes('ready'))
+  await frame.locator('#crash').click()
+  await page.waitForFunction(() => window.events.includes('failed'))
+  await frame.locator('[data-testid=billing-dashboard]').waitFor({ state: 'detached' })
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => resolve())))
+  const crashEvents = await page.evaluate(() => window.events)
+  assert.equal(crashEvents.includes('dismissed'), false, '渲染崩溃不得报告为主动关闭')
+  assert.equal(crashEvents.at(-1), 'failed')
   missing = true
   await page.reload()
   await page.evaluate(() => window.connect())
   await page.waitForFunction(() => window.events.includes('failed'), { timeout: 2000 })
   assert.equal(await page.evaluate(() => window.events.includes('ready')), false)
-  console.log('生产费用 iframe：握手后加载、资源404即时反馈、内层Escape、显式退出、面板关闭及Tab返回通过。')
+  console.log('生产费用 iframe：握手后加载、资源404即时反馈、内层Escape、显式退出、面板关闭、就绪后崩溃及Tab返回通过。')
 } finally { await browser.close() }
