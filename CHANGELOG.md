@@ -4,7 +4,7 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
-## Unreleased
+## 1.1.1 - 2026-09-09
 
 - Add Codex Pet below scheduled tasks in About, with version checks and installation/update actions.
 - Enlarge the welcome logo to 46px and the headline to 34px.
