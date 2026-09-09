@@ -17,6 +17,7 @@ export const MANAGED_DEPENDENCIES = [
   { id: 'archive', packageName: '@michengai/dsh-archive-manager' },
   { id: 'im', packageName: '@michengai/dsh-im-connect' },
   { id: 'schedule', packageName: '@michengai/dsh-automation' },
+  { id: 'pet', packageName: '@michengai/dsh-codex-pet' },
   { id: 'btw', packageName: '@michengai/dsh-btw' },
   { id: 'simplify', packageName: '@michengai/dsh-simplify' },
   { id: 'market', packageName: 'dshmarket' },

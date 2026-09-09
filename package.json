@@ -65,7 +65,8 @@
     "typecheck": "tsc --noEmit",
     "test": "pnpm run typecheck && vitest run && tsdown && node scripts/build-usage-frame.mjs && node tests/run-assertions.mjs && pnpm run test:layout",
     "test:host": "node scripts/verify-settings-exit.mjs",
-    "test:layout": "node scripts/verify-workspace-drop-layout.mjs --run && node scripts/verify-sidebar-transition.mjs && node scripts/verify-composer-style.mjs && node scripts/verify-new-conversation.mjs && node scripts/verify-composer-tools.mjs && node scripts/verify-hero-width.mjs && node scripts/verify-usage-runtime.mjs"
+    "test:settings-backdrop": "node scripts/verify-settings-backdrop.mjs",
+    "test:layout": "node scripts/verify-workspace-drop-layout.mjs --run && node scripts/verify-sidebar-transition.mjs && node scripts/verify-composer-style.mjs && node scripts/verify-new-conversation.mjs && node scripts/verify-composer-tools.mjs && node scripts/verify-hero-width.mjs && node scripts/verify-usage-runtime.mjs && node scripts/verify-settings-backdrop.mjs"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": ">=4.0.2 <5.0.0",

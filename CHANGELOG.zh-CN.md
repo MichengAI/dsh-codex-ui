@@ -4,6 +4,12 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 未发布
+
+- 关于页在定时任务下新增 Codex 宠物，支持版本检查、安装和更新。
+- 欢迎页 LOGO 放大至 46px，标题字号放大至 34px。
+- 修复 Desktop 透明设置页下会话列表文字重叠：隔离分支的后代同步隐藏，避免内部显式 `visibility:visible` 穿透；退出设置后恢复原有显示。
+
 ## suite-installer-v1.0.1 - 2026-09-09
 
 从官方 npm 解析并锁定以下成员版本：

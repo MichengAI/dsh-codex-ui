@@ -73,7 +73,8 @@ html[data-dsh-native-backdrop=mica] #root>[data-slot=root]>div>div:has(>[data-sl
 html[data-dsh-native-backdrop=mica] #root :is([class$="_centerCol"],[class$="_detailsCol"]){background:var(--dsw-alias-bg-base,#fff)}
 html[data-dsh-native-backdrop=mica] :is(.dcu-root,.dcu-settings-nav){background:rgba(255,255,255,.18)}
 html[data-dsh-native-backdrop=mica] body[data-ds-dark-theme] :is(.dcu-root,.dcu-settings-nav){background:rgba(20,23,22,.18)}
-html[data-dsh-native-backdrop=mica] .dcu-root:has(.dcu-settings-page) [inert]{visibility:hidden}
+/* 会话折叠容器显式设了 visible，必须同时隐藏隔离分支的后代，避免穿透透明设置页。 */
+html[data-dsh-native-backdrop=mica] .dcu-root:has(.dcu-settings-page) :is([inert],[inert] *){visibility:hidden!important}
 html[data-dsh-native-backdrop=mica] .dcu-settings-page,html[data-dsh-native-backdrop=mica] .dcu-root:has(.dcu-settings-page){background:transparent}
 
 .dcu-settings-inner:has(.dcu-usage-section){width:100%;height:100%;max-width:1280px;display:flex;flex-direction:column;padding-bottom:0}
