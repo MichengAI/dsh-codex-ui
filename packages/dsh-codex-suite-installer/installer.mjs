@@ -19,6 +19,7 @@ export const MEMBER_PACKAGES = [
   '@michengai/dsh-automation',
   '@michengai/dsh-btw',
   '@michengai/dsh-simplify',
+  '@michengai/dsh-codex-pet',
 ]
 
 export function memberSpecs(manifest = suiteManifest) {
