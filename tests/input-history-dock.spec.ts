@@ -43,7 +43,9 @@ function eventStore(initial: SessionEventWindow = { entries: [], revision: 0, ha
   }
 }
 
-test('独立挂载采集用户消息，命令成功后记录，失败不记录；切换与卸载释放绑定', async () => {
+test.each(['imageIds', 'attachmentIds'] as const)('%s：消息与命令历史、附件保护和卸载', async attachmentKey => {
+  const { imageIds: _images, ...base } = idle
+  const idleState = { ...base, [attachmentKey]: [] } as unknown as InputState
   const container = document.createElement('section')
   const slot = document.createElement('div')
   const editor = document.createElement('textarea')
@@ -52,13 +54,13 @@ test('独立挂载采集用户消息，命令成功后记录，失败不记录�
   const root = createRoot(slot)
   const history = new InputHistory()
   const seen = new WeakMap<object, number>()
-  const state = store(idle)
+  const state = store(idleState)
   const events = eventStore()
   const menu = store({ open: false })
   const binding = { ctx: {}, eventSource: events }
   const ctx = {
     sessions: { binding: () => binding, list: { getSnapshot: () => ({ byId: { a: { cwd: '项目一' }, b: { cwd: '项目二' } } }) } },
-    conversation: { input: { for: () => ({ state, setDraft(text: string) { editor.value = text; state.set({ ...idle, draft: text }) } }) } },
+    conversation: { input: { for: () => ({ state, setDraft(text: string) { editor.value = text; state.set({ ...idleState, draft: text }) } }) } },
     inputTriggers: { sessionOf: () => ({ menu }) },
   }
   const render = async (id: string) => act(async () => {
@@ -73,25 +75,25 @@ test('独立挂载采集用户消息，命令成功后记录，失败不记录�
     await render('a')
     events.append(userEvent(1, '普通消息'), { type: 'event', event: { seq: 2, type: 'user/message', data: { source: { kind: 'system' }, content: [{ type: 'text', text: '系统内容' }] } } } as SessionLiveEventEntry)
     expect(history.list('项目一')).toEqual(['普通消息'])
-    state.set({ ...idle, phase: 'submitting', draft: '/btw 旁问', claim: { token: '/btw' } })
-    state.set(idle)
+    state.set({ ...idleState, phase: 'submitting', draft: '/btw 旁问', claim: { token: '/btw' } })
+    state.set(idleState)
     expect(history.list('项目一')).toEqual(['普通消息', '/btw 旁问'])
-    state.set({ ...idle, phase: 'submitting', draft: '/失败' })
-    state.set({ ...idle, phase: 'claimed', draft: '/失败' })
-    state.set(idle)
+    state.set({ ...idleState, phase: 'submitting', draft: '/失败' })
+    state.set({ ...idleState, phase: 'claimed', draft: '/失败' })
+    state.set(idleState)
     expect(history.list('项目一')).not.toContain('/失败')
     expect(press()).toBe(true)
     expect(editor.value).toBe('/btw 旁问')
     for (const guard of [
-      { ...idle, phase: 'submitting' as const },
-      { ...idle, phase: 'adjudicating' as const },
-      { ...idle, imageIds: ['image'] as never },
-      { ...idle, occurrences: [{}] as never },
+      { ...idleState, phase: 'submitting' as const },
+      { ...idleState, phase: 'adjudicating' as const },
+      { ...idleState, [attachmentKey]: ['file:1'] as never },
+      { ...idleState, occurrences: [{}] as never },
     ]) {
       state.set(guard)
       expect(press()).toBe(false)
     }
-    state.set(idle)
+    state.set(idleState)
     menu.set({ open: true })
     expect(press()).toBe(false)
     menu.set({ open: false })
@@ -102,14 +104,14 @@ test('独立挂载采集用户消息，命令成功后记录，失败不记录�
     history.add('项目二', '另一个项目')
     expect(press()).toBe(true)
     expect(editor.value).toBe('另一个项目')
-    state.set(idle)
+    state.set(idleState)
     await render('a')
     expect(press()).toBe(true)
     expect(editor.value).toBe('/btw 旁问')
   } finally { await act(async () => root.unmount()) }
   expect(state.listeners.size).toBe(0)
   expect(events.listeners.size).toBe(0)
-  state.set(idle)
+  state.set(idleState)
   expect(press()).toBe(false)
 })
 

@@ -16,6 +16,8 @@ header:has([data-dcu-inline-tabs]) [class*="crumbs"]{order:1;flex:1;min-width:0}
 header:has([data-dcu-inline-tabs]) [class*="headerActions"]{order:2;flex:none}
 header [data-dcu-inline-tabs]{box-sizing:border-box;order:3;flex:none;display:flex;align-items:center;gap:0;margin:0;padding:0;height:28px;position:relative;z-index:1;overflow:hidden;border:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.12));border-radius:8px;background:var(--dsw-alias-background-secondary,rgba(255,255,255,.025))}
 header:has([data-dcu-inline-tabs]) [class*="headerUtilities"]{order:4;flex:none}
+/* 新版角落插槽被 display:contents 摊平后，需要独立排序并撤销嵌套布局的边距补偿。 */
+header:has([data-dcu-inline-tabs]) [data-conversation-header-corner]{order:5;flex:none;margin-left:0;margin-right:0}
 header [data-dcu-tab-slider]{position:absolute;left:0;top:0;height:26px;border-radius:7px;background:color-mix(in srgb,var(--dsw-alias-button-info-fill,#4c8dff) 18%,transparent);pointer-events:none;z-index:0;opacity:0;transform:translateX(0);width:0;transition:transform 240ms cubic-bezier(.16,1,.3,1),width 240ms cubic-bezier(.16,1,.3,1),opacity 160ms ease}
 /* 顶栏统一使用 34px 控件带：与宿主扩展常用的 top:3px + 28px 图标按钮同心。
    better-sidebar 0.18.0 收起时会把开关组改到 14px（按官方 padding-top:12px 算），

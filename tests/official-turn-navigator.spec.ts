@@ -31,8 +31,8 @@ test('实际官方导航不依赖宿主层级也能获得稳定标记', () => {
 
   expect(markOfficialTurnNavigators(document)).toBe(1)
   expect(nav.dataset.dcuOfficialTurnNavigator).toBe('true')
-  expect(nav.querySelector('button')?.dataset.dcuOfficialTurnMark).toBe('true')
-  expect(nav.querySelector('[role="tooltip"]')?.getAttribute('data-dcu-official-turn-tooltip')).toBe('true')
+  expect(nav.querySelector('button')?.dataset.dcuOfficialTurnMark).toBeUndefined()
+  expect(nav.querySelector('[role="tooltip"]')?.getAttribute('data-dcu-official-turn-tooltip')).toBeNull()
 })
 
 test('普通导航不会被误认为官方轮次导航', () => {

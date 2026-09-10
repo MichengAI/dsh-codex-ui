@@ -11,6 +11,13 @@ try {
   await page.goto(url.href)
   const trigger = page.locator('[data-dcu-settings-trigger]')
   await trigger.waitFor({ timeout: 30000 })
+  for (let i = 0; i < 3; i++) {
+    for (const name of ['继续', '稍后配置']) {
+      const button = page.getByRole('button', { name, exact: true })
+      if (await button.isVisible()) await button.click()
+    }
+    await page.waitForTimeout(200)
+  }
   await trigger.click()
   await page.locator('[data-dcu-settings-page]').waitFor()
   for (const mode of ['back', 'escape', 'early']) {

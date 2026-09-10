@@ -5,6 +5,7 @@ import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots
 import type {} from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { InputHistory } from './input-history.ts'
+import { hasDraftAttachments } from './draft-attachments.ts'
 import { bindHistoryKeys, findComposer } from './input-history-keyboard.ts'
 import { NS } from './locales.ts'
 
@@ -63,7 +64,7 @@ export function InputHistoryDock({ ctx, sessionId, history, seen }: HistoryDockP
       const next = input.state.getSnapshot()
       // 宿主成功提交命令后才清空草稿并回到 plain；失败保留 claimed 和原文。
       if (previous.phase === 'submitting' && next.phase === 'plain' && next.draft === ''
-        && previous.imageIds.length === 0 && previous.occurrences.length === 0) {
+        && !hasDraftAttachments(previous) && previous.occurrences.length === 0) {
         history.add(scope, previous.draft)
       }
       previous = next
@@ -83,7 +84,7 @@ export function InputHistoryDock({ ctx, sessionId, history, seen }: HistoryDockP
         blocked: () => {
           const state = input.state.getSnapshot()
           return state.phase === 'adjudicating' || state.phase === 'submitting'
-            || state.imageIds.length > 0 || state.occurrences.length > 0 || menu.getSnapshot().open
+            || hasDraftAttachments(state) || state.occurrences.length > 0 || menu.getSnapshot().open
         },
       })
     }

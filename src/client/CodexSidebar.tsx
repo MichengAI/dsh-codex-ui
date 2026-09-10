@@ -1,3 +1,4 @@
+import { GlobalPanelButtons, type GlobalPanelSource } from './global-panels.tsx'
 import { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react'
 import {
   BrandWordmark, IconChevronRightOutline14, IconEnhanceOutline16,
@@ -58,16 +59,25 @@ type CodexSidebarInjected = {
   renameSession: (sessionId: SessionId, title: string) => Promise<void>
   openPath: (path: string) => Promise<void> | void
   useSessionPendingInteraction?: UseSessionPendingInteraction
+  globalPanels?: GlobalPanelSource
+  selectPanel?: (id: string | null) => void
+  usePanelInfo?: <T>(selector: (info: { activePanelId: string | null }) => T) => T
   companionSlots?: CompanionTabSource
 }
 
 export type CodexSidebarProps =
-  PropsRuntime<'sidebar'>
-  & PropsRenderSlots<'sidebar.workspaces' | 'sidebar.settings' | 'sidebar.footer.action' | 'sidebar.channels' | 'sidebar.schedule'>
+  Omit<PropsRuntime<'sidebar'>, 'usePanelInfo'>
+  & PropsRenderSlots<'sidebar.panellist' | 'sidebar.workspaces' | 'sidebar.settings' | 'sidebar.footer.action' | 'sidebar.channels' | 'sidebar.schedule'>
   & PropsLocale<typeof NS>
   & CodexSidebarInjected
 
+const emptyPanels: readonly import('./global-panels.tsx').GlobalPanel[] = []
+const getEmptyPanels = () => emptyPanels
+const useLegacyPanelInfo = <T,>(selector: (info: { activePanelId: string | null }) => T): T => selector({ activePanelId: null })
+
 const stylesheet = `
+.dcu-global-panel[aria-current=page]{background:var(--dcu-sidebar-hover);font-weight:600}
+
 .dcu-root{--dcu-font:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei UI",sans-serif;--dcu-sidebar-background:#eef7f5;--dcu-sidebar-primary:#393d3e;--dcu-sidebar-secondary:#676b6c;--dcu-sidebar-tertiary:#9a9f9f;--dcu-sidebar-navigation:#4e5253;--dcu-sidebar-icon:#4e5253;--dcu-sidebar-hover:#dfe8e5;--dcu-sidebar-border:rgba(37,46,41,.10);--dcu-tip-bg:#ffffff;--dcu-tip-shadow:0 10px 32px rgba(31,39,36,.22);width:100%;height:100%;min-width:0;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;background:var(--dcu-sidebar-background);color:var(--dcu-sidebar-primary);font:14px/20px var(--dcu-font)}body[data-ds-dark-theme] .dcu-root{--dcu-sidebar-background:#1d2120;--dcu-sidebar-primary:#b9bab9;--dcu-sidebar-secondary:#909191;--dcu-sidebar-tertiary:#666867;--dcu-sidebar-navigation:#b9bab9;--dcu-sidebar-icon:#afafaf;--dcu-sidebar-hover:#303432;--dcu-sidebar-border:rgba(255,255,255,.08);--dcu-tip-bg:#2a2a2a;--dcu-tip-shadow:0 10px 30px rgba(0,0,0,.28)}
 /* 滤镜只作用于背景，避免为设置和搜索等 fixed 后代创建侧栏包含块。 */
 body[data-we-sidebar-glass] .dcu-root{position:relative;background:transparent}body[data-we-sidebar-glass] .dcu-root::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background-color:color-mix(in srgb,var(--we-sidebar-color,#fff) calc(var(--we-sidebar-alpha,.15)*.66*100%),transparent);background-image:linear-gradient(180deg,rgba(255,255,255,calc(var(--we-sidebar-sheen,1)*.14)),rgba(255,255,255,calc(var(--we-sidebar-sheen,1)*.04)) 38%,rgba(255,255,255,calc(var(--we-sidebar-sheen,1)*.01)));-webkit-backdrop-filter:blur(var(--we-sidebar-blur,16px)) saturate(var(--we-sidebar-saturate,1.8)) brightness(var(--we-glass-brightness,1.04)) contrast(1.01);backdrop-filter:blur(var(--we-sidebar-blur,16px)) saturate(var(--we-sidebar-saturate,1.8)) brightness(var(--we-glass-brightness,1.04)) contrast(1.01);box-shadow:inset 0 1px 0 rgba(255,255,255,calc(var(--we-sidebar-sheen,1)*.32)),inset 0 -1px 0 rgba(255,255,255,calc(var(--we-sidebar-sheen,1)*.08)),inset 0 0 0 .5px rgba(255,255,255,calc(var(--we-sidebar-sheen,1)*.06))}body[data-ds-dark-theme][data-we-sidebar-glass] .dcu-root::before{background-color:color-mix(in srgb,var(--we-sidebar-color,#fff) calc(var(--we-sidebar-alpha,.15)*.33*100%),transparent)}body[data-we-appwindow][data-we-sidebar-glass] .dcu-root::before{-webkit-backdrop-filter:none;backdrop-filter:none}@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){body[data-we-sidebar-glass] .dcu-root{background:#eef7f5}body[data-ds-dark-theme][data-we-sidebar-glass] .dcu-root{background:#1d2120}body[data-we-sidebar-glass] .dcu-root::before{display:none}}
@@ -119,6 +129,8 @@ body[data-we-sidebar-glass] .dcu-expanded-shell,body[data-we-sidebar-glass] .dcu
 [data-conversation-scroll]{--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:24px;--dcu-composer-bg:var(--dsw-specific-input-major,#fff);--dcu-composer-shadow:0 0 0 1px #0000000a,0 2px 8px #0000000a,0 4px 80px 8px #00000006}
 body[data-ds-dark-theme] [data-conversation-scroll]{--dcu-composer-bg:var(--dsw-alias-bg-layer-2,#242424);--dcu-composer-shadow:inset 0 0 1px #fff3}
 [data-conversation-scroll] [data-composer-card]{padding-top:8px;gap:4px;border:0;border-radius:20px;background:var(--dcu-composer-bg);box-shadow:var(--dcu-composer-shadow)}
+/* 官方附件轨道用 -6px 抵消 12px 行间距；本皮肤为 4px，改为 +2px 保留附件到正文的 6px。 */
+[data-conversation-scroll] [data-composer-card]>:is([class$="_rail"],[class*="_rail_"]){margin-bottom:2px}
 [data-conversation-scroll] [data-input-mirror]{min-height:44px}
 [data-conversation-scroll] [data-composer-card] [data-input-scroll]{margin-right:0}
 [data-conversation-scroll] [data-input-scroll] [data-lexical-editor=true]{min-height:44px;padding:0 12px}
@@ -135,9 +147,8 @@ body[data-ds-dark-theme] [data-conversation-scroll]{--dcu-composer-bg:var(--dsw-
 @media(forced-colors:active){[data-conversation-scroll] [data-composer-card]{outline:1px solid CanvasText}}
 html[data-dcu-official-turn-navigator-supported=true] .dcu-turn-navigator,html:has([data-dcu-official-turn-navigator]) .dcu-turn-navigator{display:none}
 [data-dcu-official-turn-navigator]{right:auto!important;left:calc(12px - (var(--dsh-composer-side-clearance) + 16px))!important}
-[data-dcu-official-turn-mark]{inset:0 auto 0 0!important}
-[data-dcu-official-turn-mark]:before{right:auto!important;left:0!important}
-[data-dcu-official-turn-tooltip]{right:auto!important;left:calc(100% + 10px)!important;animation:none!important}
+/* 左移后的预览朝聊天内容区展开，外观和动画继续使用宿主规则。 */
+[data-dcu-official-turn-navigator] [role=tooltip]{right:auto!important;left:calc(100% + 10px)!important}
 `
 
 function MenuIcon({ children }: { children: ReactNode }) { return <span className="dcu-menu-icon">{children}</span> }
@@ -240,7 +251,10 @@ const SidebarSearch = forwardRef<SidebarSearchHandle, SidebarSearchProps>(functi
 })
 
 /** Codex 风格的 DSH 侧栏，只替换导航外观，项目浏览和设置仍由 DSH 官方组件提供。 */
-export function CodexSidebar({ collapsed, width, openSession, startSession, toggleSidebar, archiveSession, deleteSession, forkSession, moveSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useSessionPendingInteraction, useWorkspaces, prefillNewConversation, newConversationDraft }: CodexSidebarProps) {
+export function CodexSidebar({ globalPanels, selectPanel, usePanelInfo = useLegacyPanelInfo, collapsed, width, openSession, startSession, toggleSidebar, archiveSession, deleteSession, forkSession, moveSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useSessionPendingInteraction, useWorkspaces, prefillNewConversation, newConversationDraft }: CodexSidebarProps) {
+  const panels = useSyncExternalStore(globalPanels?.subscribe ?? subscribeEmptyCompanionTabs, globalPanels?.getSnapshot ?? getEmptyPanels, globalPanels?.getSnapshot ?? getEmptyPanels)
+  const activePanelId = usePanelInfo(info => info.activePanelId)
+  const panelButtons = (wide: boolean) => selectPanel === undefined ? null : <GlobalPanelButtons panels={panels} activeId={activePanelId} wide={wide} conversationLabel={t('sidebar.tasksTab')} selectPanel={selectPanel} renderIcon={(id, active) => renderSlot('sidebar.panellist', { size: 16, active }, { only: id })} />
   const compact = collapsed || width < 80
   const [visualCompact, setVisualCompact] = useState(compact)
   const [collapsing, setCollapsing] = useState(false)
@@ -399,6 +413,7 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
     <div className="dcu-expanded-shell">
     <header className="dcu-head"><button type="button" className="dcu-brand" aria-label={t('sidebar.newTask')} onClick={() => { startSession() }}><BrandWordmark size={24} /></button><div className="dcu-head-actions"><button type="button" className="dcu-icon" aria-label={t('sidebar.collapse')} onClick={toggleSidebar}><IconPanelLeftOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.search')} onClick={() => { search.current?.open() }}><IconSearchOutline16 size={16} /></button></div></header>
     <nav className="dcu-menu" aria-label={t('sidebar.mainMenu')}>
+      {panelButtons(true)}
       <button type="button" onClick={() => { startSession() }}><MenuIcon><IconNewChatOutline16 size={16} /></MenuIcon>{t('sidebar.newTask')}</button>
       <div className="dcu-extensions-group">
         <button type="button" className="dcu-extensions-toggle" aria-expanded={extensionsOpen} aria-controls="dcu-extension-items" onClick={() => { setExtensionsOpen(open => { const next = !open; writeExtensionsOpen(next); return next }) }}><MenuIcon><span className="dcu-extension-leading"><IconEnhanceOutline16 className="dcu-extension-default-icon" size={16} /><IconChevronRightOutline14 className="dcu-extension-state-arrow" /></span></MenuIcon>{t('sidebar.extensions')}</button>
@@ -422,7 +437,7 @@ export function CodexSidebar({ collapsed, width, openSession, startSession, togg
           : <div className="dcu-native-workspaces">{workspaceSlot}</div>}
     </div>
     </div>
-    <div className="dcu-compact-shell"><button type="button" className="dcu-icon" aria-label={t('sidebar.expand')} onClick={toggleSidebar}><IconPanelLeftOutline16 size={16} /></button><nav className="dcu-compact-nav" aria-label={t('sidebar.mainMenu')}><button type="button" className="dcu-icon" aria-label={t('sidebar.newTask')} onClick={() => { startSession() }}><IconNewChatOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.search')} onClick={() => { search.current?.open() }}><IconSearchOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.experts')} onClick={() => { selectExternalSection(t('sidebar.experts')) }}><IconUserOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.skills')} onClick={() => { selectExternalSection(t('sidebar.skills')) }}><IconSkillOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.plugins')} onClick={() => { selectPluginSection() }}><IconPersonalizationOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.connectors')} onClick={() => { selectSection(t('sidebar.connectors')) }}><IconLinkOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.schedule')} onClick={() => { selectExternalSection(t('sidebar.schedule')) }}><ScheduleIcon /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.assistant')} onClick={openImSettings}><ImAssistantIcon /></button></nav></div>
+    <div className="dcu-compact-shell"><button type="button" className="dcu-icon" aria-label={t('sidebar.expand')} onClick={toggleSidebar}><IconPanelLeftOutline16 size={16} /></button><nav className="dcu-compact-nav" aria-label={t('sidebar.mainMenu')}>{panelButtons(false)}<button type="button" className="dcu-icon" aria-label={t('sidebar.newTask')} onClick={() => { startSession() }}><IconNewChatOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.search')} onClick={() => { search.current?.open() }}><IconSearchOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.experts')} onClick={() => { selectExternalSection(t('sidebar.experts')) }}><IconUserOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.skills')} onClick={() => { selectExternalSection(t('sidebar.skills')) }}><IconSkillOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.plugins')} onClick={() => { selectPluginSection() }}><IconPersonalizationOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.connectors')} onClick={() => { selectSection(t('sidebar.connectors')) }}><IconLinkOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.schedule')} onClick={() => { selectExternalSection(t('sidebar.schedule')) }}><ScheduleIcon /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.assistant')} onClick={openImSettings}><ImAssistantIcon /></button></nav></div>
     <footer className="dcu-foot"><div className="dcu-footer-actions">{renderSlot('sidebar.footer.action', { wide: !visualCompact })}</div><div ref={settingsSeat} className="dcu-settings-seat">{renderSlot('sidebar.settings', { wide: !visualCompact })}</div></footer>
     <SidebarSearch ref={search} imSettingsAvailable={showChannels} settingsSeat={settingsSeat} openSession={openSession} startSession={startSession} t={t} useSessions={useSessions} useWorkspaces={useWorkspaces} />
   </aside>

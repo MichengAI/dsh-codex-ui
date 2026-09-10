@@ -22,6 +22,18 @@ test('任务建议只写空白草稿，保留原文、附件、提及和提交�
   expect(setDraft).toHaveBeenCalledExactlyOnceWith('建议')
 })
 
+test('新版附件状态支持空白预填，并保护图片和普通文件', () => {
+  const setDraft = vi.fn()
+  const state = { phase: 'plain', draft: '', attachmentIds: [] as string[], occurrences: [] }
+  const input = { state: { getSnapshot: () => state }, setDraft }
+  expect(prefillNewConversation(input, '建议')).toBe('ready')
+  for (const id of ['image:1', 'file:1']) {
+    state.attachmentIds = [id]
+    expect(prefillNewConversation(input, '不能覆盖')).toBe('draft')
+  }
+  expect(setDraft).toHaveBeenCalledExactlyOnceWith('建议')
+})
+
 test('中部任务入口展开后才填入建议，离开首页和卸载不残留 portal', async () => {
   document.body.innerHTML = '<div id="mount"></div><main data-phase="hero"><div class="host_composerHero"><div><div class="host_stack"><span>原标志和文案</span></div></div></div></main>'
   const main = document.querySelector('main')!

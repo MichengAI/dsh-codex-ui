@@ -1,3 +1,5 @@
+import { openConversation } from './session-navigation.ts'
+import { createGlobalPanelSource } from './global-panels.tsx'
 import { initializeComposerWidth, observeHeroWidthHandles } from './composer-width.ts'
 import { browserStorage } from './tree-expansion.ts'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
@@ -10,6 +12,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-chat/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
@@ -23,8 +26,6 @@ import { openPathInHost, type HostOpenPathConnection } from './host-open-path.ts
 import { observeSettingsNavIcons } from './settings-nav-icons.ts'
 import { registerUsageStatistics } from './usage-statistics.ts'
 import { registerSettingsPage } from './settings-page-registration.ts'
-import { observePermissionLabels } from './permission-labels.ts'
-import { observeHostCopy } from './host-copy.ts'
 import { observeSlimSidebar } from './sidebar-width.ts'
 import { observeConversationHeader } from './conversation-header.ts'
 import { observeOfficialTurnNavigators } from './official-turn-navigator.ts'
@@ -131,9 +132,7 @@ export function apply(ctx: ClientContext): void {
   const openPath = (path: string): Promise<void> => openPathInHost(connection, path)
   ctx.effect(() => observeSlimSidebar(), 'michengai-codex-ui: slim sidebar')
   ctx.effect(() => observeSettingsNavIcons(), 'michengai-codex-ui: settings nav icons')
-  ctx.effect(() => observePermissionLabels(ctx.locale), 'michengai-codex-ui: permission labels')
   ctx.effect(() => observeComposerToolMenus({ search: t('home.projectSearch'), empty: t('home.projectEmpty') }), 'michengai-codex-ui: composer tool menus')
-  ctx.effect(() => observeHostCopy(ctx.locale, t), 'michengai-codex-ui: host copy')
   ctx.effect(() => observeConversationHeader(), 'michengai-codex-ui: conversation header')
   ctx.effect(() => observeOfficialTurnNavigators(), 'michengai-codex-ui: official turn navigator')
   const newConversationDraft = createDraftPresenceSource(ctx.sessions.list, () => {
@@ -142,11 +141,13 @@ export function apply(ctx: ClientContext): void {
     return binding === undefined ? undefined : ctx.conversation.input.for(binding.ctx).state
   })
   const companionSlots = createCompanionTabSource(ctx.slots)
+  const globalPanels = createGlobalPanelSource(ctx.slots, ctx.locale)
   ctx.slots.inject('sidebar', () => ctx.slots.register({
     name: 'sidebar',
     registrant: 'michengai-codex-ui',
     locale: NS,
     children: {
+      'sidebar.panellist': { kind: 'list', scope: 'root' },
       'sidebar.workspaces': { kind: 'single', scope: 'root' },
       'sidebar.settings': { kind: 'single', scope: 'root' },
       'sidebar.footer.action': { kind: 'list', scope: 'root' },
@@ -160,7 +161,7 @@ export function apply(ctx: ClientContext): void {
         const binding = id === undefined ? undefined : ctx.sessions.binding(id)
         return prefillNewConversation(binding === undefined ? undefined : ctx.conversation.input.for(binding.ctx), text)
       },
-      openSession: (sessionId: SessionId) => { ctx.sessions.open(sessionId) },
+      openSession: (sessionId: SessionId) => { openConversation(ctx.sessions, ctx.layout, sessionId) },
       startSession: (workspaceId?: WorkspaceId) => { startWorkspaceSession(ctx, workspaceId) },
       toggleSidebar: () => { ctx.layout.toggleSidebar() },
       archiveSession,
@@ -170,6 +171,11 @@ export function apply(ctx: ClientContext): void {
       renameSession,
       openPath,
       companionSlots,
+      globalPanels,
+      selectPanel: (id: string | null) => {
+        const layout = ctx.layout as typeof ctx.layout & { selectPanel?: (id: string | null) => void }
+        layout.selectPanel?.(id)
+      },
     }),
   }, CodexSidebar))
 
@@ -180,7 +186,7 @@ export function apply(ctx: ClientContext): void {
   const forkSession = async (sessionId: SessionId): Promise<void> => {
     await runHostAction('fork', async () => {
       const childId = await ctx.sessions.fork({ sessionId, increaseTitle: true })
-      ctx.sessions.open(childId)
+      openConversation(ctx.sessions, ctx.layout, childId)
     })
   }
   const renameSession = async (sessionId: SessionId, title: string): Promise<void> => {
@@ -237,7 +243,7 @@ export function apply(ctx: ClientContext): void {
     const binding = ctx.sessions.binding(sessionId)
     if (binding === undefined) throw new UserFacingError(t('connectors.sessionPending'))
     conversation.input.for(binding.ctx).setDraft(prompt)
-    ctx.sessions.open(sessionId)
+    openConversation(ctx.sessions, ctx.layout, sessionId)
   }
   ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({
     name: 'sidebar.workspaces', priority: -1, locale: NS,
@@ -248,7 +254,7 @@ export function apply(ctx: ClientContext): void {
       forkSession,
       moveSession,
       openPath,
-      openSession: (sessionId: SessionId) => { ctx.sessions.open(sessionId) },
+      openSession: (sessionId: SessionId) => { openConversation(ctx.sessions, ctx.layout, sessionId) },
       renameSession,
       renameWorkspace: (workspaceId: WorkspaceId, title: string) => ctx.workspaces.rename(workspaceId, title),
       insertWorkspaceBefore: (workspaceId: WorkspaceId, beforeWorkspaceId?: WorkspaceId) => ctx.workspaces.insertBefore(workspaceId, beforeWorkspaceId),
@@ -265,7 +271,7 @@ export function apply(ctx: ClientContext): void {
     const openDeepLink = (): void => {
       if (opened || ctx.sessions.list.getSnapshot().byId[sessionId] === undefined) return
       opened = true
-      ctx.sessions.open(sessionId)
+      openConversation(ctx.sessions, ctx.layout, sessionId)
     }
     openDeepLink()
     return ctx.sessions.list.subscribe(openDeepLink)

@@ -5,9 +5,12 @@ const MENU = '[role="menu"],[role="listbox"]'
 export const COMPOSER_TOOL_MENU_STYLE = `
 [class*="_heroWorkspaceRow"] button{min-height:28px;border-radius:999px;font-size:13px;line-height:20px}
 [class*="_heroWorkspaceRow"] button:hover,[class*="_heroWorkspaceRow"] button[aria-expanded=true]{background:color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent)}
-:is([data-dcu-tool-menu],[class*="_heroWorkspaceRow"] [data-gitgraph-popover]){box-sizing:border-box;min-width:0!important;width:262px;max-width:calc(100vw - 24px);max-height:var(--dcu-tool-menu-height,360px)!important;padding:5px!important;border-radius:18px!important;background:#fff!important;color:var(--dsw-alias-label-primary);box-shadow:0 8px 32px #0002,0 0 0 1px #0000000a!important;display:flex;flex-direction:column;gap:0;z-index:1100}
+:is([data-dcu-tool-menu],[class*="_heroWorkspaceRow"] [data-gitgraph-popover]){box-sizing:border-box;max-height:var(--dcu-tool-menu-height,360px)!important;padding:5px!important;border-radius:18px!important;background:#fff!important;color:var(--dsw-alias-label-primary);box-shadow:0 8px 32px #0002,0 0 0 1px #0000000a!important;display:flex;flex-direction:column;gap:0;z-index:1100}
+/* 原生菜单保留宿主宽度约束；Git 弹窗沿用独立尺寸，避免观察器标记前后跳变。 */
+:is([data-dcu-tool-menu],[class*="_heroWorkspaceRow"] [data-gitgraph-popover])[data-gitgraph-popover]{min-width:0!important;width:262px;max-width:calc(100vw - 24px)}
+:is([data-dcu-tool-menu=inline],[class*="_heroWorkspaceRow"] [data-gitgraph-popover]:not([data-dcu-tool-menu=portal]))[data-gitgraph-popover]{width:320px}
 [data-dcu-tool-menu=portal]{position:fixed!important;left:var(--dcu-tool-menu-x)!important;top:var(--dcu-tool-menu-y)!important;bottom:auto!important;right:auto!important}
-:is([data-dcu-tool-menu=inline],[class*="_heroWorkspaceRow"] [data-gitgraph-popover]:not([data-dcu-tool-menu=portal])){width:320px;translate:var(--dcu-tool-menu-shift,0px) 0}
+:is([data-dcu-tool-menu=inline],[class*="_heroWorkspaceRow"] [data-gitgraph-popover]:not([data-dcu-tool-menu=portal])){translate:var(--dcu-tool-menu-shift,0px) 0}
 [class*="_heroWorkspaceRow"] [data-gitgraph-popover]:not([data-dcu-tool-menu=portal]){top:auto!important;bottom:calc(100% + 4px)!important}
 body[data-ds-dark-theme] :is([data-dcu-tool-menu],[class*="_heroWorkspaceRow"] [data-gitgraph-popover]){background:#292929!important;box-shadow:0 8px 32px #0003,0 0 0 1px #ffffff08!important}
 :is([data-dcu-tool-menu],[class*="_heroWorkspaceRow"] [data-gitgraph-popover])>[class*="_viewport"]{min-height:0;max-height:none;overflow-y:auto;scrollbar-width:thin}
@@ -19,6 +22,12 @@ body[data-ds-dark-theme] :is([data-dcu-tool-menu],[class*="_heroWorkspaceRow"] [
 [data-dcu-tool-filter]:focus-visible{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--dsw-alias-label-primary) 20%,transparent)}
 [data-dcu-tool-empty]{padding:8px 10px;font-size:13px;color:var(--dsw-alias-label-secondary)}
 [data-dcu-tool-filtered]{display:none!important}
+/* 建议菜单单独换肤：外框跟随宿主输入区，保留宿主定位和动态高度，不给内部列表套固定宽度。 */
+[data-conversation-scroll] [data-trigger-menu]{box-sizing:border-box;left:0;right:0;width:auto;min-width:0;max-width:none;padding:5px;border-radius:18px;background:#fff;box-shadow:0 8px 32px #0002,0 0 0 1px #0000000a}
+body[data-ds-dark-theme] [data-conversation-scroll] [data-trigger-menu]{background:#292929;box-shadow:0 8px 32px #0003,0 0 0 1px #ffffff08}
+[data-conversation-scroll] [data-trigger-menu]>[role=listbox]{box-sizing:border-box;width:100%;min-width:0;align-self:stretch;scrollbar-width:thin}
+[data-conversation-scroll] [data-trigger-menu] [role=option]{box-sizing:border-box;width:100%;min-width:0;min-height:28px;padding:4px 9px;gap:8px;border-radius:8px;font-size:13px;line-height:20px}
+[data-conversation-scroll] [data-trigger-menu] [role=option][aria-selected=true]{background:color-mix(in srgb,var(--dsw-alias-label-primary) 10%,transparent)}
 `
 
 export function observeComposerToolMenus(copy: { search: string; empty: string }): () => void {
@@ -113,6 +122,8 @@ export function observeComposerToolMenus(copy: { search: string; empty: string }
     for (const [menu, dispose] of mounted) if (!menu.isConnected) { dispose(); mounted.delete(menu) }
     if (anchor === undefined || now() > pendingUntil) return
     for (const menu of document.querySelectorAll<HTMLElement>(MENU)) {
+      // @ 和指令建议的 listbox 是全宽外框内部的滚动区，不能套用工具弹窗的固定宽度。
+      if (menu.closest('[data-trigger-menu]') !== null) continue
       if (known.has(menu) || mounted.has(menu) || menu.parentElement?.closest(MENU) !== null) continue
       if (menu.getClientRects().length === 0) continue
       mount(menu, anchor)

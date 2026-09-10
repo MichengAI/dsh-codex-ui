@@ -48,10 +48,10 @@ test('流式回答变化只处理所属消息子树，不扫描整个文档', as
 
   const row = document.createElement('div')
   row.dataset.timeHoverRoot = ''
-  row.innerHTML = '<div><div class="new-user">新增问题</div></div>'
+  row.innerHTML = '<div><div class="new-user host_bubble" data-dcu-expandable-user-bubble>新增问题</div></div>'
   main.append(row)
   await settleFrames(frames)
-  expect(row.querySelector<HTMLElement>('.new-user')?.dataset.dcuExpandableUserBubble).toBe('')
+  expect(row.querySelector<HTMLElement>('.new-user')?.dataset.dcuExpandableUserBubble).toBeUndefined()
   expect(query).not.toHaveBeenCalled()
   expect(queryAll).not.toHaveBeenCalled()
   stop()

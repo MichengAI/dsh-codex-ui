@@ -22,6 +22,10 @@
 
 Working across several projects and conversations in DSH Web? DSH Codex UI helps you organize the sidebar, find tasks quickly, and jump back to earlier questions in long chats. It offers a Codex-style interface with light and dark themes.
 
+## Host compatibility
+
+The unreleased working tree supports DSH `0.1.5-rc.1` and `0.1.5-rc.2`, including attachment drafts, global panel navigation, and returning to conversations. Legacy draft handling is retained. Development dependencies provide the older regression baseline; both target versions are checked separately against their types and real hosts. The published npm 1.1.1 package does not include these changes.
+
 ## What you can do
 
 - **Organize projects and conversations**: expand or collapse projects, drag to reorder, pin frequently used projects, and see unread and running indicators.

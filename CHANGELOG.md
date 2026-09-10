@@ -4,6 +4,21 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## Unreleased
+
+- Move the native turn navigator to the left with previews opening toward the content on the right, preserving native marker styling, tooltip appearance, and animations.
+
+- Use native DSH translations for conversation display settings, permission names, and built-in command descriptions. Older hosts without translations retain their original English text without functional changes.
+
+- Restore native DSH long-message display in user bubbles by removing forced full expansion.
+
+- Keep the Codex appearance while restoring native DSH adaptive widths for project, model, and permission menus with varying label lengths. Keep @ and command suggestions aligned with the composer width without narrowing their inner list.
+
+- Preserve attachment-only message layouts, correct attachment-to-text spacing, and keep the right-sidebar toggle at the end of the header.
+
+- Support attachment drafts in DSH 0.1.5-rc.1 / rc.2, fixing suggestion prefill and input-history errors while preserving existing images and files.
+- Restore global panel navigation with compact sidebar support, selection feedback, and return to the current conversation; opening a conversation from the sidebar exits the active panel.
+
 ## suite-installer-v1.0.3 - 2026-09-09
 
 Resolved and pinned the following member versions from the official npm registry:

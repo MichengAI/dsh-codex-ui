@@ -45,8 +45,6 @@ assert.match(sidebar, /html\[data-dcu-official-turn-navigator-supported=true\] \
 assert.match(sidebar, /html:has\(\[data-dcu-official-turn-navigator\]\) \.dcu-turn-navigator/, '检测到实际官方导航时也必须隐藏旧版自定义刻度')
 assert.match(sidebar, /\[data-dcu-official-turn-navigator\]\{right:auto!important;left:calc\(12px - \(var\(--dsh-composer-side-clearance\) \+ 16px\)\)!important\}/, '官方轮次导航必须通过自有稳定标记镜像到会话左侧')
 assert.doesNotMatch(sidebar, /\[data-dcu-official-turn-navigator\]>div:first-child/, '镜像样式不得依赖官方导航内部 div 层级')
-assert.match(sidebar, /\[data-dcu-official-turn-mark\]\{inset:0 auto 0 0!important\}/, '官方刻度按钮必须通过自有部件标记左对齐')
-assert.match(sidebar, /\[data-dcu-official-turn-tooltip\]\{right:auto!important;left:calc\(100% \+ 10px\)!important/, '左侧官方导航的预览气泡必须通过自有部件标记向右展开')
 assert.match(sidebar, /--dsh-composer-side-clearance:24px/, 'Codex 输入区视觉间距必须保留，且不作为官方导航识别条件')
 assert.doesNotMatch(navigator, /--dcu-turn-right/, '轮次刻度不得再放到会话右侧')
 assert.match(navigator, /width:max-content/, '悬停气泡必须贴合文字宽度')

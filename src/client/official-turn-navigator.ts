@@ -13,15 +13,6 @@ function isOfficialTurnNavigator(element: Element): element is HTMLElement {
     && element.querySelector('button[type="button"][aria-label]') !== null
 }
 
-function markOfficialTurnNavigatorParts(navigator: HTMLElement): void {
-  for (const button of navigator.querySelectorAll('button[type="button"][aria-label]')) {
-    button.setAttribute(OFFICIAL_TURN_MARK_ATTRIBUTE, 'true')
-  }
-  for (const tooltip of navigator.querySelectorAll('[role="tooltip"]')) {
-    tooltip.setAttribute(OFFICIAL_TURN_TOOLTIP_ATTRIBUTE, 'true')
-  }
-}
-
 /** 标记实际挂载的官方轮次导航，避免依赖宿主样式文件名或会话 DOM 层级。 */
 export function markOfficialTurnNavigators(root: ParentNode = document): number {
   for (const element of root.querySelectorAll(`[${OFFICIAL_TURN_NAVIGATOR_ATTRIBUTE}]`)) {
@@ -35,7 +26,6 @@ export function markOfficialTurnNavigators(root: ParentNode = document): number 
   for (const element of root.querySelectorAll('nav')) {
     if (!isOfficialTurnNavigator(element)) continue
     element.setAttribute(OFFICIAL_TURN_NAVIGATOR_ATTRIBUTE, 'true')
-    markOfficialTurnNavigatorParts(element)
   }
   return root.querySelectorAll(`[${OFFICIAL_TURN_NAVIGATOR_ATTRIBUTE}]`).length
 }
