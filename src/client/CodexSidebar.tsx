@@ -130,7 +130,7 @@ body[data-we-sidebar-glass] .dcu-expanded-shell,body[data-we-sidebar-glass] .dcu
 body[data-ds-dark-theme] [data-conversation-scroll]{--dcu-composer-bg:var(--dsw-alias-bg-layer-2,#242424);--dcu-composer-shadow:inset 0 0 1px #fff3}
 [data-conversation-scroll] [data-composer-card]{padding-top:8px;gap:4px;border:0;border-radius:20px;background:var(--dcu-composer-bg);box-shadow:var(--dcu-composer-shadow)}
 /* 官方附件轨道用 -6px 抵消 12px 行间距；本皮肤为 4px，改为 +2px 保留附件到正文的 6px。 */
-[data-conversation-scroll] [data-composer-card]>[data-slot="conversation.input.attachments"] :is([class$="_rail"],[class*="_rail_"]){margin-bottom:2px}
+[data-conversation-scroll] [data-composer-card]>[data-slot="conversation.input.attachments"]>:is([class$="_rail"],[class*="_rail_"]){margin-bottom:2px}
 [data-conversation-scroll] [data-input-mirror]{min-height:44px}
 [data-conversation-scroll] [data-composer-card] [data-input-scroll]{margin-right:0}
 [data-conversation-scroll] [data-input-scroll] [data-lexical-editor=true]{min-height:44px;padding:0 12px}

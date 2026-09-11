@@ -31,10 +31,11 @@ try {
     await page.setViewportSize({ width, height: 900 })
     await page.setContent(`<style>
       .card{display:flex;flex-direction:column;gap:12px}.abc_rail{padding:2px 10px 0;margin-bottom:-6px}
+      .inner_root{position:relative;min-width:0}.inner_rail{display:flex;overflow:auto hidden;gap:10px}.thumbnail{display:block;height:64px;width:64px}
       [data-message-attachments]{display:flex;flex-wrap:wrap;gap:8px}
       header,.titleRow,.titleCluster{display:flex}.headerCorner{margin-left:8px;margin-right:-16px}
       ${skin}${header}
-      </style><section data-conversation-scroll><div class="card" data-composer-card><div data-slot="conversation.input.attachments" style="display:contents"><div class="abc_rail"><div style="height:64px">附件</div></div></div><div data-input-scroll style="height:44px">正文</div><div><button>发送</button></div></div></section>
+      </style><section data-conversation-scroll><div class="card" data-composer-card><div data-slot="conversation.input.attachments" style="display:contents"><div class="abc_rail"><div class="inner_root"><div class="inner_rail"><div class="thumbnail">附件</div></div></div></div></div><div data-input-scroll style="height:44px">正文</div><div><button>发送</button></div></div></section>
       <header><div class="titleRow"><div class="titleCluster"><div class="crumbs">项目</div><div class="headerActions">操作</div></div><div class="headerUtilities">工具</div><div class="headerCorner" data-conversation-header-corner>右栏</div></div><div data-dcu-inline-tabs role="tablist"><button role="tab">对话</button></div></header>
       <div data-time-hover-root><div><div data-message-attachments data-dcu-expandable-user-bubble><span>文件一</span><span>文件二</span></div></div></div>
       <div data-time-hover-root><div><div data-message-attachments>附件</div><div class="host_bubble">正文</div><div class="referenceSummary">引用</div></div></div>`)
@@ -44,7 +45,7 @@ try {
       exports.restoreOfficialUserBubbles(document)
     }, bubbleScript)
     const geometry = await page.evaluate(() => ({
-      gap: document.querySelector('[data-input-scroll]').getBoundingClientRect().top - document.querySelector('.abc_rail').getBoundingClientRect().bottom,
+      gap: document.querySelector('[data-input-scroll]').getBoundingClientRect().top - document.querySelector('.thumbnail').getBoundingClientRect().bottom,
       order: getComputedStyle(document.querySelector('[data-conversation-header-corner]')).order,
       trailingMargin: getComputedStyle(document.querySelector('[data-conversation-header-corner]')).marginRight,
       attachmentDisplays: [...document.querySelectorAll('[data-message-attachments]')].map(node => getComputedStyle(node).display),

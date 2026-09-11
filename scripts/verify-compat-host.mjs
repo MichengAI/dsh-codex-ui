@@ -111,13 +111,13 @@ try {
   assert.equal((await editor.innerText()).trim(), '')
   checks.push('普通文件真实上传及附件草稿的历史召回保护')
   const attachmentGap = await page.locator('[data-composer-card]').evaluate(card => {
-    const rail = card.querySelector('[data-slot="conversation.input.attachments"] [class*="_rail"]')
+    const thumbnails = [...card.querySelectorAll('[data-slot="conversation.input.attachments"] button[class$="_thumbnail"]')]
     const input = card.querySelector('[data-input-scroll]')
-    if (!rail || !input) throw new Error('真实附件轨道或输入区未找到')
-    return input.getBoundingClientRect().top - rail.getBoundingClientRect().bottom
+    if (!thumbnails.length || !input) throw new Error('真实附件缩略图或正文区域未找到')
+    return input.getBoundingClientRect().top - Math.max(...thumbnails.map(node => node.getBoundingClientRect().bottom))
   })
-  assert.ok(attachmentGap >= 6 && attachmentGap <= 8, `真实附件与正文间距应为 6–8px，实际 ${attachmentGap}`)
-  checks.push(`真实附件轨道穿过 slot 层后的间距 ${attachmentGap}px`)
+  assert.equal(attachmentGap, 6, `真实附件缩略图与正文间距应为 6px，实际 ${attachmentGap}`)
+  checks.push(`真实附件缩略图到正文的间距 ${attachmentGap}px`)
 
   await page.locator('[data-dcu-settings-trigger]').click()
   await page.locator('[data-dcu-settings-page]').waitFor()
