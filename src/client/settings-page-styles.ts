@@ -79,7 +79,7 @@ html[data-dsh-native-backdrop=mica] .dcu-root:has(.dcu-settings-page) :is([inert
 body:has(.dcu-settings-page) :is([data-dcu-settings-isolated],[data-dcu-settings-isolated] *){visibility:hidden!important}
 html[data-dsh-native-backdrop=mica] .dcu-settings-page,html[data-dsh-native-backdrop=mica] .dcu-root:has(.dcu-settings-page){background:transparent}
 
-.dcu-settings-inner:has(.dcu-usage-section){width:100%;height:100%;max-width:1280px;display:flex;flex-direction:column;padding-bottom:0}
+.dcu-settings-inner:has(.dcu-usage-section){height:100%;display:flex;flex-direction:column;padding-bottom:0}
 .dcu-settings-inner:has(.dcu-usage-section)>.dcu-settings-heading{display:none}
 .dcu-settings-inner:has(.dcu-usage-section)>[data-slot="settings.section"]{display:flex;flex:1;min-height:0;flex-direction:column}
 .dcu-usage-section{display:flex;flex-direction:column;flex:1;min-height:0;gap:16px}
