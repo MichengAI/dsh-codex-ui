@@ -1,17 +1,21 @@
 /** 对真实 DSH 宿主执行兼容性端到端检查；配套 fixture 仅用于隔离环境。 */
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 
 const target = process.env.DCU_DSH_URL
 const workspace = process.env.DCU_E2E_WORKSPACE
 if (!target || !workspace) throw new Error('需要 DCU_DSH_URL 和隔离的 DCU_E2E_WORKSPACE')
 await mkdir(workspace, { recursive: true })
+// 空目录的 @ 加载骨架会在零候选时消失；创建真实文件，验收稳定的候选内容。
+await writeFile(`${workspace}/compat-reference.txt`, '兼容性引用候选文件\n', { flag: 'wx' })
 const browser = await chromium.launch()
 const page = await browser.newPage({ locale: 'zh-CN', viewport: { width: 1440, height: 960 } })
 const errors = []
 page.on('pageerror', error => errors.push(error.message))
 const checks = []
+const menuMeasurements = []
+let failure
 try {
   await page.addInitScript(workspace => localStorage.setItem('michengai.codex-ui.input-history.v1', JSON.stringify({ [workspace]: ['兼容性历史消息'] })), workspace)
   await page.goto(target)
@@ -79,18 +83,39 @@ try {
   checks.push('紧凑侧栏导航、动态注销与重新注册')
 
   await clearEditor()
-  // 使用真实宿主建议菜单核对全宽与官方翻译，不改写宿主 DOM。
-  for (const trigger of ['/', '@']) {
-    await editor.click()
-    await editor.pressSequentially(trigger)
-    const menu = page.locator('[data-trigger-menu]')
-    await menu.waitFor()
-    const widths = await menu.evaluate(node => ({ outer: node.getBoundingClientRect().width, inner: node.querySelector('[role=listbox]')?.getBoundingClientRect().width }))
-    assert.ok(widths.outer > 0 && Math.abs(widths.inner - (widths.outer - 10)) < 1, '建议列表应铺满外框')
-    await page.keyboard.press('Escape')
-    await clearEditor()
+  // 等待实际候选及加载完成，再严格断言几何；不把骨架出现当成列表就绪。
+  for (const colorScheme of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme })
+    await page.waitForFunction(dark => document.body.hasAttribute('data-ds-dark-theme') === dark, colorScheme === 'dark')
+    for (const width of [1440, 900, 390]) {
+      await page.setViewportSize({ width, height: 960 })
+      for (const trigger of ['/', '@']) {
+        await editor.click()
+        await editor.pressSequentially(trigger)
+        const menu = page.locator('[data-trigger-menu]')
+        await menu.waitFor()
+        await menu.getByRole('option').first().waitFor()
+        if (trigger === '@') await menu.getByRole('option').filter({ hasText: 'compat-reference.txt' }).waitFor()
+        await menu.getByRole('status').waitFor({ state: 'detached' })
+        const readGeometry = node => {
+          const rect = node.getBoundingClientRect()
+          const list = node.querySelector('[role=listbox]')
+          return { outer: rect.width, inner: list?.getBoundingClientRect().width ?? null, left: rect.left, right: rect.right, loading: !!node.querySelector('[role=status]') }
+        }
+        const initial = await menu.evaluate(readGeometry)
+        const measurement = { colorScheme, width, trigger, initial }
+        menuMeasurements.push(measurement)
+        measurement.final = await menu.evaluate(readGeometry)
+        assert.ok(measurement.final.outer > 0 && Math.abs(measurement.final.inner - (measurement.final.outer - 10)) < 1, '建议列表应铺满外框：' + JSON.stringify(measurement))
+        assert.ok(measurement.final.left >= 0 && measurement.final.right <= width, '建议菜单不得越出视口：' + JSON.stringify(measurement))
+        await page.keyboard.press('Escape')
+        await clearEditor()
+      }
+    }
   }
-  checks.push('真实 @ 与指令建议列表全宽')
+  checks.push('真实 @ 与指令建议列表：深浅主题 × 390/900/1440px，全宽且不越出视口')
+  await page.setViewportSize({ width: 1440, height: 960 })
+  await page.emulateMedia({ colorScheme: 'light' })
   await page.locator('input[type=file]').setInputFiles({ name: 'compat.txt', mimeType: 'text/plain', buffer: Buffer.from('compatibility fixture') })
   await page.waitForFunction(() => {
     const c = window.__dcuE2E.ctx
@@ -153,7 +178,11 @@ try {
   await download.waitFor()
   const downloadEvent = page.waitForEvent('download')
   await download.click()
-  await downloadEvent
+  const downloaded = await downloadEvent
+  assert.equal(await downloaded.failure(), null, '日志下载应完整结束')
+  assert.match(downloaded.suggestedFilename(), /\.zip$/i)
+  const zip = await readFile(await downloaded.path())
+  assert.ok(zip.length > 22 && zip.readUInt32LE(0) === 0x04034b50, '下载内容应为包含文件的 ZIP')
   const closeResult = page.getByRole('button', { name: '关闭', exact: true }).filter({ hasText: /^关闭$/ })
   if (await closeResult.isVisible()) await closeResult.click()
   checks.push('官方更多操作入口及 Session ZIP 下载')
@@ -164,4 +193,11 @@ try {
   if (process.env.DCU_E2E_SCREENSHOT) await page.screenshot({ path: process.env.DCU_E2E_SCREENSHOT, fullPage: true })
   assert.deepEqual(errors, [], '页面不得产生未捕获异常')
   console.log(JSON.stringify({ version: process.env.DCU_E2E_VERSION, checks, pageErrors: errors }, null, 2))
-} finally { await browser.close() }
+} catch (error) {
+  failure = String(error.stack ?? error)
+  if (process.env.DCU_E2E_SCREENSHOT) await page.screenshot({ path: process.env.DCU_E2E_SCREENSHOT, fullPage: true }).catch(screenshotError => console.error('失败截图保存失败：', screenshotError))
+  throw error
+} finally {
+  if (process.env.DCU_E2E_REPORT) await writeFile(process.env.DCU_E2E_REPORT, JSON.stringify({ version: process.env.DCU_E2E_VERSION, checks, menuMeasurements, pageErrors: errors, failure }, null, 2))
+  await browser.close()
+}

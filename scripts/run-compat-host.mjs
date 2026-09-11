@@ -49,7 +49,7 @@ try {
     server.once('error', error => { clearTimeout(timeout); reject(error) })
     server.once('exit', code => { clearTimeout(timeout); reject(new Error(`宿主提前退出 ${code}: ${output}`)) })
   })
-  const testEnv = { ...env, DCU_DSH_URL: url }
+  const testEnv = { ...env, DCU_DSH_URL: url, DCU_E2E_REPORT: path.join(root, 'browser-report.json'), DCU_E2E_SCREENSHOT: path.join(root, 'browser.png') }
   console.log(await run(['scripts/verify-compat-host.mjs'], testEnv))
   console.log(await run(['scripts/verify-settings-exit.mjs'], testEnv))
 } finally {
