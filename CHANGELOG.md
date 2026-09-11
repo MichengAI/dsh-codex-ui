@@ -4,6 +4,22 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## suite-installer-v1.0.4 - 2026-09-11
+
+Resolved and pinned the following member versions from the official npm registry:
+
+- `@michengai/dsh-archive-manager@0.1.38`
+- `@michengai/dsh-codex-ui@1.1.2`
+- `@michengai/dsh-skills-manager@0.1.48`
+- `@michengai/dsh-agency-agents@0.1.40`
+- `@michengai/dsh-im-connect@0.1.45`
+- `@michengai/dsh-automation@0.1.38`
+- `@michengai/dsh-btw@0.1.6`
+- `@michengai/dsh-simplify@0.1.4`
+- `@michengai/dsh-codex-pet@0.1.4`
+
+The installer uses these exact versions for reproducible installation.
+
 ## 1.1.2 - 2026-09-11
 
 - Support attachment drafts and global panels in DSH 0.1.5-rc.1 / rc.2, fix prefill and history recall, and support compact-sidebar navigation and returning to existing conversations. Later release candidates still require separate validation.
