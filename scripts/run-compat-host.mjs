@@ -32,7 +32,8 @@ function run(args, extraEnv = env) {
 console.log(`准备 ${version} 隔离宿主：${root}`)
 await run([cli, 'plugin', '--profile', 'web', 'add', path.resolve(tarball), path.join(repo, 'scripts', 'fixtures', 'compat-panel')])
 const installed = await realpath(path.join(env.DSH_HOME, 'profiles', 'web', 'node_modules', '@michengai', 'dsh-codex-ui'))
-assert.ok(installed.startsWith(root), '必须测试已安装的 tarball，不能链接回开发仓库')
+const relativeInstall = path.relative(await realpath(root), installed)
+assert.ok(relativeInstall !== '' && relativeInstall !== '..' && !relativeInstall.startsWith(`..${path.sep}`) && !path.isAbsolute(relativeInstall), '必须测试已安装的 tarball，不能链接回开发仓库')
 const server = spawn(process.execPath, [cli, 'web', '--no-open', '--port', '0'], { cwd: env.DCU_E2E_WORKSPACE, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
 try {
   const url = await new Promise((resolve, reject) => {

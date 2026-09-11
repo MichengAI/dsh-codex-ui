@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs'
 import { JSDOM } from 'jsdom'
 import {
   decorateConversationTitle,
-  decorateSessionLogDownload,
   HEADER_PROJECT_TIP_EVENT,
   HEADER_SESSION_MENU_EVENT,
   placeConversationTabs,
@@ -46,8 +45,6 @@ assert.doesNotMatch(header, /toggle-cluster.*\.(after|append|insertBefore)|trans
 assert.match(header, /body\[data-dsh-sidebar-collapsed\]:has\(\[data-dcu-inline-tabs\]\) \[data-dsh-toggle-cluster\]\{[^}]*top:calc\(3px \+ env\(safe-area-inset-top\)\)/, '紧凑顶栏收起时必须把开关组扣回 3px，对冲 better-sidebar 0.18.0 的 14px')
 assert.match(header, /body\[data-dsh-sidebar-collapsed\]\[data-dsh-title-bar-compat\]:has\(\[data-dcu-inline-tabs\]\) \[data-dsh-toggle-cluster\]\{[^}]*top:calc\(var\(--dsh-title-bar-strip, 40px\) \+ 3px\)/, '标题栏兼容收起时必须保留 caption 偏移并仍用 3px')
 assert.doesNotMatch(header, /data-dsh-toggle-cluster\]\{[^}]*14px/, '紧凑顶栏不得再跟随官方 DSH 的 14px 折叠偏移')
-assert.match(header, /data-dcu-session-log-download/, 'Session log 必须改成紧凑下载按钮')
-assert.match(header, /clip:rect\(0 0 0 0\)/, 'Session log 文本必须仅视觉隐藏并保留无障碍名称')
 assert.match(header, /width="16" height="16"/, '顶栏文件夹必须和侧栏一样是 16px')
 assert.match(header, /getRect/, '三点菜单必须按按钮位置取锚点')
 assert.match(header, /toggle: true/, '再次点击顶栏文件夹必须关闭卡片')
@@ -66,7 +63,7 @@ const HOST_HEADER_HTML = `
       </nav>
       <div class="wSkVaW_headerActions"></div>
     </div>
-    <div class="wSkVaW_headerUtilities"><button type="button" class="nL4_yW_sessionLogButton"><span>Session log</span><svg aria-hidden="true"></svg></button></div>
+    <div class="wSkVaW_headerUtilities"><button type="button" class="host_moreButton" aria-label="更多操作" aria-haspopup="menu"><svg aria-hidden="true"></svg></button></div>
   </div>
   <div class="wSkVaW_tabs" role="tablist"><button type="button" role="tab" aria-selected="true">对话</button><button type="button" role="tab">轨迹</button><button type="button" role="tab">上下文</button></div>
 </header>`
@@ -80,18 +77,6 @@ const doc = dom.window.document
 const mount = (): HTMLElement => {
   doc.body.innerHTML = HOST_HEADER_HTML
   return doc.body.firstElementChild as HTMLElement
-}
-
-// 行为验证：Session log 仅改成图标外观，原文本仍留在 DOM 并补齐无障碍名称与提示。
-{
-  mount()
-  const button = doc.querySelector('.nL4_yW_sessionLogButton') as HTMLButtonElement
-  assert.equal(decorateSessionLogDownload(doc), true, 'Session log 按钮必须被标记')
-  assert.equal(button.dataset.dcuSessionLogDownload, '', '下载按钮必须带稳定样式标记')
-  assert.equal(button.getAttribute('aria-label'), 'Session log', '图标按钮必须有无障碍名称')
-  assert.equal(button.getAttribute('title'), 'Session log', '图标按钮必须保留悬停提示')
-  assert.equal(button.querySelector('span')?.textContent, 'Session log', '不得删除宿主文本节点')
-  assert.equal(decorateSessionLogDownload(doc), false, '重复标记必须幂等')
 }
 
 // 行为验证：页签只打标记，不离开宿主父节点

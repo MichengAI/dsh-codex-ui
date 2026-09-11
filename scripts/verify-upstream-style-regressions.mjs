@@ -9,17 +9,16 @@ const header = readFileSync('src/client/conversation-header.ts', 'utf8').match(/
 const bubbleScript = ts.transpileModule(readFileSync('src/client/conversation-bubbles.ts', 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText
+const nativeNavigatorCss = readFileSync('scripts/fixtures/upstream-rc2/TurnNavigator.module.css', 'utf8')
 const browser = await chromium.launch()
 try {
   const page = await browser.newPage()
   // 官方预览默认向左展开；导航移到左侧后应朝内容区展开，动画仍由宿主提供。
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.setContent(`<style>
-    .rail{position:absolute;left:80px;top:200px;width:28px;height:100px}
-    .preview{position:absolute;right:calc(100% + 10px);width:240px;height:100px;animation:dsh-turn-preview-enter 120ms ease-out}
-    @keyframes dsh-turn-preview-enter{from{opacity:0;transform:translateX(4px)}to{opacity:1;transform:translateX(0)}}
+    ${nativeNavigatorCss}
     ${skin}
-    </style><nav class="rail" data-dcu-official-turn-navigator style="--dsh-composer-side-clearance:-84px"><div class="preview" role="tooltip">预览</div></nav>`)
+    </style><nav class="frame" data-dcu-official-turn-navigator style="--dsh-composer-side-clearance:-84px;--turn-natural-height:100px"><div class="preview" role="tooltip">预览</div></nav>`)
   const preview = await page.locator('[role=tooltip]').evaluate(node => ({
     left: parseFloat(getComputedStyle(node).left),
     animation: getComputedStyle(node).animationName,
@@ -35,7 +34,7 @@ try {
       [data-message-attachments]{display:flex;flex-wrap:wrap;gap:8px}
       header,.titleRow,.titleCluster{display:flex}.headerCorner{margin-left:8px;margin-right:-16px}
       ${skin}${header}
-      </style><section data-conversation-scroll><div class="card" data-composer-card><div class="abc_rail"><div style="height:64px">附件</div></div><div data-input-scroll style="height:44px">正文</div><div><button>发送</button></div></div></section>
+      </style><section data-conversation-scroll><div class="card" data-composer-card><div data-slot="conversation.input.attachments" style="display:contents"><div class="abc_rail"><div style="height:64px">附件</div></div></div><div data-input-scroll style="height:44px">正文</div><div><button>发送</button></div></div></section>
       <header><div class="titleRow"><div class="titleCluster"><div class="crumbs">项目</div><div class="headerActions">操作</div></div><div class="headerUtilities">工具</div><div class="headerCorner" data-conversation-header-corner>右栏</div></div><div data-dcu-inline-tabs role="tablist"><button role="tab">对话</button></div></header>
       <div data-time-hover-root><div><div data-message-attachments data-dcu-expandable-user-bubble><span>文件一</span><span>文件二</span></div></div></div>
       <div data-time-hover-root><div><div data-message-attachments>附件</div><div class="host_bubble">正文</div><div class="referenceSummary">引用</div></div></div>`)

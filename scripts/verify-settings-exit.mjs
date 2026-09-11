@@ -7,7 +7,7 @@ const url = new URL(target)
 if (!['http:', 'https:'].includes(url.protocol)) throw new Error('DCU_DSH_URL 必须是 HTTP(S) 地址')
 const browser = await chromium.launch({ headless: true })
 try {
-  const page = await browser.newPage()
+  const page = await browser.newPage({ locale: 'zh-CN' })
   await page.goto(url.href)
   const trigger = page.locator('[data-dcu-settings-trigger]')
   await trigger.waitFor({ timeout: 30000 })

@@ -1,0 +1,7 @@
+{
+  "tag": "dsh-v0.1.5-rc.2",
+  "commit": "fb2c4b9e698e30edb738bca4cf0618587db7d203",
+  "path": "packages/client/ui-chat/src/client/chat/TurnNavigator.module.css",
+  "sha256": "b7edc1247dc697b12f59be979f53a835de7e4b40ac9d42b09f92a42881d0b8a8",
+  "note": "官方源码原样提取；配套 DOM 为最小布局夹具，不宣称真实会话。"
+}

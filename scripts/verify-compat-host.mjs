@@ -8,7 +8,7 @@ const workspace = process.env.DCU_E2E_WORKSPACE
 if (!target || !workspace) throw new Error('需要 DCU_DSH_URL 和隔离的 DCU_E2E_WORKSPACE')
 await mkdir(workspace, { recursive: true })
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+const page = await browser.newPage({ locale: 'zh-CN', viewport: { width: 1440, height: 960 } })
 const errors = []
 page.on('pageerror', error => errors.push(error.message))
 const checks = []
@@ -16,6 +16,7 @@ try {
   await page.addInitScript(workspace => localStorage.setItem('michengai.codex-ui.input-history.v1', JSON.stringify({ [workspace]: ['兼容性历史消息'] })), workspace)
   await page.goto(target)
   await page.waitForFunction(() => !!window.__dcuE2E)
+  assert.match(await page.evaluate(() => window.__dcuE2E.ctx.locale.getSnapshot().active), /^zh/i, '本脚本明确验收中文环境')
   // 首次安装的官方引导通过页面按钮正常完成，不配置真实密钥。
   for (let i = 0; i < 3; i++) {
     for (const name of ['继续', '稍后配置']) {
@@ -78,6 +79,18 @@ try {
   checks.push('紧凑侧栏导航、动态注销与重新注册')
 
   await clearEditor()
+  // 使用真实宿主建议菜单核对全宽与官方翻译，不改写宿主 DOM。
+  for (const trigger of ['/', '@']) {
+    await editor.click()
+    await editor.pressSequentially(trigger)
+    const menu = page.locator('[data-trigger-menu]')
+    await menu.waitFor()
+    const widths = await menu.evaluate(node => ({ outer: node.getBoundingClientRect().width, inner: node.querySelector('[role=listbox]')?.getBoundingClientRect().width }))
+    assert.ok(widths.outer > 0 && Math.abs(widths.inner - (widths.outer - 10)) < 1, '建议列表应铺满外框')
+    await page.keyboard.press('Escape')
+    await clearEditor()
+  }
+  checks.push('真实 @ 与指令建议列表全宽')
   await page.locator('input[type=file]').setInputFiles({ name: 'compat.txt', mimeType: 'text/plain', buffer: Buffer.from('compatibility fixture') })
   await page.waitForFunction(() => {
     const c = window.__dcuE2E.ctx
@@ -97,12 +110,53 @@ try {
   await editor.press('ArrowUp')
   assert.equal((await editor.innerText()).trim(), '')
   checks.push('普通文件真实上传及附件草稿的历史召回保护')
+  const attachmentGap = await page.locator('[data-composer-card]').evaluate(card => {
+    const rail = card.querySelector('[data-slot="conversation.input.attachments"] [class*="_rail"]')
+    const input = card.querySelector('[data-input-scroll]')
+    if (!rail || !input) throw new Error('真实附件轨道或输入区未找到')
+    return input.getBoundingClientRect().top - rail.getBoundingClientRect().bottom
+  })
+  assert.ok(attachmentGap >= 6 && attachmentGap <= 8, `真实附件与正文间距应为 6–8px，实际 ${attachmentGap}`)
+  checks.push(`真实附件轨道穿过 slot 层后的间距 ${attachmentGap}px`)
+
   await page.locator('[data-dcu-settings-trigger]').click()
   await page.locator('[data-dcu-settings-page]').waitFor()
   await page.keyboard.press('Escape')
   await page.locator('[data-dcu-settings-page]').waitFor({ state: 'detached' })
   assert.equal(await page.locator('[data-dcu-settings-trigger]').evaluate(node => node === document.activeElement), true)
   checks.push('设置页打开、Escape 关闭与焦点恢复')
+  const visualWorkspace = `${workspace}/visual`
+  await mkdir(visualWorkspace, { recursive: true })
+  await page.evaluate(async path => {
+    const ctx = window.__dcuE2E.ctx
+    const item = await ctx.workspaces.create({ path })
+    const visualId = await ctx.get('uiWorkspace').connectWorkspace(item.workspaceId)
+    ctx.get('uiWorkspace').openSession(visualId)
+  }, visualWorkspace)
+  const rail = page.locator('[data-dcu-official-turn-navigator]')
+  await rail.waitFor()
+  await rail.hover()
+  const tip = rail.getByRole('tooltip')
+  await tip.waitFor()
+  const previewGeometry = await tip.evaluate(node => ({
+    x: node.getBoundingClientRect().left, railRight: node.closest('nav').getBoundingClientRect().right,
+    animation: getComputedStyle(node).animationName,
+  }))
+  assert.ok(previewGeometry.x >= previewGeometry.railRight, '真实预览应朝聊天内容区展开')
+  assert.notEqual(previewGeometry.animation, 'none', '官方预览动画应保留')
+  assert.equal(await page.locator('[data-dcu-expandable-user-bubble],#dcu-user-bubble-expand-style').count(), 0)
+  checks.push('真实长消息无展开覆盖、官方轮次导航预览向右并保留动画')
+  await page.mouse.move(700, 100)
+  const more = page.getByRole('button', { name: '更多操作', exact: true })
+  await more.click()
+  const download = page.getByRole('menuitem', { name: '下载 Session 日志', exact: true })
+  await download.waitFor()
+  const downloadEvent = page.waitForEvent('download')
+  await download.click()
+  await downloadEvent
+  const closeResult = page.getByRole('button', { name: '关闭', exact: true }).filter({ hasText: /^关闭$/ })
+  if (await closeResult.isVisible()) await closeResult.click()
+  checks.push('官方更多操作入口及 Session ZIP 下载')
   await page.setViewportSize({ width: 900, height: 720 })
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.waitForTimeout(300)

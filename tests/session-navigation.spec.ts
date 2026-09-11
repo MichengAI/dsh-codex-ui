@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { openConversation } from '../src/client/session-navigation.ts'
+import { openConversation, selectGlobalPanel } from '../src/client/session-navigation.ts'
 
 test('打开已有会话时退出全局面板，兼容没有面板 API 的旧宿主', () => {
   const actions: unknown[] = []
@@ -8,4 +8,13 @@ test('打开已有会话时退出全局面板，兼容没有面板 API 的旧宿
   expect(actions).toEqual(['session-1', null])
   openConversation(sessions, {}, 'session-2')
   expect(actions).toEqual(['session-1', null, 'session-2'])
+})
+
+test('面板切换保留宿主 this，忽略旧版缺失或非函数能力', () => {
+  const layout = { active: null as string | null, selectPanel(id: string | null) { this.active = id } }
+  selectGlobalPanel(layout, 'files')
+  expect(layout.active).toBe('files')
+  selectGlobalPanel(layout, null)
+  expect(layout.active).toBeNull()
+  expect(() => selectGlobalPanel({ selectPanel: false }, 'files')).not.toThrow()
 })

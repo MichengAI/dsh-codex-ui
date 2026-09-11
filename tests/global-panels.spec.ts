@@ -12,6 +12,10 @@ test('面板注册、重命名、移除和语言更新实时同步并释放订�
   const changed = vi.fn()
   const off = source.subscribe(changed)
   expect(source.getSnapshot().map(p => p.label)).toEqual(['文件'])
+  const first = source.getSnapshot()
+  expect(source.getSnapshot()).toBe(first)
+  listeners.forEach(fn => fn())
+  expect(source.getSnapshot()).toBe(first)
   entries = [{ options: { id: 'files', order: 2, label: () => 'Files' } }]
   listeners.forEach(fn => fn())
   expect(source.getSnapshot()[0]?.label).toBe('Files')

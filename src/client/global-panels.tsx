@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { IconNewChatOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { MessageSquare } from 'lucide-react'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
@@ -23,7 +23,10 @@ export function createGlobalPanelSource(slots: PanelSlots, locale: Pick<GlobalPa
         id: options.id, order: options.order ?? 0,
         label: (typeof options.label === 'function' ? options.label() : options.label) ?? options.id,
       }]).sort((a, b) => a.order - b.order)
-      if (JSON.stringify(next) !== JSON.stringify(cached)) cached = next
+      if (next.length !== cached.length || next.some((panel, index) => {
+        const previous = cached[index]
+        return previous === undefined || panel.id !== previous.id || panel.label !== previous.label || panel.order !== previous.order
+      })) cached = next
       return cached
     },
     subscribe(listener) {
@@ -45,6 +48,6 @@ export function GlobalPanelButtons({ panels, activeId, wide, conversationLabel, 
     aria-current={activeId === id ? 'page' : undefined} onClick={() => selectPanel(id)}>
     <span className="dcu-menu-icon" aria-hidden="true">{icon}</span>{wide && label}
   </button>
-  return <>{button(null, conversationLabel, <IconNewChatOutline16 size={16} />)}{panels.map(panel =>
+  return <>{button(null, conversationLabel, <MessageSquare size={16} strokeWidth={1.6} />)}{panels.map(panel =>
     button(panel.id, panel.label, renderIcon(panel.id, activeId === panel.id)))}</>
 }

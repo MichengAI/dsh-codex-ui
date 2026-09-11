@@ -1,6 +1,7 @@
 import { CODEX_UI_API_ENDPOINTS } from '../business-api.ts'
 
 const OFFICIAL_TURN_NAVIGATOR_ATTRIBUTE = 'data-dcu-official-turn-navigator'
+// 仅用于清除旧版注入或热更新残留；新版不再给内部部件添加这些属性。
 const OFFICIAL_TURN_MARK_ATTRIBUTE = 'data-dcu-official-turn-mark'
 const OFFICIAL_TURN_TOOLTIP_ATTRIBUTE = 'data-dcu-official-turn-tooltip'
 const OFFICIAL_TURN_NAVIGATOR_SUPPORTED_ATTRIBUTE = 'data-dcu-official-turn-navigator-supported'

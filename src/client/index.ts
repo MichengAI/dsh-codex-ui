@@ -1,4 +1,4 @@
-import { openConversation } from './session-navigation.ts'
+import { openConversation, selectGlobalPanel } from './session-navigation.ts'
 import { createGlobalPanelSource } from './global-panels.tsx'
 import { initializeComposerWidth, observeHeroWidthHandles } from './composer-width.ts'
 import { browserStorage } from './tree-expansion.ts'
@@ -172,10 +172,7 @@ export function apply(ctx: ClientContext): void {
       openPath,
       companionSlots,
       globalPanels,
-      selectPanel: (id: string | null) => {
-        const layout = ctx.layout as typeof ctx.layout & { selectPanel?: (id: string | null) => void }
-        layout.selectPanel?.(id)
-      },
+      selectPanel: (id: string | null) => { selectGlobalPanel(ctx.layout, id) },
     }),
   }, CodexSidebar))
 
