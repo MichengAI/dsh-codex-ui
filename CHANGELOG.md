@@ -4,11 +4,12 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
-## Unreleased
+## 1.1.2 - 2026-09-11
 
-- Support attachment drafts and global panels in DSH 0.1.5-rc.1 / rc.2, fixing prefill and history recall and adding compact-sidebar navigation and return to the existing conversation with a distinct conversation icon.
-- Keep Codex menu styling with native adaptive project, model, and permission widths and full-width @ and command suggestions. Correct attachment spacing, the right-sidebar control position, and left-rail preview direction while preserving native navigator animations.
-- Use native user bubbles, Session log download controls, and host translations without legacy overrides. Older hosts retain untranslated English text and their original download button.
+- Support attachment drafts and global panels in DSH 0.1.5-rc.1 / rc.2, fix prefill and history recall, and support compact-sidebar navigation and returning to existing conversations. Later release candidates still require separate validation.
+- Preserve Codex menu styling with native adaptive widths, correct attachment spacing and left-side turn previews, and restore native message bubbles, Session log controls, and translations. Untranslated text on older hosts remains in English.
+- Unify connector pages with a neutral palette while preserving warning and error colors, and align usage statistics with the standard 864px settings width.
+- Hide archived channel conversations immediately and prevent stale polling responses from restoring them; failed archival keeps the conversation visible and shows an error.
 
 ## suite-installer-v1.0.3 - 2026-09-09
 

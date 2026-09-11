@@ -23,6 +23,7 @@ type SessionStore = {
 
 type WorkspaceStore = {
   items: readonly { workspaceId: string; title: string; sessionIds: readonly string[] }[]
+  archivedSessionIds?: readonly string[]
 }
 
 type ChannelBrowserProps = {
@@ -97,13 +98,19 @@ function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSe
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [t])
+  // 宿主归档状态实时生效，避免等待频道轮询或被旧响应重新显示。
+  const archived = new Set(workspaces?.archivedSessionIds ?? [])
+  const visibleGroups = groups.map(group => ({
+    ...group,
+    sessions: group.sessions.filter(session => !archived.has(session.sessionId)),
+  })).filter(group => group.sessions.length > 0)
   const banner = pollError ?? error
   return <section className="dcu-wb" aria-label={t('sidebar.channelsTab')}>
     <style>{WORKSPACE_TREE_STYLE}</style>
     <div className="dcu-wb-tree" role="tree">
       {banner !== undefined && <div className="dcu-wb-error" role="alert">{banner}</div>}
-      {pollError === undefined && groups.length === 0 && <div className="dcu-wb-empty">{t('channels.empty')}</div>}
-      {groups.map(group => {
+      {pollError === undefined && visibleGroups.length === 0 && <div className="dcu-wb-empty">{t('channels.empty')}</div>}
+      {visibleGroups.map(group => {
         const isExpanded = expanded[group.id] ?? true
         const label = channelLabel(group.id, group.label, t)
         return <div className="dcu-wb-project" key={group.id}>
