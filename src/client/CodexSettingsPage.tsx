@@ -106,6 +106,8 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     // 只为活动引导保留模态区域，不把无关菜单或其整棵包装子树一并放行。
     const guideModals = step === undefined ? [] : settingsOverlays('[role="dialog"][aria-modal="true"],[role="alertdialog"][aria-modal="true"]')
     const isolate = (element: HTMLElement) => {
+      // Pet 使用 body 下的专用容器，跨页面保留显示与交互，不放行其他浮层。
+      if (element.parentElement === document.body && element.hasAttribute('data-dsh-pet-overlay')) return
       if (element === onboardingRoot.current || guideModals.includes(element)) return
       if (guideModals.some(modal => element.contains(modal))) {
         for (const child of element.children) if (child instanceof HTMLElement && !/^(STYLE|SCRIPT|LINK)$/.test(child.tagName)) isolate(child)
@@ -135,13 +137,14 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
       const target = event.target
       if (!(target instanceof Node) || page.current === null || !settingsElementAvailable(page.current)) return
       if (page.current.contains(target) || onboardingRoot.current?.contains(target)
+        || [...document.querySelectorAll('body > [data-dsh-pet-overlay]')].some(root => root.contains(target))
         || settingsOverlays().some(overlay => overlay.contains(target))) return
       back.current?.focus()
     }
     const wrapFocus = (event: KeyboardEvent) => {
       if (event.key !== 'Tab' || event.defaultPrevented || page.current === null
         || !settingsElementAvailable(page.current) || settingsOverlays().length > 0) return
-      const roots = [page.current, onboardingRoot.current].filter((root): root is HTMLDivElement => root !== null)
+      const roots = [page.current, onboardingRoot.current, ...document.querySelectorAll<HTMLDivElement>('body > [data-dsh-pet-overlay]')].filter((root): root is HTMLDivElement => root !== null)
       const items = roots.flatMap(root => [...root.querySelectorAll<HTMLElement>('button,input,select,textarea,a[href],[tabindex]')])
         .filter(element => element.tabIndex >= 0 && !element.matches(':disabled') && settingsElementAvailable(element))
       const next = event.shiftKey ? items.at(-1) : items[0]

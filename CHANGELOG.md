@@ -4,6 +4,10 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.3 - 2026-09-12
+
+- With Pet 0.1.5 or later, keep the pet visible and accessible by mouse and keyboard on settings pages while other background content remains isolated.
+
 ## suite-installer-v1.0.4 - 2026-09-11
 
 Resolved and pinned the following member versions from the official npm registry:
