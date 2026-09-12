@@ -4,6 +4,22 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## suite-installer-v1.0.5 - 2026-09-12
+
+从官方 npm 解析并锁定以下成员版本：
+
+- `@michengai/dsh-archive-manager@0.1.39`
+- `@michengai/dsh-codex-ui@1.1.3`
+- `@michengai/dsh-skills-manager@0.1.48`
+- `@michengai/dsh-agency-agents@0.1.41`
+- `@michengai/dsh-im-connect@0.1.45`
+- `@michengai/dsh-automation@0.1.39`
+- `@michengai/dsh-btw@0.1.6`
+- `@michengai/dsh-simplify@0.1.4`
+- `@michengai/dsh-codex-pet@0.1.5`
+
+安装器使用这些精确版本执行安装，确保可复现。
+
 ## 1.1.3 - 2026-09-12
 
 - 配合 Pet 0.1.5 或更新版本，进入设置页后宠物仍可显示、点击和通过键盘操作；其他背景内容继续保持隔离。
