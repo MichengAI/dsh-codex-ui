@@ -4,6 +4,10 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 1.1.5 - 2026-09-14
+
+- 关于页支持点击插件标题或完整包名，在新标签页打开项目主页；应用市场跳转至官网。
+
 ## suite-installer-v1.0.6 - 2026-09-14
 
 从官方 npm 解析并锁定以下成员版本：

@@ -4,6 +4,10 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.5 - 2026-09-14
+
+- Click a plugin title or full package name on the About page to open its project homepage in a new tab; App Market opens its official website.
+
 ## suite-installer-v1.0.6 - 2026-09-14
 
 Resolved and pinned the following member versions from the official npm registry:
