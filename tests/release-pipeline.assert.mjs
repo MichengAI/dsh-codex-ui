@@ -13,6 +13,12 @@ for (const name of ['ci.yml', 'publish.yml', 'release.yml', 'release-suite-insta
   assert.ok(workflow.on && workflow.jobs)
   for (const key of Object.keys(workflow)) assert.ok(['name', 'on', 'permissions', 'concurrency', 'jobs', 'env', 'defaults', 'run-name'].includes(key), `${name} 根级字段无效：${key}`)
   for (const job of Object.values(workflow.jobs)) {
+    if (job.uses) {
+      assert.equal(job.steps, undefined)
+      assert.ok(job.uses.startsWith('./.github/workflows/'))
+      assert.ok(readFileSync(job.uses, 'utf8').includes('workflow_call:'))
+      continue
+    }
     assert.ok(Array.isArray(job.steps))
     for (const [index, step] of job.steps.entries()) {
       assert.notEqual(step.run === undefined, step.uses === undefined, '步骤必须且只能指定 run 或 uses')

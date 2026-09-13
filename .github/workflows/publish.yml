@@ -9,8 +9,20 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  check:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+    with:
+      full: true
+
   publish:
+    needs: check
     name: 测试并发布
     runs-on: ubuntu-latest
     steps:
@@ -45,6 +57,9 @@ jobs:
           }
           NODE
 
+      - name: 发布前校验双语发行说明
+        run: node scripts/extract-release-notes.mjs "$GITHUB_REF_NAME" "$RUNNER_TEMP/release-notes.md"
+
       - name: 发布到 npm
         run: npm publish
 
@@ -65,3 +80,9 @@ jobs:
           else
             gh workflow run release-suite-installer.yml --repo "$GITHUB_REPOSITORY" --ref main
           fi
+
+  release-notes:
+    needs: publish
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml

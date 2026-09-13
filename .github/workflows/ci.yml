@@ -2,17 +2,67 @@ name: 测试
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      full:
+        description: 执行完整检查
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      full:
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
+  changes:
+    name: 变更范围
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run_tests: ${{ steps.scope.outputs.run_tests }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: scope
+        uses: actions/github-script@v8
+        with:
+          script: |
+            // 手动检查及发布调用始终执行完整检查；普通推送只跳过展示文档。
+            if (${{ inputs.full == true }}) {
+              core.setOutput('run_tests', 'true');
+              return;
+            }
+            const base = context.eventName === 'pull_request'
+              ? context.payload.pull_request.base.sha : context.payload.before;
+            if (!base || /^0+$/.test(base) || context.ref.startsWith('refs/tags/')) {
+              core.setOutput('run_tests', 'true');
+              return;
+            }
+            const { execFileSync } = require('node:child_process');
+            const files = execFileSync('git', ['diff', '--no-renames', '--name-only', '-z', base, 'HEAD'], { encoding: 'utf8' }).split('\0').filter(Boolean);
+            const presentation = /^(?:README(?:\.[^/]+)?\.md|CHANGELOG(?:\.[^/]+)?\.md|docs\/.*|assets\/(?:branding|screenshots)\/.*)$/;
+            const run = files.some(file => !presentation.test(file));
+            core.setOutput('run_tests', String(run));
+            core.info(run ? '执行完整检查' : '仅说明或展示图片变更，跳过完整测试');
+
   test:
+    needs: changes
+    if: needs.changes.outputs.run_tests == 'true'
     name: Node.js ${{ matrix.node }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:

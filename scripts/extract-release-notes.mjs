@@ -9,6 +9,11 @@ if (!tag) {
 }
 
 const version = tag.replace(/^v/, '')
+const installer = tag.startsWith('suite-installer-v')
+const pkg = JSON.parse(readFileSync(installer ? 'packages/dsh-codex-suite-installer/package.json' : 'package.json', 'utf8'))
+if (tag !== `${installer ? 'suite-installer-v' : 'v'}${pkg.version}`) {
+  throw new Error('版本标签必须与 package.json 一致')
+}
 
 function getHeaderVersion(line) {
   const bracketed = line.match(/^##\s+\[([^\]]+)\]/)
@@ -37,8 +42,8 @@ function extractSection(path) {
 const chinese = extractSection('CHANGELOG.zh-CN.md')
 const english = extractSection('CHANGELOG.md')
 
-if (!chinese && !english) {
-  throw new Error(`No changelog section found for ${tag}`)
+if (!chinese || !english) {
+  throw new Error(`Missing Chinese or English changelog section for ${tag}`)
 }
 
 writeFileSync(outputPath, bilingualReleaseNotes(chinese, english))

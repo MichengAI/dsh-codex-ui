@@ -4,6 +4,11 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.4 - 2026-09-14
+
+- Manage companion plugins in Settings → About, with PUA, Code Review, and Codex Pet included in a consistent order.
+- Show total npm downloads beside each plugin name using a compact icon and text.
+
 ## suite-installer-v1.0.5 - 2026-09-12
 
 Resolved and pinned the following member versions from the official npm registry:

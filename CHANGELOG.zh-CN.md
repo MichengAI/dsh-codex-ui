@@ -4,6 +4,11 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 1.1.4 - 2026-09-14
+
+- 在「设置 → 关于」集中管理配套插件，补齐 PUA、Code Review 和 Codex Pet，并统一插件排序。
+- 在插件名称后显示 npm 累计下载量，以紧凑的图标和文字呈现。
+
 ## suite-installer-v1.0.5 - 2026-09-12
 
 从官方 npm 解析并锁定以下成员版本：
