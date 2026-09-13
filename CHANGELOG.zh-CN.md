@@ -4,6 +4,22 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## suite-installer-v1.0.6 - 2026-09-14
+
+从官方 npm 解析并锁定以下成员版本：
+
+- `@michengai/dsh-archive-manager@0.1.40`
+- `@michengai/dsh-codex-ui@1.1.4`
+- `@michengai/dsh-skills-manager@0.1.50`
+- `@michengai/dsh-agency-agents@0.1.42`
+- `@michengai/dsh-im-connect@0.1.47`
+- `@michengai/dsh-automation@0.1.40`
+- `@michengai/dsh-btw@0.1.7`
+- `@michengai/dsh-simplify@0.1.4`
+- `@michengai/dsh-codex-pet@0.1.5`
+
+安装器使用这些精确版本执行安装，确保可复现。
+
 ## 1.1.4 - 2026-09-14
 
 - 在「设置 → 关于」集中管理配套插件，补齐 PUA、Code Review 和 Codex Pet，并统一插件排序。
