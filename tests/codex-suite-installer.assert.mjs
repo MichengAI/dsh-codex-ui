@@ -28,8 +28,10 @@ assert.deepEqual(MEMBER_PACKAGES, [
   '@michengai/dsh-automation',
   '@michengai/dsh-btw',
   '@michengai/dsh-simplify',
+  '@michengai/dsh-pua',
+  '@michengai/dsh-code-review',
   '@michengai/dsh-codex-pet',
-], '安装器必须包含 Codex Pet，同时保持既有成员顺序')
+], '安装器必须包含 PUA、Code Review，宠物保留在最后')
 assert.equal(installerManifest.name, '@michengai/dsh-codex-suite-installer')
 assert.match(installerManifest.version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/, '安装器版本必须是发布版 semver')
 assert.equal(installerManifest.bin?.['dsh-codex-suite-installer'], 'bin.mjs', '安装器清单必须使用 npm 发布后保留的规范 bin 路径')

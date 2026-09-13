@@ -9,7 +9,7 @@ export const WEB_BUNDLE = '@deepseek-ai/dsh-web-app'
 
 const suiteManifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 
-/** 保留旧聚合包的成员顺序，新成员追加在末尾。 */
+/** 保留旧聚合包的成员顺序，新成员放在宠物之前。 */
 export const MEMBER_PACKAGES = [
   '@michengai/dsh-archive-manager',
   '@michengai/dsh-codex-ui',
@@ -19,6 +19,8 @@ export const MEMBER_PACKAGES = [
   '@michengai/dsh-automation',
   '@michengai/dsh-btw',
   '@michengai/dsh-simplify',
+  '@michengai/dsh-pua',
+  '@michengai/dsh-code-review',
   '@michengai/dsh-codex-pet',
 ]
 

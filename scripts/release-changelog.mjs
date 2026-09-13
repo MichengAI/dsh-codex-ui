@@ -2,8 +2,8 @@
 export function installerReleaseBodies(members) {
   const list = Object.entries(members).map(([name, version]) => `- \`${name}@${version}\``).join('\n')
   return {
-    chinese: `从官方 npm 解析并锁定以下成员版本：\n\n${list}\n\n安装器使用这些精确版本执行安装，确保可复现。`,
-    english: `Resolved and pinned the following member versions from the official npm registry:\n\n${list}\n\nThe installer uses these exact versions for reproducible installation.`,
+    chinese: `一键维护安装 ${Object.keys(members).length} 个自研插件。包含以下插件及版本：\n\n${list}\n\n安装器使用这些精确版本执行安装，确保可复现。`,
+    english: `Install or maintain ${Object.keys(members).length} first-party plugins in one step. Included plugins and versions:\n\n${list}\n\nThe installer uses these exact versions for reproducible installation.`,
   }
 }
 
