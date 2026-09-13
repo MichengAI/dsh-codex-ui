@@ -4,6 +4,7 @@ import { readFile, rm, unlink, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { npmTotalDownloads } from './npm-downloads.ts'
 import { MANAGED_DEPENDENCIES, SUITE_MEMBER_PACKAGES, SUITE_PACKAGE, managedDependency, type ManagedDependencyId } from './dependencies.ts'
 
 export const PROFILE_PENDING_UPDATES_FILE = '.dsh-pending-updates.json'
@@ -19,6 +20,7 @@ export type DependencyStatus = {
   installed: boolean
   version?: string
   latestVersion?: string
+  totalDownloads?: number
   updateAvailable: boolean
 }
 
@@ -354,7 +356,11 @@ export async function runtimeSupportsOfficialTurnNavigator(runtime: DependencyRu
 /** 返回当前 profile 中固定管理插件的实际安装版本与 npm latest 状态。 */
 export async function dependencyStatuses(runtime: DependencyRuntime = resolveDependencyRuntime()): Promise<readonly DependencyStatus[]> {
   const bundleNames = await profileBundleNames(runtime)
-  return Promise.all(MANAGED_DEPENDENCIES.map(async dependency => {
+  return Promise.all(MANAGED_DEPENDENCIES.map(async entry => {
+    const [status, totalDownloads] = await Promise.all([readStatus(entry), npmTotalDownloads(entry.packageName)])
+    return { ...status, totalDownloads }
+  }))
+  async function readStatus(dependency: typeof MANAGED_DEPENDENCIES[number]): Promise<DependencyStatus> {
     const version = await installedPackageVersion(dependency.packageName, runtime)
     // Desktop 本身已由 DSH runtime 启动。若宿主没有通过公开兼容路径暴露
     // runtime 目录，仍应显示为已安装，但不能伪造版本或提供升级操作。
@@ -365,7 +371,7 @@ export async function dependencyStatuses(runtime: DependencyRuntime = resolveDep
     if (version === undefined || !isManagedPackageInstalled({ installedVersion: version, declared })) return { ...dependency, installed: false, updateAvailable: false }
     const latestVersion = await npmLatestVersion(dependency.packageName)
     return { ...dependency, installed: true, version, latestVersion, updateAvailable: latestVersion !== undefined && newerVersion(version, latestVersion) }
-  }))
+  }
 }
 
 /**

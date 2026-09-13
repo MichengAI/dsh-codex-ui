@@ -10,16 +10,17 @@ export const SUITE_MEMBER_PACKAGES = [
 ] as const
 
 export const MANAGED_DEPENDENCIES = [
-  { id: 'dsh', packageName: '@deepseek-ai/dsh' },
   { id: 'ui', packageName: '@michengai/dsh-codex-ui' },
   { id: 'experts', packageName: '@michengai/dsh-agency-agents' },
   { id: 'skills', packageName: '@michengai/dsh-skills-manager' },
   { id: 'archive', packageName: '@michengai/dsh-archive-manager' },
   { id: 'im', packageName: '@michengai/dsh-im-connect' },
   { id: 'schedule', packageName: '@michengai/dsh-automation' },
-  { id: 'pet', packageName: '@michengai/dsh-codex-pet' },
   { id: 'btw', packageName: '@michengai/dsh-btw' },
   { id: 'simplify', packageName: '@michengai/dsh-simplify' },
+  { id: 'pua', packageName: '@michengai/dsh-pua' },
+  { id: 'review', packageName: '@michengai/dsh-code-review' },
+  { id: 'pet', packageName: '@michengai/dsh-codex-pet' },
   { id: 'market', packageName: 'dshmarket' },
 ] as const
 

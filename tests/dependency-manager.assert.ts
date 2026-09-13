@@ -145,7 +145,7 @@ try {
     runtimeRoots: [statusRuntimeRoot],
   })
   assert.equal(statuses.find(status => status.id === 'ui')?.installed, true, 'Desktop profile 中已声明且存在的 Codex UI 必须显示已安装')
-  assert.equal(statuses.find(status => status.id === 'dsh')?.installed, true, 'Desktop 应用内置的 DSH runtime 必须显示已安装')
+  assert.equal(statuses.some(status => status.packageName === '@deepseek-ai/dsh'), false, '插件清单不应包含 DSH runtime')
   assert.equal(statuses.find(status => status.id === 'skills')?.installed, false, '当前 profile 未安装的精确包仍应显示缺失')
 
   const statusesWithoutRuntimePath = await dependencyStatuses({
@@ -155,11 +155,7 @@ try {
     runtimeRoots: [],
     desktopPnpm,
   })
-  assert.deepEqual(
-    statusesWithoutRuntimePath.find(status => status.id === 'dsh'),
-    { id: 'dsh', packageName: '@deepseek-ai/dsh', installed: true, updateAvailable: false },
-    'Desktop 未公开 runtime 路径时必须确认宿主 DSH 已安装，但不得伪造版本或升级状态',
-  )
+  assert.equal(statusesWithoutRuntimePath.some(status => status.packageName === '@deepseek-ai/dsh'), false, '未公开 runtime 路径时也不显示 DSH')
 } finally {
   globalThis.fetch = previousFetch
   await rm(statusRoot, { recursive: true, force: true })
