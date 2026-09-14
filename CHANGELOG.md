@@ -4,6 +4,10 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.6 - 2026-09-14
+
+- Fix the Web page freezing on initial load or refresh in a narrow window when the sidebar starts collapsed.
+
 ## suite-installer-v1.0.8 - 2026-09-14
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:

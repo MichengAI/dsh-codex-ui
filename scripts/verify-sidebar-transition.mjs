@@ -12,6 +12,53 @@ const implementation = ts.transpileModule(readFileSync('src/client/sidebar-width
 }).outputText.replace(/^export /gm, '')
 const browser = await chromium.launch({ headless: true })
 try {
+  // 首次收起、拖拽和网格未就绪时也必须收敛；达到上限即断开，避免回归挂死测试进程。
+  for (const initial of ['expanded', 'collapsed', 'dragging', 'pending-grid']) {
+    const startup = await browser.newPage({ viewport: { width: 984, height: 960 } })
+    await startup.setContent(`<div id="frame" ${initial === 'expanded' ? '' : 'data-sidebar-collapsed'} ${initial === 'dragging' ? 'data-dragging' : ''} style="grid-template-columns:${initial === 'pending-grid' ? 'none' : '320px minmax(0px, 1fr) 0px'}"><div data-side="sidebar"></div></div>`)
+    await startup.evaluate(() => {
+      const NativeObserver = window.MutationObserver
+      window.startupProbe = { callbacks: 0, capped: false }
+      window.MutationObserver = class extends NativeObserver {
+        constructor(callback) {
+          super((records, observer) => {
+            if (++window.startupProbe.callbacks >= 100) {
+              window.startupProbe.capped = true
+              observer.disconnect()
+              return
+            }
+            callback(records, observer)
+          })
+        }
+      }
+    })
+    await startup.addScriptTag({ content: implementation })
+    const startupResult = await startup.evaluate(async (initial) => {
+      const frame = document.getElementById('frame')
+      if (initial === 'dragging') frame.removeAttribute('data-sidebar-collapsed')
+      const settle = async () => { for (let i = 0; i < 6; i++) await new Promise(requestAnimationFrame) }
+      const dispose = observeSlimSidebar()
+      if (initial === 'pending-grid') frame.removeAttribute('data-sidebar-collapsed')
+      await settle()
+      const cold = { ...window.startupProbe }
+      frame.removeAttribute('data-sidebar-collapsed')
+      frame.removeAttribute('data-dragging')
+      frame.style.gridTemplateColumns = '320px minmax(0px, 1fr) 0px'
+      await settle()
+      const initialized = frame.hasAttribute('data-dcu-codex-sidebar-initialized')
+      const width = parseFloat(frame.style.gridTemplateColumns)
+      const beforeIdle = window.startupProbe.callbacks
+      await settle()
+      const idleCallbacks = window.startupProbe.callbacks - beforeIdle
+      dispose()
+      return { cold, initialized, width, idleCallbacks }
+    }, initial)
+    await startup.close()
+    assert.equal(startupResult.cold.capped, false, `${initial} 首次加载触发监听循环`)
+    assert.equal(startupResult.initialized, true, `${initial} 恢复展开后应完成初始化`)
+    assert.equal(startupResult.width, 240)
+    assert.equal(startupResult.idleCallbacks, 0, `${initial} 稳定后不应继续触发监听`)
+  }
   const page = await browser.newPage()
   await page.setContent('<style>*{box-sizing:border-box}</style><div id="frame" style="display:grid;height:700px;grid-template-columns:320px minmax(0px, 1fr) 0px"><div style="min-width:0;overflow:hidden"><aside class="dcu-root"><div class="dcu-expanded-shell"><nav class="dcu-menu"><button>扩展管理专家技能插件连接器</button></nav></div><div class="dcu-foot">设置与账户余额</div></aside></div><main></main><div></div><div data-side="sidebar"></div></div>')
   await page.addStyleTag({ content: stylesheet })

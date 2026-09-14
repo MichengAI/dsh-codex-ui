@@ -4,6 +4,10 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 1.1.6 - 2026-09-14
+
+- 修复窄窗口下首次打开或刷新 Web 时，侧栏初始收起可能导致页面卡住的问题。
+
 ## suite-installer-v1.0.8 - 2026-09-14
 
 一键维护安装 11 个自研插件。包含以下插件及版本：
