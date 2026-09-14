@@ -7,6 +7,10 @@ const navigator = readFileSync(new URL('../src/client/TurnNavigator.tsx', import
 const client = readFileSync(new URL('../src/client/index.ts', import.meta.url), 'utf8')
 const settings = readFileSync(new URL('../src/client/settings-page-styles.ts', import.meta.url), 'utf8')
 
+const sidebarStylesheet = sidebar.match(/const stylesheet = `([\s\S]*?)`/)?.[1]
+assert.ok(sidebarStylesheet, '必须能读取侧栏样式，避免防回归检查被跳过')
+assert.doesNotMatch(sidebarStylesheet, /billing-(?:trigger|rail-button)/, '侧栏 CSS 不得重新覆盖用量插件入口；入口点击逻辑不受此约束')
+
 assert.ok(sidebar.includes('.dcu-settings-seat [data-slot="settings.trigger"]>svg{color:var(--dcu-sidebar-icon)}'), '设置图标必须使用侧栏颜色，穿过宿主 slot 包装定位图标')
 assert.match(settings, /\.dcu-settings-trigger-content\{[^}]*grid-template-columns:20px minmax\(0,1fr\);column-gap:8px/, '设置入口通过固定图标列对齐文字，不再叠加旧的文字偏移')
 assert.match(settings, /\.dcu-settings-trigger\[data-wide=false\] \.dcu-settings-trigger-content\{grid-template-columns:16px;justify-content:center\}/, '窄轨设置图标必须独立居中')
