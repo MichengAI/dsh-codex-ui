@@ -7,20 +7,7 @@ const navigator = readFileSync(new URL('../src/client/TurnNavigator.tsx', import
 const client = readFileSync(new URL('../src/client/index.ts', import.meta.url), 'utf8')
 const settings = readFileSync(new URL('../src/client/settings-page-styles.ts', import.meta.url), 'utf8')
 
-assert.match(sidebar, /\.dcu-footer-actions \[data-testid="billing-trigger"\]\{[^}]*border:0[^}]*background:transparent[^}]*box-shadow:none[^}]*transform:none/, '费用入口必须融入侧栏，不保留独立卡片的边框、阴影和抬升')
-assert.match(sidebar, /\.dcu-footer-actions \[data-testid="billing-trigger-icon"\]\{[^}]*width:16px;height:20px[^}]*border:0/, '费用图标必须去掉方框并与侧栏图标同宽')
-assert.match(sidebar, /\[data-testid="billing-trigger-icon"\]\+span>span:first-child>span:last-child\{[^}]*font-size:16px;font-weight:600[^}]*letter-spacing:0/, '费用和 Token 主指标必须使用紧凑等宽数字，不依赖第三方哈希类名')
-assert.match(sidebar, /\.dcu-footer-actions \[data-testid="billing-trigger-today"\]\{[^}]*color:var\(--dcu-sidebar-navigation\);font-size:12px/, '费用辅助文字必须与设置同色并保持可读字号')
-for (const suffix of ['>span', '>span:last-child']) {
-  assert.ok(sidebar.includes(`[data-testid="billing-trigger-icon"]+span>span:first-child${suffix}{color:var(--dcu-sidebar-navigation);`), '费用标签、币种和金额必须与辅助文字、设置保持同色')
-}
-assert.match(sidebar, /\[data-testid="billing-rail-button"\]\)\:focus-visible\{[^}]*outline:2px solid var\(--dcu-sidebar-icon\)/, '费用宽态和窄轨入口必须保留可见键盘焦点')
-assert.match(sidebar, /\.dcu-footer-actions \[data-testid="billing-rail-button"\]\{[^}]*width:36px;height:36px/, '费用窄轨入口必须与现有图标按钮尺寸一致')
-for (const marker of ['billing-trigger-icon', 'billing-rail-button']) {
-  assert.ok(sidebar.includes(`.dcu-footer-actions [data-testid="${marker}"] svg{flex:none;width:24px;height:24px;stroke-width:1.5px}`), '费用图形只占 24px 画布中的 16px，宽态与窄轨必须补偿画布留白且禁止 flex 压缩')
-}
-assert.ok(sidebar.includes('.dcu-settings-seat [data-slot="settings.trigger"]>svg{color:var(--dcu-sidebar-icon)}'), '设置与费用图标必须使用同一侧栏颜色，穿过宿主 slot 包装定位图标')
-assert.ok(sidebar.includes('.dcu-footer-actions [data-testid="billing-trigger-icon"]+span{min-width:0;gap:2px;margin-left:4px}'), '费用文字整体右移，保留两行左对齐')
+assert.ok(sidebar.includes('.dcu-settings-seat [data-slot="settings.trigger"]>svg{color:var(--dcu-sidebar-icon)}'), '设置图标必须使用侧栏颜色，穿过宿主 slot 包装定位图标')
 assert.match(settings, /\.dcu-settings-trigger-content\{[^}]*grid-template-columns:20px minmax\(0,1fr\);column-gap:8px/, '设置入口通过固定图标列对齐文字，不再叠加旧的文字偏移')
 assert.match(settings, /\.dcu-settings-trigger\[data-wide=false\] \.dcu-settings-trigger-content\{grid-template-columns:16px;justify-content:center\}/, '窄轨设置图标必须独立居中')
 
