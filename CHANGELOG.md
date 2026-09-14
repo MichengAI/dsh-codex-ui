@@ -4,6 +4,10 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.7 - 2026-09-14
+
+- Restore the billing plugin's native sidebar entry styles by removing Codex UI overrides for its card, icons, text, and expanded/collapsed appearance. Clicking the entry still opens the existing usage statistics settings page.
+
 ## suite-installer-v1.0.9 - 2026-09-14
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:

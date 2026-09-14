@@ -4,6 +4,10 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 1.1.7 - 2026-09-14
+
+- 恢复侧栏用量入口的插件原生样式，移除 Codex UI 对卡片、图标、文字和宽窄态外观的覆盖；点击入口仍打开现有用量统计设置页。
+
 ## suite-installer-v1.0.9 - 2026-09-14
 
 一键维护安装 11 个自研插件。包含以下插件及版本：
