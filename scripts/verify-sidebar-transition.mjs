@@ -15,7 +15,9 @@ try {
   // 首次收起、拖拽和网格未就绪时也必须收敛；达到上限即断开，避免回归挂死测试进程。
   for (const initial of ['expanded', 'collapsed', 'dragging', 'pending-grid']) {
     const startup = await browser.newPage({ viewport: { width: 984, height: 960 } })
-    await startup.setContent(`<div id="frame" ${initial === 'expanded' ? '' : 'data-sidebar-collapsed'} ${initial === 'dragging' ? 'data-dragging' : ''} style="grid-template-columns:${initial === 'pending-grid' ? 'none' : '320px minmax(0px, 1fr) 0px'}"><div data-side="sidebar"></div></div>`)
+    // 网格未就绪时先用收起标记定位 frame，监听建立后再单独验证网格守卫。
+    const collapsed = initial === 'collapsed' || initial === 'pending-grid'
+    await startup.setContent(`<div id="frame" ${collapsed ? 'data-sidebar-collapsed' : ''} ${initial === 'dragging' ? 'data-dragging' : ''} style="grid-template-columns:${initial === 'pending-grid' ? 'none' : '320px minmax(0px, 1fr) 0px'}"><div data-side="sidebar"></div></div>`)
     await startup.evaluate(() => {
       const NativeObserver = window.MutationObserver
       window.startupProbe = { callbacks: 0, capped: false }
@@ -35,7 +37,6 @@ try {
     await startup.addScriptTag({ content: implementation })
     const startupResult = await startup.evaluate(async (initial) => {
       const frame = document.getElementById('frame')
-      if (initial === 'dragging') frame.removeAttribute('data-sidebar-collapsed')
       const settle = async () => { for (let i = 0; i < 6; i++) await new Promise(requestAnimationFrame) }
       const dispose = observeSlimSidebar()
       if (initial === 'pending-grid') frame.removeAttribute('data-sidebar-collapsed')

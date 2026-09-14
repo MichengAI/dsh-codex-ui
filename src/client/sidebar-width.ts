@@ -46,9 +46,15 @@ export function applySidebarWidth(frame: HTMLElement, width: number): boolean {
   return changed
 }
 
+/** 自动宽度调整与初始化过渡共用前置条件；手动拖拽不受此限制。 */
+function canApplySlimSidebar(frame: HTMLElement): boolean {
+  return !frame.hasAttribute('data-dragging')
+    && !frame.hasAttribute('data-sidebar-collapsed')
+    && parseSidebarGrid(frame.style.gridTemplateColumns) !== undefined
+}
+
 export function applySlimSidebar(frame: HTMLElement): boolean {
-  if (frame.hasAttribute('data-dragging')) return false
-  if (parseSidebarGrid(frame.style.gridTemplateColumns) === undefined || frame.hasAttribute('data-sidebar-collapsed')) return false
+  if (!canApplySlimSidebar(frame)) return false
   const initialized = frame.hasAttribute('data-dcu-codex-sidebar-initialized')
   const width = initialized ? visibleSidebarWidths.get(frame) ?? CODEX_SIDEBAR_MIN_PX : CODEX_SIDEBAR_MIN_PX
   const changed = applySidebarWidth(frame, width)
@@ -92,7 +98,7 @@ export function observeSlimSidebar(): () => void {
       if (frame === undefined || !frame.isConnected) watchFrame(findSidebarFrame(document))
       if (frame !== undefined) {
         // 尚不能应用宽度时不要写入过渡样式，否则初始化标记缺失会让监听反复触发自身。
-        if (frame.hasAttribute('data-sidebar-collapsed') || frame.hasAttribute('data-dragging') || parseSidebarGrid(frame.style.gridTemplateColumns) === undefined) return
+        if (!canApplySlimSidebar(frame)) return
         const restoreTransition = frame.hasAttribute('data-dcu-codex-sidebar-initialized')
           ? undefined
           : pauseInitialSidebarTransition(frame)
