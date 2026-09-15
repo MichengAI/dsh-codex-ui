@@ -56,17 +56,56 @@ function abortableSignal(signal: AbortSignal | undefined): AbortSignal {
   return signal === undefined ? timeout : AbortSignal.any([signal, timeout])
 }
 
+type StreamTextPart = { text: string; closed: boolean }
+
+/**
+ * Assemble the streamed text the way the host's `BlockAssembler` does: deltas
+ * accumulate per block index and a closing `block-end` replaces them, so the
+ * adapters that send both channels cannot duplicate the title text.
+ */
 function collectText(chunks: AsyncIterable<unknown>): Promise<string> {
   return (async () => {
-    const parts: string[] = []
+    const parts = new Map<number, StreamTextPart>()
+    let finish = 'stop'
+    const part = (index: number): StreamTextPart => {
+      let existing = parts.get(index)
+      if (existing === undefined) {
+        existing = { text: '', closed: false }
+        parts.set(index, existing)
+      }
+      return existing
+    }
     for await (const chunk of chunks) {
       if (chunk === null || typeof chunk !== 'object') continue
-      const row = chunk as { type?: unknown; text?: unknown; block?: { type?: unknown; text?: unknown } }
+      const row = chunk as {
+        type?: unknown
+        index?: unknown
+        text?: unknown
+        reason?: { kind?: unknown }
+        block?: { type?: unknown; text?: unknown }
+      }
       if (row.type === 'tool-call-delta' || row.block?.type === 'tool-call') throw new Error('codex-ui session title output must be text')
-      if (row.type === 'text-delta' && typeof row.text === 'string') parts.push(row.text)
-      if (row.type === 'block-end' && row.block?.type === 'text' && typeof row.block.text === 'string') parts.push(row.block.text)
+      if (row.type === 'finish') {
+        finish = typeof row.reason?.kind === 'string' ? row.reason.kind : 'unknown'
+        continue
+      }
+      if (row.type !== 'text-delta' && row.type !== 'block-end') continue
+      if (typeof row.index !== 'number' || !Number.isSafeInteger(row.index)) continue
+      if (row.type === 'text-delta') {
+        if (typeof row.text !== 'string') continue
+        const target = part(row.index)
+        if (!target.closed) target.text += row.text
+        continue
+      }
+      if (row.block?.type !== 'text' || typeof row.block.text !== 'string') continue
+      const target = part(row.index)
+      if (target.closed) continue
+      target.text = row.block.text
+      target.closed = true
     }
-    return parts.join('').trim().split(/\r?\n/, 1)[0] ?? ''
+    if (finish !== 'stop') throw new Error(`codex-ui session title output finished with "${finish}"`)
+    const text = [...parts.values()].map(segment => segment.text).join('').trim()
+    return text.split(/\r?\n/, 1)[0] ?? ''
   })()
 }
 
@@ -81,6 +120,7 @@ export async function generateCodexSessionTitle(llm: TitleLlm, request: TitleReq
   if (route === undefined || route.provider === '' || route.model === '') throw new Error('codex-ui session title missing route')
   const framed = `根据这条用户消息生成会话标题。只返回“类型｜主题”一行，不要第三段，不要重复主题。\n${JSON.stringify([{ seq: first.seq, text }])}`
   if (Buffer.byteLength(framed, 'utf8') > MAX_INPUT_BYTES) throw new Error('codex-ui session title input too large')
+  const signal = abortableSignal(request.signal)
   const raw = await collectText(llm.stream({
     provider: route.provider,
     model: route.model,
@@ -94,8 +134,9 @@ export async function generateCodexSessionTitle(llm: TitleLlm, request: TitleReq
     maxTokens: MAX_OUTPUT_TOKENS,
     sessionId: session.id,
     purpose: 'session-title',
-    signal: abortableSignal(request.signal),
+    signal,
   }))
+  signal.throwIfAborted()
   const parsed = parseTypeAndTheme(raw)
   if (parsed === undefined) throw new Error('codex-ui session title invalid model output')
   const title = assembleSessionTitle(parsed.type, parsed.theme)

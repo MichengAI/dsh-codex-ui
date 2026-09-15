@@ -21,6 +21,11 @@ describe('parseTypeAndTheme', () => {
     expect(parseTypeAndTheme('优化')).toBeUndefined()
   })
 
+  test('ASCII 竖线和细竖线当成规范分隔符', () => {
+    expect(parseTypeAndTheme('优化|批次文字显示')).toEqual({ type: '优化', theme: '批次文字显示' })
+    expect(parseTypeAndTheme('修复│登录失败')).toEqual({ type: '修复', theme: '登录失败' })
+  })
+
   test('只取类型和第一段主题，丢掉重复段、日期和模型自带表情', () => {
     expect(parseTypeAndTheme('研究｜核对顶代码｜核对顶代码')).toEqual({ type: '研究', theme: '核对顶代码' })
     expect(parseTypeAndTheme('0909｜研究｜核对顶代码')).toEqual({ type: '研究', theme: '核对顶代码' })

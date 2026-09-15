@@ -38,6 +38,21 @@ async function* textStream(text: string): AsyncIterable<unknown> {
   yield { type: 'finish', reason: { kind: 'stop' } }
 }
 
+/** 真实宿主适配器：增量先到，收尾块在 [DONE] 时携带同一份完整文本。 */
+async function* assembledStream(text: string): AsyncIterable<unknown> {
+  yield { type: 'block-start', index: 0, blockType: 'text' }
+  for (const piece of text.split('')) yield { type: 'text-delta', index: 0, text: piece }
+  yield { type: 'block-end', index: 0, block: { type: 'text', text } }
+  yield { type: 'finish', reason: { kind: 'stop' } }
+}
+
+async function* abortedStream(text: string, kind: 'max-tokens' | 'aborted' | 'error'): AsyncIterable<unknown> {
+  yield { type: 'text-delta', index: 0, text }
+  yield kind === 'max-tokens'
+    ? { type: 'finish', reason: { kind } }
+    : { type: 'finish', reason: { kind, failure: { message: 'interrupted', code: 'X' } } }
+}
+
 test('标题服务或模型服务缺失时不注册', () => {
   const register = vi.fn()
   expect(() => registerSessionTitleProvider(host())).not.toThrow()
@@ -104,4 +119,35 @@ test('特殊会话或模型输出无效时失败以保留回退标题', async ()
   const generate = providers[0]!.generate
   await expect(generate(request({ id: 'dsh-automation-session-1' }))).rejects.toThrow()
   await expect(generate(request({ id: 'session-1' }))).rejects.toThrow()
+})
+
+test('模型用 ASCII 竖线分隔时仍能拼出规范标题', async () => {
+  const providers: Provider[] = []
+  registerSessionTitleProvider(host({
+    sessionTitle: { register: provider => { providers.push(provider); return () => {} } },
+    llm: { stream: () => textStream('优化|批次文字显示') },
+  }))
+  const result = await providers[0]!.generate(request({ id: 'session-1' }))
+  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.优化} 优化｜批次文字显示`)
+})
+
+test('增量与收尾块携带同一份文本时标题只拼一次', async () => {
+  const providers: Provider[] = []
+  registerSessionTitleProvider(host({
+    sessionTitle: { register: provider => { providers.push(provider); return () => {} } },
+    llm: { stream: () => assembledStream('优化｜批次文字显示') },
+  }))
+  const result = await providers[0]!.generate(request({ id: 'session-1' }))
+  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.优化} 优化｜批次文字显示`)
+})
+
+test('模型被截断或中断时放弃标题以保留回退', async () => {
+  for (const kind of ['max-tokens', 'aborted', 'error'] as const) {
+    const providers: Provider[] = []
+    registerSessionTitleProvider(host({
+      sessionTitle: { register: provider => { providers.push(provider); return () => {} } },
+      llm: { stream: () => abortedStream('优化｜批次文字显示', kind) },
+    }))
+    await expect(providers[0]!.generate(request({ id: 'session-1' }))).rejects.toThrow()
+  }
 })

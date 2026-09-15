@@ -17,6 +17,7 @@ export const SESSION_TITLE_EMOJI = {
 
 const TITLE_TYPES = new Set<string>(SESSION_TITLE_TYPES)
 const LEADING_EMOJI = /^(?:\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)+\s*/u
+const TITLE_SEPARATORS = /[|｜│]/g
 const GENERIC_THEME_SUFFIXES = ['类型', '分类', '相关', '需求', '问题', '会话', '标题', '主题', '内容']
 
 export type SessionTitleKind = (typeof SESSION_TITLE_TYPES)[number]
@@ -43,7 +44,7 @@ function stripLeadingNoise(part: string): string {
 }
 
 export function parseTypeAndTheme(raw: string): SessionTitleParts | undefined {
-  const cleaned = raw.trim().replace(/^["'`]+|["'`]+$/g, '').trim()
+  const cleaned = raw.trim().replace(/^["'`]+|["'`]+$/g, '').trim().replace(TITLE_SEPARATORS, SESSION_TITLE_SEPARATOR)
   const parts = cleaned.split(SESSION_TITLE_SEPARATOR).map(stripLeadingNoise).filter(part => part !== '')
   const type = parts[0]
   const theme = parts[1]
