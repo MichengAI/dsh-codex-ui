@@ -4,6 +4,24 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## suite-installer-v1.0.11 - 2026-09-15
+
+Install or maintain 11 first-party plugins in one step. Included plugins and versions:
+
+- `@michengai/dsh-archive-manager@0.1.42`
+- `@michengai/dsh-codex-ui@1.1.8`
+- `@michengai/dsh-skills-manager@0.1.50`
+- `@michengai/dsh-agency-agents@0.1.42`
+- `@michengai/dsh-im-connect@0.1.49`
+- `@michengai/dsh-automation@0.1.42`
+- `@michengai/dsh-btw@0.1.7`
+- `@michengai/dsh-simplify@0.1.4`
+- `@michengai/dsh-pua@0.3.11`
+- `@michengai/dsh-code-review@0.1.0`
+- `@michengai/dsh-codex-pet@0.1.5`
+
+The installer uses these exact versions for reproducible installation.
+
 ## 1.1.8 - 2026-09-15
 
 - After the first user message, new chats are titled once as emoji, type, and theme, for example `⚡ 优化｜批次文字显示`. Dates are not written.
