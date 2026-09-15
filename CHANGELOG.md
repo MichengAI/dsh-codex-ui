@@ -4,6 +4,11 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.8 - 2026-09-15
+
+- After the first user message, new chats are titled once as emoji, type, and theme, for example `⚡ 优化｜批次文字显示`. Dates are not written.
+- A manual rename is pinned by the host and later messages do not overwrite it.
+
 ## suite-installer-v1.0.10 - 2026-09-14
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:
