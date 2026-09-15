@@ -55,6 +55,14 @@ test('复现旧宿主：原设置外壳存在时，新壳重复声明子插槽�
   removeRoot()
 })
 
+test('发布配置停用官方首消息标题 LLM，但不关闭标题服务', () => {
+  const patch = readFileSync('cordis.patch.yml', 'utf8')
+  expect(patch).toMatch(/id: session-title-llm\s+disabled: true/)
+  expect(patch).not.toMatch(/id: session-title\s*\n\s+disabled: true/)
+  const host = readFileSync('src/index.ts', 'utf8')
+  expect(host).toMatch(/registerSessionTitleProvider/)
+})
+
 test('发布配置停用旧壳，新壳唯一声明设置树并在重新挂载后恢复功能贡献', () => {
   const patch = readFileSync('cordis.patch.yml', 'utf8')
   expect(patch).toMatch(/id: ui-settings-general\s+disabled: true/)

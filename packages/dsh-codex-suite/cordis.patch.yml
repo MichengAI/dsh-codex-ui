@@ -19,8 +19,10 @@
     - id: ui-workspace-archive-manager
       name: '@michengai/dsh-archive-manager'
 
-# dsh-codex-ui：替换默认侧栏。
+# dsh-codex-ui：替换默认侧栏，并用规范标题覆盖官方首消息 LLM。
 - id: ui-sidebar
+  disabled: true
+- id: session-title-llm
   disabled: true
 - insert:
     - id: codex-ui

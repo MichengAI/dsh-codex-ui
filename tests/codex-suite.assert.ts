@@ -45,6 +45,8 @@ assert.equal(suite.name, '@michengai/dsh-codex-suite', '聚合包名必须稳定
 assert.equal(suite.private, true, '旧聚合包必须阻止后续误发布')
 assert.equal(suite.files?.includes('installer.mjs'), false, '兼容聚合包不应携带会触发整棵依赖解析的 npx 安装器')
 assert.equal(suite.dsh?.bundle?.patch, './cordis.patch.yml', 'DSH 必须读取聚合 patch')
+assert.match(patch, /id: session-title-llm\s+disabled: true/, '聚合 patch 必须停用官方会话标题 LLM')
+assert.doesNotMatch(patch, /id: session-title\s*\n\s+disabled: true/, '聚合 patch 不得关闭会话标题服务')
 for (const packageName of packages) {
   assert.notEqual(suite.dependencies?.[packageName], undefined, `聚合包必须安装 ${packageName}`)
   assert.equal(suite.dependencies?.[packageName], expectedVersions[packageName], `聚合包必须固定 ${packageName} 的已验证版本`)

@@ -3,6 +3,8 @@
   disabled: true
 - id: ui-settings-general
   disabled: true
+- id: session-title-llm
+  disabled: true
 - insert:
     - id: codex-ui
       name: '@michengai/dsh-codex-ui'
