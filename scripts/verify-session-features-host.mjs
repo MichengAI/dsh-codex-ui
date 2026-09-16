@@ -45,9 +45,9 @@ try {
     ctx.get('uiWorkspace').openSession(sessionId)
     return { sessionId, targetId: destination.workspaceId, targetTitle: destination.title || destination.workspaceId }
   }, targetDir)
-  const escaped = await page.evaluate(id => CSS.escape(id), ids.sessionId)
-  const session = page.locator(`.dcu-wb-session[data-dcu-session="${escaped}"]`)
+  const session = page.locator('.dcu-wb-session[aria-selected="true"]')
   await session.waitFor()
+  assert.equal(await session.getAttribute('data-dcu-session'), ids.sessionId, '当前选中行必须是即将移动的会话，不能只靠标题猜')
   await page.keyboard.press('Escape')
   checks.push('隔离宿主已有可移动会话，并创建了目标项目')
 

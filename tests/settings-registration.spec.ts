@@ -67,9 +67,6 @@ test('发布配置停用官方首消息标题 LLM，但不关闭标题服务', (
   expect(readFileSync('src/index.ts', 'utf8')).not.toMatch(/registerSessionTitleProvider/)
   expect(readFileSync('src/session-title-provider.ts', 'utf8')).not.toMatch(/titleDiag|DCU_TITLE_LOG|session-title-diag|Reflect\.get/)
   expect(readFileSync('src/session-title-plugin.ts', 'utf8')).toMatch(/ctx\.effect\(\(\) => registerSessionTitleProvider\(ctx\)/)
-  const sessionFeatures = readFileSync('scripts/verify-session-features-host.mjs', 'utf8')
-  expect(sessionFeatures).not.toMatch(/locator\([^)]*CSS\.escape/)
-  expect(sessionFeatures).toMatch(/page\.evaluate\([^)]*CSS\.escape/)
 })
 
 test('发布配置停用旧壳，新壳唯一声明设置树并在重新挂载后恢复功能贡献', () => {
