@@ -96,7 +96,7 @@ const verify = async () => {
     if (style.fontSize !== '13px' || style.lineHeight !== '18px' || style.fontSize !== chatStyle.fontSize || style.lineHeight !== chatStyle.lineHeight || style.color !== chatStyle.color) throw new Error('空状态字体不统一')
     const expectedColor = theme === 'dark' ? 'rgb(112, 120, 116)' : 'rgb(118, 126, 122)'
     if (style.color !== expectedColor || chatStyle.color !== expectedColor) throw new Error('空状态未使用三级灰 token')
-    if (chatStyle.padding !== '1px 8px 5px 28px') throw new Error('空聊天四边间距不符')
+    if (chatStyle.padding !== '1px 8px 5px 30px') throw new Error('空聊天四边间距不符')
     const body = empty.parentElement
     body.dataset.open = 'false'
     if (body.getBoundingClientRect().height !== 0) throw new Error('空分组收起残留间距')
@@ -117,6 +117,22 @@ const verify = async () => {
     const below = host.querySelector('#next-project>.dcu-wb-project-head').getBoundingClientRect().top - lineTop - parseFloat(style.lineHeight)
     if (Math.abs(above - below) > 0.1) throw new Error(`暂无聊天 ${layout} 未居中: ${above}/${below}`)
     results.push({ name: `暂无聊天-${layout}`, above, below, error: Math.abs(above - below), scrollError: 0 })
+  }
+  {
+    const host = document.createElement('div')
+    host.className = 'dark'
+    host.style.cssText = 'width:275px'
+    host.innerHTML = '<div class="dcu-wb"><div class="dcu-wb-project"><div class="dcu-wb-project-head"><span class="dcu-wb-folder"><svg width="16" height="16" viewBox="0 0 16 16"></svg></span><span class="dcu-wb-project-title">项目名</span></div><div class="dcu-wb-project-body" data-open="true"><div class="dcu-wb-session" id="idle-session"><span class="dcu-wb-session-title">空闲会话</span></div><div class="dcu-wb-session" id="run-session"><span class="dcu-wb-session-title">运行会话</span><span class="dcu-wb-running"></span></div></div></div></div>'
+    document.body.append(host)
+    const folder = host.querySelector('.dcu-wb-folder').getBoundingClientRect()
+    const projectTitle = host.querySelector('.dcu-wb-project-title').getBoundingClientRect()
+    const idleTitle = host.querySelector('#idle-session .dcu-wb-session-title').getBoundingClientRect()
+    const runTitle = host.querySelector('#run-session .dcu-wb-session-title').getBoundingClientRect()
+    const spin = host.querySelector('.dcu-wb-running').getBoundingClientRect()
+    if (Math.abs(spin.left - folder.left) > 0.5 || Math.abs(spin.width - folder.width) > 0.5) throw new Error(`转圈格子未与文件夹对齐: folder=${folder.left}/${folder.width} spin=${spin.left}/${spin.width}`)
+    if (Math.abs(idleTitle.left - projectTitle.left) > 0.5) throw new Error(`空闲会话文字未与项目文字对齐: ${idleTitle.left} vs ${projectTitle.left}`)
+    if (Math.abs(runTitle.left - projectTitle.left) > 0.5) throw new Error(`运行会话文字未与项目文字对齐: ${runTitle.left} vs ${projectTitle.left}`)
+    results.push({ name: '会话与项目对齐', error: Math.max(Math.abs(spin.left - folder.left), Math.abs(idleTitle.left - projectTitle.left), Math.abs(runTitle.left - projectTitle.left)), scrollError: 0 })
   }
   return results
 }
