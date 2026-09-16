@@ -21,11 +21,11 @@ function store<T>(initial: T) {
   }
 }
 
-const idle: InputState = { draft: '', phase: 'plain', imageIds: [], occurrences: [], queue: [], draftRev: 0 }
+const idle: InputState = { draft: '', phase: 'plain', attachmentIds: [], occurrences: [], queue: [], draftRev: 0 }
 afterEach(() => document.body.replaceChildren())
 
 function userEvent(seq: number, text: string): SessionLiveEventEntry {
-  return { type: 'event', event: { seq, type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text }] } } } as SessionLiveEventEntry
+  return { type: 'event', event: { seq, time: seq, type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text }] } } } as unknown as SessionLiveEventEntry
 }
 
 function eventStore(initial: SessionEventWindow = { entries: [], revision: 0, hasMore: false, change: { kind: 'replace', entries: [] } }) {
@@ -44,7 +44,7 @@ function eventStore(initial: SessionEventWindow = { entries: [], revision: 0, ha
 }
 
 test.each(['imageIds', 'attachmentIds'] as const)('%s：消息与命令历史、附件保护和卸载', async attachmentKey => {
-  const { imageIds: _images, ...base } = idle
+  const { attachmentIds: _attachments, ...base } = idle
   const idleState = { ...base, [attachmentKey]: [] } as unknown as InputState
   const container = document.createElement('section')
   const slot = document.createElement('div')
@@ -73,9 +73,9 @@ test.each(['imageIds', 'attachmentIds'] as const)('%s：消息与命令历史、
   }
   try {
     await render('a')
-    events.append(userEvent(1, '普通消息'), { type: 'event', event: { seq: 2, type: 'user/message', data: { source: { kind: 'system' }, content: [{ type: 'text', text: '系统内容' }] } } } as SessionLiveEventEntry)
+    events.append(userEvent(1, '普通消息'), { type: 'event', event: { seq: 2, time: 2, type: 'user/message', data: { source: { kind: 'system' }, content: [{ type: 'text', text: '系统内容' }] } } } as unknown as SessionLiveEventEntry)
     expect(history.list('项目一')).toEqual(['普通消息'])
-    state.set({ ...idleState, phase: 'submitting', draft: '/btw 旁问', claim: { token: '/btw' } })
+    state.set({ ...idleState, phase: 'submitting', draft: '/btw 旁问', claim: { name: 'btw', token: '/btw' } })
     state.set(idleState)
     expect(history.list('项目一')).toEqual(['普通消息', '/btw 旁问'])
     state.set({ ...idleState, phase: 'submitting', draft: '/失败' })

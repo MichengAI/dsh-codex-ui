@@ -97,9 +97,9 @@ function localeFromTag(tag: string): SessionTitleLocale | undefined {
 function parseLocaleValue(value: unknown): SessionTitleLocale | undefined {
   if (typeof value === 'string') return localeFromTag(value)
   if (value === null || typeof value !== 'object') return undefined
-  const row = value as { getSnapshot?: () => unknown; locale?: unknown; lang?: unknown; language?: unknown; current?: unknown }
+  const row = value as { getSnapshot?: () => unknown; locale?: unknown; lang?: unknown; language?: unknown; current?: unknown; preference?: unknown }
   if (typeof row.getSnapshot === 'function') return parseLocaleValue(row.getSnapshot())
-  for (const key of ['locale', 'lang', 'language', 'current'] as const) {
+  for (const key of ['locale', 'lang', 'language', 'current', 'preference'] as const) {
     const parsed = parseLocaleValue(row[key])
     if (parsed !== undefined) return parsed
   }
@@ -111,6 +111,29 @@ function inferLocaleFromMessage(text: string | undefined): SessionTitleLocale | 
   if (/[㐀-鿿]/.test(text)) return 'zh'
   if (/[A-Za-z]/.test(text)) return 'en'
   return undefined
+}
+
+function compactMessageTheme(message: string): string {
+  const line = message.replace(/\s+/g, ' ').trim()
+  if (Buffer.byteLength(line, 'utf8') <= 40) return line
+  let used = 0
+  let output = ''
+  for (const character of line) {
+    const bytes = Buffer.byteLength(character, 'utf8')
+    if (used + bytes > 40) break
+    output += character
+    used += bytes
+  }
+  return output.trimEnd()
+}
+
+/** 主题必须跟用户消息同一语言；模型串语言时改用消息原文。 */
+export function alignThemeToMessage(theme: string, message: string): string {
+  const messageLocale = inferLocaleFromMessage(message)
+  const themeLocale = inferLocaleFromMessage(theme)
+  if (messageLocale === undefined || themeLocale === undefined || messageLocale === themeLocale) return theme
+  const fallback = compactMessageTheme(message)
+  return fallback === '' ? theme : fallback
 }
 
 export function resolveSessionTitleLocale(source: unknown, message?: string): SessionTitleLocale {

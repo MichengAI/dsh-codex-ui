@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'vitest'
 import {
   SESSION_TITLE_EMOJI,
+  alignThemeToMessage,
   assembleSessionTitle,
   parseTypeAndTheme,
+  resolveSessionTitleLocale,
   shouldSkipAutoTitle,
 } from '../src/session-title.ts'
 
@@ -60,6 +62,25 @@ describe('assembleSessionTitle', () => {
   test('超过宿主字节上限或类型无效时保留原名', () => {
     expect(assembleSessionTitle('未知', '主题')).toBeUndefined()
     expect(assembleSessionTitle('优化', '这是一段会超过八十字节上限的特别长主题用于验证截断前直接放弃')).toBeUndefined()
+  })
+})
+
+describe('alignThemeToMessage', () => {
+  test('主题语言和用户消息不一致时改用消息原文', () => {
+    expect(alignThemeToMessage('Bug修复', 'fix bug')).toBe('fix bug')
+    expect(alignThemeToMessage('project review', '评估一下项目')).toBe('评估一下项目')
+  })
+
+  test('主题和用户消息语言一致时保留模型主题', () => {
+    expect(alignThemeToMessage('login timeout', 'the login request timed out')).toBe('login timeout')
+    expect(alignThemeToMessage('登录超时', '登录请求超时了')).toBe('登录超时')
+  })
+})
+
+describe('resolveSessionTitleLocale', () => {
+  test('宿主 settings 的 locale.preference 优先于用户消息语言', () => {
+    expect(resolveSessionTitleLocale({ preference: 'en' }, '评估一下项目')).toBe('en')
+    expect(resolveSessionTitleLocale({ preference: 'zh-CN' }, 'review the login timeout')).toBe('zh')
   })
 })
 

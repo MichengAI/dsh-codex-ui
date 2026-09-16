@@ -36,8 +36,9 @@ const relativeInstall = path.relative(await realpath(root), installed)
 assert.ok(relativeInstall !== '' && relativeInstall !== '..' && !relativeInstall.startsWith(`..${path.sep}`) && !path.isAbsolute(relativeInstall), '必须测试已安装的 tarball，不能链接回开发仓库')
 const patch = await readFile(path.join(installed, 'cordis.patch.yml'), 'utf8')
 assert.match(patch, /id: session-title-llm[\s\S]*disabled: true/, '安装包必须停用官方 session-title-llm')
-const bundle = await readFile(path.join(installed, 'lib/index.mjs'), 'utf8')
-assert.match(bundle, /michengai-codex-ui-session-title/, '安装包必须注册 Codex UI first-prompt 标题提供方')
+assert.match(patch, /id: michengai-codex-ui-session-title\s+name: '@michengai\/dsh-codex-ui\/session-title'/, '安装包必须单独挂上 Codex UI first-prompt 标题插件')
+const titlePlugin = await readFile(path.join(installed, 'lib/session-title-plugin.mjs'), 'utf8')
+assert.match(titlePlugin, /michengai-codex-ui-session-title/, '安装包必须注册 Codex UI first-prompt 标题提供方')
 const server = spawn(process.execPath, [cli, 'web', '--no-open', '--port', '0'], { cwd: env.DCU_E2E_WORKSPACE, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
 try {
   const url = await new Promise((resolve, reject) => {

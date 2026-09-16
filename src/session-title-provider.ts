@@ -1,4 +1,4 @@
-import { assembleSessionTitle, parseTypeAndTheme, resolveSessionTitleLocale, sessionTitlePrompt, shouldSkipAutoTitle, type SessionTitleLocale, type SessionTitleTarget } from './session-title.ts'
+import { alignThemeToMessage, assembleSessionTitle, parseTypeAndTheme, resolveSessionTitleLocale, sessionTitlePrompt, shouldSkipAutoTitle, type SessionTitleLocale, type SessionTitleTarget } from './session-title.ts'
 
 export const SESSION_TITLE_PROVIDER_ID = 'michengai-codex-ui-session-title'
 const MAX_INPUT_BYTES = 4096
@@ -7,7 +7,6 @@ const TIMEOUT_MS = 60_000
 
 export type SessionTitleHost = {
   get: (name: string) => unknown
-  locale?: unknown
   logger?: { warn: (message: string, ...args: unknown[]) => void }
 }
 
@@ -32,14 +31,18 @@ type TitleService = {
   }) => unknown
 }
 
+function isServiceValue(value: unknown): value is object {
+  return value !== null && (typeof value === 'object' || typeof value === 'function')
+}
+
 function asTitleService(value: unknown): TitleService | undefined {
-  if (value === null || typeof value !== 'object') return undefined
+  if (!isServiceValue(value)) return undefined
   const register = (value as { register?: unknown }).register
   return typeof register === 'function' ? value as TitleService : undefined
 }
 
 function asLlm(value: unknown): TitleLlm | undefined {
-  if (value === null || typeof value !== 'object') return undefined
+  if (!isServiceValue(value)) return undefined
   const stream = (value as { stream?: unknown }).stream
   return typeof stream === 'function' ? value as TitleLlm : undefined
 }
@@ -103,7 +106,9 @@ function collectText(chunks: AsyncIterable<unknown>): Promise<string> {
 }
 
 function hostLocale(host: SessionTitleHost, message?: string): SessionTitleLocale {
-  return resolveSessionTitleLocale(host.locale ?? host.get('locale'), message)
+  const settings = host.get('settings') as { get?: (ns: string) => unknown } | undefined
+  const section = typeof settings?.get === 'function' ? settings.get('locale') : undefined
+  return resolveSessionTitleLocale(section ?? host.get('locale'), message)
 }
 
 export async function generateCodexSessionTitle(llm: TitleLlm, request: TitleRequest, locale: SessionTitleLocale = 'zh'): Promise<{ title: string; messageSeqs: number[]; model?: TitleRoute }> {
@@ -137,7 +142,7 @@ export async function generateCodexSessionTitle(llm: TitleLlm, request: TitleReq
   signal.throwIfAborted()
   const parsed = parseTypeAndTheme(raw)
   if (parsed === undefined) throw new Error('codex-ui session title invalid model output')
-  const title = assembleSessionTitle(parsed.type, parsed.theme, locale)
+  const title = assembleSessionTitle(parsed.type, alignThemeToMessage(parsed.theme, text), locale)
   if (title === undefined) throw new Error('codex-ui session title rejected')
   return {
     title,
@@ -149,7 +154,10 @@ export async function generateCodexSessionTitle(llm: TitleLlm, request: TitleReq
 export function registerSessionTitleProvider(ctx: SessionTitleHost): (() => void) | undefined {
   const sessionTitle = asTitleService(ctx.get('sessionTitle'))
   const llm = asLlm(ctx.get('llm'))
-  if (sessionTitle === undefined || llm === undefined) return undefined
+  if (sessionTitle === undefined || llm === undefined) {
+    ctx.logger?.warn('Codex UI 未能注册会话标题提供方：sessionTitle 或 llm 尚未就绪')
+    return undefined
+  }
   try {
     const dispose = sessionTitle.register({
       id: SESSION_TITLE_PROVIDER_ID,

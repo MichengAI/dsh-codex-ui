@@ -176,7 +176,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     <button ref={trigger} type="button" className="dcu-settings-trigger" data-dcu-settings-trigger data-wide={wide} aria-expanded={open} aria-label={t('settings.title')} onClick={() => { openSection('general') }}>
       {renderSlot('settings.trigger', { wide })}
     </button>
-    <ConnectionIndicator state={wide ? connectionIndicator : undefined} disconnectedLabel={t('settings.disconnected')} reconnectLabel={t('settings.reconnect')} connectingLabel={t('settings.connecting')} recoveredLabel={t('settings.recovered')} reconnectActionLabel={t('settings.reconnect')} restartActionLabel={t('settings.reconnect')} onReconnect={reconnect}/>
+    <ConnectionIndicator state={wide ? connectionIndicator : undefined} disconnectedLabel={t('settings.disconnected')} connectingLabel={t('settings.connecting')} recoveredLabel={t('settings.recovered')} reconnectActionLabel={t('settings.reconnect')} restartActionLabel={t('settings.reconnect')} onReconnect={reconnect}/>
     {open && <div ref={page} className="dcu-settings-page" data-dcu-settings-page role="region" aria-label={t('settings.title')}>
       <nav className="dcu-settings-nav" aria-label={t('settings.title')}>
         <button ref={back} type="button" className="dcu-settings-back" onClick={close}><ArrowLeft size={16}/>{renderSlot('settings.close', {}) ?? t('settings.back')}</button>

@@ -59,8 +59,13 @@ test('发布配置停用官方首消息标题 LLM，但不关闭标题服务', (
   const patch = readFileSync('cordis.patch.yml', 'utf8')
   expect(patch).toMatch(/id: session-title-llm\s+disabled: true/)
   expect(patch).not.toMatch(/id: session-title\s*\n\s+disabled: true/)
-  const host = readFileSync('src/index.ts', 'utf8')
-  expect(host).toMatch(/registerSessionTitleProvider/)
+  const plugin = readFileSync('src/session-title-plugin.ts', 'utf8')
+  expect(plugin).toMatch(/export const name = 'michengai-codex-ui-session-title'/)
+  expect(plugin).toMatch(/export const inject = \['sessionTitle', 'llm'\]/)
+  expect(plugin).toMatch(/registerSessionTitleProvider/)
+  expect(patch).toMatch(/id: michengai-codex-ui-session-title\s+name: '@michengai\/dsh-codex-ui\/session-title'/)
+  expect(readFileSync('src/index.ts', 'utf8')).not.toMatch(/registerSessionTitleProvider/)
+  expect(readFileSync('src/session-title-provider.ts', 'utf8')).not.toMatch(/titleDiag|DCU_TITLE_LOG|session-title-diag|Reflect\.get/)
 })
 
 test('发布配置停用旧壳，新壳唯一声明设置树并在重新挂载后恢复功能贡献', () => {

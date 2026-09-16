@@ -35,13 +35,18 @@ assert.deepEqual(manifest.exports?.['.'], {
 assert.deepEqual(manifest.exports?.['./client'], {
   default: './lib/client.js',
 }, '客户端导出必须从 lib 发布目录加载')
+assert.deepEqual(manifest.exports?.['./session-title'], {
+  types: './lib/session-title-plugin.d.mts',
+  default: './lib/session-title-plugin.mjs',
+}, '会话标题提供方必须作为独立宿主入口发布')
 assert.equal(manifest.files?.includes('lib'), true, '发布文件必须包含 lib 目录')
 assert.equal(manifest.files?.includes('dist'), false, '发布文件不得继续包含旧 dist 目录')
 assert.equal(manifest.dsh?.client?.inject?.includes('@deepseek-ai/dsh-client-ui-primitives'), false, '静态模块不应误写成信息性的 dsh.client.inject 边')
 assert.equal(manifest.dsh?.client?.inject?.includes('@deepseek-ai/dsh-client-ui-slots'), false, '仅类型导入不得产生运行时模块声明')
 
-const supportedDshRange = '>=0.1.0-rc.5 <0.2.0 || 0.1.5-rc.1 || 0.1.5-rc.2'
-const legacyRegressionDshVersion = '0.1.2-rc.1'
+const supportedDshRange = '>=0.1.0-rc.5 <0.2.0 || 0.1.5-rc.1 || 0.1.5-rc.2 || 0.1.6-alpha.1'
+const hostDevDshVersion = '0.1.6-alpha.1'
+const highestPublishedClientRuntime = '0.1.1-rc.2'
 const versionedClientPackages = [
   '@deepseek-ai/dsh-client-locale',
   '@deepseek-ai/dsh-client-ui-conversation',
@@ -57,12 +62,15 @@ const versionedClientPackages = [
 
 for (const packageName of versionedClientPackages) {
   assert.equal(manifest.peerDependencies?.[packageName], supportedDshRange, `${packageName} 必须使用统一的 DSH Peer 范围`)
-  assert.equal(manifest.devDependencies?.[packageName], legacyRegressionDshVersion, `${packageName} 必须使用旧版回归基线编译验证`)
+  assert.equal(manifest.devDependencies?.[packageName], hostDevDshVersion, `${packageName} 必须钉在当前宿主开发版本`)
 }
 assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-runtime'], '>=0.1.0-rc.5 <0.2.0', '客户端运行时必须声明统一的 DSH 兼容范围')
-assert.equal(manifest.devDependencies?.['@deepseek-ai/dsh-client-runtime'], '0.1.1-rc.2', '客户端运行时必须使用其已发布最高版本')
-assert.equal(manifest.devDependencies?.['@deepseek-ai/dsh-client-test-runtime'], legacyRegressionDshVersion, '客户端测试运行时必须对齐旧版回归基线')
-assert.equal(manifest.devDependencies?.['@deepseek-ai/dsh-client-ui-renderer'], legacyRegressionDshVersion, '客户端测试渲染器必须对齐旧版回归基线')
+assert.equal(manifest.devDependencies?.['@deepseek-ai/dsh-client-runtime'], highestPublishedClientRuntime, '客户端运行时没有 0.1.6 包，必须使用其已发布最高版本')
+for (const [packageName, version] of Object.entries(manifest.devDependencies ?? {})) {
+  if (!packageName.startsWith('@deepseek-ai/dsh-')) continue
+  if (packageName === '@deepseek-ai/dsh-client-runtime') continue
+  assert.equal(version, hostDevDshVersion, `${packageName} 必须钉在当前宿主开发版本`)
+}
 assert.equal(manifest.peerDependencies?.['@deepseek-ai/cordis'], '>=4.0.2 <5.0.0', 'Cordis 必须覆盖宿主认证服务的兼容范围')
-assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-connection'], '>=0.1.2-rc.1 <0.2.0 || 0.1.5-rc.1 || 0.1.5-rc.2', '业务 REST 必须声明提供 requestRejection 的最低宿主版本')
+assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-connection'], '>=0.1.2-rc.1 <0.2.0 || 0.1.5-rc.1 || 0.1.5-rc.2 || 0.1.6-alpha.1', '业务 REST 必须声明提供 requestRejection 的最低宿主版本')
 assert.equal(manifest.devDependencies?.['@deepseek-ai/cordis'], '4.0.2', 'Cordis 编译版本必须对齐当前 DSH 开发依赖')

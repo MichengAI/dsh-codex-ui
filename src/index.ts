@@ -8,7 +8,6 @@ import { authorizedExplorerWorkspacePath } from './explorer-path-policy.ts'
 import { hostServices } from './host-services.ts'
 import { ForegroundExplorer } from './native-explorer.ts'
 import { moveSessionToWorkspace, SessionMoveError } from './session-migration.ts'
-import { registerSessionTitleProvider } from './session-title-provider.ts'
 import { parsePinnedWorkspaceIds, parseStoredWorkspaceGroups, readWorkspacePreferences, WORKSPACE_PREFERENCES_VERSION, writeWorkspacePreferences } from './workspace-preferences.ts'
 
 const connectorsEndpoint = CODEX_UI_API_ENDPOINTS.connectors
@@ -141,7 +140,6 @@ function sessionMoveAuthenticationError(status: AuthenticationStatus, error: str
 export function apply(ctx: Context): void {
   // 原设置壳停用后，继续注册其公开的持久化引导 schema。
   registerSettingsSchema(ctx)
-  ctx.effect(() => registerSessionTitleProvider(ctx) ?? (() => {}), 'michengai-codex-ui: session title')
   const host = hostServices(ctx)
   ctx.effect(() => {
     const disposers = USAGE_FRAME_ROUTES.map(path => host.webServer.register({ kind: 'exact', path, handler: async (request, response) => {

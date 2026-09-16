@@ -6,5 +6,7 @@
 - id: session-title-llm
   disabled: true
 - insert:
+    - id: michengai-codex-ui-session-title
+      name: '@michengai/dsh-codex-ui/session-title'
     - id: codex-ui
       name: '@michengai/dsh-codex-ui'

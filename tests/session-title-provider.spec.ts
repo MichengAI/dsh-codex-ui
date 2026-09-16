@@ -1,4 +1,6 @@
+import { Context, Service } from '@deepseek-ai/cordis'
 import { expect, test, vi } from 'vitest'
+import { apply, inject, name } from '../src/session-title-plugin.ts'
 import { SESSION_TITLE_EMOJI } from '../src/session-title.ts'
 import { registerSessionTitleProvider } from '../src/session-title-provider.ts'
 
@@ -17,11 +19,11 @@ function host(options?: {
   sessionTitle?: { register: (provider: Provider) => () => void }
   llm?: { stream: (options: Record<string, unknown>) => AsyncIterable<unknown> }
   locale?: unknown
+  settings?: { get: (ns: string) => unknown }
   warn?: (message: string) => void
 }) {
   return {
-    get: (name: string) => name === 'sessionTitle' ? options?.sessionTitle : name === 'llm' ? options?.llm : name === 'locale' ? options?.locale : undefined,
-    locale: options?.locale,
+    get: (name: string) => name === 'sessionTitle' ? options?.sessionTitle : name === 'llm' ? options?.llm : name === 'locale' ? options?.locale : name === 'settings' ? options?.settings : undefined,
     logger: { warn: options?.warn ?? (() => {}) },
   }
 }
@@ -55,11 +57,58 @@ async function* abortedStream(text: string, kind: 'max-tokens' | 'aborted' | 'er
     : { type: 'finish', reason: { kind, failure: { message: 'interrupted', code: 'X' } } }
 }
 
-test('标题服务或模型服务缺失时不注册', () => {
+test('标题服务或模型服务缺失时不注册，并记日志', () => {
   const register = vi.fn()
-  expect(() => registerSessionTitleProvider(host())).not.toThrow()
-  expect(() => registerSessionTitleProvider(host({ sessionTitle: { register } }))).not.toThrow()
+  const warn = vi.fn()
+  expect(() => registerSessionTitleProvider(host({ warn }))).not.toThrow()
+  expect(() => registerSessionTitleProvider(host({ sessionTitle: { register }, warn }))).not.toThrow()
   expect(register).not.toHaveBeenCalled()
+  expect(warn).toHaveBeenCalled()
+})
+
+test('独立插件在 sessionTitle 与 llm 就绪后注册 first-prompt', async () => {
+  const providers: Provider[] = []
+  class SessionTitle extends Service {
+    constructor(ctx: Context) {
+      super(ctx, 'sessionTitle')
+    }
+    register(provider: Provider) {
+      providers.push(provider)
+      return () => {}
+    }
+  }
+  class Llm extends Service {
+    constructor(ctx: Context) {
+      super(ctx, 'llm')
+    }
+    async *stream() {
+      yield { type: 'text-delta', index: 0, text: '探索｜项目评估' }
+      yield { type: 'finish', reason: { kind: 'stop' } }
+    }
+  }
+  const ctx = new Context()
+  ctx.plugin(SessionTitle)
+  ctx.plugin(Llm)
+  await ctx.plugin({ name, inject, apply })
+  expect(name).toBe('michengai-codex-ui-session-title')
+  expect(inject).toEqual(['sessionTitle', 'llm'])
+  expect(providers).toHaveLength(1)
+  expect(providers[0]?.automatic).toBe('first-prompt')
+  const result = await providers[0]!.generate(request({ id: 'session-1' }, '评估一下项目'))
+  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.explore} 探索｜项目评估`)
+})
+
+test('可调用的 service 包装仍能注册', () => {
+  const providers: Provider[] = []
+  const sessionTitle = Object.assign(function sessionTitle() {}, {
+    register: (provider: Provider) => { providers.push(provider); return () => {} },
+  })
+  const llm = Object.assign(function llm() {}, {
+    stream: () => textStream('探索｜项目评估'),
+  })
+  const dispose = registerSessionTitleProvider(host({ sessionTitle, llm }))
+  expect(providers).toHaveLength(1)
+  expect(typeof dispose).toBe('function')
 })
 
 test('注册 first-prompt 提供方，并在官方位已被占用时只记日志', () => {
@@ -165,6 +214,31 @@ test('宿主英文 locale 时用英文类型标签拼标题，并使用英文提
   }))
   const result = await providers[0]!.generate(request({ id: 'session-1' }, 'fix batch text'))
   expect(result.title).toBe(`${SESSION_TITLE_EMOJI.optimize} Optimize｜batch text`)
+  expect(String(streams[0]?.system)).toContain('Feature, Design, Fix')
+  expect(String(streams[0]?.system)).not.toMatch(/功能/)
+})
+
+test('英文首句时丢掉模型写的中文主题', async () => {
+  const providers: Provider[] = []
+  registerSessionTitleProvider(host({
+    sessionTitle: { register: provider => { providers.push(provider); return () => {} } },
+    llm: { stream: () => textStream('Fix｜Bug修复') },
+    settings: { get: ns => ns === 'locale' ? { preference: 'en' } : undefined },
+  }))
+  const result = await providers[0]!.generate(request({ id: 'session-1' }, 'fix bug'))
+  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.fix} Fix｜fix bug`)
+})
+
+test('宿主 settings 选英文时中文首句也用英文类型词', async () => {
+  const streams: Record<string, unknown>[] = []
+  const providers: Provider[] = []
+  registerSessionTitleProvider(host({
+    sessionTitle: { register: provider => { providers.push(provider); return () => {} } },
+    llm: { stream: (options) => { streams.push(options); return textStream('Explore｜project review') } },
+    settings: { get: ns => ns === 'locale' ? { preference: 'en' } : undefined },
+  }))
+  const result = await providers[0]!.generate(request({ id: 'session-1' }, '评估一下项目'))
+  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.explore} Explore｜评估一下项目`)
   expect(String(streams[0]?.system)).toContain('Feature, Design, Fix')
   expect(String(streams[0]?.system)).not.toMatch(/功能/)
 })
