@@ -16,10 +16,12 @@ type Provider = {
 function host(options?: {
   sessionTitle?: { register: (provider: Provider) => () => void }
   llm?: { stream: (options: Record<string, unknown>) => AsyncIterable<unknown> }
+  locale?: unknown
   warn?: (message: string) => void
 }) {
   return {
-    get: (name: string) => name === 'sessionTitle' ? options?.sessionTitle : name === 'llm' ? options?.llm : undefined,
+    get: (name: string) => name === 'sessionTitle' ? options?.sessionTitle : name === 'llm' ? options?.llm : name === 'locale' ? options?.locale : undefined,
+    locale: options?.locale,
     logger: { warn: options?.warn ?? (() => {}) },
   }
 }
@@ -86,7 +88,7 @@ test('模型多写一段主题或自带日期时仍只拼表情和两段标题',
     llm: { stream: () => textStream('研究｜核对顶代码｜核对顶代码') },
   }))
   const result = await providers[0]!.generate(request({ id: 'session-1' }, '核对顶代码'))
-  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.研究} 研究｜核对顶代码`)
+  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.research} 研究｜核对顶代码`)
 })
 
 test('模型把分类再写进主题时只保留表情和分类', async () => {
@@ -96,7 +98,7 @@ test('模型把分类再写进主题时只保留表情和分类', async () => {
     llm: { stream: () => textStream('功能｜功能功能') },
   }))
   const result = await providers[0]!.generate(request({ id: 'session-1' }, '我想做一个功能'))
-  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.功能} 功能`)
+  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.feature} 功能`)
 })
 
 test('用模型给出的类型主题拼标题，不依赖创建时间', async () => {
@@ -106,7 +108,7 @@ test('用模型给出的类型主题拼标题，不依赖创建时间', async ()
     llm: { stream: () => textStream('优化｜批次文字显示') },
   }))
   const result = await providers[0]!.generate(request({ id: 'session-1' }))
-  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.优化} 优化｜批次文字显示`)
+  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.optimize} 优化｜批次文字显示`)
   expect(result.messageSeqs).toEqual([1])
 })
 
@@ -128,7 +130,7 @@ test('模型用 ASCII 竖线分隔时仍能拼出规范标题', async () => {
     llm: { stream: () => textStream('优化|批次文字显示') },
   }))
   const result = await providers[0]!.generate(request({ id: 'session-1' }))
-  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.优化} 优化｜批次文字显示`)
+  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.optimize} 优化｜批次文字显示`)
 })
 
 test('增量与收尾块携带同一份文本时标题只拼一次', async () => {
@@ -138,7 +140,33 @@ test('增量与收尾块携带同一份文本时标题只拼一次', async () =>
     llm: { stream: () => assembledStream('优化｜批次文字显示') },
   }))
   const result = await providers[0]!.generate(request({ id: 'session-1' }))
-  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.优化} 优化｜批次文字显示`)
+  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.optimize} 优化｜批次文字显示`)
+})
+
+test('没有宿主 locale 时按英文用户消息使用英文提示词', async () => {
+  const streams: Record<string, unknown>[] = []
+  const providers: Provider[] = []
+  registerSessionTitleProvider(host({
+    sessionTitle: { register: provider => { providers.push(provider); return () => {} } },
+    llm: { stream: (options) => { streams.push(options); return textStream('Fix｜login timeout') } },
+  }))
+  const result = await providers[0]!.generate(request({ id: 'session-1' }, 'the login request timed out'))
+  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.fix} Fix｜login timeout`)
+  expect(String(streams[0]?.system)).toContain('Feature, Design, Fix')
+})
+
+test('宿主英文 locale 时用英文类型标签拼标题，并使用英文提示词', async () => {
+  const streams: Record<string, unknown>[] = []
+  const providers: Provider[] = []
+  registerSessionTitleProvider(host({
+    sessionTitle: { register: provider => { providers.push(provider); return () => {} } },
+    llm: { stream: (options) => { streams.push(options); return textStream('Optimize｜batch text') } },
+    locale: { getSnapshot: () => ({ locale: 'en-US' }) },
+  }))
+  const result = await providers[0]!.generate(request({ id: 'session-1' }, 'fix batch text'))
+  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.optimize} Optimize｜batch text`)
+  expect(String(streams[0]?.system)).toContain('Feature, Design, Fix')
+  expect(String(streams[0]?.system)).not.toMatch(/功能/)
 })
 
 test('模型被截断或中断时放弃标题以保留回退', async () => {

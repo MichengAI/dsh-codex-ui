@@ -37,6 +37,10 @@ assert.match(channelBrowser, /title=\{label\}/, '频道文件夹名必须使用 
 assert.doesNotMatch(connectorsSection, /已带入新会话|title="MCP连接器"/, '连接器市场的可见文案不得硬编码中文')
 assert.match(connectorsSection, /t\('connectors\.promptReady'\)/, '连接器成功回执必须使用 locale 字典')
 assert.doesNotMatch(clientIndex, /throw new Error\('[^']*[㐀-鿿][^']*'\)/, '示例 Prompt 错误不得硬编码中文')
+const sessionTitleProvider = readFileSync(join(srcRoot, 'session-title-provider.ts'), 'utf8')
+assert.doesNotMatch(sessionTitleProvider, /SYSTEM_PROMPT|类型必须是其中一个|根据这条用户消息/, '会话自动命名提示词不得硬编码中文，必须走 locale 词典')
+assert.match(source, /sessionTitle\.system/, '会话自动命名必须使用 locale 系统提示词')
+assert.match(source, /sessionTitle\.type\.feature/, '会话自动命名类型必须使用 locale 词典')
 assert.doesNotMatch(aboutSection, /return message !== '' \? message/, '关于页不得直接显示 Host 返回的未本地化错误')
 
 const dead: string[] = []

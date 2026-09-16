@@ -1,20 +1,13 @@
-import { assembleSessionTitle, parseTypeAndTheme, shouldSkipAutoTitle, type SessionTitleTarget } from './session-title.ts'
+import { assembleSessionTitle, parseTypeAndTheme, resolveSessionTitleLocale, sessionTitlePrompt, shouldSkipAutoTitle, type SessionTitleLocale, type SessionTitleTarget } from './session-title.ts'
 
 export const SESSION_TITLE_PROVIDER_ID = 'michengai-codex-ui-session-title'
 const MAX_INPUT_BYTES = 4096
 const MAX_OUTPUT_TOKENS = 64
 const TIMEOUT_MS = 60_000
 
-const SYSTEM_PROMPT = [
-  '为编程助手会话生成标题。',
-  '只输出一行，恰好两段：类型｜主题',
-  '类型必须是其中一个：功能、设计、修复、优化、发布、探索、文档、研究',
-  '主题必须是具体事项，不能重复类型，不要写“功能”“功能类型”这类空主题。不要写日期或表情，不要引号、前缀、解释或 Markdown。',
-  '使用用户消息的语言。',
-].join('\n')
-
 export type SessionTitleHost = {
   get: (name: string) => unknown
+  locale?: unknown
   logger?: { warn: (message: string, ...args: unknown[]) => void }
 }
 
@@ -109,7 +102,11 @@ function collectText(chunks: AsyncIterable<unknown>): Promise<string> {
   })()
 }
 
-export async function generateCodexSessionTitle(llm: TitleLlm, request: TitleRequest): Promise<{ title: string; messageSeqs: number[]; model?: TitleRoute }> {
+function hostLocale(host: SessionTitleHost, message?: string): SessionTitleLocale {
+  return resolveSessionTitleLocale(host.locale ?? host.get('locale'), message)
+}
+
+export async function generateCodexSessionTitle(llm: TitleLlm, request: TitleRequest, locale: SessionTitleLocale = 'zh'): Promise<{ title: string; messageSeqs: number[]; model?: TitleRoute }> {
   request.signal?.throwIfAborted()
   const session = request.session
   if (session === undefined || shouldSkipAutoTitle(session)) throw new Error('codex-ui session title skipped')
@@ -118,7 +115,8 @@ export async function generateCodexSessionTitle(llm: TitleLlm, request: TitleReq
   if (first === undefined || text === '') throw new Error('codex-ui session title missing message')
   const route = request.route
   if (route === undefined || route.provider === '' || route.model === '') throw new Error('codex-ui session title missing route')
-  const framed = `根据这条用户消息生成会话标题。只返回“类型｜主题”一行，不要第三段，不要重复主题。\n${JSON.stringify([{ seq: first.seq, text }])}`
+  const prompt = sessionTitlePrompt(locale)
+  const framed = `${prompt.userFrame}\n${JSON.stringify([{ seq: first.seq, text }])}`
   if (Buffer.byteLength(framed, 'utf8') > MAX_INPUT_BYTES) throw new Error('codex-ui session title input too large')
   const signal = abortableSignal(request.signal)
   const raw = await collectText(llm.stream({
@@ -130,7 +128,7 @@ export async function generateCodexSessionTitle(llm: TitleLlm, request: TitleReq
       content: [{ type: 'text', text: framed }],
       source: { kind: 'plugin', plugin: 'michengai-codex-ui' },
     }],
-    system: SYSTEM_PROMPT,
+    system: prompt.system,
     maxTokens: MAX_OUTPUT_TOKENS,
     sessionId: session.id,
     purpose: 'session-title',
@@ -139,7 +137,7 @@ export async function generateCodexSessionTitle(llm: TitleLlm, request: TitleReq
   signal.throwIfAborted()
   const parsed = parseTypeAndTheme(raw)
   if (parsed === undefined) throw new Error('codex-ui session title invalid model output')
-  const title = assembleSessionTitle(parsed.type, parsed.theme)
+  const title = assembleSessionTitle(parsed.type, parsed.theme, locale)
   if (title === undefined) throw new Error('codex-ui session title rejected')
   return {
     title,
@@ -156,7 +154,7 @@ export function registerSessionTitleProvider(ctx: SessionTitleHost): (() => void
     const dispose = sessionTitle.register({
       id: SESSION_TITLE_PROVIDER_ID,
       automatic: 'first-prompt',
-      generate: request => generateCodexSessionTitle(llm, request),
+      generate: request => generateCodexSessionTitle(llm, request, hostLocale(ctx, request.messages?.[0]?.text)),
     })
     return typeof dispose === 'function' ? dispose as () => void : undefined
   } catch (error) {

@@ -276,6 +276,16 @@ export const zh = {
   'errors.workspaceInvalid': '项目标识无效。',
   'errors.groupMissing': '目标分组不存在。',
   'errors.orderAnchorMissing': '排序位置已失效，请重试。',
+  'sessionTitle.system': '为编程助手会话生成标题。\n只输出一行，恰好两段：类型｜主题\n类型必须是其中一个：{types}\n主题必须是具体事项，不能重复类型，不要写类型名或空主题。不要写日期或表情，不要引号、前缀、解释或 Markdown。\n主题使用用户消息的语言。',
+  'sessionTitle.userFrame': '根据这条用户消息生成会话标题。只返回“类型｜主题”一行，不要第三段，不要重复主题。',
+  'sessionTitle.type.feature': '功能',
+  'sessionTitle.type.design': '设计',
+  'sessionTitle.type.fix': '修复',
+  'sessionTitle.type.optimize': '优化',
+  'sessionTitle.type.release': '发布',
+  'sessionTitle.type.explore': '探索',
+  'sessionTitle.type.docs': '文档',
+  'sessionTitle.type.research': '研究',
   'meta.locale': 'zh-CN',
 } as const
 
@@ -552,6 +562,16 @@ export const en: Record<keyof typeof zh, string> = {
   'errors.workspaceInvalid': 'The project identifier is invalid.',
   'errors.groupMissing': 'The target group no longer exists.',
   'errors.orderAnchorMissing': 'The target position is no longer available. Try again.',
+  'sessionTitle.system': 'Generate a title for a coding-assistant conversation.\nOutput exactly one line with two parts: Type｜Theme\nType must be one of: {types}\nThe theme must be a concrete subject and must not repeat the type. Do not write dates, emoji, quotes, prefixes, explanations, or Markdown.\nWrite the theme in the language of the user message.',
+  'sessionTitle.userFrame': 'Generate a conversation title from this user message. Return only one Type｜Theme line. Do not add a third part or repeat the theme.',
+  'sessionTitle.type.feature': 'Feature',
+  'sessionTitle.type.design': 'Design',
+  'sessionTitle.type.fix': 'Fix',
+  'sessionTitle.type.optimize': 'Optimize',
+  'sessionTitle.type.release': 'Release',
+  'sessionTitle.type.explore': 'Explore',
+  'sessionTitle.type.docs': 'Docs',
+  'sessionTitle.type.research': 'Research',
   'meta.locale': 'en-US',
 }
 

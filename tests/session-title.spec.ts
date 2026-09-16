@@ -8,11 +8,11 @@ import {
 
 describe('parseTypeAndTheme', () => {
   test('接受规范的类型和主题', () => {
-    expect(parseTypeAndTheme('优化｜批次文字显示')).toEqual({ type: '优化', theme: '批次文字显示' })
+    expect(parseTypeAndTheme('优化｜批次文字显示')).toEqual({ type: 'optimize', theme: '批次文字显示' })
   })
 
   test('去掉引号和首尾空白', () => {
-    expect(parseTypeAndTheme('  "修复｜登录失败"  ')).toEqual({ type: '修复', theme: '登录失败' })
+    expect(parseTypeAndTheme('  "修复｜登录失败"  ')).toEqual({ type: 'fix', theme: '登录失败' })
   })
 
   test('类型不在名单或缺少主题时放弃', () => {
@@ -22,28 +22,39 @@ describe('parseTypeAndTheme', () => {
   })
 
   test('ASCII 竖线和细竖线当成规范分隔符', () => {
-    expect(parseTypeAndTheme('优化|批次文字显示')).toEqual({ type: '优化', theme: '批次文字显示' })
-    expect(parseTypeAndTheme('修复│登录失败')).toEqual({ type: '修复', theme: '登录失败' })
+    expect(parseTypeAndTheme('优化|批次文字显示')).toEqual({ type: 'optimize', theme: '批次文字显示' })
+    expect(parseTypeAndTheme('修复│登录失败')).toEqual({ type: 'fix', theme: '登录失败' })
   })
 
   test('只取类型和第一段主题，丢掉重复段、日期和模型自带表情', () => {
-    expect(parseTypeAndTheme('研究｜核对顶代码｜核对顶代码')).toEqual({ type: '研究', theme: '核对顶代码' })
-    expect(parseTypeAndTheme('0909｜研究｜核对顶代码')).toEqual({ type: '研究', theme: '核对顶代码' })
-    expect(parseTypeAndTheme('🔬 研究｜核对顶代码')).toEqual({ type: '研究', theme: '核对顶代码' })
-    expect(parseTypeAndTheme('🔬｜研究｜核对顶代码')).toEqual({ type: '研究', theme: '核对顶代码' })
+    expect(parseTypeAndTheme('研究｜核对顶代码｜核对顶代码')).toEqual({ type: 'research', theme: '核对顶代码' })
+    expect(parseTypeAndTheme('0909｜研究｜核对顶代码')).toEqual({ type: 'research', theme: '核对顶代码' })
+    expect(parseTypeAndTheme('🔬 研究｜核对顶代码')).toEqual({ type: 'research', theme: '核对顶代码' })
+    expect(parseTypeAndTheme('🔬｜研究｜核对顶代码')).toEqual({ type: 'research', theme: '核对顶代码' })
   })
 })
 
 describe('assembleSessionTitle', () => {
   test('拼出 emoji + 类型｜主题，不写日期', () => {
-    expect(assembleSessionTitle('优化', '批次文字显示')).toBe(`${SESSION_TITLE_EMOJI.优化} 优化｜批次文字显示`)
-    expect(assembleSessionTitle('研究', '核对顶代码')).toBe(`${SESSION_TITLE_EMOJI.研究} 研究｜核对顶代码`)
+    expect(assembleSessionTitle('优化', '批次文字显示')).toBe(`${SESSION_TITLE_EMOJI.optimize} 优化｜批次文字显示`)
+    expect(assembleSessionTitle('研究', '核对顶代码')).toBe(`${SESSION_TITLE_EMOJI.research} 研究｜核对顶代码`)
+  })
+
+  test('英文 locale 使用英文类型标签', () => {
+    expect(assembleSessionTitle('Optimize', 'batch text', 'en')).toBe(`${SESSION_TITLE_EMOJI.optimize} Optimize｜batch text`)
+    expect(assembleSessionTitle('优化', '批次文字显示', 'en')).toBe(`${SESSION_TITLE_EMOJI.optimize} Optimize｜批次文字显示`)
+  })
+
+  test('接受中英文类型名', () => {
+    expect(parseTypeAndTheme('Optimize｜batch text')).toEqual({ type: 'optimize', theme: 'batch text' })
+    expect(parseTypeAndTheme('Docs｜readme')).toEqual({ type: 'docs', theme: 'readme' })
   })
 
   test('主题只是复述类型时只保留表情和分类', () => {
-    expect(assembleSessionTitle('功能', '功能')).toBe(`${SESSION_TITLE_EMOJI.功能} 功能`)
-    expect(assembleSessionTitle('功能', '功能功能')).toBe(`${SESSION_TITLE_EMOJI.功能} 功能`)
-    expect(assembleSessionTitle('功能', '功能类型')).toBe(`${SESSION_TITLE_EMOJI.功能} 功能`)
+    expect(assembleSessionTitle('功能', '功能')).toBe(`${SESSION_TITLE_EMOJI.feature} 功能`)
+    expect(assembleSessionTitle('功能', '功能功能')).toBe(`${SESSION_TITLE_EMOJI.feature} 功能`)
+    expect(assembleSessionTitle('功能', '功能类型')).toBe(`${SESSION_TITLE_EMOJI.feature} 功能`)
+    expect(assembleSessionTitle('Feature', 'Feature type', 'en')).toBe(`${SESSION_TITLE_EMOJI.feature} Feature`)
   })
 
   test('超过宿主字节上限或类型无效时保留原名', () => {
