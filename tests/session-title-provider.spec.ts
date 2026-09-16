@@ -2,7 +2,7 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import { expect, test, vi } from 'vitest'
 import { apply, inject, name } from '../src/session-title-plugin.ts'
 import { SESSION_TITLE_EMOJI } from '../src/session-title.ts'
-import { registerSessionTitleProvider } from '../src/session-title-provider.ts'
+import { registerSessionTitleProvider, SESSION_TITLE_PROVIDER_ID } from '../src/session-title-provider.ts'
 
 type Provider = {
   id: string
@@ -96,6 +96,64 @@ test('独立插件在 sessionTitle 与 llm 就绪后注册 first-prompt', async 
   expect(providers[0]?.automatic).toBe('first-prompt')
   const result = await providers[0]!.generate(request({ id: 'session-1' }, '评估一下项目'))
   expect(result.title).toBe(`${SESSION_TITLE_EMOJI.explore} 探索｜项目评估`)
+})
+
+test('独立插件先挂上时等到 sessionTitle 与 llm 都就绪才注册', async () => {
+  const providers: Provider[] = []
+  class SessionTitle extends Service {
+    constructor(ctx: Context) {
+      super(ctx, 'sessionTitle')
+    }
+    register(provider: Provider) {
+      providers.push(provider)
+      return () => {}
+    }
+  }
+  class Llm extends Service {
+    constructor(ctx: Context) {
+      super(ctx, 'llm')
+    }
+    async *stream() {}
+  }
+  const ctx = new Context()
+  const fiber = ctx.plugin({ name, inject, apply })
+  expect(providers).toHaveLength(0)
+  await ctx.plugin(SessionTitle)
+  expect(providers).toHaveLength(0)
+  await ctx.plugin(Llm)
+  await fiber
+  expect(providers).toHaveLength(1)
+  expect(providers[0]?.id).toBe(SESSION_TITLE_PROVIDER_ID)
+})
+
+test('卸载插件时回收 first-prompt 提供方，重挂可再注册', async () => {
+  const providers = new Map<string, Provider>()
+  class SessionTitle extends Service {
+    constructor(ctx: Context) {
+      super(ctx, 'sessionTitle')
+    }
+    register(provider: Provider) {
+      if (providers.has(provider.id)) throw new Error(`session-title provider "${provider.id}" is already registered`)
+      providers.set(provider.id, provider)
+      return () => { providers.delete(provider.id) }
+    }
+  }
+  class Llm extends Service {
+    constructor(ctx: Context) {
+      super(ctx, 'llm')
+    }
+    async *stream() {}
+  }
+  const ctx = new Context()
+  await ctx.plugin(SessionTitle)
+  await ctx.plugin(Llm)
+  const plugin = { name, inject, apply }
+  const fiber = await ctx.plugin(plugin)
+  expect(providers.size).toBe(1)
+  await fiber.dispose()
+  expect(providers.size).toBe(0)
+  await ctx.plugin(plugin)
+  expect(providers.size).toBe(1)
 })
 
 test('可调用的 service 包装仍能注册', () => {
