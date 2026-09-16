@@ -116,6 +116,46 @@ export function expandedForSessionMove(
   return next
 }
 
+export type CurrentSessionExpansionTree = {
+  workspaces: readonly { workspaceId: string; sessionIds: readonly string[] }[]
+  pinnedWorkspaceIds: readonly string[]
+  groups: readonly { id: string; workspaceIds: readonly string[] }[]
+  recentIds: readonly string[]
+}
+
+function workspaceIdForSession(
+  workspaces: CurrentSessionExpansionTree['workspaces'],
+  sessionId: string,
+): string | undefined {
+  return workspaces.find(workspace => workspace.sessionIds.some(id => String(id) === sessionId))?.workspaceId
+}
+
+/** 当前会话所在项目用打开的蓝色文件夹；其余项目只跟展开状态走。 */
+export function projectFolderPresentation(isExpanded: boolean, containsCurrent: boolean): { open: boolean; current: boolean } {
+  if (containsCurrent) return { open: true, current: true }
+  return { open: isExpanded, current: false }
+}
+
+/** 当前会话变化时展开所属项目或「最近」；会话尚未进入树则保持原展开状态。 */
+export function expandedForCurrentSession(
+  current: Readonly<Record<string, boolean>>,
+  sessionId: string | undefined,
+  tree: CurrentSessionExpansionTree,
+): Record<string, boolean> {
+  if (sessionId === undefined || sessionId === '') return { ...current }
+  const workspaceId = workspaceIdForSession(tree.workspaces, sessionId)
+  if (workspaceId !== undefined) {
+    return expandedForSessionMove(current, {
+      workspaceId: String(workspaceId),
+      pinned: tree.pinnedWorkspaceIds.includes(String(workspaceId)),
+      groupId: tree.groups.find(group => group.workspaceIds.includes(String(workspaceId)))?.id,
+      hasGroups: tree.groups.length > 0,
+    })
+  }
+  if (tree.recentIds.includes(sessionId)) return { ...current, 'section:recent': true }
+  return { ...current }
+}
+
 type WorkspaceGroupSummary = {
   id: string
   title: string

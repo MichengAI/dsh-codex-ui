@@ -22,7 +22,7 @@ assert.match(tree, /import \{[^}]*Eye[^}]*EyeOff[^}]*\} from 'lucide-react'/, '�
 assert.match(tree, /id: 'unread'[\s\S]*options\.unread \? <EyeOff[^>]*\/> : <Eye[^>]*\/>/, '标记为已读必须使用闭眼图标，标记为未读必须使用睁眼图标')
 assert.match(tree, /id: 'fork'[\s\S]*IconBranchOutline16/, '共用菜单继续必须有图标')
 assert.match(tree, /main-separator/, '共用菜单分隔必须与任务树一致')
-assert.match(workspace, /sessionMenuItems\(t, \{[\s\S]*?includePath: true,[\s\S]*?moveTargets:/, '任务树必须复用共用会话菜单并提供项目移动目标')
+assert.match(workspace, /sessionMenuItems\(t, \{[\s\S]*?includePath: true,[\s\S]*?moveTargets:[\s\S]*?canDelete:/, '任务树必须复用共用会话菜单并按归档删除能力决定是否显示删除')
 assert.match(channel, /moveSession === undefined \|\| workspaces === undefined \? undefined[\s\S]*?sessionMenuItems\(t, \{ unread, moveTargets, canDelete \}\)/, '频道必须复用共用会话菜单，并在旧宿主缺少移动能力时隐藏项目子菜单')
 assert.match(schedule, /moveSession === undefined \? undefined[\s\S]*?sessionMenuItems\(t, \{ unread, moveTargets, canDelete \}\)/, '定时必须复用共用会话菜单，并在旧宿主缺少移动能力时隐藏项目子菜单')
 for (const source of [workspace, channel, schedule]) {
@@ -63,6 +63,7 @@ assert.match(tree, /draggable\?: boolean/, '共用会话行必须支持项目内
 assert.doesNotMatch(workspace, /pinSectionSessions|sectionSessionIds|pinSessionAt/, '置顶区只能接收项目，不能单独渲染会话')
 assert.match(sidebar, /\.dcu-root\{[^}]*width:100%/, '侧栏根节点必须填满宿主网格列，不能露出宿主背景空带')
 assert.doesNotMatch(workspace, /dcu-wb-project-current/, '项目文件夹不得保留当前会话的选中态')
+assert.match(workspace, /dcu-wb-folder-current/, '当前会话所在项目只能高亮文件夹图标，不能高亮整行')
 assert.match(workspace, /\.dcu-wb\{--dcu-wb-inset:8px/, '工作区树必须使用 Codex 风格的 8px 横向留白')
 assert.match(workspace, /\.dcu-wb-project-head,\.dcu-wb-session\{[^}]*border-radius:10px/, '项目和会话胶囊必须使用 Codex 风格的 10px 圆角')
 assert.match(workspace, /\.dcu-wb-project-head\{height:30px/, '项目胶囊必须使用 Codex 的 30px 高度')

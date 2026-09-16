@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { expandedForSessionMove, isTaskSession, moveBefore, orderByIds, pinnedHeaderDropIndicator, readSessionDrag, readWorkspaceDrag, readWorkspaceGroupDrag, reorderDropBeforeId, sessionDropAction, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag, writeWorkspaceGroupDrag } from '../src/client/workspace-browser.ts'
+import { expandedForCurrentSession, expandedForSessionMove, isTaskSession, moveBefore, orderByIds, pinnedHeaderDropIndicator, projectFolderPresentation, readSessionDrag, readWorkspaceDrag, readWorkspaceGroupDrag, reorderDropBeforeId, sessionDropAction, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag, writeWorkspaceGroupDrag } from '../src/client/workspace-browser.ts'
 
 const sessions = {
   a: { id: 'a', origin: 'user', blank: false },
@@ -51,6 +51,86 @@ assert.deepEqual(
   expandedForSessionMove({}, { workspaceId: 'target', pinned: false, hasGroups: false }),
   { 'section:projects': true, target: true },
   '没有自定义分组时只需展开项目区和目标项目',
+)
+assert.deepEqual(
+  expandedForCurrentSession({ existing: false }, 's1', {
+    workspaces: [{ workspaceId: 'target', sessionIds: ['s1'] }],
+    pinnedWorkspaceIds: ['target'],
+    groups: [{ id: 'ignored', workspaceIds: ['target'] }],
+    recentIds: [],
+  }),
+  { existing: false, 'section:pinned': true, 'pin:target': true },
+  '当前会话在置顶项目中时必须展开置顶区和该项目',
+)
+assert.deepEqual(
+  expandedForCurrentSession({}, 's1', {
+    workspaces: [{ workspaceId: 'target', sessionIds: ['s1'] }],
+    pinnedWorkspaceIds: [],
+    groups: [{ id: 'research', workspaceIds: ['target'] }],
+    recentIds: [],
+  }),
+  { 'section:projects': true, 'workspace-group:research': true, target: true },
+  '当前会话在自定义分组项目中时必须展开项目区、分组和该项目',
+)
+assert.deepEqual(
+  expandedForCurrentSession({}, 's1', {
+    workspaces: [{ workspaceId: 'target', sessionIds: ['s1'] }],
+    pinnedWorkspaceIds: [],
+    groups: [{ id: 'research', workspaceIds: ['other'] }],
+    recentIds: [],
+  }),
+  { 'section:projects': true, 'workspace-group:ungrouped': true, target: true },
+  '存在自定义分组时，未分组项目中的当前会话必须展开未分组分类',
+)
+assert.deepEqual(
+  expandedForCurrentSession({}, 's1', {
+    workspaces: [{ workspaceId: 'target', sessionIds: ['s1'] }],
+    pinnedWorkspaceIds: [],
+    groups: [],
+    recentIds: [],
+  }),
+  { 'section:projects': true, target: true },
+  '没有自定义分组时，当前会话只需展开项目区和所属项目',
+)
+assert.deepEqual(
+  expandedForCurrentSession({ existing: false }, 's1', {
+    workspaces: [],
+    pinnedWorkspaceIds: [],
+    groups: [],
+    recentIds: ['s1'],
+  }),
+  { existing: false, 'section:recent': true },
+  '当前会话只在最近列表时必须只展开最近分区',
+)
+assert.deepEqual(
+  expandedForCurrentSession({ existing: false, 'section:projects': false }, 'missing', {
+    workspaces: [{ workspaceId: 'target', sessionIds: ['s1'] }],
+    pinnedWorkspaceIds: [],
+    groups: [{ id: 'research', workspaceIds: ['target'] }],
+    recentIds: ['other'],
+  }),
+  { existing: false, 'section:projects': false },
+  '会话尚未出现在树中时必须保持当前展开状态',
+)
+assert.deepEqual(
+  projectFolderPresentation(false, true),
+  { open: true, current: true },
+  '当前会话所在项目即使收起也必须使用打开的当前文件夹',
+)
+assert.deepEqual(
+  projectFolderPresentation(true, true),
+  { open: true, current: true },
+  '当前会话所在项目展开时必须使用打开的当前文件夹',
+)
+assert.deepEqual(
+  projectFolderPresentation(true, false),
+  { open: true, current: false },
+  '其他展开项目必须使用打开文件夹，但不是当前色',
+)
+assert.deepEqual(
+  projectFolderPresentation(false, false),
+  { open: false, current: false },
+  '其他收起项目必须使用关闭文件夹',
 )
 {
   const store = new Map<string, string>()
