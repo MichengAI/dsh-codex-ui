@@ -1,4 +1,7 @@
-/** 隔离宿主上检查 Codex 侧栏、标题提供方产物，以及会话移动菜单与接口。 */
+/** 隔离宿主上检查 Codex 侧栏、标题提供方产物，以及会话移动菜单与接口。
+ *  菜单入口和真正 POST 的必须是同一 session id。
+ *  优先使用当前会话；若 current 被清掉，则回退到 visual 工作区里已有的会话。
+ *  单独跑时没有这两处之一会失败——通常接在 verify-compat-host.mjs 之后。 */
 import assert from 'node:assert/strict'
 import { mkdir } from 'node:fs/promises'
 import { chromium } from 'playwright'
@@ -30,19 +33,27 @@ try {
   await mkdir(targetDir, { recursive: true })
   const ids = await page.evaluate(async targetDir => {
     const ctx = window.__dcuE2E.ctx
-    const sessionId = ctx.sessions.list.getSnapshot().current
-    if (typeof sessionId !== 'string' || sessionId === '') throw new Error('隔离宿主没有当前会话')
+    const items = ctx.workspaces.list.getSnapshot().items ?? []
+    const visual = items.find(item => (item.path ?? '').replaceAll('\\', '/').endsWith('/visual'))
+    const current = ctx.sessions.list.getSnapshot().current
+    const visualIds = (visual?.sessionIds ?? []).map(String)
+    const sessionId = typeof current === 'string' && current !== '' ? current : visualIds[0]
+    if (typeof sessionId !== 'string' || sessionId === '') {
+      throw new Error('隔离宿主没有可移动会话。请先跑 verify-compat-host.mjs，且 verify-settings-exit 不得清掉 current 或 visual 工作区会话。')
+    }
     const destination = await ctx.workspaces.create({ path: targetDir })
     ctx.get('uiWorkspace').openSession(sessionId)
     return { sessionId, targetId: destination.workspaceId, targetTitle: destination.title || destination.workspaceId }
   }, targetDir)
-  const session = page.locator('.dcu-wb-session').filter({ hasText: '视觉回归' }).first()
+  const session = page.locator(`.dcu-wb-session[data-dcu-session="${CSS.escape(ids.sessionId)}"]`)
   await session.waitFor()
+  assert.equal(await session.getAttribute('data-dcu-session'), ids.sessionId, '菜单行必须是即将移动的会话，不能只靠标题猜')
   await page.keyboard.press('Escape')
   checks.push('隔离宿主已有可移动会话，并创建了目标项目')
 
   await session.locator('button.dcu-wb-context-anchor').evaluate(button => button.click())
-  const moveItem = page.getByRole('menuitem', { name: '项目', exact: true })
+  const moveLabel = await page.evaluate(() => window.__dcuE2E.ctx.locale.bind('michengai.codexUi')('sessions.moveWorkspace'))
+  const moveItem = page.getByRole('menuitem', { name: moveLabel, exact: true })
   await moveItem.waitFor()
   assert.equal(await moveItem.getAttribute('aria-disabled'), null, '有第二个项目时移动入口必须可用')
   await page.keyboard.press('Escape')
@@ -59,6 +70,7 @@ try {
   assert.equal(moved.status, 200, `会话移动接口应成功：${JSON.stringify(moved)}`)
   assert.equal(moved.body?.ok, true, `会话移动接口应返回 ok：${JSON.stringify(moved)}`)
   assert.equal(moved.body?.result?.toWorkspaceId, ids.targetId, `会话应落到目标项目：${JSON.stringify(moved)}`)
+  assert.equal(moved.body?.result?.sessionId, ids.sessionId, `移动的必须是菜单对应的会话：${JSON.stringify(moved)}`)
 
   await page.waitForFunction(({ sessionId, targetId }) => {
     const items = window.__dcuE2E.ctx.workspaces.list.getSnapshot().items ?? []

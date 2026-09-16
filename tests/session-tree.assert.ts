@@ -59,6 +59,8 @@ assert.doesNotMatch(tree, /title=\{t\('sessions\.archive'\)\}/, '会话行归档
 assert.doesNotMatch(workspace, /title=\{workspace\.path\}/, '项目标题不得写原生 title，路径已在悬停卡片展示')
 assert.doesNotMatch(workspace, /title=\{t\('sessions\.pinned'\)\}/, '任务树会话行钉选标记不得写原生 title')
 assert.doesNotMatch(workspace, /title=\{t\('sessions\.archive'\)\}/, '任务树会话行归档按钮不得写原生 title')
+assert.match(tree, /data-dcu-session=\{id\}/, '共用会话行必须带会话 id，供脚本按行而不是标题定位')
+assert.match(workspace, /data-dcu-session=\{id\}/, '任务树会话行必须带会话 id，供脚本按行而不是标题定位')
 assert.match(tree, /draggable\?: boolean/, '共用会话行必须支持项目内排序')
 assert.doesNotMatch(workspace, /pinSectionSessions|sectionSessionIds|pinSessionAt/, '置顶区只能接收项目，不能单独渲染会话')
 assert.match(sidebar, /\.dcu-root\{[^}]*width:100%/, '侧栏根节点必须填满宿主网格列，不能露出宿主背景空带')

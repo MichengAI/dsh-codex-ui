@@ -133,7 +133,7 @@ export function SessionRow({
   onOpen, onMenuChange, onSelectAction, onArchive, onHover, onLeave, onContextMenu, menuPoint,
   subtitle, flat, draggable, dropActive, onDragStart, onDragEnd, onDragOver, onDrop,
 }: SessionRowProps) {
-  return <div className={`dcu-wb-session${selected ? ' dcu-wb-selected' : ''}${menuOpen ? ' dcu-wb-menu-open' : ''}${dropActive === true ? ' dcu-wb-drop' : ''}${flat === true ? ' dcu-wb-session-flat' : ''}`} role="treeitem" aria-selected={selected} draggable={draggable} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragOver={onDragOver} onDrop={onDrop} onClick={onOpen} onContextMenu={onContextMenu} onMouseEnter={onHover} onMouseLeave={onLeave}>
+  return <div data-dcu-session={id} className={`dcu-wb-session${selected ? ' dcu-wb-selected' : ''}${menuOpen ? ' dcu-wb-menu-open' : ''}${dropActive === true ? ' dcu-wb-drop' : ''}${flat === true ? ' dcu-wb-session-flat' : ''}`} role="treeitem" aria-selected={selected} draggable={draggable} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragOver={onDragOver} onDrop={onDrop} onClick={onOpen} onContextMenu={onContextMenu} onMouseEnter={onHover} onMouseLeave={onLeave}>
     {subtitle !== undefined && subtitle !== '' ? <span className="dcu-wb-session-copy"><span className="dcu-wb-session-title">{title.split(/\r?\n/)[0] ?? title}</span><span className="dcu-wb-session-sub">{subtitle}</span></span> : <span className="dcu-wb-session-title">{title.split(/\r?\n/)[0] ?? title}</span>}
     <SessionState pendingInteraction={pendingInteraction} unread={unread} running={running} t={t} />
     <span className="dcu-wb-quick-actions">

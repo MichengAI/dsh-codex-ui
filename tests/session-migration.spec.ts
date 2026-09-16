@@ -413,6 +413,43 @@ describe('DSH 0.1.6 SessionHandle 持久化', () => {
     expect(current.sourceRecord.sessionIds).toEqual(['before', 'session-1', 'after'])
   })
 
+  test('list 可见但磁盘无工件时按会话不存在处理，不抛裸 ENOENT', async () => {
+    const current = await fixture({ persistence: 'handle' })
+    const { rm } = await import('node:fs/promises')
+    await rm(current.oldArtifact)
+    current.services.sessionPersistence.open = async () => ({
+      header: { id: 'session-1', cwd: current.sourcePath },
+      inheritedEventCount: 0,
+      read: async () => ({ events: [{ type: 'session/title', title: '迁移测试' }] }),
+      close: async () => {},
+    })
+
+    await expect(moveSessionToWorkspace(current.services, 'session-1', 'target')).rejects.toMatchObject({
+      code: 'session-move/session-not-found',
+    } satisfies Partial<SessionMoveError>)
+    expect(await exists(current.newDirectory)).toBe(false)
+    expect(current.sourceRecord.sessionIds).toEqual(['before', 'session-1', 'after'])
+  })
+
+  test('双代际目录会改写随目录搬走的旧代际 cwd', async () => {
+    const current = await fixture({ persistence: 'handle' })
+    const leftoverHeader = { id: 'session-1', cwd: current.sourcePath, createdAt: '2026-01-01T00:00:00.000Z' }
+    const leftoverEvent = { type: 'session/title', title: '旧代际' }
+    const leftover = join(current.oldDirectory, 'session.jsonl.zstd')
+    await writeChecksummedZstd(leftover, [`${JSON.stringify(leftoverHeader)}\n`, `${JSON.stringify(leftoverEvent)}\n`])
+
+    await moveSessionToWorkspace(current.services, 'session-1', 'target')
+
+    const movedLeftover = join(current.newDirectory, 'session.jsonl.zstd')
+    const leftoverLines = (await readPersistedText(movedLeftover)).trimEnd().split('\n')
+    expect(JSON.parse(leftoverLines[0] ?? '{}').cwd).toBe(current.targetPath)
+    expect(JSON.parse(leftoverLines[1] ?? '{}')).toEqual(leftoverEvent)
+    const currentLines = (await readFile(current.newArtifact, 'utf8')).trimEnd().split('\n')
+    expect(JSON.parse(currentLines[0] ?? '{}').cwd).toBe(current.targetPath)
+    expect(await readFile(join(current.newDirectory, 'attachment.bin'), 'utf8')).toBe('保留附件')
+    expect(await exists(current.oldDirectory)).toBe(false)
+  })
+
   test('checksummed zstd 多帧只改写头部并原样保留后续事件帧', async () => {
     const current = await fixture({ persistence: 'handle' })
     const header = { id: 'session-1', cwd: current.sourcePath, createdAt: '2026-09-03T00:00:00.000Z' }

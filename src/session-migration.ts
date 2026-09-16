@@ -1,4 +1,4 @@
-import { lstat, mkdir, open, readFile, realpath, rename, rm } from 'node:fs/promises'
+import { lstat, mkdir, open, readdir, readFile, realpath, rename, rm } from 'node:fs/promises'
 import { basename, dirname, join, relative, resolve } from 'node:path'
 import { randomBytes } from 'node:crypto'
 
@@ -133,15 +133,29 @@ async function listPersistedHeader(persistence: SessionPersistencePort, sessionI
   return undefined
 }
 
+function isMissingArtifact(error: unknown): boolean {
+  if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true
+  return (error as Error).name === 'SessionPersistenceNotFoundError'
+}
+
+function missingArtifactError(error?: unknown): SessionMoveError {
+  return new SessionMoveError('session-move/session-not-found', '读取会话持久化记录失败。', error === undefined ? undefined : { cause: error })
+}
+
 async function loadStoredSession(persistence: SessionPersistencePort, sessionId: string): Promise<StoredSession | undefined> {
-  if (typeof persistence.loadStored === 'function') return persistence.loadStored(sessionId)
-  if (typeof persistence.open !== 'function') return undefined
-  const handle = await persistence.open(sessionId, 'read')
   try {
-    const { events } = await handle.read()
-    return { meta: handle.header, events, inheritedEventCount: handle.inheritedEventCount }
-  } finally {
-    await handle.close()
+    if (typeof persistence.loadStored === 'function') return persistence.loadStored(sessionId)
+    if (typeof persistence.open !== 'function') return undefined
+    const handle = await persistence.open(sessionId, 'read')
+    try {
+      const { events } = await handle.read()
+      return { meta: handle.header, events, inheritedEventCount: handle.inheritedEventCount }
+    } finally {
+      await handle.close()
+    }
+  } catch (error) {
+    if (isMissingArtifact(error)) throw missingArtifactError(error)
+    throw error
   }
 }
 
@@ -221,8 +235,18 @@ type DecodedArtifact = {
   trailingZstd?: Buffer
 }
 
+function isSessionGenerationFilename(name: string): boolean {
+  return /^session(?:\.v[1-9]\d*)?\.jsonl(?:\.zstd)?$/.test(name)
+}
+
 async function decodeArtifactFile(path: string): Promise<DecodedArtifact> {
-  const bytes = await readFile(path)
+  let bytes: Buffer
+  try {
+    bytes = await readFile(path)
+  } catch (error) {
+    if (isMissingArtifact(error)) throw missingArtifactError(error)
+    throw error
+  }
   const zstd = path.endsWith('.zstd') || (bytes.length >= 4 && bytes.readUInt32LE(0) === ZSTD_MAGIC)
   if (!zstd) {
     const text = bytes.toString('utf8')
@@ -241,22 +265,28 @@ async function decodeArtifactFile(path: string): Promise<DecodedArtifact> {
 }
 
 async function readSessionArtifact(persistence: SessionPersistencePort, sessionId: string, meta: SessionHeader): Promise<{ decoded: DecodedArtifact; path: string }> {
-  const path = await resolveArtifactPath(persistence, sessionId, meta)
-  if (path === undefined) throw new SessionMoveError('session-move/path-invalid', '宿主无法定位会话工件。')
-  if (typeof persistence.readRaw === 'function') {
-    const raw = await persistence.readRaw(sessionId)
-    if (raw === undefined) throw new SessionMoveError('session-move/session-not-found', '读取会话持久化记录失败。')
-    const newlineIndex = raw.content.indexOf('\n')
-    return {
-      path,
-      decoded: {
-        firstLine: newlineIndex < 0 ? raw.content : raw.content.slice(0, newlineIndex),
-        body: newlineIndex < 0 ? '' : raw.content.slice(newlineIndex + 1),
-        zstd: path.endsWith('.zstd'),
-      },
+  try {
+    const path = await resolveArtifactPath(persistence, sessionId, meta)
+    if (path === undefined) throw new SessionMoveError('session-move/path-invalid', '宿主无法定位会话工件。')
+    if (typeof persistence.readRaw === 'function') {
+      const raw = await persistence.readRaw(sessionId)
+      if (raw === undefined) throw missingArtifactError()
+      const newlineIndex = raw.content.indexOf('\n')
+      return {
+        path,
+        decoded: {
+          firstLine: newlineIndex < 0 ? raw.content : raw.content.slice(0, newlineIndex),
+          body: newlineIndex < 0 ? '' : raw.content.slice(newlineIndex + 1),
+          zstd: path.endsWith('.zstd'),
+        },
+      }
     }
+    return { path, decoded: await decodeArtifactFile(path) }
+  } catch (error) {
+    if (error instanceof SessionMoveError) throw error
+    if (isMissingArtifact(error)) throw missingArtifactError(error)
+    throw error
   }
-  return { path, decoded: await decodeArtifactFile(path) }
 }
 
 async function encodeRewrittenArtifact(firstLine: string, decoded: DecodedArtifact, encodeArtifact: typeof encodeSessionArtifact): Promise<Uint8Array> {
@@ -303,11 +333,18 @@ async function encodeSessionArtifact(headerLine: string, body: string, zstd: boo
   return Buffer.concat([headerFrame, bodyFrame])
 }
 
+type SiblingRewrite = {
+  sessionId: string
+  targetCwd: string
+  encodeArtifact: typeof encodeSessionArtifact
+}
+
 class ArtifactDirectoryMove {
   private directoryMoved = false
   private backupCreated = false
   private published = false
   private temporaryPath?: string
+  private readonly extraBackups: { path: string; backup: string }[] = []
   private readonly oldDirectory: string
   private readonly newDirectory: string
   private readonly movedOldArtifact: string
@@ -324,7 +361,7 @@ class ArtifactDirectoryMove {
     this.backupArtifact = join(this.newDirectory, `${basename(oldArtifact)}.${randomBytes(6).toString('hex')}.dcu-backup`)
   }
 
-  async publish(bytes: Uint8Array): Promise<void> {
+  async publish(bytes: Uint8Array, siblings?: SiblingRewrite): Promise<void> {
     if (resolve(this.oldDirectory).toLowerCase() === resolve(this.newDirectory).toLowerCase()) {
       throw new SessionMoveError('session-move/path-conflict', '源项目和目标项目使用了相同的会话目录。')
     }
@@ -341,6 +378,7 @@ class ArtifactDirectoryMove {
       await rename(this.temporaryPath, this.newArtifact)
       this.temporaryPath = undefined
       this.published = true
+      if (siblings !== undefined) await this.rewriteSiblingGenerations(siblings)
     } catch (error) {
       try { await this.rollback() } catch (rollbackError) {
         throw new SessionMoveError('session-move/rollback-failed', '迁移会话工件失败，且自动回滚未完整完成。', { cause: rollbackError })
@@ -350,11 +388,35 @@ class ArtifactDirectoryMove {
     }
   }
 
+  private async rewriteSiblingGenerations(siblings: SiblingRewrite): Promise<void> {
+    for (const name of await readdir(this.newDirectory)) {
+      if (!isSessionGenerationFilename(name)) continue
+      const path = join(this.newDirectory, name)
+      if (resolve(path) === resolve(this.newArtifact) || resolve(path) === resolve(this.backupArtifact)) continue
+      let decoded: DecodedArtifact
+      try { decoded = await decodeArtifactFile(path) } catch { continue }
+      let header: SessionHeader
+      try { header = JSON.parse(decoded.firstLine) as SessionHeader } catch { continue }
+      if (header.id !== siblings.sessionId) continue
+      const backup = join(this.newDirectory, `${name}.${randomBytes(6).toString('hex')}.dcu-backup`)
+      await rename(path, backup)
+      this.extraBackups.push({ path, backup })
+      const rewritten = await encodeRewrittenArtifact(JSON.stringify({ ...header, cwd: siblings.targetCwd }), decoded, siblings.encodeArtifact)
+      this.temporaryPath = await writeTemporaryFile(path, rewritten)
+      await rename(this.temporaryPath, path)
+      this.temporaryPath = undefined
+    }
+  }
+
   async rollback(): Promise<void> {
     const failures: unknown[] = []
     if (this.temporaryPath !== undefined) {
       try { await rm(this.temporaryPath, { force: true }) } catch (error) { failures.push(error) }
       this.temporaryPath = undefined
+    }
+    for (const extra of this.extraBackups.splice(0).reverse()) {
+      try { await rm(extra.path, { force: true }) } catch (error) { failures.push(error) }
+      try { await rename(extra.backup, extra.path) } catch (error) { failures.push(error) }
     }
     if (this.published) {
       try { await rm(this.newArtifact, { force: true }); this.published = false } catch (error) { failures.push(error) }
@@ -369,12 +431,15 @@ class ArtifactDirectoryMove {
   }
 
   async commit(logger?: SessionMigrationServices['logger']): Promise<void> {
-    if (!this.backupCreated) return
-    try {
-      await rm(this.backupArtifact, { force: true })
-      this.backupCreated = false
-    } catch (error) {
-      logger?.warn(`会话迁移成功，但旧工件备份清理失败：${String(error)}`)
+    const leftovers = [
+      ...(this.backupCreated ? [this.backupArtifact] : []),
+      ...this.extraBackups.splice(0).map(extra => extra.backup),
+    ]
+    this.backupCreated = false
+    for (const backup of leftovers) {
+      try { await rm(backup, { force: true }) } catch (error) {
+        logger?.warn(`会话迁移成功，但旧工件备份清理失败：${String(error)}`)
+      }
     }
   }
 }
@@ -485,7 +550,7 @@ async function moveAccounting(target: WorkspaceEntity, snapshots: readonly Works
 }
 
 /**
- * 把持久化会话完整迁移到目标项目。整个会话目录一起移动，任何提交前失败都会恢复原工件和项目顺序。
+ * 把持久化会话完整迁移到目标项目。整个会话目录一起移动，当前代际和同目录旧代际的 cwd 一并改写；任何提交前失败都会恢复原工件和项目顺序。
  */
 export async function moveSessionToWorkspace(
   services: SessionMigrationServices,
@@ -604,7 +669,7 @@ export async function moveSessionToWorkspace(
 
     let enteredPlaceholder: EnteredStoredSession | undefined
     try {
-      await transaction.publish(bytes)
+      await transaction.publish(bytes, { sessionId, targetCwd: targetPath, encodeArtifact: encoder })
       let movedStored: StoredSession | undefined
       try {
         movedStored = await loadStoredSession(services.sessionPersistence, sessionId)
