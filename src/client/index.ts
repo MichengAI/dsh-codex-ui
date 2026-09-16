@@ -36,6 +36,7 @@ import { observeComposerToolMenus } from './composer-tool-menus.ts'
 import { hasConnectWorkspace, hasStartSession, recentWorkspaceId, workspaceBaselinesReady } from './workspace-compat.ts'
 import { HostActionError, type HostAction, UserFacingError } from './user-error.ts'
 import { finishSessionMove, requestSessionMove, sessionMoveErrorKey, SessionMoveRequestError } from './session-move.ts'
+import { hasArchiveSessionDelete } from './archive-session-delete.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
@@ -90,7 +91,7 @@ type ArchiveRegistry = {
 }
 
 function hasDeleteSession(value: unknown): value is ArchiveRegistry {
-  return value !== null && typeof value === 'object' && 'deleteSession' in value && typeof value.deleteSession === 'function'
+  return hasArchiveSessionDelete(value)
 }
 
 async function runHostAction<T>(action: HostAction, execute: () => Promise<T>): Promise<T> {
@@ -165,6 +166,7 @@ export function apply(ctx: ClientContext): void {
       startSession: (workspaceId?: WorkspaceId) => { startWorkspaceSession(ctx, workspaceId) },
       toggleSidebar: () => { ctx.layout.toggleSidebar() },
       archiveSession,
+      canDeleteSession: () => hasArchiveSessionDelete(ctx.get('remote.workspaceRegistry')),
       deleteSession,
       forkSession,
       moveSession,
@@ -246,6 +248,7 @@ export function apply(ctx: ClientContext): void {
     name: 'sidebar.workspaces', priority: -1, locale: NS,
     inject: () => ({
       archiveSession,
+      canDeleteSession: () => hasArchiveSessionDelete(ctx.get('remote.workspaceRegistry')),
       deleteSession,
       deleteWorkspace: (workspaceId: WorkspaceId) => ctx.workspaces.delete(workspaceId),
       forkSession,

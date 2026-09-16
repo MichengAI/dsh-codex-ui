@@ -53,6 +53,7 @@ type CodexSidebarInjected = {
   startSession: (workspaceId?: WorkspaceId) => void
   toggleSidebar: () => void
   archiveSession: (sessionId: SessionId) => Promise<void>
+  canDeleteSession?: () => boolean
   deleteSession: (sessionId: SessionId) => Promise<void>
   forkSession: (sessionId: SessionId) => Promise<void>
   moveSession: (sessionId: SessionId, targetWorkspaceId: WorkspaceId) => Promise<void>
@@ -235,7 +236,7 @@ const SidebarSearch = forwardRef<SidebarSearchHandle, SidebarSearchProps>(functi
 })
 
 /** Codex 风格的 DSH 侧栏，只替换导航外观，项目浏览和设置仍由 DSH 官方组件提供。 */
-export function CodexSidebar({ globalPanels, selectPanel, usePanelInfo = useLegacyPanelInfo, collapsed, width, openSession, startSession, toggleSidebar, archiveSession, deleteSession, forkSession, moveSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useSessionPendingInteraction, useWorkspaces, prefillNewConversation, newConversationDraft }: CodexSidebarProps) {
+export function CodexSidebar({ globalPanels, selectPanel, usePanelInfo = useLegacyPanelInfo, collapsed, width, openSession, startSession, toggleSidebar, archiveSession, canDeleteSession, deleteSession, forkSession, moveSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useSessionPendingInteraction, useWorkspaces, prefillNewConversation, newConversationDraft }: CodexSidebarProps) {
   const panels = useSyncExternalStore(globalPanels?.subscribe ?? subscribeEmptyCompanionTabs, globalPanels?.getSnapshot ?? getEmptyPanels, globalPanels?.getSnapshot ?? getEmptyPanels)
   const activePanelId = usePanelInfo(info => info.activePanelId)
   const panelButtons = (wide: boolean) => selectPanel === undefined ? null : <GlobalPanelButtons panels={panels} activeId={activePanelId} wide={wide} conversationLabel={t('sidebar.tasksTab')} selectPanel={selectPanel} renderIcon={(id, active) => renderSlot('sidebar.panellist', { size: 16, active }, { only: id })} />
@@ -413,9 +414,9 @@ export function CodexSidebar({ globalPanels, selectPanel, usePanelInfo = useLega
         {showSchedule && <button type="button" className="dcu-im-tab" data-on={imTab === 'schedule'} onClick={() => { setImTab('schedule') }}>{t('sidebar.scheduleTab')}</button>}
       </div>}
       {imTab === 'channels' && showChannels
-        ? <div className="dcu-native-workspaces"><ChannelBrowser openSession={openSession} archiveSession={archiveSession} deleteSession={deleteSession} forkSession={forkSession} moveSession={moveSession} renameSession={renameSession} useSessions={useSessions} useSessionPendingInteraction={useSessionPendingInteraction} useWorkspaces={useWorkspaces} t={t} /></div>
+        ? <div className="dcu-native-workspaces"><ChannelBrowser openSession={openSession} archiveSession={archiveSession} deleteSession={deleteSession} canDeleteSession={canDeleteSession} forkSession={forkSession} moveSession={moveSession} renameSession={renameSession} useSessions={useSessions} useSessionPendingInteraction={useSessionPendingInteraction} useWorkspaces={useWorkspaces} t={t} /></div>
         : imTab === 'schedule' && showSchedule
-          ? <div className="dcu-native-workspaces"><ScheduleBrowser openSession={openSession} archiveSession={archiveSession} deleteSession={deleteSession} forkSession={forkSession} moveSession={moveSession} renameSession={renameSession} useSessions={useSessions} useSessionPendingInteraction={useSessionPendingInteraction} useWorkspaces={useWorkspaces} t={t} overviewContent={scheduleOverviewSlot} openTaskSettings={(request) => {
+          ? <div className="dcu-native-workspaces"><ScheduleBrowser openSession={openSession} archiveSession={archiveSession} deleteSession={deleteSession} canDeleteSession={canDeleteSession} forkSession={forkSession} moveSession={moveSession} renameSession={renameSession} useSessions={useSessions} useSessionPendingInteraction={useSessionPendingInteraction} useWorkspaces={useWorkspaces} t={t} overviewContent={scheduleOverviewSlot} openTaskSettings={(request) => {
               openSettingsSection(settingsSeat.current, t('sidebar.schedule'), () => { clearAutomationTaskSettingsRequest(); selectSection(t('about.nav')) }, () => { requestAutomationTaskSettings(request) })
             }} /></div>
           : <div className="dcu-native-workspaces">{workspaceSlot}</div>}

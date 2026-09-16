@@ -50,6 +50,7 @@ type ScheduleBrowserProps = {
   useSessions: (selector: (state: SessionStore) => SessionStore) => SessionStore
   useSessionPendingInteraction?: UseSessionPendingInteraction
   useWorkspaces: (selector: (state: WorkspaceStore) => WorkspaceStore) => WorkspaceStore
+  canDeleteSession?: () => boolean
   t: TranslateNS<typeof NS>
   overviewContent?: ReactNode
   openTaskSettings?: (request: { name: string; sessionIds: string[] }) => void
@@ -77,7 +78,7 @@ export function ScheduleBrowser(props: ScheduleBrowserProps) {
   </div>
 }
 
-function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkSession, moveSession, renameSession, useSessions, useSessionPendingInteraction, useWorkspaces, t, openTaskSettings, menu, setMenu }: ScheduleBrowserProps & { menu?: OpenMenu; setMenu: (menu?: OpenMenu) => void }) {
+function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkSession, moveSession, renameSession, useSessions, useSessionPendingInteraction, useWorkspaces, t, canDeleteSession, openTaskSettings, menu, setMenu }: ScheduleBrowserProps & { menu?: OpenMenu; setMenu: (menu?: OpenMenu) => void }) {
   const sessions = useSessions(state => state)
   const pendingInteractions = (useSessionPendingInteraction ?? useEmptySessionPendingInteraction)(state => state)
   const workspaces = useWorkspaces(state => state)
@@ -144,7 +145,8 @@ function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkS
             const unread = flags.unreadSessionIds.includes(id)
             const pendingInteraction = pendingInteractionForSession(id, pendingInteractions, sessions.byId[id]?.pendingInteraction)
             const moveTargets = moveSession === undefined ? undefined : sessionMoveTargets(workspaces.items ?? [], id).map(target => ({ ...target, id: moveSessionActionId(target.id) }))
-            return <SessionRow key={id} id={id} title={title} selected={sessions.current === id} menuOpen={menu?.id === id} unread={unread} running={session.running} pendingInteraction={pendingInteraction} t={t} menuItems={sessionMenuItems(t, { unread, moveTargets })} menuPoint={menu?.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { flags.setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id } : undefined) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ title, project: group.label, time: session.updatedAt === undefined ? undefined : formatHoverTime(session.updatedAt, t), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => { if (busy !== undefined) return; const targetWorkspaceId = parseMoveSessionActionId(action); if (targetWorkspaceId !== undefined && moveSession !== undefined) { setMenu(undefined); void run('session-move', () => moveSession(id as SessionId, targetWorkspaceId as WorkspaceId)); return }; dialogs.handleAction(action, id, title) }} />
+            const canDelete = canDeleteSession?.() === true
+            return <SessionRow key={id} id={id} title={title} selected={sessions.current === id} menuOpen={menu?.id === id} unread={unread} running={session.running} pendingInteraction={pendingInteraction} t={t} menuItems={sessionMenuItems(t, { unread, moveTargets, canDelete })} menuPoint={menu?.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { flags.setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id } : undefined) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ title, project: group.label, time: session.updatedAt === undefined ? undefined : formatHoverTime(session.updatedAt, t), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => { if (busy !== undefined) return; const targetWorkspaceId = parseMoveSessionActionId(action); if (targetWorkspaceId !== undefined && moveSession !== undefined) { setMenu(undefined); void run('session-move', () => moveSession(id as SessionId, targetWorkspaceId as WorkspaceId)); return }; dialogs.handleAction(action, id, title) }} />
           })}</div>}
         </div>
       })}

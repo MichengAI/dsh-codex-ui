@@ -142,6 +142,7 @@ assert.match(workspaceBrowser, /sessions\.delete/, '会话菜单必须提供删�
 assert.match(sessionTree, /copy-separator[^]*id: 'copyId'[^]*id: 'copyTitle'[^]*id: 'copyPath'[^]*delete-separator[^]*sessions\.delete/, '会话复制项必须按 ID、标题、工作目录排列，删除操作必须位于最底部')
 assert.doesNotMatch(sessionTree, /id: 'copyLink'/, '会话菜单不得保留清单外的复制链接入口')
 assert.match(client, /remote\.workspaceRegistry/, '删除会话必须复用归档管理插件的远程服务')
+assert.match(client, /canDeleteSession: \(\) => hasArchiveSessionDelete\(ctx\.get\('remote\.workspaceRegistry'\)\)/, '侧栏和工作区必须按归档删除能力决定是否显示删除会话')
 assert.match(client, /sessionMoveErrorKey\(error\.code\)/, '客户端必须通过受测映射解析会话迁移错误码')
 assert.match(sessionMove, /session-move\/service-unavailable[^]*sessions\.moveUnavailable/, '宿主缺少安全迁移能力时必须显示明确的服务不可用提示')
 assert.match(sessionMove, /session-move\/rollback-failed[^]*sessions\.moveRollbackFailed/, '自动恢复未完整完成时必须显示独立警告，不能承诺原会话已保留')

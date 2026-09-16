@@ -23,8 +23,8 @@ assert.match(tree, /id: 'unread'[\s\S]*options\.unread \? <EyeOff[^>]*\/> : <Eye
 assert.match(tree, /id: 'fork'[\s\S]*IconBranchOutline16/, '共用菜单继续必须有图标')
 assert.match(tree, /main-separator/, '共用菜单分隔必须与任务树一致')
 assert.match(workspace, /sessionMenuItems\(t, \{[\s\S]*?includePath: true,[\s\S]*?moveTargets:/, '任务树必须复用共用会话菜单并提供项目移动目标')
-assert.match(channel, /moveSession === undefined \|\| workspaces === undefined \? undefined[\s\S]*?sessionMenuItems\(t, \{ unread, moveTargets \}\)/, '频道必须复用共用会话菜单，并在旧宿主缺少移动能力时隐藏项目子菜单')
-assert.match(schedule, /moveSession === undefined \? undefined[\s\S]*?sessionMenuItems\(t, \{ unread, moveTargets \}\)/, '定时必须复用共用会话菜单，并在旧宿主缺少移动能力时隐藏项目子菜单')
+assert.match(channel, /moveSession === undefined \|\| workspaces === undefined \? undefined[\s\S]*?sessionMenuItems\(t, \{ unread, moveTargets, canDelete \}\)/, '频道必须复用共用会话菜单，并在旧宿主缺少移动能力时隐藏项目子菜单')
+assert.match(schedule, /moveSession === undefined \? undefined[\s\S]*?sessionMenuItems\(t, \{ unread, moveTargets, canDelete \}\)/, '定时必须复用共用会话菜单，并在旧宿主缺少移动能力时隐藏项目子菜单')
 for (const source of [workspace, channel, schedule]) {
   assert.doesNotMatch(source, /pinnedSessionIds|setPinnedSessionIds|SESSION_PINS_STORAGE_KEY|QuickPinIcon|dcu-wb-quick-pin|sessions\.(?:pin|unpin|pinned)/, '三棵会话树都不得维护或展示会话置顶')
 }

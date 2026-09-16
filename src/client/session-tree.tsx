@@ -42,7 +42,7 @@ export function SessionHoverCard({ tip, onEnter, onLeave }: { tip: SessionHoverT
   </div>
 }
 
-export function sessionMenuItems(t: TranslateNS<typeof NS>, options: { unread: boolean; path?: string; includePath?: boolean; moveTargets?: readonly { id: string; label: string }[] }): MenuEntry[] {
+export function sessionMenuItems(t: TranslateNS<typeof NS>, options: { unread: boolean; path?: string; includePath?: boolean; moveTargets?: readonly { id: string; label: string }[]; canDelete?: boolean }): MenuEntry[] {
   const items: MenuEntry[] = [
     { id: 'rename', label: t('sessions.rename'), icon: <IconEditOutline16 size={16} /> },
     { id: 'unread', label: t(options.unread ? 'sessions.markRead' : 'sessions.markUnread'), icon: options.unread ? <EyeOff aria-hidden="true" size={16} strokeWidth={1.5} /> : <Eye aria-hidden="true" size={16} strokeWidth={1.5} /> },
@@ -67,9 +67,13 @@ export function sessionMenuItems(t: TranslateNS<typeof NS>, options: { unread: b
     { id: 'copyId', label: t('sessions.copyId'), icon: <IconLinkOutline16 size={16} /> },
     { id: 'copyTitle', label: t('sessions.copyTitle'), icon: <IconCopyOutline16 size={16} /> },
     ...(options.includePath === true ? [{ id: 'copyPath', label: t('sessions.copyPath'), icon: <IconCopyOutline16 size={16} />, disabled: options.path === undefined } satisfies MenuEntry] : []),
-    { type: 'separator', id: 'delete-separator' },
-    { id: 'delete', label: t('sessions.delete'), icon: <IconTrashOutline16 size={16} />, danger: true },
   )
+  if (options.canDelete !== false) {
+    items.push(
+      { type: 'separator', id: 'delete-separator' },
+      { id: 'delete', label: t('sessions.delete'), icon: <IconTrashOutline16 size={16} />, danger: true },
+    )
+  }
   return items
 }
 
