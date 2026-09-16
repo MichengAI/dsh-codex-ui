@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { moveSessionToWorkspace, SessionMoveError, type SessionMigrationServices } from '../src/session-migration.ts'
+import { moveSessionToWorkspace, persistedSessionHeader, SessionMoveError, type SessionMigrationServices } from '../src/session-migration.ts'
 
 const temporaryDirectories: string[] = []
 
@@ -18,6 +18,7 @@ type FixtureOptions = {
   failTargetAttach?: boolean
   flushWritesEvent?: boolean
   live?: boolean
+  persistence?: 'legacy' | 'handle'
   sameWorkspacePath?: boolean
   strictPersistenceOwner?: boolean
   usePersistencePrepare?: boolean
@@ -120,28 +121,50 @@ async function fixture(options: FixtureOptions = {}) {
         return entry.detach
       },
     },
-    sessionPersistence: {
-      list: async () => [header],
-      readRaw: async () => {
-        lifecycle.push('readRaw')
-        return { meta: header, content: await readFile(oldArtifact, 'utf8') }
-      },
-      locate: meta => ({ path: meta.cwd === targetPath && options.sameWorkspacePath !== true ? newArtifact : oldArtifact }),
-      loadStored: async () => {
-        const moved = await exists(newArtifact)
-        if (options.failLoadStored === true && moved) return undefined
-        const content = await readFile(moved ? newArtifact : oldArtifact, 'utf8')
-        const lines = content.trimEnd().split('\n')
-        return { meta: JSON.parse(lines[0] ?? '{}'), events: lines.slice(1).map(line => JSON.parse(line)) }
-      },
-    },
+    sessionPersistence: options.persistence === 'handle'
+      ? {
+          list: async () => [{ header, revision: 1 }],
+          open: async (id: string) => {
+            lifecycle.push('open')
+            const moved = await exists(newArtifact)
+            if (options.failLoadStored === true && moved) throw new Error('open after move failed')
+            const content = await readPersistedText(moved ? newArtifact : oldArtifact)
+            const lines = content.trimEnd().split('\n')
+            const meta = JSON.parse(lines[0] ?? '{}')
+            return {
+              header: meta,
+              inheritedEventCount: 0,
+              read: async () => ({ events: lines.slice(1).map(line => JSON.parse(line)) }),
+              close: async () => { lifecycle.push('close') },
+            }
+          },
+          resolveCurrentLog: async () => await exists(newArtifact) ? newArtifact : oldArtifact,
+          locate: (meta: { cwd?: string }) => ({ path: meta.cwd === targetPath && options.sameWorkspacePath !== true ? newArtifact : oldArtifact }),
+        }
+      : {
+          list: async () => [header],
+          readRaw: async () => {
+            lifecycle.push('readRaw')
+            return { meta: header, content: await readFile(oldArtifact, 'utf8') }
+          },
+          locate: (meta: { cwd?: string }) => ({ path: meta.cwd === targetPath && options.sameWorkspacePath !== true ? newArtifact : oldArtifact }),
+          loadStored: async () => {
+            const moved = await exists(newArtifact)
+            if (options.failLoadStored === true && moved) return undefined
+            const content = await readFile(moved ? newArtifact : oldArtifact, 'utf8')
+            const lines = content.trimEnd().split('\n')
+            return { meta: JSON.parse(lines[0] ?? '{}'), events: lines.slice(1).map(line => JSON.parse(line)) }
+          },
+        },
     workspaceRegistry: { list: () => [source, target] },
     emit: options.emitFailure === true ? () => { throw new Error('通知失败') } : undefined,
   }
   if (options.usePersistencePrepare === true) {
     services.sessionPersistence.prepare = async id => {
       if (persistenceOwnerActive) throw new Error(`session "${id}" already has a live persistence owner`)
-      const stored = await services.sessionPersistence.loadStored(id)
+      const stored = services.sessionPersistence.loadStored === undefined
+        ? await loadFromHandle(services, id)
+        : await services.sessionPersistence.loadStored(id)
       if (stored === undefined) throw new Error(`session "${id}" not found`)
       return {
         session: services.sessions.prepare(id, {
@@ -157,9 +180,96 @@ async function fixture(options: FixtureOptions = {}) {
   return { services, sourcePath, targetPath, oldDirectory, newDirectory, oldArtifact, newArtifact, sourceRecord, targetRecord, store, originalEntry, lifecycle, flushedEvent, originalDetachCalls: () => originalDetachCalls, persistenceOwnerActive: () => persistenceOwnerActive }
 }
 
+const ZSTD_MAGIC = 4247762216
+
 async function exists(path: string): Promise<boolean> {
   try { await stat(path); return true } catch { return false }
 }
+
+function firstZstdFrameEnd(buffer: Buffer): number | undefined {
+  if (buffer.length < 4 || buffer.readUInt32LE(0) !== ZSTD_MAGIC) return undefined
+  let offset = 4
+  if (offset >= buffer.length) return undefined
+  const descriptor = buffer.readUInt8(offset)
+  offset += 1
+  if ((descriptor & 24) !== 0) return undefined
+  const contentSizeFlag = descriptor >>> 6
+  const singleSegment = (descriptor & 32) !== 0
+  const checksum = (descriptor & 4) !== 0
+  const dictionaryFlag = descriptor & 3
+  const dictionaryBytes = dictionaryFlag === 3 ? 4 : dictionaryFlag
+  const contentSizeBytes = contentSizeFlag === 0 ? (singleSegment ? 1 : 0) : 1 << contentSizeFlag
+  offset += (singleSegment ? 0 : 1) + dictionaryBytes + contentSizeBytes
+  for (;;) {
+    if (buffer.length - offset < 3) return undefined
+    const blockHeader = buffer.readUIntLE(offset, 3)
+    offset += 3
+    const lastBlock = (blockHeader & 1) !== 0
+    const blockType = blockHeader >>> 1 & 3
+    const blockSize = blockHeader >>> 3
+    if (blockType === 3) return undefined
+    const payloadBytes = blockType === 1 ? 1 : blockSize
+    if (buffer.length - offset < payloadBytes) return undefined
+    offset += payloadBytes
+    if (lastBlock) break
+  }
+  if (checksum) {
+    if (buffer.length - offset < 4) return undefined
+    offset += 4
+  }
+  return offset
+}
+
+async function readPersistedText(path: string): Promise<string> {
+  const bytes = await readFile(path)
+  if (bytes.length < 4 || bytes.readUInt32LE(0) !== ZSTD_MAGIC) return bytes.toString('utf8')
+  const zlib = await import('node:zlib')
+  const { promisify } = await import('node:util')
+  const decompress = promisify(zlib.zstdDecompress)
+  const parts: Buffer[] = []
+  let rest = bytes
+  while (rest.length > 0) {
+    const end = firstZstdFrameEnd(rest)
+    if (end === undefined) throw new Error(`incomplete zstd frame in ${path}`)
+    parts.push(await decompress(rest.subarray(0, end)))
+    rest = rest.subarray(end)
+  }
+  return Buffer.concat(parts).toString('utf8')
+}
+
+async function writeChecksummedZstd(path: string, frames: readonly string[]): Promise<void> {
+  const zlib = await import('node:zlib')
+  const { promisify } = await import('node:util')
+  const compress = promisify(zlib.zstdCompress)
+  const options = { params: { [zlib.constants.ZSTD_c_checksumFlag]: 1 } }
+  const encoded = await Promise.all(frames.map(frame => compress(Buffer.from(frame, 'utf8'), options)))
+  await writeFile(path, Buffer.concat(encoded))
+}
+
+async function loadFromHandle(services: SessionMigrationServices, id: string) {
+  const handle = await services.sessionPersistence.open?.(id, 'read')
+  if (handle === undefined) return undefined
+  try {
+    const { events } = await handle.read()
+    return { meta: handle.header, events, inheritedEventCount: handle.inheritedEventCount }
+  } finally {
+    await handle.close()
+  }
+}
+
+describe('持久化列表解包', () => {
+  test('兼容旧版直接返回的会话头', () => {
+    expect(persistedSessionHeader({ id: 'session-1', cwd: '/tmp' })).toEqual({ id: 'session-1', cwd: '/tmp' })
+  })
+
+  test('兼容 0.1.6 list() 的 { header, revision } 快照', () => {
+    expect(persistedSessionHeader({ header: { id: 'session-1', cwd: '/tmp', origin: 'chat' }, revision: 3 })).toEqual({
+      id: 'session-1',
+      cwd: '/tmp',
+      origin: 'chat',
+    })
+  })
+})
 
 describe('会话跨项目迁移', () => {
   test('同步改写 cwd、保留历史和会话目录中的附属文件', async () => {
@@ -266,5 +376,63 @@ describe('会话跨项目迁移', () => {
     } satisfies Partial<SessionMoveError>)
     expect(current.lifecycle).toEqual([])
     expect(await exists(current.oldArtifact)).toBe(true)
+  })
+})
+
+describe('DSH 0.1.6 SessionHandle 持久化', () => {
+  test('list 快照加上 open/locate 也能搬会话目录并改写 cwd', async () => {
+    const current = await fixture({ persistence: 'handle' })
+    const result = await moveSessionToWorkspace(current.services, 'session-1', 'target')
+
+    expect(result).toMatchObject({ moved: true, sessionId: 'session-1', fromWorkspaceIds: ['source'], toWorkspaceId: 'target' })
+    const lines = (await readFile(current.newArtifact, 'utf8')).trimEnd().split('\n')
+    expect(JSON.parse(lines[0] ?? '{}').cwd).toBe(current.targetPath)
+    expect(JSON.parse(lines[1] ?? '{}')).toEqual({ type: 'session/title', title: '迁移测试' })
+    expect(await readFile(join(current.newDirectory, 'attachment.bin'), 'utf8')).toBe('保留附件')
+    expect(await exists(current.oldDirectory)).toBe(false)
+    expect(current.sourceRecord.sessionIds).toEqual(['before', 'after'])
+    expect(current.targetRecord.sessionIds).toEqual(['session-1'])
+    expect(current.lifecycle).toContain('open')
+  })
+
+  test('工作目录已是目标路径时，冷会话通过 open 修复项目归属', async () => {
+    const current = await fixture({ persistence: 'handle', sameWorkspacePath: true })
+    const result = await moveSessionToWorkspace(current.services, 'session-1', 'target')
+    expect(result.moved).toBe(true)
+    expect(current.sourceRecord.sessionIds).toEqual(['before', 'after'])
+    expect(current.targetRecord.sessionIds).toEqual(['session-1'])
+  })
+
+  test('open 校验失败时恢复原目录和项目归属', async () => {
+    const current = await fixture({ persistence: 'handle', failLoadStored: true })
+    await expect(moveSessionToWorkspace(current.services, 'session-1', 'target')).rejects.toMatchObject({
+      code: 'session-move/validation-failed',
+    } satisfies Partial<SessionMoveError>)
+    expect(JSON.parse((await readFile(current.oldArtifact, 'utf8')).split('\n')[0] ?? '{}').cwd).toBe(current.sourcePath)
+    expect(await exists(current.newDirectory)).toBe(false)
+    expect(current.sourceRecord.sessionIds).toEqual(['before', 'session-1', 'after'])
+  })
+
+  test('checksummed zstd 多帧只改写头部并原样保留后续事件帧', async () => {
+    const current = await fixture({ persistence: 'handle' })
+    const header = { id: 'session-1', cwd: current.sourcePath, createdAt: '2026-09-03T00:00:00.000Z' }
+    const event = { type: 'session/title', title: '迁移测试' }
+    await writeChecksummedZstd(current.oldArtifact, [`${JSON.stringify(header)}\n`, `${JSON.stringify(event)}\n`])
+    const original = await readFile(current.oldArtifact)
+    const originalHeaderEnd = firstZstdFrameEnd(original)
+    expect(originalHeaderEnd).toBeDefined()
+    const originalBody = original.subarray(originalHeaderEnd!)
+
+    await moveSessionToWorkspace(current.services, 'session-1', 'target')
+
+    const moved = await readFile(current.newArtifact)
+    expect(moved.readUInt32LE(0)).toBe(ZSTD_MAGIC)
+    const movedHeaderEnd = firstZstdFrameEnd(moved)
+    expect(movedHeaderEnd).toBeDefined()
+    expect(moved.subarray(movedHeaderEnd!)).toEqual(originalBody)
+    const lines = (await readPersistedText(current.newArtifact)).trimEnd().split('\n')
+    expect(JSON.parse(lines[0] ?? '{}').cwd).toBe(current.targetPath)
+    expect(JSON.parse(lines[1] ?? '{}')).toEqual(event)
+    expect(await readFile(join(current.newDirectory, 'attachment.bin'), 'utf8')).toBe('保留附件')
   })
 })

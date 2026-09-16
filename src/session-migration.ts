@@ -1,4 +1,4 @@
-import { lstat, mkdir, open, realpath, rename, rm } from 'node:fs/promises'
+import { lstat, mkdir, open, readFile, realpath, rename, rm } from 'node:fs/promises'
 import { basename, dirname, join, relative, resolve } from 'node:path'
 import { randomBytes } from 'node:crypto'
 
@@ -48,6 +48,23 @@ type SessionPreparation = {
   [Symbol.dispose]: () => void
 }
 
+export type SessionHandleLike = {
+  header: SessionHeader
+  inheritedEventCount?: number
+  read: (offset?: number, length?: number) => Promise<{ events: readonly unknown[] }>
+  close: () => Promise<void>
+}
+
+export type SessionPersistencePort = {
+  list: () => Promise<readonly unknown[]>
+  readRaw?: (sessionId: string) => Promise<{ meta: SessionHeader; content: string } | undefined>
+  loadStored?: (sessionId: string) => Promise<StoredSession | undefined>
+  locate?: (meta: SessionHeader) => { path: string } | undefined
+  open?: (sessionId: string, access: 'read' | 'write') => Promise<SessionHandleLike>
+  resolveCurrentLog?: (sessionId: string) => Promise<string | undefined>
+  prepare?: (sessionId: string) => Promise<SessionPreparation>
+}
+
 export type SessionMigrationServices = {
   agents: {
     get: (sessionId: string) => {
@@ -65,13 +82,7 @@ export type SessionMigrationServices = {
     enter: (session: HostSession) => () => void
     announce?: (session: HostSession) => void
   }
-  sessionPersistence: {
-    list: () => Promise<readonly SessionHeader[]>
-    readRaw: (sessionId: string) => Promise<{ meta: SessionHeader; content: string } | undefined>
-    loadStored: (sessionId: string) => Promise<StoredSession | undefined>
-    locate: (meta: SessionHeader) => { path: string } | undefined
-    prepare?: (sessionId: string) => Promise<SessionPreparation>
-  }
+  sessionPersistence: SessionPersistencePort
   workspaceRegistry: { list: () => readonly WorkspaceEntity[] }
   sessionProjectionCache?: { coldSnapshot?: (sessionId: string) => Promise<unknown> }
   emit?: (event: string, ...args: unknown[]) => void
@@ -99,6 +110,162 @@ export class SessionMoveError extends Error {
 }
 
 const movingSessions = new Set<string>()
+const ZSTD_MAGIC = 4247762216
+
+/** 旧宿主 list() 直接给会话头；0.1.6 起返回 { header, revision }。 */
+export function persistedSessionHeader(item: unknown): SessionHeader | undefined {
+  if (item === null || typeof item !== 'object') return undefined
+  const record = item as Record<string, unknown>
+  if (typeof record.id === 'string' && record.id.length > 0) return record as SessionHeader
+  const nested = record.header
+  if (nested !== null && typeof nested === 'object') {
+    const header = nested as Record<string, unknown>
+    if (typeof header.id === 'string' && header.id.length > 0) return header as SessionHeader
+  }
+  return undefined
+}
+
+async function listPersistedHeader(persistence: SessionPersistencePort, sessionId: string): Promise<SessionHeader | undefined> {
+  for (const item of await persistence.list()) {
+    const header = persistedSessionHeader(item)
+    if (header?.id === sessionId) return header
+  }
+  return undefined
+}
+
+async function loadStoredSession(persistence: SessionPersistencePort, sessionId: string): Promise<StoredSession | undefined> {
+  if (typeof persistence.loadStored === 'function') return persistence.loadStored(sessionId)
+  if (typeof persistence.open !== 'function') return undefined
+  const handle = await persistence.open(sessionId, 'read')
+  try {
+    const { events } = await handle.read()
+    return { meta: handle.header, events, inheritedEventCount: handle.inheritedEventCount }
+  } finally {
+    await handle.close()
+  }
+}
+
+function locateArtifact(persistence: SessionPersistencePort, meta: SessionHeader): { path: string } | undefined {
+  if (typeof persistence.locate !== 'function') return undefined
+  return persistence.locate(meta)
+}
+
+async function resolveArtifactPath(persistence: SessionPersistencePort, sessionId: string, meta: SessionHeader): Promise<string | undefined> {
+  const located = locateArtifact(persistence, meta)
+  if (located?.path !== undefined && located.path !== '') return located.path
+  if (typeof persistence.resolveCurrentLog === 'function') return persistence.resolveCurrentLog(sessionId)
+  return undefined
+}
+
+function firstZstdFrameEnd(buffer: Buffer): number | undefined {
+  if (buffer.length < 4 || buffer.readUInt32LE(0) !== ZSTD_MAGIC) return undefined
+  let offset = 4
+  if (offset >= buffer.length) return undefined
+  const descriptor = buffer.readUInt8(offset)
+  offset += 1
+  if ((descriptor & 24) !== 0) return undefined
+  const contentSizeFlag = descriptor >>> 6
+  const singleSegment = (descriptor & 32) !== 0
+  const checksum = (descriptor & 4) !== 0
+  const dictionaryFlag = descriptor & 3
+  const dictionaryBytes = dictionaryFlag === 3 ? 4 : dictionaryFlag
+  const contentSizeBytes = contentSizeFlag === 0 ? (singleSegment ? 1 : 0) : 1 << contentSizeFlag
+  offset += (singleSegment ? 0 : 1) + dictionaryBytes + contentSizeBytes
+  for (;;) {
+    if (buffer.length - offset < 3) return undefined
+    const blockHeader = buffer.readUIntLE(offset, 3)
+    offset += 3
+    const lastBlock = (blockHeader & 1) !== 0
+    const blockType = blockHeader >>> 1 & 3
+    const blockSize = blockHeader >>> 3
+    if (blockType === 3) return undefined
+    const payloadBytes = blockType === 1 ? 1 : blockSize
+    if (buffer.length - offset < payloadBytes) return undefined
+    offset += payloadBytes
+    if (lastBlock) break
+  }
+  if (checksum) {
+    if (buffer.length - offset < 4) return undefined
+    offset += 4
+  }
+  return offset
+}
+
+async function zlibZstd<T extends (data: Buffer, options?: object, callback?: (error: Error | null, output: Buffer) => void) => unknown>(
+  name: 'zstdCompress' | 'zstdDecompress',
+  data: Buffer,
+  options?: object,
+): Promise<Buffer> {
+  const zlib = await import('node:zlib')
+  const transform = zlib[name]
+  if (typeof transform !== 'function') {
+    throw new SessionMoveError('session-move/zstd-unavailable', '当前 Node.js 运行时不支持 Zstd 会话迁移。')
+  }
+  return new Promise((resolvePromise, rejectPromise) => {
+    const done = (error: Error | null, output: Buffer) => { if (error === null) resolvePromise(output); else rejectPromise(error) }
+    if (options === undefined) transform(data, done)
+    else transform(data, options, done)
+  })
+}
+
+async function zstdChecksumOptions(): Promise<object | undefined> {
+  const { constants } = await import('node:zlib')
+  const flag = constants.ZSTD_c_checksumFlag
+  return typeof flag === 'number' ? { params: { [flag]: 1 } } : undefined
+}
+
+type DecodedArtifact = {
+  firstLine: string
+  body: string
+  zstd: boolean
+  trailingZstd?: Buffer
+}
+
+async function decodeArtifactFile(path: string): Promise<DecodedArtifact> {
+  const bytes = await readFile(path)
+  const zstd = path.endsWith('.zstd') || (bytes.length >= 4 && bytes.readUInt32LE(0) === ZSTD_MAGIC)
+  if (!zstd) {
+    const text = bytes.toString('utf8')
+    const newlineIndex = text.indexOf('\n')
+    return {
+      firstLine: newlineIndex < 0 ? text : text.slice(0, newlineIndex),
+      body: newlineIndex < 0 ? '' : text.slice(newlineIndex + 1),
+      zstd: false,
+    }
+  }
+  const frameEnd = firstZstdFrameEnd(bytes)
+  if (frameEnd === undefined) throw new SessionMoveError('session-move/artifact-invalid', '会话工件头部无法解析。')
+  const plaintext = await zlibZstd('zstdDecompress', bytes.subarray(0, frameEnd))
+  const text = plaintext.toString('utf8').replace(/\n$/, '')
+  return { firstLine: text, body: '', zstd: true, trailingZstd: bytes.subarray(frameEnd) }
+}
+
+async function readSessionArtifact(persistence: SessionPersistencePort, sessionId: string, meta: SessionHeader): Promise<{ decoded: DecodedArtifact; path: string }> {
+  const path = await resolveArtifactPath(persistence, sessionId, meta)
+  if (path === undefined) throw new SessionMoveError('session-move/path-invalid', '宿主无法定位会话工件。')
+  if (typeof persistence.readRaw === 'function') {
+    const raw = await persistence.readRaw(sessionId)
+    if (raw === undefined) throw new SessionMoveError('session-move/session-not-found', '读取会话持久化记录失败。')
+    const newlineIndex = raw.content.indexOf('\n')
+    return {
+      path,
+      decoded: {
+        firstLine: newlineIndex < 0 ? raw.content : raw.content.slice(0, newlineIndex),
+        body: newlineIndex < 0 ? '' : raw.content.slice(newlineIndex + 1),
+        zstd: path.endsWith('.zstd'),
+      },
+    }
+  }
+  return { path, decoded: await decodeArtifactFile(path) }
+}
+
+async function encodeRewrittenArtifact(firstLine: string, decoded: DecodedArtifact, encodeArtifact: typeof encodeSessionArtifact): Promise<Uint8Array> {
+  if (decoded.zstd && decoded.trailingZstd !== undefined) {
+    const headerFrame = await zlibZstd('zstdCompress', Buffer.from(`${firstLine}\n`, 'utf8'), await zstdChecksumOptions())
+    return Buffer.concat([headerFrame, decoded.trailingZstd])
+  }
+  return encodeArtifact(firstLine, decoded.body, decoded.zstd)
+}
 
 function rawSessionIds(workspace: WorkspaceEntity): readonly string[] {
   return Array.isArray(workspace.record?.sessionIds) ? workspace.record.sessionIds : workspace.sessionIds
@@ -129,16 +296,10 @@ async function writeTemporaryFile(finalPath: string, data: Uint8Array): Promise<
 
 async function encodeSessionArtifact(headerLine: string, body: string, zstd: boolean): Promise<Uint8Array> {
   if (!zstd) return Buffer.from(`${headerLine}\n${body}`, 'utf8')
-  const { zstdCompress } = await import('node:zlib')
-  if (typeof zstdCompress !== 'function') {
-    throw new SessionMoveError('session-move/zstd-unavailable', '当前 Node.js 运行时不支持 Zstd 会话迁移。')
-  }
-  const compress = (data: Uint8Array): Promise<Buffer> => new Promise((resolvePromise, rejectPromise) => {
-    zstdCompress(data, (error, output) => { if (error === null) resolvePromise(output); else rejectPromise(error) })
-  })
-  const headerFrame = await compress(Buffer.from(`${headerLine}\n`, 'utf8'))
+  const options = await zstdChecksumOptions()
+  const headerFrame = await zlibZstd('zstdCompress', Buffer.from(`${headerLine}\n`, 'utf8'), options)
   if (body === '') return headerFrame
-  const bodyFrame = await compress(Buffer.from(body, 'utf8'))
+  const bodyFrame = await zlibZstd('zstdCompress', Buffer.from(body, 'utf8'), options)
   return Buffer.concat([headerFrame, bodyFrame])
 }
 
@@ -348,8 +509,7 @@ export async function moveSessionToWorkspace(
       throw new SessionMoveError('session-move/accounting-invalid', '会话当前的项目归属不一致，无法安全移动。')
     }
 
-    const persistedHeaders = await services.sessionPersistence.list()
-    const persistedHeader = persistedHeaders.find(header => header.id === sessionId)
+    const persistedHeader = await listPersistedHeader(services.sessionPersistence, sessionId)
     if (persistedHeader === undefined) throw new SessionMoveError('session-move/session-not-found', '该会话没有可迁移的持久化记录。')
     if (persistedHeader.origin === 'subagent') throw new SessionMoveError('session-move/subagent-unsupported', '子代理会话不能移动到其他项目。')
 
@@ -370,7 +530,7 @@ export async function moveSessionToWorkspace(
 
     // 工作目录已经正确时只修复项目归属，不停止 Agent，也不摘除原会话入口。
     if (currentPath === targetPath) {
-      const stored = liveSession === undefined ? await services.sessionPersistence.loadStored(sessionId) : undefined
+      const stored = liveSession === undefined ? await loadStoredSession(services.sessionPersistence, sessionId) : undefined
       if (liveSession === undefined && stored === undefined) {
         throw new SessionMoveError('session-move/session-not-found', '读取会话持久化记录失败。')
       }
@@ -408,27 +568,23 @@ export async function moveSessionToWorkspace(
     }
 
     // 刷新完成后再读取，确保迁移工件包含停止前的最后一批事件。
-    const raw = await services.sessionPersistence.readRaw(sessionId)
-    const originalStored = await services.sessionPersistence.loadStored(sessionId)
-    if (raw === undefined || originalStored === undefined) throw new SessionMoveError('session-move/session-not-found', '读取会话持久化记录失败。')
-    const newlineIndex = raw.content.indexOf('\n')
-    const headerText = newlineIndex < 0 ? raw.content : raw.content.slice(0, newlineIndex)
-    const body = newlineIndex < 0 ? '' : raw.content.slice(newlineIndex + 1)
+    const originalStored = await loadStoredSession(services.sessionPersistence, sessionId)
+    if (originalStored === undefined) throw new SessionMoveError('session-move/session-not-found', '读取会话持久化记录失败。')
+    const artifact = await readSessionArtifact(services.sessionPersistence, sessionId, persistedHeader)
     let header: SessionHeader
-    try { header = JSON.parse(headerText) as SessionHeader } catch (error) {
+    try { header = JSON.parse(artifact.decoded.firstLine) as SessionHeader } catch (error) {
       throw new SessionMoveError('session-move/artifact-invalid', '会话工件头部无法解析。', { cause: error })
     }
     if (header.id !== sessionId) throw new SessionMoveError('session-move/artifact-invalid', '会话工件标识与请求不一致。')
     const targetHeader = { ...header, cwd: targetPath }
-    const targetMeta = { ...raw.meta, cwd: targetPath }
-    const oldLocation = services.sessionPersistence.locate(raw.meta)
-    const newLocation = services.sessionPersistence.locate(targetMeta)
-    if (oldLocation === undefined || newLocation === undefined) throw new SessionMoveError('session-move/path-invalid', '宿主无法定位会话工件。')
+    const targetMeta = { ...originalStored.meta, cwd: targetPath }
+    const newPath = locateArtifact(services.sessionPersistence, targetMeta)?.path
+    if (newPath === undefined) throw new SessionMoveError('session-move/path-invalid', '宿主无法定位会话工件。')
 
     // 编码和路径校验都必须在摘除原 Store 入口前完成，失败时原会话仍可访问。
     const encoder = options.encodeArtifact ?? encodeSessionArtifact
-    const bytes = await encoder(JSON.stringify(targetHeader), body, newLocation.path.endsWith('.zstd'))
-    const transaction = new ArtifactDirectoryMove(oldLocation.path, newLocation.path)
+    const bytes = await encodeRewrittenArtifact(JSON.stringify(targetHeader), artifact.decoded, encoder)
+    const transaction = new ArtifactDirectoryMove(artifact.path, newPath)
 
     try {
       await agent?.scope?.dispose?.()
@@ -449,7 +605,12 @@ export async function moveSessionToWorkspace(
     let enteredPlaceholder: EnteredStoredSession | undefined
     try {
       await transaction.publish(bytes)
-      const movedStored = await services.sessionPersistence.loadStored(sessionId)
+      let movedStored: StoredSession | undefined
+      try {
+        movedStored = await loadStoredSession(services.sessionPersistence, sessionId)
+      } catch (error) {
+        throw new SessionMoveError('session-move/validation-failed', '迁移后的会话工件校验失败。', { cause: error })
+      }
       if (movedStored === undefined || movedStored.meta.cwd !== targetPath) {
         throw new SessionMoveError('session-move/validation-failed', '迁移后的会话工件校验失败。')
       }
