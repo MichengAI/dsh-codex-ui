@@ -130,10 +130,9 @@ function workspaceIdForSession(
   return workspaces.find(workspace => workspace.sessionIds.some(id => String(id) === sessionId))?.workspaceId
 }
 
-/** 当前会话所在项目用打开的蓝色文件夹；其余项目只跟展开状态走。 */
+/** 打开或闭合只跟展开状态走；当前会话所在项目额外使用当前色。 */
 export function projectFolderPresentation(isExpanded: boolean, containsCurrent: boolean): { open: boolean; current: boolean } {
-  if (containsCurrent) return { open: true, current: true }
-  return { open: isExpanded, current: false }
+  return { open: isExpanded, current: containsCurrent }
 }
 
 /** 当前会话变化时展开所属项目或「最近」；会话尚未进入树则保持原展开状态。 */

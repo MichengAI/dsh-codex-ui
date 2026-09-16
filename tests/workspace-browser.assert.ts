@@ -114,8 +114,8 @@ assert.deepEqual(
 )
 assert.deepEqual(
   projectFolderPresentation(false, true),
-  { open: true, current: true },
-  '当前会话所在项目即使收起也必须使用打开的当前文件夹',
+  { open: false, current: true },
+  '当前会话所在项目收起时必须使用关闭的当前文件夹',
 )
 assert.deepEqual(
   projectFolderPresentation(true, true),

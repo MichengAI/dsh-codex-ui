@@ -159,6 +159,7 @@ assert.doesNotMatch(workspaceBrowser, /dcu-wb-search/, '工作区区域不得保
 assert.doesNotMatch(workspaceBrowser, /IconChevronRightOutline14/, '项目树不得保留展开箭头')
 assert.match(workspaceBrowser, /toggleGroup\(expandKey, true\)/, '点击项目文件夹必须切换展开状态')
 assert.match(workspaceBrowser, /projectFolderPresentation\(isExpanded, workspace\.visibleIds\.some\(id => id === currentSessionId\)\)/, '项目文件夹必须根据展开状态和当前会话决定打开或闭合')
+assert.match(workspaceBrowser, /folder\.open \? folder\.current \? <IconFolderOpen16 size=\{16\} \/> : <IconFolderOpenOutline16 size=\{16\} \/> : <IconFolderClose16 size=\{16\} \/>/, '当前展开项目必须用官方打开文件夹，其余展开项目用线框，收起用闭合')
 assert.match(workspaceBrowser, /dcu-wb-folder-current/, '当前会话所在项目必须给文件夹加上当前色标记')
 assert.match(workspaceBrowser, /\.dcu-wb-folder\.dcu-wb-folder-current\{color:var\(--dsw-alias-state-business-primary\)\}/, '当前项目文件夹必须使用业务蓝')
 assert.match(workspaceBrowser, /id: 'openPath'[^]*IconFolderOpenOutline16 size=\{16\}/, '在资源管理器中打开必须继续使用打开文件夹图标')
