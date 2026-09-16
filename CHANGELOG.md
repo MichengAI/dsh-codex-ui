@@ -4,6 +4,14 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.9 - 2026-09-16
+
+- Session title type words follow the Chinese or English UI locale.
+- Hide Delete conversation when archive delete is unavailable.
+- Changing the current session expands its project folder or Recent.
+- The workspace tree uses official open and closed folder glyphs, and the running indicator aligns with project titles.
+- Moving a session to another project works on DSH 0.1.6. A missing artifact is reported as not found, and leftover generation files get their working directory rewritten.
+
 ## suite-installer-v1.0.11 - 2026-09-15
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:
