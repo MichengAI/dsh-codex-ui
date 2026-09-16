@@ -3,9 +3,11 @@ import { readFileSync } from 'node:fs'
 import { tickMarkSize } from '../src/client/TurnNavigator.tsx'
 
 const sidebar = readFileSync(new URL('../src/client/CodexSidebar.tsx', import.meta.url), 'utf8')
+const footerActions = readFileSync(new URL('../src/client/footer-actions.ts', import.meta.url), 'utf8')
 const navigator = readFileSync(new URL('../src/client/TurnNavigator.tsx', import.meta.url), 'utf8')
 const client = readFileSync(new URL('../src/client/index.ts', import.meta.url), 'utf8')
 const settings = readFileSync(new URL('../src/client/settings-page-styles.ts', import.meta.url), 'utf8')
+const settingsPage = readFileSync(new URL('../src/client/CodexSettingsPage.tsx', import.meta.url), 'utf8')
 
 const sidebarStylesheet = sidebar.match(/const stylesheet = `([\s\S]*?)`/)?.[1]
 assert.ok(sidebarStylesheet, '必须能读取侧栏样式，避免防回归检查被跳过')
@@ -14,6 +16,8 @@ assert.doesNotMatch(sidebarStylesheet, /billing-(?:trigger|rail-button)/, '侧�
 assert.ok(sidebar.includes('.dcu-settings-seat [data-slot="settings.trigger"]>svg{color:var(--dcu-sidebar-icon)}'), '设置图标必须使用侧栏颜色，穿过宿主 slot 包装定位图标')
 assert.match(settings, /\.dcu-settings-trigger-content\{[^}]*grid-template-columns:20px minmax\(0,1fr\);column-gap:8px/, '设置入口通过固定图标列对齐文字，不再叠加旧的文字偏移')
 assert.match(settings, /\.dcu-settings-trigger\[data-wide=false\] \.dcu-settings-trigger-content\{grid-template-columns:16px;justify-content:center\}/, '窄轨设置图标必须独立居中')
+assert.match(settingsPage, /createPortal\([\s\S]*data-dcu-settings-page[\s\S]*document\.body\)/, '设置页必须 portal 到 document.body，避免收缩窄轨的 containing block 困住全屏页')
+assert.match(settings, /body:has\(\.dcu-settings-page\) \.dcu-root/, '透明设置页隔离必须覆盖 portal 到 body 后的侧栏根')
 
 assert.doesNotMatch(sidebar, /--dsh-chat-content-width:\s*800px/, '会话内容列必须保留宿主自适应和拖拽宽度')
 assert.match(sidebar, /--dsh-composer-card-max-width:calc\(var\(--dsh-chat-content-width\) \+ 32px\)/, '输入卡片必须继续从宿主会话宽度轴派生')
@@ -57,6 +61,12 @@ assert.match(sidebar, /const compact = collapsed \|\| width < 80/, '列宽小于
 assert.match(sidebar, /className=\{`dcu-root\$\{visualCompact \? ' dcu-compact' : ''\}\$\{collapsing \? ' dcu-collapsing' : ''\}`\}/, '收缩动画必须用独立视觉状态隔离工作区树')
 assert.match(sidebar, /\.dcu-root\.dcu-compact \.dcu-expanded-shell\{display:none\}/, '窄轨必须隐藏文字菜单，但保留工作区树实例避免展开时重新挂载')
 assert.match(sidebar, /dcu-compact-nav/, '窄轨必须渲染图标导航列')
+assert.match(footerActions, /CONTEXT_OVERVIEW_FOOTER_ID = 'context-overview'/, '必须按 dsh-context 注册的 slot id 跳过上下文洞察')
+assert.match(footerActions, /HIDDEN_FOOTER_ACTION_IDS: ReadonlySet<string>/, '隐藏名单必须是只读 Set，避免运行时被改掉')
+assert.match(sidebar, /only: action\.id/, '底部动作必须按 id 单独 renderSlot，不能整槽渲染')
+assert.match(sidebar, /footer-actions 必须保持竖排/, '逐条 data-slot 锚点可能被插件设为 100% 宽，底部动作区不得改成横向 flex')
+assert.doesNotMatch(sidebar, /lc-ov-entry/, '不得再靠 dsh-context 的按钮 class 藏入口')
+assert.doesNotMatch(sidebar, /\[data-slot\]:has\(/, '不得按 slot 祖先隐藏洞察入口，否则会把同槽的用量统计一起藏掉')
 assert.match(sidebar, /dcu-compact-nav[\s\S]*sidebar.newTask[\s\S]*sidebar.search[\s\S]*sidebar.experts[\s\S]*sidebar.skills[\s\S]*sidebar.plugins[\s\S]*sidebar.connectors[\s\S]*sidebar.schedule[\s\S]*sidebar.assistant/, '窄轨必须保留主导航图标')
 assert.match(sidebar, /dcu-compact .dcu-settings-seat>button\{display:grid;place-items:center;width:36px;min-height:36px;padding:0!important;font-size:0!important/, '窄轨设置入口只能保留图标')
 assert.match(sidebar, /<div className="dcu-compact-shell"><button type="button" className="dcu-icon" aria-label=\{t\('sidebar\.expand'\)\} onClick=\{toggleSidebar\}><IconPanelLeftOutline16 size=\{16\} \/>/, '折叠态展开按钮必须位于窄轨顶部')

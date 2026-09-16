@@ -4,6 +4,12 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.11 - 2026-09-16
+
+- Open the settings page (and usage statistics) through a `document.body` portal so a collapsed 56px rail cannot trap the overlay in a transform containing block.
+- Skip the dsh-context `context-overview` footer action by slot id and render the remaining footer actions one by one. Usage statistics stays visible. Footer actions without an id are dropped. The per-session Context tab is unchanged.
+- Pin a dragged project into an empty pinned section even when dragleave clears the insertion target.
+
 ## suite-installer-v1.0.13 - 2026-09-16
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:

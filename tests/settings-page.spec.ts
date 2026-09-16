@@ -14,9 +14,12 @@ const source = <T,>(items: readonly T[]) => ({ getSnapshot: () => items, subscri
 const cleanups: Array<() => void> = []
 afterEach(async () => { await act(async () => { cleanups.splice(0).forEach(cleanup => cleanup()) }); document.body.innerHTML = ''; vi.restoreAllMocks() })
 
-async function mount(extra: Partial<CodexSettingsPageProps> = {}) {
+const settingsPage = () => document.querySelector<HTMLElement>('[data-dcu-settings-page]')
+const inSettings = <T extends Element>(selector: string) => document.querySelector<T>(selector)
+
+async function mount(extra: Partial<CodexSettingsPageProps> = {}, parent: HTMLElement = document.body) {
   const container = document.createElement('div')
-  document.body.append(container)
+  parent.append(container)
   const root = createRoot(container)
   const props = {
     wide: true, sections: source(rows), onboarding: source([]), connectionState: { getSnapshot: () => 'connected', subscribe: () => () => {} }, reconnect: () => {},
@@ -35,13 +38,13 @@ async function mount(extra: Partial<CodexSettingsPageProps> = {}) {
 test('关闭后普通入口回到常规，快捷入口仍能指定分区', async () => {
   const { container, trigger } = await mount()
   await act(async () => { openSettingsSection(container, '模型'); await new Promise(resolve => setTimeout(resolve, 50)) })
-  await act(async () => { container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click() })
+  await act(async () => { inSettings<HTMLButtonElement>('.dcu-settings-back')!.click() })
   await act(async () => { trigger.click() })
-  expect(container.querySelector('[aria-current="page"]')?.textContent).toBe('常规')
-  await act(async () => { container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click() })
+  expect(inSettings('[aria-current="page"]')?.textContent).toBe('常规')
+  await act(async () => { inSettings<HTMLButtonElement>('.dcu-settings-back')!.click() })
   await act(async () => { openSettingsSection(container, '模型') })
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 50)) })
-  expect(container.querySelector('[aria-current="page"]')?.textContent).toBe('模型')
+  expect(inSettings('[aria-current="page"]')?.textContent).toBe('模型')
 })
 
 test('关闭状态的快捷入口首次渲染就是目标分区，不闪过常规', async () => {
@@ -50,7 +53,7 @@ test('关闭状态的快捷入口首次渲染就是目标分区，不闪过常�
     if (name === 'settings.section' && options?.only) rendered.push(options.only)
     return null
   }) as CodexSettingsPageProps['renderSlot'] })
-  await act(async () => { container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click() })
+  await act(async () => { inSettings<HTMLButtonElement>('.dcu-settings-back')!.click() })
   rendered.length = 0
   await act(async () => { openSettingsSection(container, '模型') })
   expect(rendered).toEqual(['models'])
@@ -62,34 +65,34 @@ test('退出设置恢复焦点和被覆盖分支，保留底层会话 DOM', asyn
   document.body.append(conversation)
   const { container, trigger } = await mount()
   expect(conversation.inert).toBe(true)
-  expect(document.activeElement).toBe(container.querySelector('.dcu-settings-back'))
-  await act(async () => { container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click() })
-  expect(container.querySelector('[data-dcu-settings-page]')).toBeNull()
+  expect(document.activeElement).toBe(inSettings('.dcu-settings-back'))
+  await act(async () => { inSettings<HTMLButtonElement>('.dcu-settings-back')!.click() })
+  expect(settingsPage()).toBeNull()
   expect(conversation.inert).not.toBe(true)
   expect(conversation.value).toBe('尚未发送的内容')
   expect(document.activeElement).toBe(trigger)
 })
 
 test('内层确认框独占 Escape，关闭确认框后 Escape 才返回应用', async () => {
-  const { container } = await mount()
+  await mount()
   const dialog = document.createElement('div')
   dialog.setAttribute('role', 'dialog')
   document.body.append(dialog)
   await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })) })
-  expect(container.querySelector('[data-dcu-settings-page]')).not.toBeNull()
+  expect(settingsPage()).not.toBeNull()
   dialog.remove()
   await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })) })
-  expect(container.querySelector('[data-dcu-settings-page]')).toBeNull()
+  expect(settingsPage()).toBeNull()
 })
 
 test('既有侧栏快捷入口可以在独立设置页选择对应插件', async () => {
   const { container } = await mount()
   await act(async () => { openSettingsSection(container, '模型'); await new Promise(resolve => setTimeout(resolve, 50)) })
-  expect(container.querySelector('.dcu-settings-heading h1')).toBeNull()
-  expect(container.querySelector('[aria-current="page"]')?.textContent).toBe('模型')
-  expect(container.querySelector('[data-section=models]')).not.toBeNull()
-  await act(async () => { container.querySelector<HTMLButtonElement>('[data-section=models]')!.click() })
-  expect(container.querySelector('[data-dcu-settings-page]')).toBeNull()
+  expect(inSettings('.dcu-settings-heading h1')).toBeNull()
+  expect(inSettings('[aria-current="page"]')?.textContent).toBe('模型')
+  expect(inSettings('[data-section=models]')).not.toBeNull()
+  await act(async () => { inSettings<HTMLButtonElement>('[data-section=models]')!.click() })
+  expect(settingsPage()).toBeNull()
 })
 
 test('搜索保留未知插件，空结果不会误选页面，条目分组覆盖新增项', () => {
@@ -107,42 +110,43 @@ test('隐藏或已隔离的无关对话框不阻止 Escape 返回', async () => 
   dialog.setAttribute('role', 'dialog')
   document.body.append(dialog)
   const { container, trigger } = await mount()
-  expect(trigger.inert).toBe(true)
+  expect(container.inert).toBe(true)
+  expect(container.contains(trigger)).toBe(true)
   expect(dialog.inert).toBe(true)
   await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })) })
-  expect(container.querySelector('[data-dcu-settings-page]')).toBeNull()
+  expect(settingsPage()).toBeNull()
 })
 
 test('设置打开时内联引导仍可完成，迟挂载背景不能抢走焦点', async () => {
-  const { container } = await mount({
+  await mount({
     onboarding: source([{ id: 'first-run' }]),
     renderSlot: ((name: string, owner: { complete?: () => void }) => name === 'settings.onboarding'
       ? createElement('button', { 'data-onboarding-test': true, onClick: owner.complete }, '完成引导') : null) as CodexSettingsPageProps['renderSlot'],
   })
-  const onboarding = container.querySelector<HTMLButtonElement>('[data-onboarding-test]')!
+  const onboarding = inSettings<HTMLButtonElement>('[data-onboarding-test]')!
   expect(onboarding.closest('[inert]')).toBeNull()
   expect(onboarding.inert).not.toBe(true)
   const late = document.createElement('button')
   document.body.append(late)
   late.focus()
-  expect(document.activeElement).toBe(container.querySelector('.dcu-settings-back'))
+  expect(document.activeElement).toBe(inSettings('.dcu-settings-back'))
   await act(async () => { onboarding.click() })
-  expect(container.querySelector('[data-onboarding-test]')).toBeNull()
+  expect(inSettings('[data-onboarding-test]')).toBeNull()
 })
 
 test('新设置页直接提供互不重复的社区插件图标', async () => {
-  const { container } = await mount({ sections: source([
+  await mount({ sections: source([
     ...rows, {id:'market',label:'插件市场',order:3}, {id:'better-sidebar',label:'侧边卡片',order:4},
   ]) })
-  expect(container.querySelector('.dcu-settings-nav .lucide-store')).not.toBeNull()
-  expect(container.querySelector('.dcu-settings-nav .lucide-panel-right')).not.toBeNull()
+  expect(inSettings('.dcu-settings-nav .lucide-store')).not.toBeNull()
+  expect(inSettings('.dcu-settings-nav .lucide-panel-right')).not.toBeNull()
 })
 
 
 test('Shift+Tab 在设置内部循环，隐藏的迟挂载 dialog 不拦截 Escape', async () => {
- const {container}=await mount()
- const back=container.querySelector<HTMLButtonElement>('.dcu-settings-back')!
- const last=container.querySelector<HTMLButtonElement>('[data-section]')!
+ await mount()
+ const back=inSettings<HTMLButtonElement>('.dcu-settings-back')!
+ const last=inSettings<HTMLButtonElement>('[data-section]')!
  back.focus()
  document.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',shiftKey:true,bubbles:true,cancelable:true}))
  expect(document.activeElement).toBe(last)
@@ -150,7 +154,7 @@ test('Shift+Tab 在设置内部循环，隐藏的迟挂载 dialog 不拦截 Esca
  expect(document.activeElement).toBe(back)
  const hidden=document.createElement('div');hidden.setAttribute('role','dialog');hidden.style.display='none';document.body.append(hidden)
  await act(async()=>{document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))})
- expect(container.querySelector('[data-dcu-settings-page]')).toBeNull()
+ expect(settingsPage()).toBeNull()
 })
 
 test('已有引导 portal 保留交互，设置退出不改写原始 inert 状态', async () => {
@@ -159,7 +163,7 @@ test('已有引导 portal 保留交互，设置退出不改写原始 inert 状�
  const {container}=await mount({onboarding:source([{id:'portal-step'}])})
  expect(overlay.inert).not.toBe(true)
  next.focus();expect(document.activeElement).toBe(next)
- await act(async()=>{container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click()})
+ await act(async()=>{inSettings<HTMLButtonElement>('.dcu-settings-back')!.click()})
  expect(background.inert).toBe(true)
  expect(background.getAttribute('data-dcu-settings-isolated')).toBe('previous')
 })
@@ -167,11 +171,11 @@ test('已有引导 portal 保留交互，设置退出不改写原始 inert 状�
 
 test('搜索弹窗尚未卸载也能从快捷入口打开设置分区', async () => {
  const {container}=await mount()
- await act(async()=>{container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click()})
+ await act(async()=>{inSettings<HTMLButtonElement>('.dcu-settings-back')!.click()})
  const search=document.createElement('div');search.setAttribute('role','dialog');document.body.append(search)
  await act(async()=>{openSettingsSection(container,'模型')})
  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,50))})
- expect(container.querySelector('[data-section=models]')).not.toBeNull()
+ expect(inSettings('[data-section=models]')).not.toBeNull()
 })
 
 
@@ -186,20 +190,20 @@ test('引导只保留模态区域，同包装的背景菜单仍被隔离', async
   menu.setAttribute('role', 'menu')
   branch.append(dialog, menu)
   document.body.append(branch)
-  const { container } = await mount({ onboarding: source([{ id: 'guide' }]) })
+  await mount({ onboarding: source([{ id: 'guide' }]) })
   expect(dialog.inert).not.toBe(true)
   expect(menu.inert).toBe(true)
   expect(dialog.hasAttribute('data-dcu-settings-isolated')).toBe(false)
   expect(menu.hasAttribute('data-dcu-settings-isolated')).toBe(true)
   next.focus()
   expect(document.activeElement).toBe(next)
-  await act(async () => { container.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click() })
+  await act(async () => { inSettings<HTMLButtonElement>('.dcu-settings-back')!.click() })
   expect(menu.inert).not.toBe(true)
   expect(menu.hasAttribute('data-dcu-settings-isolated')).toBe(false)
 })
 
 test.each(['menu', 'listbox'])('Escape 只关闭 %s，下一次才退出设置', async role => {
-  const { container } = await mount()
+  await mount()
   const popup = document.createElement('div')
   popup.setAttribute('role', role)
   document.body.append(popup)
@@ -207,15 +211,15 @@ test.each(['menu', 'listbox'])('Escape 只关闭 %s，下一次才退出设置',
   document.addEventListener('keydown', dismiss, { once: true })
   await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })) })
   expect(popup.isConnected).toBe(false)
-  expect(container.querySelector('[data-dcu-settings-page]')).not.toBeNull()
+  expect(settingsPage()).not.toBeNull()
   await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })) })
-  expect(container.querySelector('[data-dcu-settings-page]')).toBeNull()
+  expect(settingsPage()).toBeNull()
 })
 
 test('过滤提示随匹配与选择变化，过滤本身不卸载当前正文', async () => {
-  const { container } = await mount()
-  const original = container.querySelector('[data-section=general]')
-  const input = container.querySelector<HTMLInputElement>('input[type=search]')!
+  await mount()
+  const original = inSettings('[data-section=general]')
+  const input = inSettings<HTMLInputElement>('input[type=search]')!
   const search = async (value: string) => {
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value)
@@ -223,14 +227,25 @@ test('过滤提示随匹配与选择变化，过滤本身不卸载当前正文',
     })
   }
   await search('第三方')
-  expect(container.querySelector('[role=status]')?.textContent).toBe(zh['settings.filterHint'])
-  expect(container.querySelector('[data-section=general]')).toBe(original)
-  await act(async () => { container.querySelector<HTMLButtonElement>('.dcu-settings-link')!.click() })
-  expect(container.querySelector('[role=status]')).toBeNull()
-  expect(container.querySelector('[data-section=third-party]')).not.toBeNull()
+  expect(inSettings('[role=status]')?.textContent).toBe(zh['settings.filterHint'])
+  expect(inSettings('[data-section=general]')).toBe(original)
+  await act(async () => { inSettings<HTMLButtonElement>('.dcu-settings-link')!.click() })
+  expect(inSettings('[role=status]')).toBeNull()
+  expect(inSettings('[data-section=third-party]')).not.toBeNull()
   await search('不存在')
-  expect(container.querySelector('[role=status]')?.textContent).toBe(zh['settings.noResults'])
-  expect(container.querySelector('[data-section=third-party]')).not.toBeNull()
+  expect(inSettings('[role=status]')?.textContent).toBe(zh['settings.noResults'])
+  expect(inSettings('[data-section=third-party]')).not.toBeNull()
   await search('')
-  expect(container.querySelector('[role=status]')).toBeNull()
+  expect(inSettings('[role=status]')).toBeNull()
+})
+
+test('设置页挂到 document.body，不被收缩侧栏的 transform 包含块困住', async () => {
+  const rail = document.createElement('aside')
+  rail.style.cssText = 'transform:translateX(0);width:56px;overflow:hidden'
+  document.body.append(rail)
+  const { container } = await mount({}, rail)
+  const page = settingsPage()
+  expect(page?.parentElement).toBe(document.body)
+  expect(container.contains(page)).toBe(false)
+  expect(rail.contains(page)).toBe(false)
 })

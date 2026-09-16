@@ -82,6 +82,20 @@ export function pinnedHeaderDropIndicator(ids: readonly string[]): PinnedHeaderD
   return workspaceId === undefined ? { kind: 'empty' } : { kind: 'workspace', workspaceId }
 }
 
+/**
+ * 空置顶没有项目行可自行计算落点，松手时 dragleave 又常把 relatedTarget 置空并清掉蓝线。
+ * 只要这次 drop 发生在置顶区，空列表也必须把项目置顶。
+ */
+export function resolvePinnedSectionDrop(
+  draggedWorkspace: string | undefined,
+  target: { zone: string; beforeId?: string } | undefined,
+  pinnedEmpty: boolean,
+): { id: string; beforeId?: string } | undefined {
+  if (draggedWorkspace === undefined) return undefined
+  if (target?.zone === 'pinned') return { id: draggedWorkspace, beforeId: target.beforeId }
+  return pinnedEmpty ? { id: draggedWorkspace } : undefined
+}
+
 /** 按指定 id 顺序取出对应项；未出现在 ids 中的项丢弃。 */
 export function orderByIds<T>(items: readonly T[], ids: readonly string[], idOf: (item: T) => string): T[] {
   const byId = new Map(items.map(item => [idOf(item), item]))

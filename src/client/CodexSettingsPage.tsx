@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { createPortal } from 'react-dom'
 import { ArrowLeft, Archive, BarChart3, Box, CircleHelp, Clock, Cpu, Link, MessageSquare, PanelRight, Search, Settings, SlidersHorizontal, Sparkles, Store, User } from 'lucide-react'
 import type { PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { ConnectionIndicator } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -101,7 +102,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     wasOpen.current = open
     if (!open || page.current === null) return
     if (settingsElementAvailable(page.current) && settingsOverlays().length === 0) back.current?.focus()
-    // 只隔离被设置页覆盖的分支，不卸载会话，也不移动宿主 React 节点。
+    // 只隔离被设置页覆盖的分支，不卸载会话。设置页本身已 portal 到 body，避免收缩侧栏的 containing block 把全屏页困在窄轨。
     const hidden = new Map<HTMLElement, { inert: boolean; marker: string | null }>()
     // 只为活动引导保留模态区域，不把无关菜单或其整棵包装子树一并放行。
     const guideModals = step === undefined ? [] : settingsOverlays('[role="dialog"][aria-modal="true"],[role="alertdialog"][aria-modal="true"]')
@@ -177,6 +178,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
       {renderSlot('settings.trigger', { wide })}
     </button>
     <ConnectionIndicator state={wide ? connectionIndicator : undefined} disconnectedLabel={t('settings.disconnected')} connectingLabel={t('settings.connecting')} recoveredLabel={t('settings.recovered')} reconnectActionLabel={t('settings.reconnect')} restartActionLabel={t('settings.reconnect')} onReconnect={reconnect}/>
+    {createPortal(<>
     {open && <div ref={page} className="dcu-settings-page" data-dcu-settings-page role="region" aria-label={t('settings.title')}>
       <nav className="dcu-settings-nav" aria-label={t('settings.title')}>
         <button ref={back} type="button" className="dcu-settings-back" onClick={close}><ArrowLeft size={16}/>{renderSlot('settings.close', {}) ?? t('settings.back')}</button>
@@ -202,6 +204,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
       </div>
     </div>}
     <div ref={onboardingRoot} style={{ display: 'contents' }}>{step !== undefined && renderSlot('settings.onboarding', { stepId: step.id, complete: () => { setCompleted(previous => new Set([...previous, step.id])) }, openSection }, { only: step.id })}</div>
+    </>, document.body)}
   </>
 }
 

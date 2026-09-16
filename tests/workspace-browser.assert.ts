@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { expandedForCurrentSession, expandedForSessionMove, isTaskSession, moveBefore, orderByIds, pinnedHeaderDropIndicator, projectFolderPresentation, readSessionDrag, readWorkspaceDrag, readWorkspaceGroupDrag, reorderDropBeforeId, sessionDropAction, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag, writeWorkspaceGroupDrag } from '../src/client/workspace-browser.ts'
+import { expandedForCurrentSession, expandedForSessionMove, isTaskSession, moveBefore, orderByIds, pinnedHeaderDropIndicator, projectFolderPresentation, readSessionDrag, readWorkspaceDrag, readWorkspaceGroupDrag, reorderDropBeforeId, resolvePinnedSectionDrop, sessionDropAction, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag, writeWorkspaceGroupDrag } from '../src/client/workspace-browser.ts'
 
 const sessions = {
   a: { id: 'a', origin: 'user', blank: false },
@@ -27,6 +27,10 @@ assert.equal(reorderDropBeforeId(['a', 'b', 'c'], 'c', 'b', true), null, '末项
 assert.equal(reorderDropBeforeId(['a', 'b', 'c'], 'external', 'b', true), 'c', '跨分区项目应按目标列表计算插入锚点')
 assert.deepEqual(pinnedHeaderDropIndicator(['w1', 'w2']), { kind: 'workspace', workspaceId: 'w1' }, '置顶标题区应复用首项目顶部的插入线')
 assert.deepEqual(pinnedHeaderDropIndicator([]), { kind: 'empty' }, '空置顶区才应渲染独立的起始插入线')
+assert.deepEqual(resolvePinnedSectionDrop('w1', { zone: 'pinned', beforeId: 'w2' }, false), { id: 'w1', beforeId: 'w2' }, '非空置顶必须沿用蓝线锚点')
+assert.deepEqual(resolvePinnedSectionDrop('w1', undefined, true), { id: 'w1' }, '空置顶松手时即使 dragleave 清掉蓝线也必须置顶')
+assert.equal(resolvePinnedSectionDrop('w1', undefined, false), undefined, '非空置顶没有落点时不得误置顶')
+assert.equal(resolvePinnedSectionDrop(undefined, { zone: 'pinned' }, true), undefined, '没有项目载荷时不得置顶')
 assert.deepEqual(
   orderByIds([{ id: 'a' }, { id: 'b' }, { id: 'c' }], ['c', 'a'], item => item.id),
   [{ id: 'c' }, { id: 'a' }],

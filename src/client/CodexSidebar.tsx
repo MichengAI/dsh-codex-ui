@@ -1,5 +1,5 @@
 import { GlobalPanelButtons, type GlobalPanelSource } from './global-panels.tsx'
-import { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react'
+import { Fragment, forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react'
 import {
   BrandWordmark, IconChevronRightOutline14, IconEnhanceOutline16,
   IconLinkOutline16, IconNewChatOutline16, IconPanelLeftOutline16, IconPersonalizationOutline16, IconSearchOutline16, IconSkillOutline16,
@@ -24,6 +24,7 @@ import { NEW_CONVERSATION_STYLE } from './new-conversation-style.ts'
 import { COMPOSER_TOOL_MENU_STYLE } from './composer-tool-menus.ts'
 import type { DraftPresenceSource } from './new-conversation-draft.ts'
 import { NewConversationSuggestions, type PrefillResult } from './NewConversationSuggestions.tsx'
+import type { FooterAction, FooterActionSource } from './footer-actions.ts'
 
 type CompanionTabSource = {
   getSnapshot: () => CompanionTabAvailability
@@ -32,6 +33,8 @@ type CompanionTabSource = {
 
 const subscribeEmptyCompanionTabs = (): (() => void) => () => {}
 const getEmptyCompanionTabs = (): CompanionTabAvailability => EMPTY_COMPANION_TABS
+const emptyFooterActions: readonly FooterAction[] = []
+const getEmptyFooterActions = (): readonly FooterAction[] => emptyFooterActions
 const SIDEBAR_COLLAPSE_SETTLE_MS = 500
 const SIDEBAR_EXPANSION_STORAGE_KEY = 'dsh-codex-ui.sidebar-expansion.v1'
 const EXTENSIONS_EXPANSION_KEY = 'extensions'
@@ -61,6 +64,7 @@ type CodexSidebarInjected = {
   openPath: (path: string) => Promise<void> | void
   useSessionPendingInteraction?: UseSessionPendingInteraction
   globalPanels?: GlobalPanelSource
+  footerActions?: FooterActionSource
   selectPanel?: (id: string | null) => void
   usePanelInfo?: <T>(selector: (info: { activePanelId: string | null }) => T) => T
   companionSlots?: CompanionTabSource
@@ -236,8 +240,9 @@ const SidebarSearch = forwardRef<SidebarSearchHandle, SidebarSearchProps>(functi
 })
 
 /** Codex 风格的 DSH 侧栏，只替换导航外观，项目浏览和设置仍由 DSH 官方组件提供。 */
-export function CodexSidebar({ globalPanels, selectPanel, usePanelInfo = useLegacyPanelInfo, collapsed, width, openSession, startSession, toggleSidebar, archiveSession, canDeleteSession, deleteSession, forkSession, moveSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useSessionPendingInteraction, useWorkspaces, prefillNewConversation, newConversationDraft }: CodexSidebarProps) {
+export function CodexSidebar({ globalPanels, footerActions, selectPanel, usePanelInfo = useLegacyPanelInfo, collapsed, width, openSession, startSession, toggleSidebar, archiveSession, canDeleteSession, deleteSession, forkSession, moveSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useSessionPendingInteraction, useWorkspaces, prefillNewConversation, newConversationDraft }: CodexSidebarProps) {
   const panels = useSyncExternalStore(globalPanels?.subscribe ?? subscribeEmptyCompanionTabs, globalPanels?.getSnapshot ?? getEmptyPanels, globalPanels?.getSnapshot ?? getEmptyPanels)
+  const visibleFooterActions = useSyncExternalStore(footerActions?.subscribe ?? subscribeEmptyCompanionTabs, footerActions?.getSnapshot ?? getEmptyFooterActions, footerActions?.getSnapshot ?? getEmptyFooterActions)
   const activePanelId = usePanelInfo(info => info.activePanelId)
   const panelButtons = (wide: boolean) => selectPanel === undefined ? null : <GlobalPanelButtons panels={panels} activeId={activePanelId} wide={wide} conversationLabel={t('sidebar.tasksTab')} selectPanel={selectPanel} renderIcon={(id, active) => renderSlot('sidebar.panellist', { size: 16, active }, { only: id })} />
   const compact = collapsed || width < 80
@@ -423,7 +428,8 @@ export function CodexSidebar({ globalPanels, selectPanel, usePanelInfo = useLega
     </div>
     </div>
     <div className="dcu-compact-shell"><button type="button" className="dcu-icon" aria-label={t('sidebar.expand')} onClick={toggleSidebar}><IconPanelLeftOutline16 size={16} /></button><nav className="dcu-compact-nav" aria-label={t('sidebar.mainMenu')}>{panelButtons(false)}<button type="button" className="dcu-icon" aria-label={t('sidebar.newTask')} onClick={() => { startSession() }}><IconNewChatOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.search')} onClick={() => { search.current?.open() }}><IconSearchOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.experts')} onClick={() => { selectExternalSection(t('sidebar.experts')) }}><IconUserOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.skills')} onClick={() => { selectExternalSection(t('sidebar.skills')) }}><IconSkillOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.plugins')} onClick={() => { selectPluginSection() }}><IconPersonalizationOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.connectors')} onClick={() => { selectSection(t('sidebar.connectors')) }}><IconLinkOutline16 size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.schedule')} onClick={() => { selectExternalSection(t('sidebar.schedule')) }}><ScheduleIcon /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.assistant')} onClick={openImSettings}><ImAssistantIcon /></button></nav></div>
-    <footer className="dcu-foot"><div className="dcu-footer-actions">{renderSlot('sidebar.footer.action', { wide: !visualCompact })}</div><div ref={settingsSeat} className="dcu-settings-seat">{renderSlot('sidebar.settings', { wide: !visualCompact })}</div></footer>
+    <footer className="dcu-foot"><div className="dcu-footer-actions">{footerActions === undefined ? renderSlot('sidebar.footer.action', { wide: !visualCompact }) : visibleFooterActions.map(action => <Fragment key={action.id}>{renderSlot('sidebar.footer.action', { wide: !visualCompact }, { only: action.id })}</Fragment>)}</div><div ref={settingsSeat} className="dcu-settings-seat">{renderSlot('sidebar.settings', { wide: !visualCompact })}</div></footer>
+    {/* 逐条 only:id 各生成一个 data-slot 锚点；插件可能给锚点写 width:100%，footer-actions 必须保持竖排。 */}
     <SidebarSearch ref={search} imSettingsAvailable={showChannels} settingsSeat={settingsSeat} openSession={openSession} startSession={startSession} t={t} useSessions={useSessions} useWorkspaces={useWorkspaces} />
   </aside>
 }

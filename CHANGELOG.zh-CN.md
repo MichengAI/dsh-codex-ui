@@ -4,6 +4,12 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 1.1.11 - 2026-09-16
+
+- 设置页和用量统计改为挂到 `document.body`。侧栏收缩后，宿主或插件若给窄轨加了 transform，全屏页不再被困在 56px 里挤成竖排。
+- 侧栏底部按 slot id 跳过 dsh-context 的 `context-overview`，其余底部动作（含费用统计）仍按 id 单独渲染。没有 id 的底部动作不渲染。会话里的上下文页还在。
+- 置顶为空时，从项目区拖入仍会置顶；松手时即使蓝线落点被清掉也不丢。
+
 ## suite-installer-v1.0.13 - 2026-09-16
 
 一键维护安装 11 个自研插件。包含以下插件及版本：

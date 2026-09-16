@@ -7,7 +7,8 @@ const styles = source.slice(source.indexOf('`') + 1, source.lastIndexOf('`'))
 const browser = await chromium.launch({ headless: true })
 try {
   const page = await browser.newPage()
-  await page.setContent(`<html data-dsh-native-backdrop="mica"><body><style>${styles}</style><style>.dcu-wb-section-body{visibility:visible}</style><div class="dcu-root"><div id="sessions" inert><div class="dcu-wb-section-body"><button id="session">会话标题</button></div></div><div class="dcu-settings-page"><button id="back">返回应用</button></div></div></body></html>`)
+  await page.setContent(`<html data-dsh-native-backdrop="mica"><body><style>${styles}</style><style>.dcu-wb-section-body{visibility:visible}</style><div class="dcu-root" style="transform:translateX(0);width:56px"><div id="sessions" inert><div class="dcu-wb-section-body"><button id="session">会话标题</button></div></div></div><div class="dcu-settings-page"><button id="back">返回应用</button></div></body></html>`)
+  assert.equal(await page.locator('.dcu-settings-page').evaluate(node => node.getBoundingClientRect().width), await page.evaluate(() => window.innerWidth), '设置页挂在 body 时不得被收缩侧栏的 transform 包含块裁成窄轨')
   assert.equal(await page.locator('#session').evaluate(node => getComputedStyle(node).visibility), 'hidden')
   assert.equal(await page.locator('#back').isVisible(), true)
   await page.evaluate(() => {

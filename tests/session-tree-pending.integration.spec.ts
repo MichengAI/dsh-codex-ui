@@ -73,10 +73,11 @@ function createDataTransfer(): DataTransfer {
   } as unknown as DataTransfer
 }
 
-function dispatchDrag(target: Element, type: 'dragstart' | 'dragover' | 'dragleave' | 'dragend' | 'drop', dataTransfer: DataTransfer): void {
+function dispatchDrag(target: Element, type: 'dragstart' | 'dragover' | 'dragleave' | 'dragend' | 'drop', dataTransfer: DataTransfer, relatedTarget?: EventTarget | null): void {
   const event = new Event(type, { bubbles: true, cancelable: true })
   Object.defineProperty(event, 'dataTransfer', { value: dataTransfer })
   Object.defineProperty(event, 'clientY', { value: 0 })
+  if (relatedTarget !== undefined) Object.defineProperty(event, 'relatedTarget', { value: relatedTarget })
   target.dispatchEvent(event)
 }
 
@@ -129,6 +130,31 @@ test('跨置顶、分组与未分组悬停不依赖 dragleave，结束清空所�
     await act(async () => { dispatchDrag(pinned[1]!, 'dragend', transfer) })
     expect(markers()).toHaveLength(0)
     expect(view.container.querySelector('.dcu-wb-drop-indicator')).toBeNull()
+  } finally { await view.dispose() }
+})
+
+test('空置顶在 dragleave 清掉蓝线后仍能接收项目', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const workspaces = { baselinesReady: true, archivedSessionIds: [], items: ['alpha', 'beta'].map(id => ({ workspaceId: id, title: id, path: `D:/${id}`, sessionIds: [] })) }
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ exists: true, pinnedWorkspaceIds: [], workspaceGroups: [] }))))
+  const view = await render(createElement(CodexWorkspaceBrowser, {
+    ...sessionActions, wide: true, useSessions: createSessionStore(createSession('unused', 'unused', undefined)),
+    useSessionPendingInteraction: useEmptyPendingInteractions,
+    useWorkspaces: (selector: (snapshot: typeof workspaces) => unknown) => selector(workspaces), t,
+    deleteWorkspace: vi.fn(), insertSessionBefore: vi.fn(), insertWorkspaceBefore: vi.fn(), openPath: vi.fn(), renameWorkspace: vi.fn(), startSession: vi.fn(),
+  } as never))
+  try {
+    await act(async () => { await Promise.resolve(); await Promise.resolve() })
+    const project = view.container.querySelector('.dcu-wb-project-head')!
+    const pinned = view.container.querySelector('.dcu-wb-section[aria-label="workspace.pinned"]')!
+    const empty = pinned.querySelector('.dcu-wb-empty')!
+    const transfer = createDataTransfer()
+    await act(async () => { dispatchDrag(project, 'dragstart', transfer) })
+    await act(async () => { dispatchDrag(empty, 'dragover', transfer) })
+    await act(async () => { dispatchDrag(pinned, 'dragleave', transfer, null) })
+    await act(async () => { dispatchDrag(empty, 'drop', transfer) })
+    expect(view.container.querySelector('.dcu-wb-pinned-list .dcu-wb-project-title')?.textContent).toBe('alpha')
+    expect(view.container.querySelectorAll('.dcu-wb-section[aria-label="workspace.projects"] .dcu-wb-project-title')).toHaveLength(1)
   } finally { await view.dispose() }
 })
 

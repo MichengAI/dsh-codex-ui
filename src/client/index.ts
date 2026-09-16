@@ -22,6 +22,7 @@ import { CodexWorkspaceBrowser } from './CodexWorkspaceBrowser.tsx'
 import { ConnectorsSection } from './ConnectorsSection.tsx'
 import { en, NS, zh } from './locales.ts'
 import { createCompanionTabSource } from './companion-slots.ts'
+import { createFooterActionSource } from './footer-actions.ts'
 import { openPathInHost, type HostOpenPathConnection } from './host-open-path.ts'
 import { observeSettingsNavIcons } from './settings-nav-icons.ts'
 import { registerUsageStatistics } from './usage-statistics.ts'
@@ -143,6 +144,7 @@ export function apply(ctx: ClientContext): void {
   })
   const companionSlots = createCompanionTabSource(ctx.slots)
   const globalPanels = createGlobalPanelSource(ctx.slots, ctx.locale)
+  const footerActions = createFooterActionSource(ctx.slots)
   ctx.slots.inject('sidebar', () => ctx.slots.register({
     name: 'sidebar',
     registrant: 'michengai-codex-ui',
@@ -174,6 +176,7 @@ export function apply(ctx: ClientContext): void {
       openPath,
       companionSlots,
       globalPanels,
+      footerActions,
       selectPanel: (id: string | null) => { selectGlobalPanel(ctx.layout, id) },
     }),
   }, CodexSidebar))
