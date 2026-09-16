@@ -4,6 +4,12 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.10 - 2026-09-16
+
+- Cold start registers session titles through a dedicated `@michengai/dsh-codex-ui/session-title` plugin after `sessionTitle` and `llm` are ready, and recycles the provider on unload.
+- Type words follow the host settings locale. The theme follows the user message; a language mismatch falls back to the message text.
+- Peer range now includes DSH `0.1.6-alpha.1`. Development dependencies are pinned to that host, except `dsh-client-runtime`, which stays on `0.1.1-rc.2`.
+
 ## suite-installer-v1.0.12 - 2026-09-16
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:

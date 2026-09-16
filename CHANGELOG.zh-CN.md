@@ -4,6 +4,12 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 1.1.10 - 2026-09-16
+
+- 冷启动也能自动命名：独立挂上 `@michengai/dsh-codex-ui/session-title`，等 `sessionTitle` 与 `llm` 就绪后再占 first-prompt；卸载时回收提供方。
+- 类型词跟随宿主 settings 的界面语言。主题跟用户消息语言，模型串语言时改用原文。
+- Peer 声明支持 DSH `0.1.6-alpha.1`。开发依赖钉在该版本；`dsh-client-runtime` 没有 0.1.6 包，仍用 `0.1.1-rc.2`。
+
 ## suite-installer-v1.0.12 - 2026-09-16
 
 一键维护安装 11 个自研插件。包含以下插件及版本：
