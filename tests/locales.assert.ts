@@ -30,6 +30,10 @@ for (const [key, value] of Object.entries(en)) {
   assert.deepEqual(enParams, zhParams, `中英文词典 ${key} 的占位符必须一致`)
 }
 
+assert.equal(en['time.justNow'], 'Just now')
+assert.equal(en['time.justNowShort'], 'now')
+assert.equal(zh['time.justNow'], '刚刚')
+assert.equal(zh['time.justNowShort'], '刚刚')
 assert.equal(en['channel.weixin'], 'WeChat')
 assert.equal(en['channel.wecom'], 'WeCom')
 assert.match(channelBrowser, /const CHANNEL_LOCALE_KEYS =/)

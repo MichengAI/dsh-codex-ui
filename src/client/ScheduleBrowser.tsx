@@ -5,7 +5,8 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { Button, IconArchiveOutline20, IconEllipsisOutline16, IconSettingsOutline16, Menu, Modal, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
 import { NS } from './locales.ts'
 import { WORKSPACE_TREE_STYLE } from './CodexWorkspaceBrowser.tsx'
-import { formatHoverTime, hoverCardAnchor } from './hover-tip.ts'
+import { formatCompactTime, formatHoverTime, hoverCardAnchor } from './hover-tip.ts'
+import { useSharedNow } from './shared-now.ts'
 import { isChannelSession } from './channel-api.ts'
 import { groupScheduleSessions, type ScheduleSession } from './schedule-sessions.ts'
 import { SessionHoverCardLayer, SessionModals, useBusyAction, useSessionDialogs, useSessionFlags } from './session-row-actions.tsx'
@@ -80,6 +81,7 @@ export function ScheduleBrowser(props: ScheduleBrowserProps) {
 
 function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkSession, moveSession, renameSession, useSessions, useSessionPendingInteraction, useWorkspaces, t, canDeleteSession, openTaskSettings, menu, setMenu }: ScheduleBrowserProps & { menu?: OpenMenu; setMenu: (menu?: OpenMenu) => void }) {
   const sessions = useSessions(state => state)
+  const now = useSharedNow()
   const pendingInteractions = (useSessionPendingInteraction ?? useEmptySessionPendingInteraction)(state => state)
   const workspaces = useWorkspaces(state => state)
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => readTreeExpansionState(browserStorage(), SCHEDULE_EXPANSION_STORAGE_KEY))
@@ -146,7 +148,7 @@ function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkS
             const pendingInteraction = pendingInteractionForSession(id, pendingInteractions, sessions.byId[id]?.pendingInteraction)
             const moveTargets = moveSession === undefined ? undefined : sessionMoveTargets(workspaces.items ?? [], id).map(target => ({ ...target, id: moveSessionActionId(target.id) }))
             const canDelete = canDeleteSession?.() === true
-            return <SessionRow key={id} id={id} title={title} selected={sessions.current === id} menuOpen={menu?.id === id} unread={unread} running={session.running} pendingInteraction={pendingInteraction} time={session.updatedAt === undefined ? undefined : formatHoverTime(session.updatedAt, t)} t={t} menuItems={sessionMenuItems(t, { unread, moveTargets, canDelete })} menuPoint={menu?.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { flags.setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id } : undefined) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ title, project: group.label, time: session.updatedAt === undefined ? undefined : formatHoverTime(session.updatedAt, t), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => { if (busy !== undefined) return; const targetWorkspaceId = parseMoveSessionActionId(action); if (targetWorkspaceId !== undefined && moveSession !== undefined) { setMenu(undefined); void run('session-move', () => moveSession(id as SessionId, targetWorkspaceId as WorkspaceId)); return }; dialogs.handleAction(action, id, title) }} />
+            return <SessionRow key={id} id={id} title={title} selected={sessions.current === id} menuOpen={menu?.id === id} unread={unread} running={session.running} pendingInteraction={pendingInteraction} time={session.updatedAt === undefined ? undefined : formatCompactTime(session.updatedAt, t, now)} t={t} menuItems={sessionMenuItems(t, { unread, moveTargets, canDelete })} menuPoint={menu?.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { flags.setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id } : undefined) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ title, project: group.label, time: session.updatedAt === undefined ? undefined : formatHoverTime(session.updatedAt, t, now), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => { if (busy !== undefined) return; const targetWorkspaceId = parseMoveSessionActionId(action); if (targetWorkspaceId !== undefined && moveSession !== undefined) { setMenu(undefined); void run('session-move', () => moveSession(id as SessionId, targetWorkspaceId as WorkspaceId)); return }; dialogs.handleAction(action, id, title) }} />
           })}</div>}
         </div>
       })}

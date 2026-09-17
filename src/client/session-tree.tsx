@@ -147,10 +147,13 @@ export function SessionRowTitle({ title }: { title: string }) {
     if (wrap === null || inner === null) return
     const measure = () => { setShift(titleOverflowPx(inner.scrollWidth, wrap.clientWidth)) }
     measure()
-    if (typeof ResizeObserver === 'undefined') return
+    let cancelled = false
+    const fonts = typeof document === 'undefined' ? undefined : document.fonts
+    if (fonts !== undefined) void fonts.ready.then(() => { if (!cancelled) measure() })
+    if (typeof ResizeObserver === 'undefined') return () => { cancelled = true }
     const observer = new ResizeObserver(measure)
     observer.observe(wrap)
-    return () => { observer.disconnect() }
+    return () => { cancelled = true; observer.disconnect() }
   }, [text])
 
   const style = shift > 0

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { JSDOM } from 'jsdom'
 import { HOVER_TIP_SHOW_DELAY_MS, WORKSPACE_HOVER_CARD_WIDTH } from '../src/client/hover-shell.tsx'
-import { clampHoverCardPosition, formatHoverTime, hoverCardAnchor } from '../src/client/hover-tip.ts'
+import { clampHoverCardPosition, formatCompactTime, formatHoverTime, hoverCardAnchor } from '../src/client/hover-tip.ts'
 import { sidebarWidthDuringDrag, shouldCollapseOnSidebarDrag } from '../src/client/sidebar-drag.ts'
 import { applySidebarWidth, applySlimSidebar, parseSidebarGrid } from '../src/client/sidebar-width.ts'
 
@@ -14,8 +14,8 @@ const now = 1_700_000_000_000
 const hoverTime = (locale: 'zh' | 'en') => (key: string, params?: Record<string, unknown>): string => {
   const count = String(params?.count ?? '')
   const dictionary = locale === 'zh'
-    ? { 'time.justNow': '刚刚', 'time.minutes': `${count}分`, 'time.hours': `${count}小时`, 'time.days': `${count}天`, 'time.weeks': `${count}周`, 'time.months': `${count}个月`, 'time.years': `${count}年` }
-    : { 'time.justNow': 'now', 'time.minutes': `${count}m`, 'time.hours': `${count}h`, 'time.days': `${count}d`, 'time.weeks': `${count}w`, 'time.months': `${count}mo`, 'time.years': `${count}y` }
+    ? { 'time.justNow': '刚刚', 'time.justNowShort': '刚刚', 'time.minutes': `${count}分`, 'time.hours': `${count}小时`, 'time.days': `${count}天`, 'time.weeks': `${count}周`, 'time.months': `${count}个月`, 'time.years': `${count}年` }
+    : { 'time.justNow': 'Just now', 'time.justNowShort': 'now', 'time.minutes': `${count}m`, 'time.hours': `${count}h`, 'time.days': `${count}d`, 'time.weeks': `${count}w`, 'time.months': `${count}mo`, 'time.years': `${count}y` }
   return dictionary[key as keyof typeof dictionary]
 }
 assert.equal(formatHoverTime(now - 10_000, hoverTime('zh'), now), '刚刚')
@@ -30,7 +30,9 @@ assert.equal(formatHoverTime(now - 7 * 86400_000, hoverTime('zh'), now), '1周')
 assert.equal(formatHoverTime(now - 29 * 86400_000, hoverTime('zh'), now), '4周')
 assert.equal(formatHoverTime(now - 30 * 86400_000, hoverTime('zh'), now), '1个月')
 assert.equal(formatHoverTime(now - 400 * 86400_000, hoverTime('zh'), now), '1年')
-assert.equal(formatHoverTime(now - 10_000, hoverTime('en'), now), 'now')
+assert.equal(formatHoverTime(now - 10_000, hoverTime('en'), now), 'Just now')
+assert.equal(formatCompactTime(now - 10_000, hoverTime('en'), now), 'now')
+assert.equal(formatCompactTime(now - 10_000, hoverTime('zh'), now), '刚刚')
 assert.equal(formatHoverTime(now - 7 * 60_000, hoverTime('en'), now), '7m')
 assert.equal(formatHoverTime(now - 2 * 3600_000, hoverTime('en'), now), '2h')
 assert.equal(formatHoverTime(now - 3 * 86400_000, hoverTime('en'), now), '3d')

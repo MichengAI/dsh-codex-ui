@@ -169,13 +169,26 @@ const verify = async () => {
   }
   return results
 }
-const script = `(async()=>{document.head.innerHTML='<meta charset="utf-8">';const style=document.createElement('style');style.textContent=${JSON.stringify(styles.join('\n') + '\nbody{margin:0;font-family:Arial;background:#ddd}h3{font-size:13px}.dark{--dcu-sidebar-primary:#b9bab9;--dcu-sidebar-secondary:#909191;--dcu-sidebar-tertiary:#707874;--dcu-sidebar-hover:#303432;background:#1d2120;color:#b9bab9}.light{--dcu-sidebar-primary:#303432;--dcu-sidebar-secondary:#606563;--dcu-sidebar-tertiary:#767e7a;--dcu-sidebar-hover:#dfe8e5;background:#eef7f5;color:#303432}.dcu-wb{--dsw-alias-state-business-primary:#69a7ff}')} ;document.head.append(style);${implementation};return (${verify.toString()})();})()`
+const bootStyles = JSON.stringify(styles.join('\n') + '\nbody{margin:0;font-family:Arial;background:#ddd}h3{font-size:13px}.dark{--dcu-sidebar-primary:#b9bab9;--dcu-sidebar-secondary:#909191;--dcu-sidebar-tertiary:#707874;--dcu-sidebar-hover:#303432;background:#1d2120;color:#b9bab9}.light{--dcu-sidebar-primary:#303432;--dcu-sidebar-secondary:#606563;--dcu-sidebar-tertiary:#767e7a;--dcu-sidebar-hover:#dfe8e5;background:#eef7f5;color:#303432}.dcu-wb{--dsw-alias-state-business-primary:#69a7ff}')
+const script = `(async()=>{document.head.innerHTML='<meta charset="utf-8">';const style=document.createElement('style');style.textContent=${bootStyles} ;document.head.append(style);${implementation};return (${verify.toString()})();})()`
+const verifyReducedTitle = () => {
+  document.body.innerHTML = '<div class="dark" style="width:275px"><div class="dcu-wb"><div class="dcu-wb-session dcu-wb-menu-open" id="scroll-session"><span class="dcu-wb-session-title" data-overflow style="--dcu-title-shift:80px;--dcu-title-duration:2000ms"><span class="dcu-wb-session-title-text">很长的会话标题用来检查悬停时能否滚出省略号后面的文字</span></span></div></div></div>'
+  const text = document.querySelector('#scroll-session .dcu-wb-session-title-text')
+  const style = getComputedStyle(text)
+  if (style.animationName !== 'none') throw new Error(`减动效不得滚动标题: ${style.animationName}`)
+  if (style.textOverflow !== 'ellipsis') throw new Error(`减动效必须保持省略号: ${style.textOverflow}`)
+  return { name: '减动效标题省略', error: 0, scrollError: 0 }
+}
+const reducedScript = `(async()=>{document.head.innerHTML='<meta charset="utf-8">';const style=document.createElement('style');style.textContent=${bootStyles};document.head.append(style);return (${verifyReducedTitle.toString()})();})()`
 if (process.argv.includes('--run')) {
   const { chromium } = await import('playwright')
   const browser = await chromium.launch({ headless: true })
   try {
     const page = await browser.newPage()
     const results = await page.evaluate(script)
-    console.log(`工作区布局：${results.length} 组 Chromium 几何与样式检查通过（无截图）。`)
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    const reduced = await page.evaluate(reducedScript)
+    console.log(`工作区布局：${results.length + 1} 组 Chromium 几何与样式检查通过（无截图）。`)
+    if (reduced.name !== '减动效标题省略') throw new Error('减动效检查未执行')
   } finally { await browser.close() }
 } else console.log(script)
