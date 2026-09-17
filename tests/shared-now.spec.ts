@@ -71,3 +71,35 @@ test('两棵树共用一套定时器，卸一棵另一棵继续走', async () =>
     vi.useRealTimers()
   }
 })
+
+test('整分前和整分后卸载都不留定时器', async () => {
+  vi.useFakeTimers()
+  try {
+    vi.setSystemTime(new Date('2026-09-17T10:00:30.500Z'))
+    const earlyRoot = createRoot(document.createElement('div'))
+    await act(async () => { earlyRoot.render(createElement(Probe, { seen: [] })) })
+    expect(vi.getTimerCount()).toBe(1)
+    await act(async () => { earlyRoot.unmount() })
+    expect(vi.getTimerCount()).toBe(0)
+
+    const ticked: number[] = []
+    const tickedRoot = createRoot(document.createElement('div'))
+    await act(async () => { tickedRoot.render(createElement(Probe, { seen: ticked })) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(29_500) })
+    expect(new Date(ticked.at(-1)!).toISOString()).toBe('2026-09-17T10:01:00.000Z')
+    await act(async () => { tickedRoot.unmount() })
+    expect(vi.getTimerCount()).toBe(0)
+
+    vi.setSystemTime(new Date('2026-09-17T11:20:40.000Z'))
+    const remounted: number[] = []
+    const remountedRoot = createRoot(document.createElement('div'))
+    await act(async () => { remountedRoot.render(createElement(Probe, { seen: remounted })) })
+    expect(new Date(remounted.at(-1)!).toISOString()).toBe('2026-09-17T11:20:40.000Z')
+    await act(async () => { await vi.advanceTimersByTimeAsync(20_000) })
+    expect(new Date(remounted.at(-1)!).toISOString()).toBe('2026-09-17T11:21:00.000Z')
+    await act(async () => { remountedRoot.unmount() })
+    expect(vi.getTimerCount()).toBe(0)
+  } finally {
+    vi.useRealTimers()
+  }
+})
