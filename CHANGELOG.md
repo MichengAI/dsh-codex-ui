@@ -4,6 +4,24 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## suite-installer-v1.0.15 - 2026-09-17
+
+Install or maintain 11 first-party plugins in one step. Included plugins and versions:
+
+- `@michengai/dsh-archive-manager@0.1.43`
+- `@michengai/dsh-codex-ui@1.1.12`
+- `@michengai/dsh-skills-manager@0.1.52`
+- `@michengai/dsh-agency-agents@0.1.43`
+- `@michengai/dsh-im-connect@0.1.50`
+- `@michengai/dsh-automation@0.1.44`
+- `@michengai/dsh-btw@0.1.8`
+- `@michengai/dsh-simplify@0.1.5`
+- `@michengai/dsh-pua@0.3.13`
+- `@michengai/dsh-code-review@0.1.2`
+- `@michengai/dsh-codex-pet@0.1.6`
+
+The installer uses these exact versions for reproducible installation.
+
 ## 1.1.12 - 2026-09-17
 
 - Session rows show compact relative time on the right (now, minutes, hours, days, weeks, months, years). Hover or the action menu yields to the archive shortcut; a pending label hides the inline time.
