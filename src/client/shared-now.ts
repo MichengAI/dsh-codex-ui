@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 
 export const SHARED_NOW_INTERVAL_MS = 60_000
 
@@ -8,19 +8,55 @@ export function msUntilNextNowTick(now: number, intervalMs = SHARED_NOW_INTERVAL
   return remainder === 0 ? intervalMs : intervalMs - remainder
 }
 
-/** 三棵会话树共用的当前时刻，每分钟刷新一次。 */
-export function useSharedNow(intervalMs = SHARED_NOW_INTERVAL_MS): number {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    let intervalId = 0
-    const timeoutId = window.setTimeout(() => {
-      setNow(Date.now())
-      intervalId = window.setInterval(() => { setNow(Date.now()) }, intervalMs)
-    }, msUntilNextNowTick(Date.now(), intervalMs))
-    return () => {
-      window.clearTimeout(timeoutId)
-      if (intervalId !== 0) window.clearInterval(intervalId)
+const listeners = new Set<() => void>()
+let sharedNow = Date.now()
+let timeoutId = 0
+let intervalId = 0
+let cancelled = true
+
+function publish(now: number) {
+  sharedNow = now
+  for (const listener of listeners) listener()
+}
+
+function startClock() {
+  cancelled = false
+  timeoutId = window.setTimeout(() => {
+    if (cancelled) return
+    publish(Date.now())
+    intervalId = window.setInterval(() => { publish(Date.now()) }, SHARED_NOW_INTERVAL_MS)
+    if (cancelled) {
+      window.clearInterval(intervalId)
+      intervalId = 0
     }
-  }, [intervalMs])
-  return now
+  }, msUntilNextNowTick(Date.now()))
+}
+
+function stopClock() {
+  cancelled = true
+  window.clearTimeout(timeoutId)
+  window.clearInterval(intervalId)
+  timeoutId = 0
+  intervalId = 0
+}
+
+function subscribe(listener: () => void) {
+  if (listeners.size === 0) {
+    sharedNow = Date.now()
+    startClock()
+  }
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+    if (listeners.size === 0) stopClock()
+  }
+}
+
+function getSnapshot() {
+  return sharedNow
+}
+
+/** 模块级当前时刻。几棵树挂着都只走一套定时器，每分钟刷新一次。 */
+export function useSharedNow(): number {
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
