@@ -4,6 +4,12 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.12 - 2026-09-17
+
+- Session rows show compact relative time on the right (now, minutes, hours, days, weeks, months, years). Hover or the action menu yields to the archive shortcut; a pending label hides the inline time.
+- Truncated session titles scroll on hover or when the menu is open. Reduced motion keeps the ellipsis.
+- Relative times refresh every minute. Inline English uses now; hover cards use Just now.
+
 ## suite-installer-v1.0.14 - 2026-09-16
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:
