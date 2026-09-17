@@ -134,6 +134,39 @@ const verify = async () => {
     if (Math.abs(runTitle.left - projectTitle.left) > 0.5) throw new Error(`运行会话文字未与项目文字对齐: ${runTitle.left} vs ${projectTitle.left}`)
     results.push({ name: '会话与项目对齐', error: Math.max(Math.abs(spin.left - folder.left), Math.abs(idleTitle.left - projectTitle.left), Math.abs(runTitle.left - projectTitle.left)), scrollError: 0 })
   }
+  {
+    const host = document.createElement('div')
+    host.className = 'dark'
+    host.style.cssText = 'width:275px'
+    host.innerHTML = '<div class="dcu-wb"><div class="dcu-wb-session" id="timed-session"><span class="dcu-wb-session-title">很长的会话标题用来检查省略号是否给右侧时间让位</span><span class="dcu-wb-session-time">23小时</span></div><div class="dcu-wb-session" id="pending-session"><span class="dcu-wb-session-title">待处理会话</span><span class="dcu-wb-pending" data-state="warning"><span class="dcu-wb-pending-dot"></span><span class="dcu-wb-pending-label">等待回答</span></span><span class="dcu-wb-session-time">23小时</span></div></div>'
+    document.body.append(host)
+    const title = host.querySelector('#timed-session .dcu-wb-session-title').getBoundingClientRect()
+    const time = host.querySelector('#timed-session .dcu-wb-session-time')
+    const timeBox = time.getBoundingClientRect()
+    const pendingTime = host.querySelector('#pending-session .dcu-wb-session-time')
+    if (timeBox.width < 8) throw new Error('会话行右侧时间未显示')
+    if (timeBox.left + 0.5 < title.right) throw new Error(`会话行时间必须在标题右侧: title=${title.right} time=${timeBox.left}`)
+    if (getComputedStyle(pendingTime).display !== 'none') throw new Error('待处理会话不得显示行内时间')
+    results.push({ name: '会话行右侧时间', error: Math.max(0, title.right - timeBox.left), scrollError: 0 })
+  }
+  {
+    const host = document.createElement('div')
+    host.className = 'dark'
+    host.style.cssText = 'width:275px'
+    host.innerHTML = '<div class="dcu-wb"><div class="dcu-wb-session" id="scroll-session"><span class="dcu-wb-session-title" data-overflow style="--dcu-title-shift:80px;--dcu-title-duration:2000ms"><span class="dcu-wb-session-title-text">很长的会话标题用来检查悬停时能否滚出省略号后面的文字</span></span></div></div>'
+    document.body.append(host)
+    const row = host.querySelector('#scroll-session')
+    const text = host.querySelector('#scroll-session .dcu-wb-session-title-text')
+    row.classList.add('dcu-wb-menu-open')
+    const style = getComputedStyle(text)
+    if (!style.animationName.includes('dcu-wb-title-scroll')) throw new Error(`截断标题在悬停等价态必须滚动: ${style.animationName}`)
+    const wrap = host.querySelector('#scroll-session .dcu-wb-session-title')
+    wrap.removeAttribute('data-overflow')
+    row.classList.remove('dcu-wb-menu-open')
+    const overflow = text.scrollWidth - wrap.clientWidth
+    if (overflow <= 1) throw new Error(`长标题必须测得出溢出: scroll=${text.scrollWidth} client=${wrap.clientWidth}`)
+    results.push({ name: '会话标题悬停滚动', error: 0, scrollError: 0 })
+  }
   return results
 }
 const script = `(async()=>{document.head.innerHTML='<meta charset="utf-8">';const style=document.createElement('style');style.textContent=${JSON.stringify(styles.join('\n') + '\nbody{margin:0;font-family:Arial;background:#ddd}h3{font-size:13px}.dark{--dcu-sidebar-primary:#b9bab9;--dcu-sidebar-secondary:#909191;--dcu-sidebar-tertiary:#707874;--dcu-sidebar-hover:#303432;background:#1d2120;color:#b9bab9}.light{--dcu-sidebar-primary:#303432;--dcu-sidebar-secondary:#606563;--dcu-sidebar-tertiary:#767e7a;--dcu-sidebar-hover:#dfe8e5;background:#eef7f5;color:#303432}.dcu-wb{--dsw-alias-state-business-primary:#69a7ff}')} ;document.head.append(style);${implementation};return (${verify.toString()})();})()`

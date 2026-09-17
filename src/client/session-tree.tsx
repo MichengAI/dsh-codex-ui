@@ -1,4 +1,4 @@
-import type { DragEvent, MouseEvent, ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type CSSProperties, type DragEvent, type MouseEvent, type ReactNode } from 'react'
 import {
   IconArchiveOutline20,
   IconBranchOutline16,
@@ -16,6 +16,7 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { Archive as LucideArchiveIcon, Eye, EyeOff, Pin as LucidePinIcon } from 'lucide-react'
 import { NS } from './locales.ts'
 import type { PendingInteractionKind } from './session-pending.ts'
+import { sessionTitleLine, titleOverflowPx, titleScrollDurationMs } from './session-title-scroll.ts'
 
 export function PinIcon() {
   return <LucidePinIcon aria-hidden="true" size={16} strokeWidth={1.5} />
@@ -108,6 +109,7 @@ export type SessionRowProps = {
   onDragEnd?: () => void
   onDragOver?: (event: DragEvent<HTMLDivElement>) => void
   onDrop?: (event: DragEvent<HTMLDivElement>) => void
+  time?: string
 }
 
 function pendingLabel(kind: PendingInteractionKind, t: TranslateNS<typeof NS>): string {
@@ -128,14 +130,45 @@ export function SessionState({ pendingInteraction, unread, running, t }: Pick<Se
   return null
 }
 
+export function SessionTime({ time }: { time?: string }) {
+  if (time === undefined || time === '') return null
+  return <span className="dcu-wb-session-time">{time}</span>
+}
+
+export function SessionRowTitle({ title }: { title: string }) {
+  const text = sessionTitleLine(title)
+  const wrapRef = useRef<HTMLSpanElement>(null)
+  const textRef = useRef<HTMLSpanElement>(null)
+  const [shift, setShift] = useState(0)
+
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current
+    const inner = textRef.current
+    if (wrap === null || inner === null) return
+    const measure = () => { setShift(titleOverflowPx(inner.scrollWidth, wrap.clientWidth)) }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(wrap)
+    return () => { observer.disconnect() }
+  }, [text])
+
+  const style = shift > 0
+    ? { '--dcu-title-shift': `${shift}px`, '--dcu-title-duration': `${titleScrollDurationMs(shift)}ms` } as CSSProperties
+    : undefined
+
+  return <span ref={wrapRef} className="dcu-wb-session-title" data-overflow={shift > 0 || undefined} style={style}><span ref={textRef} className="dcu-wb-session-title-text">{text}</span></span>
+}
+
 export function SessionRow({
   id, title, selected, menuOpen, unread, running, pendingInteraction, t, menuItems,
   onOpen, onMenuChange, onSelectAction, onArchive, onHover, onLeave, onContextMenu, menuPoint,
-  subtitle, flat, draggable, dropActive, onDragStart, onDragEnd, onDragOver, onDrop,
+  subtitle, flat, draggable, dropActive, onDragStart, onDragEnd, onDragOver, onDrop, time,
 }: SessionRowProps) {
   return <div data-dcu-session={id} className={`dcu-wb-session${selected ? ' dcu-wb-selected' : ''}${menuOpen ? ' dcu-wb-menu-open' : ''}${dropActive === true ? ' dcu-wb-drop' : ''}${flat === true ? ' dcu-wb-session-flat' : ''}`} role="treeitem" aria-selected={selected} draggable={draggable} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragOver={onDragOver} onDrop={onDrop} onClick={onOpen} onContextMenu={onContextMenu} onMouseEnter={onHover} onMouseLeave={onLeave}>
-    {subtitle !== undefined && subtitle !== '' ? <span className="dcu-wb-session-copy"><span className="dcu-wb-session-title">{title.split(/\r?\n/)[0] ?? title}</span><span className="dcu-wb-session-sub">{subtitle}</span></span> : <span className="dcu-wb-session-title">{title.split(/\r?\n/)[0] ?? title}</span>}
+    {subtitle !== undefined && subtitle !== '' ? <span className="dcu-wb-session-copy"><SessionRowTitle title={title} /><span className="dcu-wb-session-sub">{subtitle}</span></span> : <SessionRowTitle title={title} />}
     <SessionState pendingInteraction={pendingInteraction} unread={unread} running={running} t={t} />
+    <SessionTime time={time} />
     <span className="dcu-wb-quick-actions">
       <button type="button" className="dcu-wb-more" aria-label={t('sessions.archive')} onClick={(event) => { event.stopPropagation(); onArchive() }}><QuickArchiveIcon /></button>
     </span>

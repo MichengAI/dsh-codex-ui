@@ -11,11 +11,22 @@ export function hoverCardAnchor(rect: { right: number; top: number }): { left: n
   return { left: rect.right + 8, top: rect.top }
 }
 
-/** Codex 会话卡片右上角的紧凑相对时间。 */
-export function formatHoverTime(updatedAt: number, t: (key: 'time.justNow' | 'time.minutes' | 'time.hours' | 'time.days', params?: { count: number }) => string, now: number = Date.now()): string {
-  const seconds = Math.max(0, Math.round((now - updatedAt) / 1000))
+export type HoverTimeKey = 'time.justNow' | 'time.minutes' | 'time.hours' | 'time.days' | 'time.weeks' | 'time.months' | 'time.years'
+
+const HOUR = 3600
+const DAY = HOUR * 24
+const WEEK = DAY * 7
+const MONTH = DAY * 30
+const YEAR = DAY * 365
+
+/** Codex 会话卡片右上角的紧凑相对时间。分档与 ChatGPT `$wa` 一致。 */
+export function formatHoverTime(updatedAt: number, t: (key: HoverTimeKey, params?: { count: number }) => string, now: number = Date.now()): string {
+  const seconds = Math.max(0, Math.floor((now - updatedAt) / 1000))
   if (seconds < 60) return t('time.justNow')
-  if (seconds < 3600) return t('time.minutes', { count: Math.floor(seconds / 60) })
-  if (seconds < 86400) return t('time.hours', { count: Math.floor(seconds / 3600) })
-  return t('time.days', { count: Math.floor(seconds / 86400) })
+  if (seconds < HOUR) return t('time.minutes', { count: Math.floor(seconds / 60) })
+  if (seconds < DAY) return t('time.hours', { count: Math.floor(seconds / HOUR) })
+  if (seconds < WEEK) return t('time.days', { count: Math.floor(seconds / DAY) })
+  if (seconds < MONTH) return t('time.weeks', { count: Math.floor(seconds / WEEK) })
+  if (seconds < YEAR) return t('time.months', { count: Math.floor(seconds / MONTH) })
+  return t('time.years', { count: Math.floor(seconds / YEAR) })
 }

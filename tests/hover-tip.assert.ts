@@ -14,18 +14,29 @@ const now = 1_700_000_000_000
 const hoverTime = (locale: 'zh' | 'en') => (key: string, params?: Record<string, unknown>): string => {
   const count = String(params?.count ?? '')
   const dictionary = locale === 'zh'
-    ? { 'time.justNow': '刚刚', 'time.minutes': `${count}分`, 'time.hours': `${count}小时`, 'time.days': `${count}天` }
-    : { 'time.justNow': 'Just now', 'time.minutes': `${count}m`, 'time.hours': `${count}h`, 'time.days': `${count}d` }
+    ? { 'time.justNow': '刚刚', 'time.minutes': `${count}分`, 'time.hours': `${count}小时`, 'time.days': `${count}天`, 'time.weeks': `${count}周`, 'time.months': `${count}个月`, 'time.years': `${count}年` }
+    : { 'time.justNow': 'now', 'time.minutes': `${count}m`, 'time.hours': `${count}h`, 'time.days': `${count}d`, 'time.weeks': `${count}w`, 'time.months': `${count}mo`, 'time.years': `${count}y` }
   return dictionary[key as keyof typeof dictionary]
 }
 assert.equal(formatHoverTime(now - 10_000, hoverTime('zh'), now), '刚刚')
+assert.equal(formatHoverTime(now - 59_999, hoverTime('zh'), now), '刚刚')
+assert.equal(formatHoverTime(now - 60_000, hoverTime('zh'), now), '1分')
 assert.equal(formatHoverTime(now - 7 * 60_000, hoverTime('zh'), now), '7分')
 assert.equal(formatHoverTime(now - 2 * 3600_000, hoverTime('zh'), now), '2小时')
+assert.equal(formatHoverTime(now - 23 * 3600_000, hoverTime('zh'), now), '23小时')
+assert.equal(formatHoverTime(now - 24 * 3600_000, hoverTime('zh'), now), '1天')
 assert.equal(formatHoverTime(now - 3 * 86400_000, hoverTime('zh'), now), '3天')
-assert.equal(formatHoverTime(now - 10_000, hoverTime('en'), now), 'Just now')
+assert.equal(formatHoverTime(now - 7 * 86400_000, hoverTime('zh'), now), '1周')
+assert.equal(formatHoverTime(now - 29 * 86400_000, hoverTime('zh'), now), '4周')
+assert.equal(formatHoverTime(now - 30 * 86400_000, hoverTime('zh'), now), '1个月')
+assert.equal(formatHoverTime(now - 400 * 86400_000, hoverTime('zh'), now), '1年')
+assert.equal(formatHoverTime(now - 10_000, hoverTime('en'), now), 'now')
 assert.equal(formatHoverTime(now - 7 * 60_000, hoverTime('en'), now), '7m')
 assert.equal(formatHoverTime(now - 2 * 3600_000, hoverTime('en'), now), '2h')
 assert.equal(formatHoverTime(now - 3 * 86400_000, hoverTime('en'), now), '3d')
+assert.equal(formatHoverTime(now - 8 * 86400_000, hoverTime('en'), now), '1w')
+assert.equal(formatHoverTime(now - 60 * 86400_000, hoverTime('en'), now), '2mo')
+assert.equal(formatHoverTime(now - 400 * 86400_000, hoverTime('en'), now), '1y')
 
 assert.equal(shouldCollapseOnSidebarDrag(240, 300, 179), true)
 assert.equal(shouldCollapseOnSidebarDrag(240, 300, 180), false)

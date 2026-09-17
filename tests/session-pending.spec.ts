@@ -69,3 +69,57 @@ test('待处理交互覆盖未读点和运行中状态', async () => {
     await act(async () => { root.unmount() })
   }
 })
+
+test('会话行右侧显示相对时间，待处理时仍渲染但由样式隐藏', async () => {
+  const container = document.createElement('div')
+  const root = createRoot(container)
+  try {
+    await act(async () => {
+      root.render(createElement(SessionRow, {
+        id: 'session-time',
+        title: '带时间的任务',
+        selected: false,
+        menuOpen: false,
+        unread: false,
+        running: false,
+        time: '3小时',
+        t: (key: string) => key,
+        menuItems: [],
+        onOpen: () => {},
+        onMenuChange: () => {},
+        onSelectAction: () => {},
+        onArchive: () => {},
+        onHover: () => {},
+        onLeave: () => {},
+        onContextMenu: () => {},
+      } as never))
+    })
+    expect(container.querySelector('.dcu-wb-session-time')?.textContent).toBe('3小时')
+
+    await act(async () => {
+      root.render(createElement(SessionRow, {
+        id: 'session-time-pending',
+        title: '带时间的任务',
+        selected: false,
+        menuOpen: false,
+        unread: false,
+        running: false,
+        pendingInteraction: 'question',
+        time: '3小时',
+        t: (key: string) => key === 'sessions.waitingAnswer' ? '等待回答' : key,
+        menuItems: [],
+        onOpen: () => {},
+        onMenuChange: () => {},
+        onSelectAction: () => {},
+        onArchive: () => {},
+        onHover: () => {},
+        onLeave: () => {},
+        onContextMenu: () => {},
+      } as never))
+    })
+    expect(container.querySelector('.dcu-wb-pending')?.textContent).toBe('等待回答')
+    expect(container.querySelector('.dcu-wb-session-time')?.textContent).toBe('3小时')
+  } finally {
+    await act(async () => { root.unmount() })
+  }
+})
