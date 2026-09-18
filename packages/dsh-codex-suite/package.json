@@ -20,11 +20,11 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@michengai/dsh-agency-agents": "0.1.43",
-    "@michengai/dsh-archive-manager": "0.1.43",
-    "@michengai/dsh-automation": "0.1.44",
+    "@michengai/dsh-agency-agents": "0.1.44",
+    "@michengai/dsh-archive-manager": "0.1.44",
+    "@michengai/dsh-automation": "0.1.45",
     "@michengai/dsh-codex-ui": "workspace:*",
-    "@michengai/dsh-im-connect": "0.1.50",
-    "@michengai/dsh-skills-manager": "0.1.52"
+    "@michengai/dsh-im-connect": "0.1.51",
+    "@michengai/dsh-skills-manager": "0.1.53"
   }
 }
