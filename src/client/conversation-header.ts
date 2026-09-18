@@ -10,8 +10,11 @@ export const HEADER_SESSION_MENU_EVENT = 'dcu-header-session-menu'
 // 否则宿主重渲染时会因节点父级脱钩抛 NotFoundError 导致整个界面白屏。
 // crumbs 不能 flex:1：标题会吃掉中间空间，把官方 header.actions（标准模式 / Agent Team）
 // 一起顶到最右侧。操作区必须紧贴标题；页签用 margin-left:auto 靠右，扩展区跟在页签后面。
+// 顶栏也不能 wrap：换行按 flex-basis 的内容宽度判定，收缩发生在换行之后，crumbs 改成
+// flex:0 1 auto 后长标题会让 order 最大的右栏入口掉到第二行左侧。nowrap 让宽度不足时
+// 只收缩 crumbs（min-width:0 + overflow:hidden 截断标题），控件带恒为 34px 单行。
 export const CONVERSATION_HEADER_STYLE = `
-header:has([data-dcu-inline-tabs]){box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-height:34px;padding-top:3px;padding-bottom:3px;border-bottom:0}
+header:has([data-dcu-inline-tabs]){box-sizing:border-box;display:flex;flex-wrap:nowrap;align-items:center;gap:10px;min-height:34px;padding-top:3px;padding-bottom:3px;border-bottom:0}
 header:has([data-dcu-inline-tabs]):after{display:none;content:none}
 header:has([data-dcu-inline-tabs]) [class*="titleRow"],header:has([data-dcu-inline-tabs]) [class*="titleCluster"]{display:contents}
 header:has([data-dcu-inline-tabs]) [class*="crumbs"]{order:1;flex:0 1 auto;min-width:0}

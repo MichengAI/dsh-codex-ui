@@ -19,6 +19,7 @@ assert.match(header, /display:contents/, '必须用 CSS 展开标题行，而不
 assert.match(header, /\[class\*="crumbs"\]\{order:1;flex:0 1 auto;min-width:0\}/, '面包屑不得用 flex:1 把标准模式和 Agent Team 顶到最右侧')
 assert.doesNotMatch(header, /\[class\*="crumbs"\]\{[^}]*flex:1[;}]/, '面包屑不得再抢占中间剩余空间')
 assert.match(header, /\[class\*="headerActions"\]\{order:2/, '操作区必须排在面包屑后')
+assert.match(header, /header:has\(\[data-dcu-inline-tabs\]\)\{[^}]*flex-wrap:nowrap/, '紧凑顶栏不得换行：长标题会把 order 最大的右栏入口挤到第二行左侧')
 assert.match(header, /header \[data-dcu-inline-tabs\]\{[^}]*order:3/, '对话轨迹页签必须排到操作区后面')
 assert.match(header, /header \[data-dcu-inline-tabs\]\{[^}]*margin:0 0 0 auto/, '对话轨迹页签必须靠右，不能跟在标准模式后面')
 assert.match(header, /\[class\*="headerUtilities"\]\{order:4;flex:none\}/, '扩展区必须排到页签后面')

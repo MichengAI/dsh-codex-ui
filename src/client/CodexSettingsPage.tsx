@@ -110,8 +110,8 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     const isolate = (element: HTMLElement) => {
       // Pet 使用 body 下的专用容器，跨页面保留显示与交互，不放行其他浮层。
       if (element.parentElement === document.body && element.hasAttribute('data-dsh-pet-overlay')) return
-      // 官方插件开关把失败 toast 挂到 body；隔离会 inert + 藏掉，看起来像点不开。
-      if (element.getAttribute('role') === 'alert') return
+      // 官方 Toast createPortal 到 body；只放行 body 直接子级，避免会话树里的 role=alert 被当成 sibling 漏出。
+      if (element.parentElement === document.body && element.getAttribute('role') === 'alert') return
       if (element === onboardingRoot.current || guideModals.includes(element)) return
       if (guideModals.some(modal => element.contains(modal))) {
         for (const child of element.children) if (child instanceof HTMLElement && !/^(STYLE|SCRIPT|LINK)$/.test(child.tagName)) isolate(child)
@@ -141,14 +141,14 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
       const target = event.target
       if (!(target instanceof Node) || page.current === null || !settingsElementAvailable(page.current)) return
       if (page.current.contains(target) || onboardingRoot.current?.contains(target)
-        || [...document.querySelectorAll('body > [data-dsh-pet-overlay]')].some(root => root.contains(target))
+        || [...document.querySelectorAll('body > [data-dsh-pet-overlay], body > [role=alert]')].some(root => root.contains(target))
         || settingsOverlays().some(overlay => overlay.contains(target))) return
       back.current?.focus()
     }
     const wrapFocus = (event: KeyboardEvent) => {
       if (event.key !== 'Tab' || event.defaultPrevented || page.current === null
         || !settingsElementAvailable(page.current) || settingsOverlays().length > 0) return
-      const roots = [page.current, onboardingRoot.current, ...document.querySelectorAll<HTMLDivElement>('body > [data-dsh-pet-overlay]')].filter((root): root is HTMLDivElement => root !== null)
+      const roots = [page.current, onboardingRoot.current, ...document.querySelectorAll<HTMLElement>('body > [data-dsh-pet-overlay], body > [role=alert]')].filter((root): root is HTMLElement => root !== null)
       const items = roots.flatMap(root => [...root.querySelectorAll<HTMLElement>('button,input,select,textarea,a[href],[tabindex]')])
         .filter(element => element.tabIndex >= 0 && !element.matches(':disabled') && settingsElementAvailable(element))
       const next = event.shiftKey ? items.at(-1) : items[0]

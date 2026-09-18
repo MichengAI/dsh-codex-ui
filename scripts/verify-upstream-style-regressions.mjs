@@ -57,5 +57,40 @@ try {
     assert.deepEqual(geometry.attachmentDisplays, ['flex', 'flex'], '纯附件和混排消息均保留官方排列')
     assert.deepEqual(geometry.expanded, [], '气泡与附件均不得残留展开覆盖标记')
   }
-  console.log('新版样式回归：附件间距、右栏按钮排序及负外边距通过三个视口检查。')
+  // 紧凑顶栏必须单行：换行按 flex-basis 的内容宽度判定（收缩发生在换行之后），
+  // 长标题会把 order 最大的右栏入口挤到第二行左侧，并把顶栏撑高。
+  for (const width of [1440, 900, 720]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.setContent(`<style>
+      .wSkVaW_titleRow,.wSkVaW_titleCluster,.wSkVaW_crumbs,.wSkVaW_crumbSeg,.wSkVaW_headerActions,.wSkVaW_headerUtilities,.wSkVaW_headerCorner,.wSkVaW_tabs{display:flex}
+      .wSkVaW_titleCluster{flex:1;gap:10px;min-width:0}.wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;overflow:hidden}
+      .wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0}.wSkVaW_crumb{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .wSkVaW_headerActions{flex:none;gap:8px}.wSkVaW_headerUtilities{flex:none;gap:8px;margin-left:20px}.wSkVaW_headerCorner{flex:none;margin-left:8px;margin-right:-16px}
+      ${skin}${header}
+      </style><header class="wSkVaW_header"><div class="wSkVaW_titleRow"><div class="host_headerLeading">侧</div><div class="wSkVaW_titleCluster">
+      <nav class="wSkVaW_crumbs"><span class="wSkVaW_crumbSeg"><button type="button" class="wSkVaW_crumb">父会话标题很长很长很长</button></span><span class="wSkVaW_crumbSeg"><span>／</span><button type="button" data-dcu-title-folder></button><button type="button" class="wSkVaW_crumb wSkVaW_crumbCurrent" disabled>当前会话标题也很长很长很长</button><button type="button" data-dcu-title-more></button></span></nav>
+      <div class="wSkVaW_headerActions"><button type="button">标准模式</button><button type="button">Agent Team</button></div></div>
+      <div class="wSkVaW_headerUtilities"><button type="button">工具</button></div></div>
+      <div class="wSkVaW_headerCorner" data-conversation-header-corner><button type="button">右栏</button></div>
+      <div class="wSkVaW_tabs" role="tablist" data-dcu-inline-tabs><button role="tab" aria-selected="true">对话</button><button role="tab">轨迹</button><button role="tab">上下文</button></div></header>`)
+    const bar = await page.evaluate(() => {
+      const box = selector => document.querySelector(selector).getBoundingClientRect()
+      const boxes = ['.wSkVaW_crumbs', '.wSkVaW_headerActions', '[data-dcu-inline-tabs]', '.wSkVaW_headerUtilities', '[data-conversation-header-corner]'].map(box)
+      return {
+        height: box('header').height,
+        rowSpread: Math.max(...boxes.map(node => node.top)) - Math.min(...boxes.map(node => node.top)),
+        crumbsRight: boxes[0].right,
+        actionsLeft: boxes[1].left,
+        actionsRight: boxes[1].right,
+        tabsLeft: boxes[2].left,
+        utilitiesRight: boxes[3].right,
+        cornerRight: boxes[4].right,
+      }
+    })
+    assert.equal(bar.height, 34, `${width}px：紧凑顶栏不得被长标题撑成两行`)
+    assert.ok(bar.rowSpread < 20, `${width}px：顶栏控件必须同处一行（垂直散布 ${bar.rowSpread.toFixed(1)}px）`)
+    assert.ok(bar.actionsLeft - bar.crumbsRight <= 11, `${width}px：操作区必须紧贴标题，不得被顶到中间`)
+    assert.ok(bar.cornerRight > bar.utilitiesRight && bar.utilitiesRight > bar.tabsLeft && bar.tabsLeft >= bar.actionsRight, `${width}px：页签、扩展区与右栏必须按序留在右侧`)
+  }
+  console.log('新版样式回归：附件间距、右栏按钮排序、负外边距及紧凑顶栏单行通过三个视口检查。')
 } finally { await browser.close() }

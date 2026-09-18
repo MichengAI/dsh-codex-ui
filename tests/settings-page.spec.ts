@@ -181,6 +181,35 @@ test('官方插件开关的 body toast 不被设置隔离藏掉', async () => {
   expect(toast.closest('[inert]')).toBeNull()
 })
 
+test('设置已打开时晚挂到 body 的 toast 仍可见，焦点不被抢回返回', async () => {
+  await mount()
+  const toast = document.createElement('div')
+  toast.setAttribute('role', 'alert')
+  const retry = document.createElement('button')
+  retry.textContent = '重试'
+  toast.append(retry)
+  document.body.append(toast)
+  expect(toast.inert).not.toBe(true)
+  expect(toast.hasAttribute('data-dcu-settings-isolated')).toBe(false)
+  expect(getComputedStyle(toast).visibility).not.toBe('hidden')
+  retry.focus()
+  expect(document.activeElement).toBe(retry)
+})
+
+test('嵌套的 role=alert 不会因为官方 toast 守卫而漏出设置页后面', async () => {
+  const host = document.createElement('div')
+  const modal = document.createElement('div')
+  modal.setAttribute('role', 'dialog')
+  modal.setAttribute('aria-modal', 'true')
+  const nested = document.createElement('div')
+  nested.setAttribute('role', 'alert')
+  host.append(modal, nested)
+  document.body.append(host)
+  await mount({ onboarding: source([{ id: 'portal-step' }]) })
+  expect(nested.inert).toBe(true)
+  expect(nested.hasAttribute('data-dcu-settings-isolated')).toBe(true)
+})
+
 test('已有引导 portal 保留交互，设置退出不改写原始 inert 状态', async () => {
  const overlay=document.createElement('div');overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');const next=document.createElement('button');overlay.append(next);document.body.append(overlay)
  const background=document.createElement('div');background.inert=true;background.setAttribute('data-dcu-settings-isolated','previous');document.body.append(background)
