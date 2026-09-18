@@ -82,6 +82,17 @@ let runtime: ClientApplyHarness | undefined
 
 afterEach(() => { runtime?.dispose(); runtime = undefined })
 
+test('新建任务有 reflect 时不硬读未注入的 uiWorkspace', () => {
+  const archiveStart = vi.fn()
+  startWorkspaceSession({
+    reflect: { get: (name: string) => name === 'uiWorkspace' ? { startSession: archiveStart } : undefined },
+    get uiWorkspace(): never { throw new Error('cannot get property "uiWorkspace" without inject') },
+    get() { throw new Error('get should wait for reflect') },
+    workspaces: { startSession: vi.fn() },
+  } as never, 'workspace-reflect' as never)
+  expect(archiveStart).toHaveBeenCalledWith('workspace-reflect')
+})
+
 test('新建任务优先使用 Archive Manager 提供的 uiWorkspace，并保留官方回退', () => {
   const archiveStart = vi.fn()
   const coreStart = vi.fn()

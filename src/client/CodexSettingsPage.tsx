@@ -9,6 +9,7 @@ import { filterSettingsRows, generalItemGroup, settingsGroup, type SettingsRow }
 import { settingsPageStyles } from './settings-page-styles.ts'
 import { settingsElementAvailable, settingsOverlays } from './settings-focus.ts'
 import { SETTINGS_OPEN_SECTION_EVENT } from './settings-navigation.ts'
+import { isBlankOnboardingSession } from './session-host.ts'
 
 const groupLabels = { personal: 'settings.personal', integrations: 'settings.integrations', records: 'settings.records', permissions: 'settings.permissions', general: 'settings.general', editor: 'settings.editor' } as const
 
@@ -45,7 +46,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
   const rows = useSyncExternalStore(sections.subscribe, sections.getSnapshot)
   const steps = useSyncExternalStore(onboarding.subscribe, onboarding.getSnapshot)
   const connection = useSyncExternalStore(connectionState.subscribe, connectionState.getSnapshot)
-  const onboardingActive = useSessions(state => state.phase === 'ready' && (state.current === undefined || state.byId[state.current]?.blank === true))
+  const onboardingActive = useSessions(state => isBlankOnboardingSession(state))
   const [completed, setCompleted] = useState<ReadonlySet<string>>(() => new Set())
   const [open, setOpen] = useState(false)
   const [activeId, setActiveId] = useState('general')
@@ -171,6 +172,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
   useEffect(() => { if (main.current !== null) main.current.scrollTop = 0 }, [active?.id])
 
   const visible = filterSettingsRows(rows, query)
+  const ownTitle = active?.id === 'general' ? t('settings.general') : active?.id === 'plugin-config' ? t('settings.pluginConfig') : undefined
   const connectionIndicator = connection === 'disconnected' ? 'disconnected' : connection === 'connecting' ? 'connecting' : recovered ? 'recovered' : undefined
   return <>
     <style>{settingsPageStyles}</style>
@@ -198,7 +200,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
       </nav>
       <div ref={main} className="dcu-settings-main">
         <div className="dcu-settings-inner" data-settings-section={active?.id}>
-          <header className="dcu-settings-heading" data-own-title={active?.id === 'general'}>{active?.id === 'general' && <h1>{t('settings.general')}</h1>}<div className="dcu-settings-actions">{renderSlot('settings.action', {})}</div></header>
+          <header className="dcu-settings-heading" data-own-title={ownTitle !== undefined}>{ownTitle !== undefined && <h1>{ownTitle}</h1>}<div className="dcu-settings-actions">{renderSlot('settings.action', {})}</div></header>
           {active !== undefined && renderSlot('settings.section', { close }, { only: active.id })}
         </div>
       </div>

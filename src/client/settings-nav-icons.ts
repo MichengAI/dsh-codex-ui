@@ -26,6 +26,8 @@ export const SETTINGS_NAV_ICON_HTML: Record<SettingsNavIconId, string> = {
 
 const LABEL_ALIASES: ReadonlyArray<readonly [readonly string[], SettingsNavIconId]> = [
   [['插件市场', 'Plugin Market'], 'plugins'],
+  [['内置插件', 'Built-in plugins'], 'plugins'],
+  [['插件配置', 'Plugin configuration'], 'plugins'],
   [['专家', 'Experts'], 'experts'],
   [['技能', 'Skills'], 'skills'],
   [['插件', 'Plugins'], 'plugins'],

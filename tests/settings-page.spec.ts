@@ -2,7 +2,7 @@ import { createRequire } from 'node:module'
 import { act, createElement, type ReactNode } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { CodexSettingsPage, type CodexSettingsPageProps } from '../src/client/CodexSettingsPage.tsx'
-import { filterSettingsRows, generalItemGroup } from '../src/client/settings-page-model.ts'
+import { filterSettingsRows, generalItemGroup, settingsGroup } from '../src/client/settings-page-model.ts'
 import { openSettingsSection } from '../src/client/settings-navigation.ts'
 import { zh } from '../src/client/locales.ts'
 
@@ -102,6 +102,8 @@ test('搜索保留未知插件，空结果不会误选页面，条目分组覆�
   expect(generalItemGroup('default-permission')).toBe('permissions')
   expect(generalItemGroup('composer-enter')).toBe('editor')
   expect(generalItemGroup('new-preference')).toBe('general')
+  expect(settingsGroup('plugins')).toBe('integrations')
+  expect(settingsGroup('plugin-config')).toBe('integrations')
 })
 
 
@@ -134,12 +136,24 @@ test('设置打开时内联引导仍可完成，迟挂载背景不能抢走焦�
   expect(inSettings('[data-onboarding-test]')).toBeNull()
 })
 
+test('插件配置使用常规页同款自有标题', async () => {
+  const { container } = await mount({ sections: source([
+    ...rows, {id:'plugin-config',label:'插件配置',order:16},
+  ]) })
+  await act(async () => { openSettingsSection(container, '插件配置'); await new Promise(resolve => setTimeout(resolve, 50)) })
+  expect(inSettings('.dcu-settings-inner')?.getAttribute('data-settings-section')).toBe('plugin-config')
+  expect(inSettings('.dcu-settings-heading')?.getAttribute('data-own-title')).toBe('true')
+  expect(inSettings('.dcu-settings-heading h1')?.textContent).toBe('插件配置')
+})
+
 test('新设置页直接提供互不重复的社区插件图标', async () => {
   await mount({ sections: source([
     ...rows, {id:'market',label:'插件市场',order:3}, {id:'better-sidebar',label:'侧边卡片',order:4},
+    {id:'plugins',label:'内置插件',order:15}, {id:'plugin-config',label:'插件配置',order:16},
   ]) })
   expect(inSettings('.dcu-settings-nav .lucide-store')).not.toBeNull()
   expect(inSettings('.dcu-settings-nav .lucide-panel-right')).not.toBeNull()
+  expect(inSettings('.dcu-settings-nav .lucide-sliders-horizontal')).not.toBeNull()
 })
 
 

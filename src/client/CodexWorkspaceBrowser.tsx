@@ -20,7 +20,8 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { NS } from './locales.ts'
 import { PinIcon, QuickArchiveIcon, SessionRow, SessionRowTitle, SessionState, SessionTime, pointerMenuRect, sessionMenuItems } from './session-tree.tsx'
-import { legacyPendingInteraction, pendingInteractionForSession, useEmptySessionPendingInteraction, type UseSessionPendingInteraction } from './session-pending.ts'
+import { currentSessionId } from './session-host.ts'
+import { legacyPendingInteraction, pendingInteractionForSession, useHostPendingInteractions, type UseSessionPendingInteraction, type UseSessionStatus } from './session-pending.ts'
 import { insertPinnedWorkspace, prunePinnedWorkspaceIds, readHostPinnedWorkspaceIds, readPinnedWorkspaceIds, readWorkspaceGroupsCache, resolveWorkspacePreferencesHydration, savePinnedWorkspaceIds, saveWorkspaceGroupsCache, togglePinnedWorkspace, writeHostWorkspacePreferences } from './pinned-workspaces.ts'
 import { assignWorkspaceToGroup, createWorkspaceGroup, deleteWorkspaceGroup, groupedWorkspaceIds, moveWorkspaceGroup, moveWorkspaceGroupMember, placeWorkspaceInGroup, pruneWorkspaceGroups, renameWorkspaceGroup, MAX_WORKSPACE_GROUP_TITLE_LENGTH, type WorkspaceGroup } from '../workspace-groups.ts'
 import {
@@ -60,6 +61,7 @@ type BrowserInjected = {
   renameWorkspace: (workspaceId: WorkspaceId, title: string) => Promise<unknown>
   startSession: (workspaceId?: WorkspaceId) => void
   useSessionPendingInteraction?: UseSessionPendingInteraction
+  useSessionStatus?: UseSessionStatus
   canDeleteSession?: () => boolean
 }
 
@@ -189,7 +191,7 @@ const stylesheet = `
 .dcu-wb-project-head:hover,.dcu-wb-project-head.dcu-wb-menu-open,.dcu-wb-session:hover,.dcu-wb-session.dcu-wb-selected,.dcu-wb-session.dcu-wb-menu-open{background:var(--dcu-sidebar-hover)}.dcu-wb-project.dcu-wb-session-drop>.dcu-wb-project-head{border-radius:8px;background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 9%,transparent);outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:-2px}.dcu-wb-project.dcu-wb-session-move-drop{border-radius:8px;background:color-mix(in srgb,var(--dsw-alias-state-business-primary) 9%,transparent);outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:-2px}.dcu-wb-project.dcu-wb-session-move-drop>.dcu-wb-project-head{background:transparent;outline:0}.dcu-wb-project-body>.dcu-wb-session:first-child,.dcu-wb-project-body>.dcu-wb-nochat:first-child{margin-top:4px}.dcu-wb-session+.dcu-wb-session{margin-top:2px}
 .dcu-wb-project-head[draggable=true],.dcu-wb-session[draggable=true]{cursor:grab}
 .dcu-wb-project-head[draggable=true]:active,.dcu-wb-session[draggable=true]:active{cursor:grabbing}
-.dcu-wb-section,.dcu-wb-section:focus,.dcu-wb-section:focus-visible,.dcu-wb-project-head:focus,.dcu-wb-session:focus{outline:0}.dcu-wb-pin-end,.dcu-wb-pin-start{position:relative;height:8px}.dcu-wb-project.dcu-wb-drop::before,.dcu-wb-session.dcu-wb-drop::before,.dcu-wb-pin-end.dcu-wb-drop::before,.dcu-wb-pin-start.dcu-wb-drop::before{content:"";position:absolute;z-index:2;left:7px;right:8px;top:-8px;height:8px;pointer-events:none;background:radial-gradient(circle at 4px 50%,transparent 1.75px,var(--dsw-alias-state-business-primary) 2px 3.75px,transparent 4px),linear-gradient(var(--dsw-alias-state-business-primary),var(--dsw-alias-state-business-primary)) 10px 50%/calc(100% - 10px) 2px no-repeat}.dcu-wb-pin-start.dcu-wb-drop::before{top:0}.dcu-wb-pinned-list>.dcu-wb-project:first-child.dcu-wb-drop::before{top:-4px}.dcu-wb-project.dcu-wb-drop-after::before,.dcu-wb-session.dcu-wb-drop-after::before{top:auto;bottom:-8px}.dcu-wb-dragging{opacity:.28}.dcu-wb-drag-ghost{position:fixed;top:0;left:0;transform:translate(-200vw,-200vh);z-index:10040;display:flex;align-items:center;gap:8px;max-width:220px;height:30px;padding:0 10px;border:1px solid var(--dcu-sidebar-border);border-radius:8px;background:var(--dcu-sidebar-hover);box-shadow:0 4px 12px rgba(0,0,0,.24);color:var(--dcu-sidebar-primary);font:14px/20px var(--dcu-font,inherit);white-space:nowrap;pointer-events:none}.dcu-wb-drag-ghost-icon{display:grid;place-items:center;flex:none;width:16px;height:16px;color:var(--dcu-sidebar-icon)}.dcu-wb-drag-ghost-icon svg{display:block;width:16px;height:16px}.dcu-wb-drag-ghost-title{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.dcu-wb-section,.dcu-wb-section:focus,.dcu-wb-section:focus-visible,.dcu-wb-project-head:focus,.dcu-wb-session:focus{outline:0}.dcu-wb-pinned-list{position:relative}.dcu-wb-pin-end,.dcu-wb-pin-start{position:absolute;left:0;right:0;height:8px;z-index:2}.dcu-wb-pin-start{top:0}.dcu-wb-pin-end{bottom:-8px}.dcu-wb-project.dcu-wb-drop::before,.dcu-wb-session.dcu-wb-drop::before,.dcu-wb-pin-end.dcu-wb-drop::before,.dcu-wb-pin-start.dcu-wb-drop::before{content:"";position:absolute;z-index:2;left:7px;right:8px;top:-8px;height:8px;pointer-events:none;background:radial-gradient(circle at 4px 50%,transparent 1.75px,var(--dsw-alias-state-business-primary) 2px 3.75px,transparent 4px),linear-gradient(var(--dsw-alias-state-business-primary),var(--dsw-alias-state-business-primary)) 10px 50%/calc(100% - 10px) 2px no-repeat}.dcu-wb-pin-start.dcu-wb-drop::before{top:0}.dcu-wb-pinned-list>.dcu-wb-project:first-child.dcu-wb-drop::before{top:-4px}.dcu-wb-project.dcu-wb-drop-after::before,.dcu-wb-session.dcu-wb-drop-after::before{top:auto;bottom:-8px}.dcu-wb-dragging{opacity:.28}.dcu-wb-drag-ghost{position:fixed;top:8px;left:-9999px;z-index:10040;display:flex;align-items:center;gap:8px;max-width:220px;height:30px;padding:0 10px;border:1px solid var(--dcu-sidebar-border);border-radius:8px;background:var(--dcu-sidebar-hover);box-shadow:0 4px 12px rgba(0,0,0,.24);color:var(--dcu-sidebar-primary);font:14px/20px var(--dcu-font,inherit);white-space:nowrap;pointer-events:none}.dcu-wb-drag-ghost-icon{display:grid;place-items:center;flex:none;width:16px;height:16px;color:var(--dcu-sidebar-icon)}.dcu-wb-drag-ghost-icon svg{display:block;width:16px;height:16px}.dcu-wb-drag-ghost-title{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .dcu-wb-folder{display:grid;place-items:center;flex:none;width:16px;height:20px;color:var(--dcu-sidebar-icon)}.dcu-wb-folder.dcu-wb-folder-current{color:var(--dsw-alias-state-business-primary)}.dcu-wb-brand{display:block;width:16px;height:16px}
 .dcu-wb-project-title,.dcu-wb-session-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;line-height:20px}
 .dcu-wb-project-title{flex:1;font-weight:400;color:var(--dcu-sidebar-primary)}
@@ -230,7 +232,7 @@ const collectionLayoutStyles = `
 .dcu-wb-drop-indicator::before{content:"";position:absolute;left:6px;right:0;top:3px;height:2px;border-radius:999px;background:currentColor}
 .dcu-wb-drop-indicator::after{content:"";position:absolute;box-sizing:border-box;left:0;top:0;width:8px;height:8px;border:2px solid currentColor;border-radius:50%}
 .dcu-wb-project-body:has(>.dcu-wb-session)::after{content:"";display:block;height:4px;pointer-events:none}
-.dcu-wb-section-body[data-open=true]:has(.dcu-wb-group-order-drop){overflow:visible}
+.dcu-wb-section-body[data-open=true]:has(.dcu-wb-group-order-drop),.dcu-wb-section-body[data-open=true]:has(.dcu-wb-pin-end),.dcu-wb-section-body[data-open=true]:has(.dcu-wb-pin-start){overflow:visible}
 .dcu-wb-collection-body{padding-left:0}
 .dcu-wb-collection-body>.dcu-wb-group-member:first-child{padding-top:4px}
 .dcu-wb-collection-body .dcu-wb-project-head{padding-left:8px}
@@ -278,10 +280,11 @@ export function CodexWorkspaceBrowser(props: CodexWorkspaceBrowserProps) {
   return <HoverShell><CodexWorkspaceTree {...props} /></HoverShell>
 }
 
-function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, useWorkspaces, t, archiveSession, deleteSession, deleteWorkspace, forkSession, insertSessionBefore, insertWorkspaceBefore, moveSession, openPath, openSession, renameSession, renameWorkspace, startSession, canDeleteSession }: CodexWorkspaceBrowserProps) {
+function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, useSessionStatus, useWorkspaces, t, archiveSession, deleteSession, deleteWorkspace, forkSession, insertSessionBefore, insertWorkspaceBefore, moveSession, openPath, openSession, renameSession, renameWorkspace, startSession, canDeleteSession }: CodexWorkspaceBrowserProps) {
   const sessions = useSessions(state => state)
   const now = useSharedNow()
-  const pendingInteractions = (useSessionPendingInteraction ?? useEmptySessionPendingInteraction)(state => state)
+  const pendingInteractions = useHostPendingInteractions(useSessionPendingInteraction, useSessionStatus)
+  const selectedId = currentSessionId(sessions)
   const workspaces = useWorkspaces(state => state)
   const baselinesReady = workspaceBaselinesReady(workspaces, sessions)
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => readTreeExpansionState(storage(), WORKSPACE_EXPANSION_STORAGE_KEY))
@@ -451,17 +454,16 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
     }
   }, [baselinesReady, workspaces.items])
   useEffect(() => {
-    const current = sessions.current
-    if (current !== undefined) setUnreadSessionIds(ids => ids.filter(id => id !== current))
-  }, [sessions.current])
+    if (selectedId !== undefined) setUnreadSessionIds(ids => ids.filter(id => id !== selectedId))
+  }, [selectedId])
   useEffect(() => {
     const next = Object.fromEntries(Object.entries(sessions.byId).map(([id, session]) => [id, session.running === true]))
     const previous = previousSessionRunningRef.current
     previousSessionRunningRef.current = next
     if (previous === undefined) return
-    const completed = completedBackgroundSessionIds(previous, next, sessions.current)
+    const completed = completedBackgroundSessionIds(previous, next, selectedId)
     if (completed.length > 0) setUnreadSessionIds(ids => [...completed, ...ids.filter(id => !completed.includes(id))])
-  }, [sessions.byId, sessions.current])
+  }, [selectedId, sessions.byId])
   const groups = useMemo(() => {
     const archived = workspaces.archivedSessionIds
     const visible = (ids: readonly string[]) => visibleSessionIds(ids, sessions.byId, archived)
@@ -487,7 +489,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
   useEffect(() => {
     const onProject = (event: Event): void => {
       const detail = (event as CustomEvent<HeaderAnchorDetail>).detail
-      const current = sessions.current
+      const current = selectedId
       const workspace = groups.items.find(item => current !== undefined && item.visibleIds.includes(String(current)))
       if (workspace === undefined || detail === undefined) return
       if (detail.toggle === true && isShowing('workspace', workspace.workspaceId)) {
@@ -498,7 +500,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
     }
     const onMenu = (event: Event): void => {
       const detail = (event as CustomEvent<HeaderAnchorDetail>).detail
-      const current = sessions.current
+      const current = selectedId
       if (current === undefined || detail === undefined) return
       dismissTip()
       // 500ms 内有一次“菜单开着时”的 pointerdown：这次点击是再次点击关闭，不再重开
@@ -515,7 +517,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
       window.removeEventListener(HEADER_PROJECT_TIP_EVENT, onProject)
       window.removeEventListener(HEADER_SESSION_MENU_EVENT, onMenu)
     }
-  }, [groups.items, sessions.current, menu, pinnedWorkspaceIds, unreadSessionIds])
+  }, [groups.items, menu, pinnedWorkspaceIds, selectedId, unreadSessionIds])
 
 
   const projectPinned = (id: WorkspaceId | string): boolean => pinnedWorkspaceIds.includes(String(id))
@@ -713,7 +715,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
   const renderGroup = (workspace: (typeof groups.items)[number], zone: 'pinned' | 'projects') => {
     const expandKey = zone === 'pinned' ? `pin:${workspace.workspaceId}` : String(workspace.workspaceId)
     const isExpanded = expanded[expandKey] ?? true
-    const currentSessionId = sessions.current === undefined ? undefined : String(sessions.current)
+    const currentSessionId = selectedId
     const folder = projectFolderPresentation(isExpanded, workspace.visibleIds.some(id => id === currentSessionId))
     const shownIds = workspace.visibleIds
     const menuOpen = menu?.type === 'workspace' && menu.id === workspace.workspaceId
@@ -789,7 +791,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
         if (session === undefined) return null
         const pendingInteraction = pendingInteractionForSession(id, pendingInteractions, legacyPendingInteraction(session))
         const path = session.cwd ?? workspace.path
-        const selected = sessions.current === id
+        const selected = selectedId === id
         const sessionMenuOpen = menu?.type === 'session' && menu.id === id
         const sessionMenuAt = sessionMenuOpen && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined
         const dropsBeforeSession = sessionDropTarget?.workspaceId === workspaceId && sessionDropTarget.ontoProject !== true && sessionDropTarget.beforeId === id
@@ -871,7 +873,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
   }, [wide, sorting])
   useEffect(() => {
     // 仅在当前会话 id 变化时展开所属文件夹；尚未进入树（恢复归属滞后）时继续等待。
-    const current = sessions.current === undefined ? undefined : String(sessions.current)
+    const current = selectedId
     if (current === undefined || lastRevealedSessionIdRef.current === current) return
     const tree = {
       workspaces: workspaces.items.map(item => ({
@@ -887,7 +889,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
     lastRevealedSessionIdRef.current = current
     pendingRevealScrollRef.current = true
     setExpanded(currentExpanded => expandedForCurrentSession(currentExpanded, current, tree))
-  }, [pinnedWorkspaceIds, recentIds, sessions.current, workspaceGroups, workspaces.items])
+  }, [pinnedWorkspaceIds, recentIds, selectedId, workspaceGroups, workspaces.items])
   useLayoutEffect(() => {
     if (!pendingRevealScrollRef.current) return
     pendingRevealScrollRef.current = false
@@ -918,7 +920,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
           const title = session.displayTitle
           const unread = unreadSessionIds.includes(id)
           const pendingInteraction = pendingInteractionForSession(id, pendingInteractions, legacyPendingInteraction(session))
-          return <SessionRow key={id} id={id} title={title} selected={sessions.current === id} menuOpen={menu?.type === 'session' && menu.id === id} unread={unread} running={session.running === true} pendingInteraction={pendingInteraction} time={formatCompactTime(session.updatedAt, t, now)} t={t} menuItems={sessionMenu(id, session.cwd)} draggable onDragStart={(event) => { event.stopPropagation(); setWorkspaceDragId(undefined); setWorkspaceDropTarget(undefined); setWorkspaceGroupDragId(undefined); setWorkspaceGroupDropTarget(undefined); writeSessionDrag(event.dataTransfer, id, title); setDragPreview(event.dataTransfer, title); setSessionDrag({ sessionId: id, workspaceId: '' }) }} onDragEnd={() => { setSessionDrag(undefined); setSessionDropTarget(undefined); setWorkspaceDropTarget(undefined); setWorkspaceGroupDropTarget(undefined) }} menuPoint={menu?.type === 'session' && menu.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id, type: 'session' } : undefined) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ kind: 'session', id, title, time: formatHoverTime(session.updatedAt, t, now), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, type: 'session', x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => {
+          return <SessionRow key={id} id={id} title={title} selected={selectedId === id} menuOpen={menu?.type === 'session' && menu.id === id} unread={unread} running={session.running === true} pendingInteraction={pendingInteraction} time={formatCompactTime(session.updatedAt, t, now)} t={t} menuItems={sessionMenu(id, session.cwd)} draggable onDragStart={(event) => { event.stopPropagation(); setWorkspaceDragId(undefined); setWorkspaceDropTarget(undefined); setWorkspaceGroupDragId(undefined); setWorkspaceGroupDropTarget(undefined); writeSessionDrag(event.dataTransfer, id, title); setDragPreview(event.dataTransfer, title); setSessionDrag({ sessionId: id, workspaceId: '' }) }} onDragEnd={() => { setSessionDrag(undefined); setSessionDropTarget(undefined); setWorkspaceDropTarget(undefined); setWorkspaceGroupDropTarget(undefined) }} menuPoint={menu?.type === 'session' && menu.id === id && menu.x !== undefined && menu.y !== undefined ? { x: menu.x, y: menu.y } : undefined} onOpen={() => { setUnreadSessionIds(ids => ids.filter(item => item !== id)); openSession(id as SessionId) }} onMenuChange={(open) => { setMenu(open ? { id, type: 'session' } : undefined) }} onArchive={() => { void run('archive', () => archiveSession(id as SessionId)) }} onHover={(event) => { const box = hoverCardAnchor(event.currentTarget.getBoundingClientRect()); showTip({ kind: 'session', id, title, time: formatHoverTime(session.updatedAt, t, now), left: box.left, top: box.top }) }} onLeave={hideTip} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); dismissTip(); setMenu({ id, type: 'session', x: event.clientX, y: event.clientY }) }} onSelectAction={(action) => {
             if (busy !== undefined || runSessionMoveAction(action, id)) return
             if (action === 'rename') beginRename('session', id, title)
             if (action === 'unread') { setUnreadSessionIds(ids => toggleSessionId(ids, id)); setMenu(undefined) }

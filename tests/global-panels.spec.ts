@@ -4,6 +4,15 @@ import { createRoot } from 'react-dom/client'
 import { expect, test, vi } from 'vitest'
 import { GlobalPanelButtons, createGlobalPanelSource } from '../src/client/global-panels.tsx'
 
+test('官方插件面板不进入侧栏顶栏，扩展管理已有自己的入口', () => {
+  const entries = [
+    { options: { id: 'plugins', order: 0, label: () => '插件' } },
+    { options: { id: 'files', order: 2, label: () => '文件' } },
+  ]
+  const source = createGlobalPanelSource({ entriesOfSlot: () => entries, subscribe: () => () => {} }, { subscribe: () => () => {} })
+  expect(source.getSnapshot().map(panel => panel.id)).toEqual(['files'])
+})
+
 test('面板注册、重命名、移除和语言更新实时同步并释放订阅', () => {
   let entries = [{ options: { id: 'files', order: 2, label: () => '文件' } }]
   const listeners = new Set<() => void>()

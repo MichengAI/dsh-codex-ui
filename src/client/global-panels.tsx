@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { MessageSquare } from 'lucide-react'
+import { OFFICIAL_PLUGINS_PANEL_ID } from './settings-navigation.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
@@ -19,10 +20,13 @@ export function createGlobalPanelSource(slots: PanelSlots, locale: Pick<GlobalPa
   let cached: readonly GlobalPanel[] = []
   return {
     getSnapshot() {
-      const next = slots.entriesOfSlot('sidebar.panellist').flatMap(({ options }) => options.id === undefined ? [] : [{
-        id: options.id, order: options.order ?? 0,
-        label: (typeof options.label === 'function' ? options.label() : options.label) ?? options.id,
-      }]).sort((a, b) => a.order - b.order)
+      const next = slots.entriesOfSlot('sidebar.panellist').flatMap(({ options }) => {
+        if (options.id === undefined || options.id === OFFICIAL_PLUGINS_PANEL_ID) return []
+        return [{
+          id: options.id, order: options.order ?? 0,
+          label: (typeof options.label === 'function' ? options.label() : options.label) ?? options.id,
+        }]
+      }).sort((a, b) => a.order - b.order)
       if (next.length !== cached.length || next.some((panel, index) => {
         const previous = cached[index]
         return previous === undefined || panel.id !== previous.id || panel.label !== previous.label || panel.order !== previous.order

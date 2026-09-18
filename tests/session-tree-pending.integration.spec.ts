@@ -7,7 +7,8 @@ import { ChannelBrowser } from '../src/client/ChannelBrowser.tsx'
 import { CodexWorkspaceBrowser } from '../src/client/CodexWorkspaceBrowser.tsx'
 import { ScheduleBrowser } from '../src/client/ScheduleBrowser.tsx'
 import { WORKSPACE_GROUPS_STORAGE_KEY } from '../src/client/pinned-workspaces.ts'
-import type { PendingInteractionSnapshot, UseSessionPendingInteraction } from '../src/client/session-pending.ts'
+import type { PendingInteractionSnapshot, UseSessionPendingInteraction, UseSessionStatus } from '../src/client/session-pending.ts'
+import type { SessionStatusSnapshot } from '../src/client/session-host.ts'
 import type { PendingInteractionKind } from '../src/client/session-pending.ts'
 
 const createRoot = (createRequire(import.meta.url)('react-dom/client') as {
@@ -41,6 +42,7 @@ function createSession(id: string, displayTitle: string, pendingInteraction: Pen
     pendingInteraction,
     blank: false,
     updatedAt: Date.parse('2026-09-01T00:00:00.000Z'),
+    retainedBy: {},
   }
 }
 
@@ -48,17 +50,20 @@ function createSessionStore(session: SessionSummary) {
   const state: SessionListState = {
     ids: [session.id],
     byId: { [session.id]: session },
-    current: undefined,
     phase: 'ready',
     subagentsByParent: {},
     jobsBySession: {},
-    currentAddress: undefined,
   }
   return <T,>(selector: (snapshot: SessionListState) => T): T => selector(state)
 }
 
 function createPendingInteractionStore(sessionId: string, kind: PendingInteractionKind): UseSessionPendingInteraction {
   const state = new Map([[sessionId, { kind }]])
+  return selector => selector(state)
+}
+
+function createSessionStatusStore(sessionId: string, kind: PendingInteractionKind): UseSessionStatus {
+  const state: SessionStatusSnapshot = new Map([[sessionId, { pendingInteraction: { kind }, running: true }]])
   return selector => selector(state)
 }
 
@@ -130,6 +135,29 @@ test('跨置顶、分组与未分组悬停不依赖 dragleave，结束清空所�
     await act(async () => { dispatchDrag(pinned[1]!, 'dragend', transfer) })
     expect(markers()).toHaveLength(0)
     expect(view.container.querySelector('.dcu-wb-drop-indicator')).toBeNull()
+  } finally { await view.dispose() }
+})
+
+test('拖动项目时置顶末尾落点不得把项目分区顶下去', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const workspaces = { baselinesReady: true, archivedSessionIds: [], items: ['pinned', 'loose'].map(id => ({ workspaceId: id, title: id, path: `D:/${id}`, sessionIds: [] })) }
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ exists: true, pinnedWorkspaceIds: ['pinned'], workspaceGroups: [] }))))
+  const view = await render(createElement(CodexWorkspaceBrowser, {
+    ...sessionActions, wide: true, useSessions: createSessionStore(createSession('unused', 'unused', undefined)),
+    useSessionPendingInteraction: useEmptyPendingInteractions,
+    useWorkspaces: (selector: (snapshot: typeof workspaces) => unknown) => selector(workspaces), t,
+    deleteWorkspace: vi.fn(), insertSessionBefore: vi.fn(), insertWorkspaceBefore: vi.fn(), openPath: vi.fn(), renameWorkspace: vi.fn(), startSession: vi.fn(),
+  } as never))
+  try {
+    await act(async () => { await Promise.resolve(); await Promise.resolve() })
+    const projects = view.container.querySelector<HTMLElement>('.dcu-wb-section[aria-label="workspace.projects"]')!
+    const before = projects.offsetTop
+    const transfer = createDataTransfer()
+    await act(async () => { dispatchDrag(view.container.querySelectorAll('.dcu-wb-project-head')[1]!, 'dragstart', transfer) })
+    const pinEnd = view.container.querySelector<HTMLElement>('.dcu-wb-pin-end')!
+    expect(pinEnd).not.toBeNull()
+    expect(getComputedStyle(pinEnd).position).toBe('absolute')
+    expect(projects.offsetTop).toBe(before)
   } finally { await view.dispose() }
 })
 
@@ -232,11 +260,9 @@ test('任务树把会话拖到其他项目时先确认，取消不迁移且确�
   const sessionState: SessionListState = {
     ids: [session.id, targetSession.id],
     byId: { [session.id]: session, [targetSession.id]: targetSession },
-    current: undefined,
     phase: 'ready',
     subagentsByParent: {},
     jobsBySession: {},
-    currentAddress: undefined,
   }
   const useSessions = <T,>(selector: (snapshot: SessionListState) => T): T => selector(sessionState)
   const workspaces = {
@@ -321,11 +347,9 @@ test('项目跨分组拖动时高亮整个目标分组并保留精确插入', as
   const sessionState: SessionListState = {
     ids: [],
     byId: {},
-    current: undefined,
     phase: 'ready',
     subagentsByParent: {},
     jobsBySession: {},
-    currentAddress: undefined,
   }
   const useSessions = <T,>(selector: (snapshot: SessionListState) => T): T => selector(sessionState)
   const workspaces = {
@@ -749,6 +773,42 @@ test('频道树从待处理交互 Store 渲染等待回答状态', async () => {
   } as never))
   try {
     expectPendingState(view.container, '频道 Store 会话', 'question', '等待回答')
+  } finally {
+    await view.dispose()
+  }
+})
+
+test('任务树在没有旧 pending Store 时从 SessionStatus 渲染等待审批', async () => {
+  const session = createSession('workspace-status-session', '任务 Status 会话', undefined)
+  const useSessions = createSessionStore(session)
+  const useSessionStatus = createSessionStatusStore(session.id, 'approval')
+  const workspaces = {
+    baselinesReady: true,
+    archivedSessionIds: [],
+    items: [{ workspaceId: 'workspace-status-1', title: 'Status 测试项目', path: 'D:\\Workspace\\status-test', sessionIds: [session.id] }],
+  }
+  const useWorkspaces = <T,>(selector: (snapshot: typeof workspaces) => T): T => selector(workspaces)
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ exists: true, pinnedWorkspaceIds: [] }), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  })))
+
+  const view = await render(createElement(CodexWorkspaceBrowser, {
+    ...sessionActions,
+    wide: true,
+    useSessions,
+    useSessionStatus,
+    useWorkspaces,
+    t,
+    deleteWorkspace: async () => {},
+    insertSessionBefore: async () => {},
+    insertWorkspaceBefore: async () => {},
+    openPath: async () => {},
+    renameWorkspace: async () => {},
+    startSession: () => {},
+  } as never))
+  try {
+    expectPendingState(view.container, session.displayTitle, 'approval', '等待审批')
   } finally {
     await view.dispose()
   }

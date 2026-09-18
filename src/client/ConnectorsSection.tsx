@@ -4,6 +4,7 @@ import type { SessionListState } from '@deepseek-ai/dsh-api-session-controller/c
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { CODEX_UI_API_ENDPOINTS } from '../business-api.ts'
 import { NS } from './locales.ts'
+import { currentSessionId } from './session-host.ts'
 import { userErrorText } from './user-error.ts'
 import { BusinessRequestError, businessRequestErrorKey } from './business-request-error.ts'
 
@@ -98,7 +99,7 @@ function ConnectorMarket({ startPromptSession, t }: Pick<ConnectorsSectionProps,
 }
 
 function NativeConnectorList({ sessionStore, t }: Pick<ConnectorsSectionProps, 'sessionStore' | 't'>) {
-  const sessionId = useSyncExternalStore(sessionStore.subscribe, () => sessionStore.getSnapshot().current)
+  const sessionId = useSyncExternalStore(sessionStore.subscribe, () => currentSessionId(sessionStore.getSnapshot()))
   const [connectors, setConnectors] = useState<readonly Connector[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading')
   const [failure, setFailure] = useState<unknown>()

@@ -35,11 +35,24 @@ function measureTarget(root: HTMLElement, target: HTMLElement): DropIndicatorRec
     lower = after ? rows[index + 1]?.rect.top : edge.rect.top
   } else if (target.matches('.dcu-wb-pin-start,.dcu-wb-pin-end')) {
     if (anchor.width <= 0 || anchor.height <= 0) return undefined
-    // 空列表和列表末尾已有专用槽；有相邻行时仍按两行的边界居中。
-    upper = rows.filter(row => row.rect.bottom <= anchor.top).at(-1)?.rect.bottom
-    lower = rows.find(row => row.rect.top >= anchor.bottom)?.rect.top
-    if (lower === undefined) lower = anchor.bottom
-    if (upper === undefined) upper = anchor.top
+    const itemRows = rows.filter(row => !row.node.matches('.dcu-wb-section-head'))
+    if (target.matches('.dcu-wb-pin-end') && itemRows.length > 0) {
+      const last = itemRows[itemRows.length - 1]!
+      anchor = last.rect
+      upper = last.rect.bottom
+      lower = rows.find(row => row.rect.top >= last.rect.bottom - 0.5)?.rect.top
+    } else if (target.matches('.dcu-wb-pin-start') && itemRows.length > 0) {
+      const first = itemRows[0]!
+      anchor = first.rect
+      lower = first.rect.top
+      upper = rows.filter(row => row.rect.bottom <= first.rect.top + 0.5).at(-1)?.rect.bottom
+    } else {
+      // 空列表只剩专用槽时，线留在槽内，不能画到槽外。
+      upper = rows.filter(row => row.rect.bottom <= anchor.top).at(-1)?.rect.bottom
+      lower = rows.find(row => row.rect.top >= anchor.bottom)?.rect.top
+      if (lower === undefined) lower = anchor.bottom
+      if (upper === undefined) upper = anchor.top
+    }
   } else return undefined
   const center = upper === undefined ? lower! - 4 : lower === undefined ? upper + 4 : (upper + lower) / 2
   const box = root.getBoundingClientRect()

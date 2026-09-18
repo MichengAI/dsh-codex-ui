@@ -36,10 +36,12 @@ assert.match(pending, /'pendingInteraction' in summary/, '旧版 SessionSummary 
 assert.match(channel, /pendingInteractionForSession\(id, pendingInteractions, sessions\.byId\[id\]\?\.pendingInteraction\)/, '频道必须兼容 SessionSummary 和待处理交互 Store')
 assert.match(schedule, /pendingInteractionForSession\(id, pendingInteractions, sessions\.byId\[id\]\?\.pendingInteraction\)/, '定时必须兼容 SessionSummary 和待处理交互 Store')
 for (const source of [workspace, channel, schedule]) {
-  assert.match(source, /useSessionPendingInteraction \?\? useEmptySessionPendingInteraction/, '三棵树必须订阅宿主待处理交互 Store，并兼容旧宿主')
+  assert.match(source, /useHostPendingInteractions\(useSessionPendingInteraction, useSessionStatus\)/, '三棵树必须同时订阅旧 pending Store 和 alpha.2 SessionStatus')
 }
 assert.match(sidebar, /<ChannelBrowser [^>]*useSessionPendingInteraction=\{useSessionPendingInteraction\}/, '侧栏必须向频道树透传待处理交互 Store')
+assert.match(sidebar, /<ChannelBrowser [^>]*useSessionStatus=\{useSessionStatus\}/, '侧栏必须向频道树透传 alpha.2 SessionStatus')
 assert.match(sidebar, /<ScheduleBrowser [^>]*useSessionPendingInteraction=\{useSessionPendingInteraction\}/, '侧栏必须向定时树透传待处理交互 Store')
+assert.match(sidebar, /<ScheduleBrowser [^>]*useSessionStatus=\{useSessionStatus\}/, '侧栏必须向定时树透传 alpha.2 SessionStatus')
 assert.match(pending, /visiblePendingKind\(summaryKind\) \?\? visiblePendingKind\(pendingInteractions\.get\(sessionId\)\?\.kind\)/, '有效 SessionSummary 必须优先，缺失时回退待处理交互 Store')
 assert.match(locales, /'sessions\.waitingAnswer': 'Waiting for answer'/, '等待回答英文文案必须与官方一致')
 assert.match(locales, /'sessions\.waitingApproval': 'Waiting for approval'/, '等待审批英文文案必须与官方一致')
@@ -121,5 +123,5 @@ assert.match(workspace, /\.dcu-wb-running::after\{[^}]*width:12px;height:12px/, 
 assert.match(workspace, /\.dcu-wb-session-flat:has\(\.dcu-wb-running\),\s*\.dcu-wb-session-top:has\(\.dcu-wb-running\)\{padding-left:30px\}/, '无项目缩进的运行会话必须给左侧转圈让出与项目标题对齐的位置')
 assert.doesNotMatch(workspace, /\.dcu-wb-session:hover \.dcu-wb-running/, '运行指示器在左侧，悬停快捷操作不得再把它藏起来')
 assert.match(workspace, /\.dcu-wb-session:hover \.dcu-wb-pending,[^}]*visibility:hidden/, '悬浮快捷操作出现时必须隐藏右侧待处理和未读，避免重叠')
-assert.match(workspace, /completedBackgroundSessionIds\(previous, next, sessions\.current\)/, '后台会话结束时必须自动标为未读')
+assert.match(workspace, /completedBackgroundSessionIds\(previous, next, selectedId\)/, '后台会话结束时必须自动标为未读')
 assert.match(sessionManager, /previous\[id\] === true && running !== true && id !== currentSessionId/, '当前打开会话结束时不得自动标未读')

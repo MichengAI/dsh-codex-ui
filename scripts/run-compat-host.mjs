@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 const cli = process.env.DCU_DSH_BIN
 const tarball = process.env.DCU_E2E_TARBALL
 const version = process.env.DCU_E2E_VERSION
-if (!cli || !tarball || !['0.1.5-rc.1', '0.1.5-rc.2', '0.1.6-alpha.1'].includes(version)) throw new Error('需要 DCU_DSH_BIN、DCU_E2E_TARBALL 和精确的 DCU_E2E_VERSION')
+if (!cli || !tarball || !['0.1.5-rc.1', '0.1.5-rc.2', '0.1.6-alpha.1', '0.1.6-alpha.2'].includes(version)) throw new Error('需要 DCU_DSH_BIN、DCU_E2E_TARBALL 和精确的 DCU_E2E_VERSION')
 const repo = fileURLToPath(new URL('../', import.meta.url))
 const resolve = createRequire(cli)
 for (const name of ['dsh', 'dsh-base', 'dsh-web-app', 'dsh-client-ui-layout', 'dsh-client-ui-conversation', 'dsh-client-ui-sidebar', 'dsh-client-ui-session', 'dsh-client-ui-settings']) {

@@ -1,4 +1,13 @@
 import { openConversation, selectGlobalPanel } from './session-navigation.ts'
+import {
+  archiveHostSession,
+  currentSessionId,
+  forkHostSession,
+  probeService,
+  renameHostSession,
+  UnknownSessionError,
+  withSessionBinding,
+} from './session-host.ts'
 import { createGlobalPanelSource } from './global-panels.tsx'
 import { initializeComposerWidth, observeHeroWidthHandles } from './composer-width.ts'
 import { browserStorage } from './tree-expansion.ts'
@@ -26,6 +35,7 @@ import { createFooterActionSource } from './footer-actions.ts'
 import { openPathInHost, type HostOpenPathConnection } from './host-open-path.ts'
 import { observeSettingsNavIcons } from './settings-nav-icons.ts'
 import { registerUsageStatistics } from './usage-statistics.ts'
+import { registerPluginConfigSection } from './plugin-config.ts'
 import { registerSettingsPage } from './settings-page-registration.ts'
 import { observeSlimSidebar } from './sidebar-width.ts'
 import { observeConversationHeader } from './conversation-header.ts'
@@ -106,7 +116,7 @@ async function runHostAction<T>(action: HostAction, execute: () => Promise<T>): 
 
 /** Archive Manager replaces the official ui-workspace row with this optional service. */
 export function startWorkspaceSession(ctx: ClientContext, workspaceId?: WorkspaceId): void {
-  const uiWorkspace = (ctx.get as (name: string) => unknown)('uiWorkspace')
+  const uiWorkspace = probeService(ctx, 'uiWorkspace')
   if (hasStartSession(uiWorkspace)) {
     uiWorkspace.startSession(workspaceId)
     return
@@ -128,6 +138,7 @@ export function apply(ctx: ClientContext): void {
   registerInputHistory(ctx)
   registerSettingsPage(ctx)
   registerUsageStatistics(ctx)
+  registerPluginConfigSection(ctx)
   // Host 与客户端共用 Cordis 的服务名；此处读取的是客户端 RPC 外观，而非 HostConnectionService。
   const connectionService: unknown = ctx.get('connection')
   const connection = connectionService as HostOpenPathConnection
@@ -138,8 +149,8 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => observeConversationHeader(), 'michengai-codex-ui: conversation header')
   ctx.effect(() => observeOfficialTurnNavigators(), 'michengai-codex-ui: official turn navigator')
   const newConversationDraft = createDraftPresenceSource(ctx.sessions.list, () => {
-    const id = ctx.sessions.list.getSnapshot().current
-    const binding = id === undefined ? undefined : ctx.sessions.binding(id)
+    const id = currentSessionId(ctx.sessions.list.getSnapshot())
+    const binding = id === undefined ? undefined : ctx.sessions.binding(id as SessionId)
     return binding === undefined ? undefined : ctx.conversation.input.for(binding.ctx).state
   })
   const companionSlots = createCompanionTabSource(ctx.slots)
@@ -160,11 +171,11 @@ export function apply(ctx: ClientContext): void {
     inject: () => ({
       newConversationDraft,
       prefillNewConversation: (text: string) => {
-        const id = ctx.sessions.list.getSnapshot().current
-        const binding = id === undefined ? undefined : ctx.sessions.binding(id)
+        const id = currentSessionId(ctx.sessions.list.getSnapshot())
+        const binding = id === undefined ? undefined : ctx.sessions.binding(id as SessionId)
         return prefillNewConversation(binding === undefined ? undefined : ctx.conversation.input.for(binding.ctx), text)
       },
-      openSession: (sessionId: SessionId) => { openConversation(ctx.sessions, ctx.layout, sessionId) },
+      openSession: (sessionId: SessionId) => { openConversation(ctx, ctx.layout, sessionId) },
       startSession: (workspaceId?: WorkspaceId) => { startWorkspaceSession(ctx, workspaceId) },
       toggleSidebar: () => { ctx.layout.toggleSidebar() },
       archiveSession,
@@ -186,17 +197,16 @@ export function apply(ctx: ClientContext): void {
   }, TurnNavigator))
 
   const forkSession = async (sessionId: SessionId): Promise<void> => {
-    await runHostAction('fork', async () => {
-      const childId = await ctx.sessions.fork({ sessionId, increaseTitle: true })
-      openConversation(ctx.sessions, ctx.layout, childId)
-    })
+    await runHostAction('fork', () => forkHostSession(ctx, sessionId))
   }
   const renameSession = async (sessionId: SessionId, title: string): Promise<void> => {
-    const session = ctx.sessions.binding(sessionId)?.session
-    if (session === undefined) throw new UserFacingError(t('sessions.unknown'))
     await runHostAction('rename', async () => {
-      const result = await session.rename(title)
-      if (!result.ok) throw result.error
+      try {
+        await renameHostSession(ctx, sessionId, title)
+      } catch (reason) {
+        if (reason instanceof UnknownSessionError) throw new UserFacingError(t('sessions.unknown'))
+        throw reason
+      }
     })
   }
   const deleteSession = async (sessionId: SessionId): Promise<void> => {
@@ -209,7 +219,7 @@ export function apply(ctx: ClientContext): void {
         : result.error
     })
   }
-  const archiveSession = (sessionId: SessionId): Promise<void> => runHostAction('archive', () => ctx.workspaces.archiveSession(sessionId))
+  const archiveSession = (sessionId: SessionId): Promise<void> => runHostAction('archive', () => archiveHostSession(ctx, sessionId))
   const moveSession = async (sessionId: SessionId, targetWorkspaceId: WorkspaceId): Promise<void> => {
     try {
       await requestSessionMove(sessionId, targetWorkspaceId)
@@ -228,24 +238,31 @@ export function apply(ctx: ClientContext): void {
     if (prompt === '') throw new UserFacingError(t('connectors.promptRequired'))
     const workspaces = ctx.workspaces.list.getSnapshot()
     const sessionSnapshot = ctx.sessions.list.getSnapshot()
-    const currentSessionId = sessionSnapshot.current
-    const currentWorkspaceId = currentSessionId === undefined
+    const selectedSessionId = currentSessionId(sessionSnapshot)
+    const currentWorkspaceId = selectedSessionId === undefined
       ? undefined
-      : workspaces.items.find(workspace => workspace.sessionIds.includes(currentSessionId))?.workspaceId
+      : workspaces.items.find(workspace => workspace.sessionIds.includes(selectedSessionId as SessionId))?.workspaceId
     const baselinesReady = workspaceBaselinesReady(workspaces, sessionSnapshot)
     const targetWorkspaceId = currentWorkspaceId ?? (baselinesReady ? recentWorkspaceId(workspaces.items, sessionSnapshot.byId) : undefined)
     if (targetWorkspaceId === undefined && !baselinesReady) throw new UserFacingError(t('connectors.workspacesLoading'))
     if (targetWorkspaceId === undefined) throw new UserFacingError(t('connectors.workspaceRequired'))
-    const uiWorkspace = (ctx.get as (name: string) => unknown)('uiWorkspace')
+    const uiWorkspace = probeService(ctx, 'uiWorkspace')
     const workspaceNavigation = hasConnectWorkspace(uiWorkspace) ? uiWorkspace : hasConnectWorkspace(ctx.workspaces) ? ctx.workspaces : undefined
     if (workspaceNavigation === undefined) throw new UserFacingError(t('connectors.workspaceUnavailable'))
     const sessionId = await workspaceNavigation.connectWorkspace(targetWorkspaceId)
     const conversation = ctx.get('conversation')
     if (conversation === undefined) throw new UserFacingError(t('connectors.conversationUnavailable'))
-    const binding = ctx.sessions.binding(sessionId)
-    if (binding === undefined) throw new UserFacingError(t('connectors.sessionPending'))
-    conversation.input.for(binding.ctx).setDraft(prompt)
-    openConversation(ctx.sessions, ctx.layout, sessionId)
+    try {
+      await withSessionBinding(ctx.sessions, sessionId, () => {
+        const binding = ctx.sessions.binding(sessionId)
+        if (binding === undefined) throw new UnknownSessionError()
+        conversation.input.for(binding.ctx).setDraft(prompt)
+      })
+    } catch (reason) {
+      if (reason instanceof UnknownSessionError) throw new UserFacingError(t('connectors.sessionPending'))
+      throw reason
+    }
+    openConversation(ctx, ctx.layout, sessionId)
   }
   ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({
     name: 'sidebar.workspaces', priority: -1, locale: NS,
@@ -257,7 +274,7 @@ export function apply(ctx: ClientContext): void {
       forkSession,
       moveSession,
       openPath,
-      openSession: (sessionId: SessionId) => { openConversation(ctx.sessions, ctx.layout, sessionId) },
+      openSession: (sessionId: SessionId) => { openConversation(ctx, ctx.layout, sessionId) },
       renameSession,
       renameWorkspace: (workspaceId: WorkspaceId, title: string) => ctx.workspaces.rename(workspaceId, title),
       insertWorkspaceBefore: (workspaceId: WorkspaceId, beforeWorkspaceId?: WorkspaceId) => ctx.workspaces.insertBefore(workspaceId, beforeWorkspaceId),
@@ -274,7 +291,7 @@ export function apply(ctx: ClientContext): void {
     const openDeepLink = (): void => {
       if (opened || ctx.sessions.list.getSnapshot().byId[sessionId] === undefined) return
       opened = true
-      openConversation(ctx.sessions, ctx.layout, sessionId)
+      openConversation(ctx, ctx.layout, sessionId)
     }
     openDeepLink()
     return ctx.sessions.list.subscribe(openDeepLink)

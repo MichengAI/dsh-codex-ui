@@ -3,20 +3,26 @@ import { pickSettingsSectionButton, routeOptionalSettingsSection } from '../src/
 
 const plugins = { textContent: '插件' }
 const market = { textContent: '插件市场' }
+const builtin = { textContent: '内置插件' }
 const about = { textContent: ' Codex UI ' }
 
 assert.equal(
-  pickSettingsSectionButton([plugins, about], ['插件市场', '插件']),
-  plugins,
-  '未安装市场时必须回退到原生插件管理',
+  pickSettingsSectionButton([plugins, about], ['插件市场', '内置插件']),
+  undefined,
+  '旧「插件」标题不得抢市场和内置插件的跳转',
 )
 assert.equal(
-  pickSettingsSectionButton([plugins, market, about], ['插件市场', '插件']),
+  pickSettingsSectionButton([builtin, about], ['插件市场', '内置插件']),
+  builtin,
+  '没有市场时必须打开内置插件',
+)
+assert.equal(
+  pickSettingsSectionButton([plugins, market, builtin, about], ['插件市场', '内置插件']),
   market,
   '已安装市场时必须优先进入插件市场',
 )
 assert.equal(
-  pickSettingsSectionButton([about], ['插件市场', '插件']),
+  pickSettingsSectionButton([about], ['插件市场', '内置插件']),
   undefined,
   '两个目标分区都不存在时不得误点其他设置页',
 )

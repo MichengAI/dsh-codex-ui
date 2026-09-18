@@ -17,7 +17,13 @@ const checks = []
 const menuMeasurements = []
 let failure
 try {
-  await page.addInitScript(workspace => localStorage.setItem('michengai.codex-ui.input-history.v1', JSON.stringify({ [workspace]: ['兼容性历史消息'] })), workspace)
+  await page.addInitScript(() => {
+  window.__dcuCurrentSessionId = list => {
+    if (typeof list?.current === 'string' && list.current !== '') return list.current
+    return Object.values(list?.byId ?? {}).find(session => (session.retainedBy?.mainView ?? 0) > 0)?.id
+  }
+})
+await page.addInitScript(workspace => localStorage.setItem('michengai.codex-ui.input-history.v1', JSON.stringify({ [workspace]: ['兼容性历史消息'] })), workspace)
   await page.goto(target)
   await page.waitForFunction(() => !!window.__dcuE2E)
   assert.match(await page.evaluate(() => window.__dcuE2E.ctx.locale.getSnapshot().active), /^zh/i, '本脚本明确验收中文环境')
@@ -40,7 +46,7 @@ try {
   await editor.waitFor()
   const waitDraft = text => page.waitForFunction(text => {
     const c = window.__dcuE2E.ctx
-    return c.conversation.input.for(c.sessions.binding(c.sessions.list.getSnapshot().current).ctx).state.getSnapshot().draft === text
+    return c.conversation.input.for(c.sessions.binding(window.__dcuCurrentSessionId(c.sessions.list.getSnapshot())).ctx).state.getSnapshot().draft === text
   }, text)
   const clearEditor = async () => {
     await editor.click()
@@ -66,7 +72,7 @@ try {
   await page.getByRole('button', { name: '任务', exact: true }).click()
   await editor.waitFor()
   assert.equal(await editor.innerText(), draft)
-  assert.equal(await page.evaluate(() => window.__dcuE2E.ctx.sessions.list.getSnapshot().current), id)
+  assert.equal(await page.evaluate(() => window.__dcuCurrentSessionId(window.__dcuE2E.ctx.sessions.list.getSnapshot())), id)
   checks.push('全局面板切换、选中反馈、返回原会话并保留草稿')
   await page.getByRole('button', { name: '收缩侧边栏', exact: true }).click()
   await page.waitForTimeout(350)
@@ -119,7 +125,7 @@ try {
   await page.locator('input[type=file]').setInputFiles({ name: 'compat.txt', mimeType: 'text/plain', buffer: Buffer.from('compatibility fixture') })
   await page.waitForFunction(() => {
     const c = window.__dcuE2E.ctx
-    const binding = c.sessions.binding(c.sessions.list.getSnapshot().current)
+    const binding = c.sessions.binding(window.__dcuCurrentSessionId(c.sessions.list.getSnapshot()))
     return c.conversation.input.for(binding.ctx).state.getSnapshot().attachmentIds.length > 0
   })
   await editor.press('ArrowUp')
@@ -130,7 +136,7 @@ try {
   await page.locator('input[type=file]').setInputFiles({ name: 'compat.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=', 'base64') })
   await page.waitForFunction(() => {
     const c = window.__dcuE2E.ctx
-    return c.conversation.input.for(c.sessions.binding(c.sessions.list.getSnapshot().current).ctx).state.getSnapshot().attachmentIds.length === 2
+    return c.conversation.input.for(c.sessions.binding(window.__dcuCurrentSessionId(c.sessions.list.getSnapshot())).ctx).state.getSnapshot().attachmentIds.length === 2
   })
   await editor.press('ArrowUp')
   assert.equal((await editor.innerText()).trim(), '')

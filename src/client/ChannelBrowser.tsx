@@ -11,7 +11,8 @@ import { useSharedNow } from './shared-now.ts'
 import { SessionHoverCardLayer, SessionModals, useBusyAction, useSessionDialogs, useSessionFlags } from './session-row-actions.tsx'
 import { HoverShell, useHoverDispatch } from './hover-shell.tsx'
 import { GroupHead, SessionRow, sessionMenuItems } from './session-tree.tsx'
-import { pendingInteractionForSession, useEmptySessionPendingInteraction, type UseSessionPendingInteraction } from './session-pending.ts'
+import { currentSessionId } from './session-host.ts'
+import { pendingInteractionForSession, useHostPendingInteractions, type UseSessionPendingInteraction, type UseSessionStatus } from './session-pending.ts'
 import { browserStorage, CHANNEL_EXPANSION_STORAGE_KEY, readTreeExpansionState, writeTreeExpansionState } from './tree-expansion.ts'
 import { moveSessionActionId, parseMoveSessionActionId, sessionMoveTargets } from './session-move.ts'
 
@@ -19,7 +20,8 @@ type OpenMenu = { id: string; x?: number; y?: number }
 
 type SessionStore = {
   current?: string
-  byId: Record<string, { running?: boolean; displayTitle?: string; updatedAt?: number; pendingInteraction?: unknown }>
+  ids?: readonly string[]
+  byId: Record<string, { id?: string; running?: boolean; displayTitle?: string; updatedAt?: number; pendingInteraction?: unknown; retainedBy?: { mainView?: number } }>
 }
 
 type WorkspaceStore = {
@@ -37,6 +39,7 @@ type ChannelBrowserProps = {
   useSessions: (selector: (state: SessionStore) => SessionStore) => SessionStore
   useWorkspaces?: (selector: (state: WorkspaceStore) => WorkspaceStore) => WorkspaceStore
   useSessionPendingInteraction?: UseSessionPendingInteraction
+  useSessionStatus?: UseSessionStatus
   canDeleteSession?: () => boolean
   t: TranslateNS<typeof NS>
 }
@@ -57,15 +60,16 @@ export function ChannelBrowser(props: ChannelBrowserProps) {
   return <HoverShell blocked={menu !== undefined}><ChannelBrowserTree {...props} menu={menu} setMenu={setMenu} /></HoverShell>
 }
 
-function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSession, moveSession, renameSession, useSessions, useSessionPendingInteraction, useWorkspaces, t, canDeleteSession, menu, setMenu }: ChannelBrowserProps & { menu?: OpenMenu; setMenu: (menu?: OpenMenu) => void }) {
+function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSession, moveSession, renameSession, useSessions, useSessionPendingInteraction, useSessionStatus, useWorkspaces, t, canDeleteSession, menu, setMenu }: ChannelBrowserProps & { menu?: OpenMenu; setMenu: (menu?: OpenMenu) => void }) {
   const sessions = useSessions(state => state)
   const now = useSharedNow()
   const workspaces = useWorkspaces?.(state => state)
-  const pendingInteractions = (useSessionPendingInteraction ?? useEmptySessionPendingInteraction)(state => state)
+  const pendingInteractions = useHostPendingInteractions(useSessionPendingInteraction, useSessionStatus)
+  const selectedId = currentSessionId(sessions)
   const [groups, setGroups] = useState<ChannelGroup[]>([])
   const [pollError, setPollError] = useState<string>()
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => readTreeExpansionState(browserStorage(), CHANNEL_EXPANSION_STORAGE_KEY))
-  const flags = useSessionFlags(sessions.current)
+  const flags = useSessionFlags(selectedId)
   const { showTip, hideTip, dismissTip } = useHoverDispatch()
   const { busy, error, setError, run } = useBusyAction(t, () => { setMenu(undefined) })
   const dialogs = useSessionDialogs({ archiveSession, deleteSession, forkSession, renameSession }, flags, run, () => { setMenu(undefined); setError(undefined) })
@@ -121,7 +125,7 @@ function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSe
           {isExpanded && <div className="dcu-wb-project-body">{group.sessions.map(session => {
             const id = session.sessionId
             const title = session.title
-            const selected = sessions.current === id
+            const selected = selectedId === id
             const running = session.running || sessions.byId[id]?.running === true
             const updatedAt = session.updatedAt ?? sessions.byId[id]?.updatedAt
             const unread = flags.unreadSessionIds.includes(id)

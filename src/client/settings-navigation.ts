@@ -28,6 +28,9 @@ export function routeOptionalSettingsSection(
   openFallback()
 }
 
+/** 官方 alpha.2 插件管理页占用 sidebar.panellist / main 的同一 id。 */
+export const OFFICIAL_PLUGINS_PANEL_ID = 'plugins'
+
 let cancelPendingNavigation: (() => void) | undefined
 export const SETTINGS_NAVIGATION_TIMEOUT_MS = 4_000
 export const SETTINGS_TRIGGER_SELECTOR = '[data-dcu-settings-trigger],[aria-haspopup="dialog"]'

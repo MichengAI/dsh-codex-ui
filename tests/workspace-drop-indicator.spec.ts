@@ -74,6 +74,11 @@ describe('统一排序线几何', () => {
     box('#slot', 20, 8)
     expect(measureWorkspaceDropIndicator(root)?.top).toBe(20)
   })
+  it('置顶末尾槽叠在最后一行上时，插入线仍画在行下而不是穿题', () => {
+    const { root, box } = fixture('<div class="dcu-wb-section-head" id="head"></div><div class="dcu-wb-project-head" id="a"></div><div class="dcu-wb-project-head" id="b"></div><div class="dcu-wb-pin-end dcu-wb-drop" id="slot"></div>')
+    box('#head', 0, 24); box('#a', 24, 30); box('#b', 54, 30); box('#slot', 76, 8)
+    expect(measureWorkspaceDropIndicator(root)?.top).toBe(84)
+  })
   it('取消落点隐藏蓝线，卸载取消刷新并移除绘制节点', () => {
     const { root } = fixture('')
     vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(1)

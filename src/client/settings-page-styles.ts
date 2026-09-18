@@ -82,6 +82,10 @@ html[data-dsh-native-backdrop=mica] .dcu-settings-page,html[data-dsh-native-back
 .dcu-settings-inner:has(.dcu-usage-section){height:100%;display:flex;flex-direction:column;padding-bottom:0}
 .dcu-settings-inner:has(.dcu-usage-section)>.dcu-settings-heading{display:none}
 .dcu-settings-inner:has(.dcu-usage-section)>[data-slot="settings.section"]{display:flex;flex:1;min-height:0;flex-direction:column}
+.dcu-plugin-config [data-plugin-panel]{height:auto;padding:0;overflow:visible;align-items:stretch;gap:24px}
+.dcu-plugin-config [data-plugin-panel]>*{max-width:none}
+.dcu-plugin-config [data-plugin-panel]>header :is(h1,p){display:none}
+.dcu-plugin-config [data-plugin-panel]>header{justify-content:flex-end}
 .dcu-usage-section{display:flex;flex-direction:column;flex:1;min-height:0;gap:16px}
 .dcu-usage-section h1{font-size:24px;font-weight:500;margin:0}
 .dcu-usage-section p{color:var(--sp-muted)}
