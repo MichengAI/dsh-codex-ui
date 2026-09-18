@@ -12,7 +12,8 @@ export const HEADER_SESSION_MENU_EVENT = 'dcu-header-session-menu'
 // 一起顶到最右侧。操作区必须紧贴标题；页签用 margin-left:auto 靠右，扩展区跟在页签后面。
 // 顶栏也不能 wrap：换行按 flex-basis 的内容宽度判定，收缩发生在换行之后，crumbs 改成
 // flex:0 1 auto 后长标题会让 order 最大的右栏入口掉到第二行左侧。nowrap 让宽度不足时
-// 只收缩 crumbs（min-width:0 + overflow:hidden 截断标题），控件带恒为 34px 单行。
+// 只收缩 crumbs（min-width:0）。标题截断依赖宿主 .crumbs{overflow:hidden} 和
+// .crumb{text-overflow:ellipsis}，插件不重复写 overflow。控件带恒为 34px 单行。
 export const CONVERSATION_HEADER_STYLE = `
 header:has([data-dcu-inline-tabs]){box-sizing:border-box;display:flex;flex-wrap:nowrap;align-items:center;gap:10px;min-height:34px;padding-top:3px;padding-bottom:3px;border-bottom:0}
 header:has([data-dcu-inline-tabs]):after{display:none;content:none}
