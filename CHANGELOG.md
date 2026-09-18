@@ -22,6 +22,14 @@ Install or maintain 11 first-party plugins in one step. Included plugins and ver
 
 The installer uses these exact versions for reproducible installation.
 
+## 1.1.13 - 2026-09-18
+
+- Adapt sessions, settings, and connector prompts to DSH 0.1.6-alpha.2 dual-path hosts. Older hosts stay supported. Peer range now includes alpha.2.
+- Settings keeps official Built-in plugins and adds Plugin configuration that forwards the official manager cards.
+- Running and completion-unread indicators prefer host SessionStatus. A selected row still shows a user-toggled unread mark.
+- Connector example prompts open a workspace once so they do not leave a leftover blank session.
+- Pinned drop lines stay between rows and no longer shove the Projects heading down.
+
 ## 1.1.12 - 2026-09-17
 
 - Session rows show compact relative time on the right (now, minutes, hours, days, weeks, months, years). Hover or the action menu yields to the archive shortcut; a pending label hides the inline time.
