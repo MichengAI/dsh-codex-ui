@@ -70,6 +70,8 @@ assert.doesNotMatch(sidebar, /openPluginsEntry|hasPluginsPanel|selectPanel\('plu
 assert.match(globalPanels, /options.id === OFFICIAL_PLUGINS_PANEL_ID/, '官方顶栏插件入口必须隐藏，扩展管理已有入口')
 assert.match(settingsPageSource, /active\?\.id === 'plugin-config' \? t\('settings.pluginConfig'\)/, '插件配置必须使用和常规一样的自有标题')
 assert.match(settingsStyles, /\.dcu-plugin-config \[data-plugin-panel\]>header :is\(h1,p\)\{display:none\}/, '插件配置必须隐藏官方页自带标题，避免和设置壳标题重复')
+assert.match(settingsPageSource, /getAttribute\('role'\) === 'alert'/, '设置隔离不得 inert 官方插件管理挂到 body 的 toast')
+assert.match(settingsStyles, /body:has\(\.dcu-settings-page\) > \[role=alert\]\{visibility:visible!important\}/, '设置页打开时必须仍能看见官方启用失败 toast')
 assert.doesNotMatch(settingsStyles, /\.dcu-settings-inner:has\(\.dcu-plugin-config\)\{width:100%/, '插件配置不得撑满主栏，必须沿用常规页宽度')
 assert.match(sidebar, /selectSection\(t\('sidebar\.connectors'\)\)/, '连接器菜单必须直达设置内的连接器页')
 assert.match(sidebar, /\.dcu-root \.mcpConnectorLauncher,[^}]*display:none!important/, '第三方 MCP 连接器不得再保留独立侧栏入口')

@@ -171,6 +171,16 @@ test('Shift+Tab 在设置内部循环，隐藏的迟挂载 dialog 不拦截 Esca
  expect(settingsPage()).toBeNull()
 })
 
+test('官方插件开关的 body toast 不被设置隔离藏掉', async () => {
+  const toast = document.createElement('div')
+  toast.setAttribute('role', 'alert')
+  document.body.append(toast)
+  await mount()
+  expect(toast.inert).not.toBe(true)
+  expect(toast.hasAttribute('data-dcu-settings-isolated')).toBe(false)
+  expect(toast.closest('[inert]')).toBeNull()
+})
+
 test('已有引导 portal 保留交互，设置退出不改写原始 inert 状态', async () => {
  const overlay=document.createElement('div');overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');const next=document.createElement('button');overlay.append(next);document.body.append(overlay)
  const background=document.createElement('div');background.inert=true;background.setAttribute('data-dcu-settings-isolated','previous');document.body.append(background)

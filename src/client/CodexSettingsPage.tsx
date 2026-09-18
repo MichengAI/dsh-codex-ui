@@ -110,6 +110,8 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     const isolate = (element: HTMLElement) => {
       // Pet 使用 body 下的专用容器，跨页面保留显示与交互，不放行其他浮层。
       if (element.parentElement === document.body && element.hasAttribute('data-dsh-pet-overlay')) return
+      // 官方插件开关把失败 toast 挂到 body；隔离会 inert + 藏掉，看起来像点不开。
+      if (element.getAttribute('role') === 'alert') return
       if (element === onboardingRoot.current || guideModals.includes(element)) return
       if (guideModals.some(modal => element.contains(modal))) {
         for (const child of element.children) if (child instanceof HTMLElement && !/^(STYLE|SCRIPT|LINK)$/.test(child.tagName)) isolate(child)

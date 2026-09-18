@@ -8,13 +8,15 @@ export const HEADER_SESSION_MENU_EVENT = 'dcu-header-session-menu'
 // 页签（role=tablist）是 header 的直接子节点。这里只用 display:contents 把标题行摊平、
 // 再用 order 重排为 [面包屑][操作区][页签][扩展区]，绝不物理搬移 React 管理的节点，
 // 否则宿主重渲染时会因节点父级脱钩抛 NotFoundError 导致整个界面白屏。
+// crumbs 不能 flex:1：标题会吃掉中间空间，把官方 header.actions（标准模式 / Agent Team）
+// 一起顶到最右侧。操作区必须紧贴标题；页签用 margin-left:auto 靠右，扩展区跟在页签后面。
 export const CONVERSATION_HEADER_STYLE = `
 header:has([data-dcu-inline-tabs]){box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-height:34px;padding-top:3px;padding-bottom:3px;border-bottom:0}
 header:has([data-dcu-inline-tabs]):after{display:none;content:none}
 header:has([data-dcu-inline-tabs]) [class*="titleRow"],header:has([data-dcu-inline-tabs]) [class*="titleCluster"]{display:contents}
-header:has([data-dcu-inline-tabs]) [class*="crumbs"]{order:1;flex:1;min-width:0}
+header:has([data-dcu-inline-tabs]) [class*="crumbs"]{order:1;flex:0 1 auto;min-width:0}
 header:has([data-dcu-inline-tabs]) [class*="headerActions"]{order:2;flex:none}
-header [data-dcu-inline-tabs]{box-sizing:border-box;order:3;flex:none;display:flex;align-items:center;gap:0;margin:0;padding:0;height:28px;position:relative;z-index:1;overflow:hidden;border:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.12));border-radius:8px;background:var(--dsw-alias-background-secondary,rgba(255,255,255,.025))}
+header [data-dcu-inline-tabs]{box-sizing:border-box;order:3;flex:none;display:flex;align-items:center;gap:0;margin:0 0 0 auto;padding:0;height:28px;position:relative;z-index:1;overflow:hidden;border:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.12));border-radius:8px;background:var(--dsw-alias-background-secondary,rgba(255,255,255,.025))}
 header:has([data-dcu-inline-tabs]) [class*="headerUtilities"]{order:4;flex:none}
 /* 新版角落插槽被 display:contents 摊平后，需要独立排序并撤销嵌套布局的边距补偿。 */
 header:has([data-dcu-inline-tabs]) [data-conversation-header-corner]{order:5;flex:none;margin-left:0;margin-right:0}
