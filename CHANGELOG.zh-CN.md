@@ -4,6 +4,11 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 1.1.14 - 2026-09-19
+
+- 紧凑顶栏：标准模式 / Agent Team 贴在标题旁，对话 / 轨迹靠右。长标题单行截断，不再把右栏掉到第二行。
+- 设置页不再藏起官方挂到 body 的插件 Toast；只有 body 直接子级的 alert 跳过隔离和焦点陷阱。
+
 ## suite-installer-v1.0.16 - 2026-09-18
 
 一键维护安装 11 个自研插件。包含以下插件及版本：

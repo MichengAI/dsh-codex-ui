@@ -4,6 +4,11 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.14 - 2026-09-19
+
+- Keep official header actions beside the session title and conversation tabs on the right. Long titles stay on one 34px row instead of wrapping the corner slot down.
+- Settings isolation leaves official body-level plugin toasts visible and inside the focus trap. Only `body > [role=alert]` skips isolation.
+
 ## suite-installer-v1.0.16 - 2026-09-18
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:
