@@ -215,7 +215,8 @@ test('连接器 Prompt 必须用 using 传入的 binding，并在释放前打开
 
 test('连接器 Prompt 优先在官方 openWorkspace 的 beforeOpen 里写草稿', async () => {
   runtime = new ClientApplyHarness()
-  const drafts: Array<{ ctx: unknown; held: boolean; text: string }> = []
+  const drafts: Array<{ ctx: unknown; held: boolean; text: string; id: string }> = []
+  const created: string[] = []
   let held = false
   Object.assign(runtime.ctx.workspaces.list, {
     getSnapshot: () => ({
@@ -227,7 +228,11 @@ test('连接器 Prompt 优先在官方 openWorkspace 的 beforeOpen 里写草稿
     getSnapshot: () => ({ ids: [], byId: {}, phase: 'ready' }),
   })
   Object.assign(runtime.ctx.sessions, {
-    binding: (id: string) => id === 'temporary-session' && held ? { ctx: 'main-view' } : undefined,
+    binding: (id: string) => id === 'opened-session' && held ? { ctx: 'main-view' } : undefined,
+  })
+  const connectWorkspace = vi.fn(async () => {
+    created.push('leftover-blank')
+    return 'leftover-blank'
   })
   Object.assign(runtime.ctx, {
     layout: { selectPanel() {} },
@@ -235,22 +240,25 @@ test('连接器 Prompt 优先在官方 openWorkspace 的 beforeOpen 里写草稿
       ? { api: { host: { openPath: async () => ({ result: { ok: true, value: undefined } }) } } }
       : name === 'uiWorkspace'
         ? {
-            connectWorkspace: async () => 'temporary-session',
+            connectWorkspace,
             openWorkspace: (_workspaceId: string, beforeOpen?: (sessionId: string) => void) => {
+              created.push('opened-session')
               held = true
-              beforeOpen?.('temporary-session')
+              beforeOpen?.('opened-session')
               held = false
             },
           }
         : name === 'conversation'
-          ? { input: { for(ctx: unknown) { return { setDraft(text: string) { drafts.push({ ctx, held, text }) } } } } }
+          ? { input: { for(ctx: unknown) { return { setDraft(text: string) { drafts.push({ ctx, held, text, id: created.at(-1) ?? '' }) } } } } }
           : undefined,
   })
   runtime.mount()
   const connector = runtime.slots.entries('settings.section').find(entry => entry.id === 'connectors')
   const injected = (connector?.inject as (() => { startPromptSession: (prompt: string) => Promise<void> }))()
   await injected.startPromptSession('检查项目')
-  expect(drafts).toEqual([{ ctx: 'main-view', held: true, text: '检查项目' }])
+  expect(connectWorkspace).not.toHaveBeenCalled()
+  expect(created).toEqual(['opened-session'])
+  expect(drafts).toEqual([{ ctx: 'main-view', held: true, text: '检查项目', id: 'opened-session' }])
 })
 
 test('连接器示例 Prompt 在双基线就绪前不选择临时工作区', async () => {

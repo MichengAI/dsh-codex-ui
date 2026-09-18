@@ -12,6 +12,7 @@ assert.match(host, /source: 'controllerOperation'/, '绑定/重命名必须用 c
 assert.match(navigation, /openHostSession\(host, id\)/, '打开会话必须走双路径宿主导航')
 assert.match(navigation, /if \(opened\) selectGlobalPanel\(layout, null\)/, '打开失败时必须保留当前全局面板')
 assert.match(client, /openConversationWithDraft|openWorkspace/, '连接器草稿必须在 retain 仍有效时写入')
+assert.match(client, /if \(hasOpenWorkspace\(uiWorkspace\)\) \{[\s\S]*openWorkspace\([\s\S]*return[\s\S]*connectWorkspace/, '有官方 openWorkspace 时不得先 connectWorkspace 再开一次')
 assert.match(client, /__dcuCurrentSessionId/, '兼容脚本必须使用生产环境的当前会话实现')
 assert.match(client, /probeService\(ctx, 'uiWorkspace'\)/, '工作区导航必须 probe，不能硬读 ctx.uiWorkspace')
 assert.doesNotMatch(client, /export const inject = \[[^\]]*['"]uiWorkspace['"]/, '不得把 uiWorkspace 写进 apply inject')

@@ -207,7 +207,8 @@ test('全局面板打开时不得把主视图会话标成选中', () => {
 test('未读点认 SessionStatus.completionUnread，当前会话除外', () => {
   expect(sessionRowUnread(false, { completionUnread: true })).toBe(true)
   expect(sessionRowUnread(true, undefined)).toBe(true)
-  expect(sessionRowUnread(true, { completionUnread: true }, true)).toBe(false)
+  expect(sessionRowUnread(false, { completionUnread: true }, true)).toBe(false)
+  expect(sessionRowUnread(true, { completionUnread: true }, true)).toBe(true)
   expect(sessionRowUnread(false, { completionUnread: false })).toBe(false)
 })
 

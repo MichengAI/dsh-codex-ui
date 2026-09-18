@@ -247,9 +247,6 @@ export function apply(ctx: ClientContext): void {
     if (targetWorkspaceId === undefined && !baselinesReady) throw new UserFacingError(t('connectors.workspacesLoading'))
     if (targetWorkspaceId === undefined) throw new UserFacingError(t('connectors.workspaceRequired'))
     const uiWorkspace = probeService(ctx, 'uiWorkspace')
-    const workspaceNavigation = hasConnectWorkspace(uiWorkspace) ? uiWorkspace : hasConnectWorkspace(ctx.workspaces) ? ctx.workspaces : undefined
-    if (workspaceNavigation === undefined) throw new UserFacingError(t('connectors.workspaceUnavailable'))
-    const sessionId = await workspaceNavigation.connectWorkspace(targetWorkspaceId)
     const conversation = ctx.get('conversation')
     if (conversation === undefined) throw new UserFacingError(t('connectors.conversationUnavailable'))
     try {
@@ -262,6 +259,9 @@ export function apply(ctx: ClientContext): void {
         selectGlobalPanel(ctx.layout, null)
         return
       }
+      const workspaceNavigation = hasConnectWorkspace(uiWorkspace) ? uiWorkspace : hasConnectWorkspace(ctx.workspaces) ? ctx.workspaces : undefined
+      if (workspaceNavigation === undefined) throw new UserFacingError(t('connectors.workspaceUnavailable'))
+      const sessionId = await workspaceNavigation.connectWorkspace(targetWorkspaceId)
       await openConversationWithDraft(ctx, ctx.layout, ctx.sessions, sessionId, binding => {
         if (binding.ctx === undefined) throw new UnknownSessionError()
         conversation.input.for(binding.ctx as ClientContext).setDraft(prompt)

@@ -89,8 +89,7 @@ export function visibleSelectedSessionId(state: SessionListLike | undefined, pan
 }
 
 export function sessionRowUnread(localUnread: boolean, status?: SessionStatusLike, selected = false): boolean {
-  if (selected) return false
-  return localUnread || status?.completionUnread === true
+  return localUnread || (status?.completionUnread === true && !selected)
 }
 
 export function sessionRunningFlags(
