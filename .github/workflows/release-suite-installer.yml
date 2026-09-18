@@ -89,7 +89,7 @@ jobs:
         working-directory: packages/dsh-codex-suite-installer
         run: npm publish
 
-      - name: 创建版本标签和 GitHub Release
+      - name: 创建版本标签
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -100,7 +100,5 @@ jobs:
             git push origin "$tag"
           fi
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release edit "$tag" --title "$tag" --notes-file "$RUNNER_TEMP/release-notes.md"
-          else
-            gh release create "$tag" --title "$tag" --notes-file "$RUNNER_TEMP/release-notes.md"
+            gh release delete "$tag" --yes
           fi

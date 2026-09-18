@@ -6,6 +6,14 @@ import { dirname, join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { parseDocument } from 'workflow-yaml'
 
+{
+  const installer = readFileSync('.github/workflows/release-suite-installer.yml', 'utf8')
+  const uiRelease = readFileSync('.github/workflows/release.yml', 'utf8')
+  assert.ok(!/gh release (create|edit)\b/.test(installer), 'Installer 只打 tag，不创建 GitHub Release')
+  assert.ok(installer.includes('git tag -a'), 'Installer 发布后仍须创建 suite-installer-v* 标签')
+  assert.ok(uiRelease.includes('gh release create') && uiRelease.includes('gh release edit'), 'UI 标签仍须同步 GitHub Release 说明')
+}
+
 for (const name of ['ci.yml', 'publish.yml', 'release.yml', 'release-suite-installer.yml']) {
   const doc = parseDocument(readFileSync(`.github/workflows/${name}`, 'utf8'), { uniqueKeys: true })
   assert.deepEqual(doc.errors, [], `${name} 必须是有效 YAML`)
