@@ -11,8 +11,8 @@ import { useSharedNow } from './shared-now.ts'
 import { SessionHoverCardLayer, SessionModals, useBusyAction, useSessionDialogs, useSessionFlags } from './session-row-actions.tsx'
 import { HoverShell, useHoverDispatch } from './hover-shell.tsx'
 import { GroupHead, SessionRow, sessionMenuItems } from './session-tree.tsx'
-import { currentSessionId } from './session-host.ts'
-import { pendingInteractionForSession, useHostPendingInteractions, type UseSessionPendingInteraction, type UseSessionStatus } from './session-pending.ts'
+import { sessionIsRunning, sessionRowUnread, visibleSelectedSessionId } from './session-host.ts'
+import { pendingInteractionForSession, useHostPendingInteractions, useHostSessionStatus, type UseSessionPendingInteraction, type UseSessionStatus } from './session-pending.ts'
 import { browserStorage, CHANNEL_EXPANSION_STORAGE_KEY, readTreeExpansionState, writeTreeExpansionState } from './tree-expansion.ts'
 import { moveSessionActionId, parseMoveSessionActionId, sessionMoveTargets } from './session-move.ts'
 
@@ -41,6 +41,7 @@ type ChannelBrowserProps = {
   useSessionPendingInteraction?: UseSessionPendingInteraction
   useSessionStatus?: UseSessionStatus
   canDeleteSession?: () => boolean
+  panelActive?: boolean
   t: TranslateNS<typeof NS>
 }
 
@@ -60,12 +61,13 @@ export function ChannelBrowser(props: ChannelBrowserProps) {
   return <HoverShell blocked={menu !== undefined}><ChannelBrowserTree {...props} menu={menu} setMenu={setMenu} /></HoverShell>
 }
 
-function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSession, moveSession, renameSession, useSessions, useSessionPendingInteraction, useSessionStatus, useWorkspaces, t, canDeleteSession, menu, setMenu }: ChannelBrowserProps & { menu?: OpenMenu; setMenu: (menu?: OpenMenu) => void }) {
+function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSession, moveSession, renameSession, useSessions, useSessionPendingInteraction, useSessionStatus, useWorkspaces, t, canDeleteSession, panelActive = false, menu, setMenu }: ChannelBrowserProps & { menu?: OpenMenu; setMenu: (menu?: OpenMenu) => void }) {
   const sessions = useSessions(state => state)
   const now = useSharedNow()
   const workspaces = useWorkspaces?.(state => state)
   const pendingInteractions = useHostPendingInteractions(useSessionPendingInteraction, useSessionStatus)
-  const selectedId = currentSessionId(sessions)
+  const sessionStatus = useHostSessionStatus(useSessionStatus)
+  const selectedId = visibleSelectedSessionId(sessions, panelActive)
   const [groups, setGroups] = useState<ChannelGroup[]>([])
   const [pollError, setPollError] = useState<string>()
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => readTreeExpansionState(browserStorage(), CHANNEL_EXPANSION_STORAGE_KEY))
@@ -126,9 +128,10 @@ function ChannelBrowserTree({ openSession, archiveSession, deleteSession, forkSe
             const id = session.sessionId
             const title = session.title
             const selected = selectedId === id
-            const running = session.running || sessions.byId[id]?.running === true
+            const status = sessionStatus.get(id)
+            const running = sessionIsRunning({ running: session.running === true || sessions.byId[id]?.running === true }, status)
             const updatedAt = session.updatedAt ?? sessions.byId[id]?.updatedAt
-            const unread = flags.unreadSessionIds.includes(id)
+            const unread = sessionRowUnread(flags.unreadSessionIds.includes(id), status, selected)
             const pendingInteraction = pendingInteractionForSession(id, pendingInteractions, sessions.byId[id]?.pendingInteraction)
             const moveTargets = moveSession === undefined || workspaces === undefined ? undefined : sessionMoveTargets(workspaces.items, id).map(target => ({ ...target, id: moveSessionActionId(target.id) }))
             const canDelete = canDeleteSession?.() === true

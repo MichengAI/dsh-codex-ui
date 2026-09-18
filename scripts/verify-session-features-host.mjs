@@ -36,9 +36,7 @@ try {
     const items = ctx.workspaces.list.getSnapshot().items ?? []
     const visual = items.find(item => (item.path ?? '').replaceAll('\\', '/').endsWith('/visual'))
     const list = ctx.sessions.list.getSnapshot()
-    const current = typeof list.current === 'string' && list.current !== ''
-      ? list.current
-      : Object.values(list.byId ?? {}).find(session => (session.retainedBy?.mainView ?? 0) > 0)?.id
+    const current = window.__dcuCurrentSessionId(list)
     const visualIds = (visual?.sessionIds ?? []).map(String)
     const sessionId = typeof current === 'string' && current !== '' ? current : visualIds[0]
     if (typeof sessionId !== 'string' || sessionId === '') {

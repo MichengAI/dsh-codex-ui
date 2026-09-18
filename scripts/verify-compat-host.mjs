@@ -17,13 +17,7 @@ const checks = []
 const menuMeasurements = []
 let failure
 try {
-  await page.addInitScript(() => {
-  window.__dcuCurrentSessionId = list => {
-    if (typeof list?.current === 'string' && list.current !== '') return list.current
-    return Object.values(list?.byId ?? {}).find(session => (session.retainedBy?.mainView ?? 0) > 0)?.id
-  }
-})
-await page.addInitScript(workspace => localStorage.setItem('michengai.codex-ui.input-history.v1', JSON.stringify({ [workspace]: ['兼容性历史消息'] })), workspace)
+  await page.addInitScript(workspace => localStorage.setItem('michengai.codex-ui.input-history.v1', JSON.stringify({ [workspace]: ['兼容性历史消息'] })), workspace)
   await page.goto(target)
   await page.waitForFunction(() => !!window.__dcuE2E)
   assert.match(await page.evaluate(() => window.__dcuE2E.ctx.locale.getSnapshot().active), /^zh/i, '本脚本明确验收中文环境')

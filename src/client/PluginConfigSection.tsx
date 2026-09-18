@@ -1,7 +1,19 @@
 import { Component, createElement, useSyncExternalStore, type ReactNode } from 'react'
 
 export type OfficialPluginPage = (props: Record<string, unknown>) => ReactNode
-export type PluginConfigLocale = (ns: string) => (key: string) => string
+export type PluginConfigTranslate = (key: string, params?: Record<string, unknown>) => string
+export type PluginConfigLocale = (ns: string) => PluginConfigTranslate
+
+export function bindPluginConfigLocale(bind: (ns: string) => PluginConfigTranslate): PluginConfigLocale {
+  const cache = new Map<string, PluginConfigTranslate>()
+  return ns => {
+    const existing = cache.get(ns)
+    if (existing !== undefined) return existing
+    const translate = bind(ns)
+    cache.set(ns, translate)
+    return translate
+  }
+}
 
 const FORWARDED_CONFIG_SLOTS = new Set(['plugins.item', 'plugins.bundle.config', 'plugins.row.config'])
 
@@ -44,16 +56,22 @@ function bindSnapshotSelector(source: SnapshotSource) {
   }
 }
 
+function bindHookSources(hooks: Record<string, unknown> | undefined, bound: Record<string, unknown>): void {
+  for (const [name, source] of Object.entries(hooks ?? {})) {
+    if (isSnapshotSource(source)) bound[hookPropName(name)] = bindSnapshotSelector(source)
+  }
+}
+
 function bindInjectFace(inject: unknown): Record<string, unknown> {
   try {
     if (typeof inject !== 'function') return {}
     const face = inject()
     if (typeof face !== 'object' || face === null) return {}
-    const { hooks, keyedHooks: _keyedHooks, ...rest } = face as { hooks?: Record<string, unknown>; keyedHooks?: unknown }
+    const { hooks, keyedHooks, ...rest } = face as { hooks?: Record<string, unknown>; keyedHooks?: Record<string, unknown> }
     const bound: Record<string, unknown> = { ...rest }
-    for (const [name, source] of Object.entries(hooks ?? {})) {
-      if (isSnapshotSource(source)) bound[hookPropName(name)] = bindSnapshotSelector(source)
-    }
+    if (keyedHooks !== undefined) bound.keyedHooks = keyedHooks
+    bindHookSources(hooks, bound)
+    bindHookSources(keyedHooks, bound)
     return bound
   } catch {
     return {}

@@ -24,7 +24,7 @@ Working across several projects and conversations in DSH Web? DSH Codex UI helps
 
 ## Host compatibility
 
-This working tree declares DSH `0.1.5-rc.1`, `0.1.5-rc.2`, and `0.1.6-alpha.1`. Development dependencies are pinned to `0.1.6-alpha.1`. `@deepseek-ai/dsh-client-runtime` has no 0.1.6 release, so it stays on its highest published version, `0.1.1-rc.2`. Isolated host checks cover rc.2 and 0.1.6-alpha.1.
+This working tree declares DSH `0.1.5-rc.1`, `0.1.5-rc.2`, `0.1.6-alpha.1`, and `0.1.6-alpha.2`. Development dependencies are pinned to `0.1.6-alpha.2`. `@deepseek-ai/dsh-client-runtime` has no 0.1.6 release, so it stays on its highest published version, `0.1.1-rc.2`. Isolated host checks cover rc.1, rc.2, alpha.1, and alpha.2.
 
 ## What you can do
 

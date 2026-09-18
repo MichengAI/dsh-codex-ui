@@ -3,7 +3,7 @@ import { act, createElement, type ReactNode } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { SlotCore } from '@deepseek-ai/dsh-client-ui-slots'
 import type { Context } from '@deepseek-ai/cordis'
-import { PluginConfigSection } from '../src/client/PluginConfigSection.tsx'
+import { bindPluginConfigLocale, PluginConfigSection } from '../src/client/PluginConfigSection.tsx'
 import { PLUGIN_CONFIG_SECTION_ID, PLUGIN_CONFIG_SECTION_ORDER, registerPluginConfigSection } from '../src/client/plugin-config.ts'
 
 const { createRoot } = createRequire(import.meta.url)('react-dom/client') as { createRoot: (element: HTMLElement) => { render: (node: ReactNode) => void; unmount: () => void } }
@@ -116,6 +116,57 @@ test('插件配置必须带上官方 inject 和文案，才能画出宿主插件
   cleanups.push(() => { root.unmount(); removeOfficial(); removeRoot() })
   expect(container.textContent).toContain('settings.plugins:bashDescription')
   expect(container.querySelector('[data-bash-config]')?.textContent).toBe('1000')
+})
+
+test('插件配置文案绑定必须转发插值且保持同一函数身份', () => {
+  const translate = vi.fn((key: string, params?: Record<string, unknown>) => `${key}:${params?.n ?? ''}`)
+  const bind = bindPluginConfigLocale(() => translate)
+  const first = bind('settings.plugins')
+  expect(first).toBe(bind('settings.plugins'))
+  expect(first('hello', { n: 1 })).toBe('hello:1')
+})
+
+test('官方 keyedHooks 必须绑成 use 钩子，文案要带上插值参数', async () => {
+  const slots = new SlotCore()
+  const removeRoot = slots.register({
+    name: 'root',
+    children: { main: { kind: 'keyed', scope: 'root' } },
+  } as never, (() => null) as never)
+  const removeOfficial = slots.register({
+    name: 'main',
+    key: 'plugins',
+    children: { 'plugins.item': { kind: 'list', scope: 'root' } },
+  } as never, (() => null) as never)
+  const store = {
+    getSnapshot: () => ({ label: 'keyed' }),
+    subscribe: () => () => {},
+  }
+  slots.register({
+    name: 'plugins.item',
+    id: 'keyed-card',
+    locale: 'settings.plugins',
+    inject: () => ({ keyedHooks: { bundleCard: store } }),
+  } as never, ((props: {
+    t?: (key: string, params?: Record<string, unknown>) => string
+    useBundleCard?: (select: (snapshot: { label: string }) => string) => string
+  }) => createElement('form', { 'data-keyed-config': true }, `${props.t?.('timeout', { ms: 12 }) ?? ''}:${props.useBundleCard?.(snapshot => snapshot.label) ?? ''}`)) as never)
+  function officialList(props: Record<string, unknown>): ReactNode {
+    const renderSlot = props.renderSlot as ((name: string, owner: object, opts?: { only?: string }) => ReactNode) | undefined
+    return createElement('div', { 'data-official-plugins': true }, renderSlot?.('plugins.item', { view: 'page' }, { only: 'keyed-card' }))
+  }
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+  await act(async () => {
+    root.render(createElement(PluginConfigSection, {
+      Official: officialList,
+      officialLabel: '插件配置',
+      slots,
+      bindLocale: (ns: string) => (key: string, params?: Record<string, unknown>) => `${ns}:${key}:${params?.ms ?? ''}`,
+    }))
+  })
+  cleanups.push(() => { root.unmount(); removeOfficial(); removeRoot() })
+  expect(container.querySelector('[data-keyed-config]')?.textContent).toBe('settings.plugins:timeout:12:keyed')
 })
 
 test('官方 plugins.item 缺 inject 抛错时不得拆掉插件配置页', async () => {

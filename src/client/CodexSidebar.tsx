@@ -244,6 +244,7 @@ export function CodexSidebar({ globalPanels, footerActions, selectPanel, usePane
   const panels = useSyncExternalStore(globalPanels?.subscribe ?? subscribeEmptyCompanionTabs, globalPanels?.getSnapshot ?? getEmptyPanels, globalPanels?.getSnapshot ?? getEmptyPanels)
   const visibleFooterActions = useSyncExternalStore(footerActions?.subscribe ?? subscribeEmptyCompanionTabs, footerActions?.getSnapshot ?? getEmptyFooterActions, footerActions?.getSnapshot ?? getEmptyFooterActions)
   const activePanelId = usePanelInfo(info => info.activePanelId)
+  const panelActive = activePanelId !== null && activePanelId !== ''
   const panelButtons = (wide: boolean) => selectPanel === undefined ? null : <GlobalPanelButtons panels={panels} activeId={activePanelId} wide={wide} conversationLabel={t('sidebar.tasksTab')} selectPanel={selectPanel} renderIcon={(id, active) => renderSlot('sidebar.panellist', { size: 16, active }, { only: id })} />
   const compact = collapsed || width < 80
   const [visualCompact, setVisualCompact] = useState(compact)
@@ -374,10 +375,10 @@ export function CodexSidebar({ globalPanels, footerActions, selectPanel, usePane
     }, SIDEBAR_COLLAPSE_SETTLE_MS)
     return () => { window.clearTimeout(timer) }
   }, [compact, visualCompact])
-  const workspaceSlot = useMemo(
-    () => renderSlot('sidebar.workspaces', { wide: true, expandSidebar }),
-    [expandSidebar, renderSlot],
-  )
+  const workspaceSlot = useMemo(() => {
+    const owner = { wide: true, expandSidebar, panelActive }
+    return renderSlot('sidebar.workspaces', owner)
+  }, [expandSidebar, panelActive, renderSlot])
   const scheduleOverviewSlot = useMemo(
     () => renderSlot('sidebar.schedule', {
       wide: true,
@@ -421,9 +422,9 @@ export function CodexSidebar({ globalPanels, footerActions, selectPanel, usePane
         {showSchedule && <button type="button" className="dcu-im-tab" data-on={imTab === 'schedule'} onClick={() => { setImTab('schedule') }}>{t('sidebar.scheduleTab')}</button>}
       </div>}
       {imTab === 'channels' && showChannels
-        ? <div className="dcu-native-workspaces"><ChannelBrowser openSession={openSession} archiveSession={archiveSession} deleteSession={deleteSession} canDeleteSession={canDeleteSession} forkSession={forkSession} moveSession={moveSession} renameSession={renameSession} useSessions={useSessions} useSessionPendingInteraction={useSessionPendingInteraction} useSessionStatus={useSessionStatus} useWorkspaces={useWorkspaces} t={t} /></div>
+        ? <div className="dcu-native-workspaces"><ChannelBrowser openSession={openSession} archiveSession={archiveSession} deleteSession={deleteSession} canDeleteSession={canDeleteSession} forkSession={forkSession} moveSession={moveSession} renameSession={renameSession} useSessions={useSessions} useSessionPendingInteraction={useSessionPendingInteraction} useSessionStatus={useSessionStatus} useWorkspaces={useWorkspaces} panelActive={panelActive} t={t} /></div>
         : imTab === 'schedule' && showSchedule
-          ? <div className="dcu-native-workspaces"><ScheduleBrowser openSession={openSession} archiveSession={archiveSession} deleteSession={deleteSession} canDeleteSession={canDeleteSession} forkSession={forkSession} moveSession={moveSession} renameSession={renameSession} useSessions={useSessions} useSessionPendingInteraction={useSessionPendingInteraction} useSessionStatus={useSessionStatus} useWorkspaces={useWorkspaces} t={t} overviewContent={scheduleOverviewSlot} openTaskSettings={(request) => {
+          ? <div className="dcu-native-workspaces"><ScheduleBrowser openSession={openSession} archiveSession={archiveSession} deleteSession={deleteSession} canDeleteSession={canDeleteSession} forkSession={forkSession} moveSession={moveSession} renameSession={renameSession} useSessions={useSessions} useSessionPendingInteraction={useSessionPendingInteraction} useSessionStatus={useSessionStatus} useWorkspaces={useWorkspaces} panelActive={panelActive} t={t} overviewContent={scheduleOverviewSlot} openTaskSettings={(request) => {
               openSettingsSection(settingsSeat.current, t('sidebar.schedule'), () => { clearAutomationTaskSettingsRequest(); selectSection(t('about.nav')) }, () => { requestAutomationTaskSettings(request) })
             }} /></div>
           : <div className="dcu-native-workspaces">{workspaceSlot}</div>}

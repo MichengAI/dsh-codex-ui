@@ -1,4 +1,4 @@
-import { openConversation, selectGlobalPanel } from './session-navigation.ts'
+import { openConversation, openConversationWithDraft, selectGlobalPanel } from './session-navigation.ts'
 import {
   archiveHostSession,
   currentSessionId,
@@ -6,7 +6,6 @@ import {
   probeService,
   renameHostSession,
   UnknownSessionError,
-  withSessionBinding,
 } from './session-host.ts'
 import { createGlobalPanelSource } from './global-panels.tsx'
 import { initializeComposerWidth, observeHeroWidthHandles } from './composer-width.ts'
@@ -44,7 +43,7 @@ import { TurnNavigator } from './TurnNavigator.tsx'
 import { registerInputHistory } from './InputHistoryDock.tsx'
 import { prefillNewConversation, createDraftPresenceSource } from './new-conversation-draft.ts'
 import { observeComposerToolMenus } from './composer-tool-menus.ts'
-import { hasConnectWorkspace, hasStartSession, recentWorkspaceId, workspaceBaselinesReady } from './workspace-compat.ts'
+import { hasConnectWorkspace, hasOpenWorkspace, hasStartSession, recentWorkspaceId, workspaceBaselinesReady } from './workspace-compat.ts'
 import { HostActionError, type HostAction, UserFacingError } from './user-error.ts'
 import { finishSessionMove, requestSessionMove, sessionMoveErrorKey, SessionMoveRequestError } from './session-move.ts'
 import { hasArchiveSessionDelete } from './archive-session-delete.ts'
@@ -130,6 +129,7 @@ export function startWorkspaceSession(ctx: ClientContext, workspaceId?: Workspac
 
 /** 替换 DSH 的官方 sidebar 插槽，不修改 DSH 源码或会话数据。 */
 export function apply(ctx: ClientContext): void {
+  Object.assign(globalThis, { __dcuCurrentSessionId: currentSessionId })
   const widthStorage = browserStorage()
   if (widthStorage) initializeComposerWidth(widthStorage)
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'michengai-codex-ui: dictionaries')
@@ -253,16 +253,23 @@ export function apply(ctx: ClientContext): void {
     const conversation = ctx.get('conversation')
     if (conversation === undefined) throw new UserFacingError(t('connectors.conversationUnavailable'))
     try {
-      await withSessionBinding(ctx.sessions, sessionId, () => {
-        const binding = ctx.sessions.binding(sessionId)
-        if (binding === undefined) throw new UnknownSessionError()
-        conversation.input.for(binding.ctx).setDraft(prompt)
+      if (hasOpenWorkspace(uiWorkspace)) {
+        await Promise.resolve(uiWorkspace.openWorkspace(targetWorkspaceId, id => {
+          const binding = ctx.sessions.binding(id)
+          if (binding?.ctx === undefined) throw new UnknownSessionError()
+          conversation.input.for(binding.ctx as ClientContext).setDraft(prompt)
+        }))
+        selectGlobalPanel(ctx.layout, null)
+        return
+      }
+      await openConversationWithDraft(ctx, ctx.layout, ctx.sessions, sessionId, binding => {
+        if (binding.ctx === undefined) throw new UnknownSessionError()
+        conversation.input.for(binding.ctx as ClientContext).setDraft(prompt)
       })
     } catch (reason) {
       if (reason instanceof UnknownSessionError) throw new UserFacingError(t('connectors.sessionPending'))
       throw reason
     }
-    openConversation(ctx, ctx.layout, sessionId)
   }
   ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({
     name: 'sidebar.workspaces', priority: -1, locale: NS,

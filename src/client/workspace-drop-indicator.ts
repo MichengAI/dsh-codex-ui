@@ -35,7 +35,7 @@ function measureTarget(root: HTMLElement, target: HTMLElement): DropIndicatorRec
     lower = after ? rows[index + 1]?.rect.top : edge.rect.top
   } else if (target.matches('.dcu-wb-pin-start,.dcu-wb-pin-end')) {
     if (anchor.width <= 0 || anchor.height <= 0) return undefined
-    const itemRows = rows.filter(row => !row.node.matches('.dcu-wb-section-head'))
+    const itemRows = rows.filter(row => !row.node.matches('.dcu-wb-section-head,.dcu-wb-empty,.dcu-wb-nochat'))
     if (target.matches('.dcu-wb-pin-end') && itemRows.length > 0) {
       const last = itemRows[itemRows.length - 1]!
       anchor = last.rect

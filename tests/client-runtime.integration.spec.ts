@@ -165,6 +165,94 @@ test('会话操作适配层保留 Host 结构化错误', async () => {
   } satisfies Partial<HostActionError>)
 })
 
+test('连接器 Prompt 必须用 using 传入的 binding，并在释放前打开会话', async () => {
+  runtime = new ClientApplyHarness()
+  const usingBinding = { ctx: 'using-ctx' }
+  const drafts: Array<{ ctx: unknown; released: boolean; text: string }> = []
+  const opened: Array<{ id: string; released: boolean }> = []
+  let released = false
+  Object.assign(runtime.ctx.workspaces.list, {
+    getSnapshot: () => ({
+      items: [{ workspaceId: 'temporary-workspace', sessionIds: [], createdAt: '2026-09-03T00:00:00.000Z' }],
+      phase: 'ready',
+    }),
+  })
+  Object.assign(runtime.ctx.sessions.list, {
+    getSnapshot: () => ({ ids: [], byId: {}, phase: 'ready' }),
+  })
+  Object.assign(runtime.ctx.sessions, {
+    using: async (_id: string, _options: { source: string }, operation: (reference: { ready?: Promise<unknown>; binding?: { ctx?: unknown } }) => unknown) => {
+      try {
+        return await operation({ ready: Promise.resolve(), binding: usingBinding })
+      } finally {
+        released = true
+      }
+    },
+    binding() { throw new Error('must use using binding') },
+    retain() { return {} },
+  })
+  Object.assign(runtime.ctx, {
+    layout: { selectPanel() {} },
+    get: (name: string): unknown => name === 'connection'
+      ? { api: { host: { openPath: async () => ({ result: { ok: true, value: undefined } }) } } }
+      : name === 'uiWorkspace'
+        ? {
+            connectWorkspace: async () => 'temporary-session',
+            openSession: (id: string) => { opened.push({ id, released }) },
+          }
+        : name === 'conversation'
+          ? { input: { for(ctx: unknown) { return { setDraft(text: string) { drafts.push({ ctx, released, text }) } } } } }
+          : undefined,
+  })
+  runtime.mount()
+  const connector = runtime.slots.entries('settings.section').find(entry => entry.id === 'connectors')
+  const injected = (connector?.inject as (() => { startPromptSession: (prompt: string) => Promise<void> }))()
+  await injected.startPromptSession('检查项目')
+  expect(drafts).toEqual([{ ctx: 'using-ctx', released: false, text: '检查项目' }])
+  expect(opened).toEqual([{ id: 'temporary-session', released: false }])
+  expect(released).toBe(true)
+})
+
+test('连接器 Prompt 优先在官方 openWorkspace 的 beforeOpen 里写草稿', async () => {
+  runtime = new ClientApplyHarness()
+  const drafts: Array<{ ctx: unknown; held: boolean; text: string }> = []
+  let held = false
+  Object.assign(runtime.ctx.workspaces.list, {
+    getSnapshot: () => ({
+      items: [{ workspaceId: 'temporary-workspace', sessionIds: [], createdAt: '2026-09-03T00:00:00.000Z' }],
+      phase: 'ready',
+    }),
+  })
+  Object.assign(runtime.ctx.sessions.list, {
+    getSnapshot: () => ({ ids: [], byId: {}, phase: 'ready' }),
+  })
+  Object.assign(runtime.ctx.sessions, {
+    binding: (id: string) => id === 'temporary-session' && held ? { ctx: 'main-view' } : undefined,
+  })
+  Object.assign(runtime.ctx, {
+    layout: { selectPanel() {} },
+    get: (name: string): unknown => name === 'connection'
+      ? { api: { host: { openPath: async () => ({ result: { ok: true, value: undefined } }) } } }
+      : name === 'uiWorkspace'
+        ? {
+            connectWorkspace: async () => 'temporary-session',
+            openWorkspace: (_workspaceId: string, beforeOpen?: (sessionId: string) => void) => {
+              held = true
+              beforeOpen?.('temporary-session')
+              held = false
+            },
+          }
+        : name === 'conversation'
+          ? { input: { for(ctx: unknown) { return { setDraft(text: string) { drafts.push({ ctx, held, text }) } } } } }
+          : undefined,
+  })
+  runtime.mount()
+  const connector = runtime.slots.entries('settings.section').find(entry => entry.id === 'connectors')
+  const injected = (connector?.inject as (() => { startPromptSession: (prompt: string) => Promise<void> }))()
+  await injected.startPromptSession('检查项目')
+  expect(drafts).toEqual([{ ctx: 'main-view', held: true, text: '检查项目' }])
+})
+
 test('连接器示例 Prompt 在双基线就绪前不选择临时工作区', async () => {
   runtime = new ClientApplyHarness()
   const connectWorkspace = vi.fn(async () => 'temporary-session')

@@ -18,6 +18,10 @@ export function useEmptySessionStatus<Selected>(selector: (state: SessionStatusS
   return selector(EMPTY_SESSION_STATUS)
 }
 
+export function useHostSessionStatus(useSessionStatus?: UseSessionStatus): SessionStatusSnapshot {
+  return (useSessionStatus ?? useEmptySessionStatus)(state => state)
+}
+
 /** 旧宿主订阅 pending Store；alpha.2 改走 useSessionStatus。两路都要订阅，避免条件 Hook。 */
 export function useHostPendingInteractions(
   useSessionPendingInteraction?: UseSessionPendingInteraction,

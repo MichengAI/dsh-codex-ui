@@ -83,6 +83,27 @@ export function currentSessionId(state: SessionListLike | undefined): string | u
   return undefined
 }
 
+/** 官方树在全局面板打开时取消会话选中。 */
+export function visibleSelectedSessionId(state: SessionListLike | undefined, panelActive = false): string | undefined {
+  return panelActive ? undefined : currentSessionId(state)
+}
+
+export function sessionRowUnread(localUnread: boolean, status?: SessionStatusLike, selected = false): boolean {
+  if (selected) return false
+  return localUnread || status?.completionUnread === true
+}
+
+export function sessionRunningFlags(
+  byId: Readonly<Record<string, { readonly running?: boolean } | undefined>>,
+  status?: SessionStatusSnapshot,
+): Readonly<Record<string, boolean>> {
+  const ids = new Set<string>(Object.keys(byId))
+  if (status !== undefined) for (const id of status.keys()) ids.add(id)
+  const next: Record<string, boolean> = {}
+  for (const id of ids) next[id] = sessionIsRunning(byId[id], status?.get(id))
+  return next
+}
+
 /** 旧宿主看 current 是否空会话；alpha.2 看主视图 retain 的 blank。 */
 export function isBlankOnboardingSession(state: SessionListLike | undefined): boolean {
   if (state?.phase !== 'ready') return false

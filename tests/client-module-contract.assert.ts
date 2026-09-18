@@ -64,7 +64,7 @@ for (const packageName of versionedClientPackages) {
   assert.equal(manifest.peerDependencies?.[packageName], supportedDshRange, `${packageName} 必须使用统一的 DSH Peer 范围`)
   assert.equal(manifest.devDependencies?.[packageName], hostDevDshVersion, `${packageName} 必须钉在当前宿主开发版本`)
 }
-assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-runtime'], '>=0.1.0-rc.5 <0.2.0', '客户端运行时必须声明统一的 DSH 兼容范围')
+assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-runtime'], '>=0.1.0-rc.5 <0.2.0 || 0.1.1-rc.2', '客户端运行时必须覆盖自己钉住的 0.1.1-rc.2')
 assert.equal(manifest.devDependencies?.['@deepseek-ai/dsh-client-runtime'], highestPublishedClientRuntime, '客户端运行时没有 0.1.6 包，必须使用其已发布最高版本')
 for (const [packageName, version] of Object.entries(manifest.devDependencies ?? {})) {
   if (!packageName.startsWith('@deepseek-ai/dsh-')) continue

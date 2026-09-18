@@ -21,6 +21,14 @@ export function hasConnectWorkspace(value: unknown): value is WorkspaceConnectSe
   return value !== null && typeof value === 'object' && 'connectWorkspace' in value && typeof value.connectWorkspace === 'function'
 }
 
+export type WorkspaceOpenService = {
+  openWorkspace: (workspaceId: WorkspaceId, beforeOpen?: (sessionId: SessionId) => void) => unknown
+}
+
+export function hasOpenWorkspace(value: unknown): value is WorkspaceOpenService {
+  return value !== null && typeof value === 'object' && 'openWorkspace' in value && typeof value.openWorkspace === 'function'
+}
+
 export function hasWorkspaceRefresh(value: unknown): value is WorkspaceRefreshService {
   return value !== null && typeof value === 'object' && 'refresh' in value && typeof value.refresh === 'function'
 }

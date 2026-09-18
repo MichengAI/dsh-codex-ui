@@ -9,6 +9,9 @@ import {
   probeService,
   renameHostSession,
   sessionIsRunning,
+  sessionRowUnread,
+  sessionRunningFlags,
+  visibleSelectedSessionId,
   withSessionBinding,
 } from '../src/client/session-host.ts'
 
@@ -193,4 +196,24 @@ test('运行态优先认 SessionStatus，没有再回退 SessionSummary.running'
   expect(sessionIsRunning({ running: false }, { running: true })).toBe(true)
   expect(sessionIsRunning({ running: true }, undefined)).toBe(true)
   expect(sessionIsRunning(undefined, undefined)).toBe(false)
+})
+
+test('全局面板打开时不得把主视图会话标成选中', () => {
+  const state = { byId: { main: { id: 'main', retainedBy: { mainView: 1 } } } }
+  expect(visibleSelectedSessionId(state, false)).toBe('main')
+  expect(visibleSelectedSessionId(state, true)).toBeUndefined()
+})
+
+test('未读点认 SessionStatus.completionUnread，当前会话除外', () => {
+  expect(sessionRowUnread(false, { completionUnread: true })).toBe(true)
+  expect(sessionRowUnread(true, undefined)).toBe(true)
+  expect(sessionRowUnread(true, { completionUnread: true }, true)).toBe(false)
+  expect(sessionRowUnread(false, { completionUnread: false })).toBe(false)
+})
+
+test('运行边沿必须合并 SessionStatus，不能只读 list.running', () => {
+  expect(sessionRunningFlags(
+    { stale: { running: true }, live: { running: false } },
+    new Map([['live', { running: true }], ['status-only', { running: true }]]),
+  )).toEqual({ stale: true, live: true, 'status-only': true })
 })

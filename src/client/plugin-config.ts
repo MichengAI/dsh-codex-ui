@@ -2,7 +2,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { StoredEntry } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
-import { createPluginConfigSection, type OfficialPluginPage } from './PluginConfigSection.tsx'
+import { bindPluginConfigLocale, createPluginConfigSection, type OfficialPluginPage } from './PluginConfigSection.tsx'
 import { NS } from './locales.ts'
 import { OFFICIAL_PLUGINS_PANEL_ID } from './settings-navigation.ts'
 
@@ -41,10 +41,10 @@ export function registerPluginConfigSection(ctx: Context): void {
         label: () => t('settings.pluginConfig'),
         locale: entry.locale,
         inject: entry.inject,
-      }, createPluginConfigSection(Official, () => t('settings.pluginConfig'), ctx.slots, ns => {
+      }, createPluginConfigSection(Official, () => t('settings.pluginConfig'), ctx.slots, bindPluginConfigLocale(ns => {
         const translate = ctx.locale.bind(ns as never)
-        return key => translate(key as never)
-      }))
+        return (key, params) => translate(key as never, params as never)
+      })))
     }
     const unsubscribe = ctx.slots.subscribe('main', refresh)
     refresh()
