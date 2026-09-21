@@ -10,6 +10,7 @@ const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.
   files?: string[]
   dsh?: { client?: { inject?: string[] } }
   peerDependencies?: Record<string, string>
+  peerDependenciesMeta?: Record<string, unknown>
   devDependencies?: Record<string, string>
 }
 const bundle = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
@@ -74,3 +75,6 @@ for (const [packageName, version] of Object.entries(manifest.devDependencies ?? 
 assert.equal(manifest.peerDependencies?.['@deepseek-ai/cordis'], '>=4.0.2 <5.0.0', 'Cordis 必须覆盖宿主认证服务的兼容范围')
 assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-connection'], '>=0.1.2-rc.1 <0.2.0 || 0.1.5-rc.1 || 0.1.5-rc.2 || 0.1.6-alpha.1 || 0.1.6-alpha.2', '业务 REST 必须声明提供 requestRejection 的最低宿主版本')
 assert.equal(manifest.devDependencies?.['@deepseek-ai/cordis'], '4.0.2', 'Cordis 编译版本必须对齐当前 DSH 开发依赖')
+assert.equal(manifest.peerDependencies?.['@michengai/dsh-agency-agents'], undefined, '不得把专家插件写成 Codex UI 的 peer')
+assert.equal(manifest.peerDependencies?.['@michengai/dsh-skills-manager'], undefined, '不得把技能插件写成 Codex UI 的 peer')
+assert.equal(manifest.peerDependenciesMeta, undefined, '自研配套插件不再需要 optional peer 元数据')
