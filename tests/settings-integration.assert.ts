@@ -292,7 +292,7 @@ assert.doesNotMatch(workspaceBrowser, /standalonePinnedSessionIds|sectionSession
 assert.match(workspaceBrowser, /const pinDragActive = workspaceDragId !== undefined/, '置顶区只能在拖动项目时成为落点')
 assert.match(workspaceBrowser, /if \(pinnedGroups\.length === 0 \|\| event\.target === event\.currentTarget \|\| \(event\.target instanceof Element && event\.target\.closest\('\.dcu-wb-section-head'\) !== null\)\)/, '置顶为空时整个空态区域都必须激活首位落点，不能只命中顶部 8px 占位')
 assert.match(workspaceBrowser, /pinnedGroups\.length === 0 && <div className="dcu-wb-empty"[\s\S]*?\{t\('workspace\.pinnedEmpty'\)\}<\/div>/, '空置顶落点激活后必须保留空态高度，避免命中区域缩回顶部并闪烁')
-assert.match(workspaceBrowser, /<DisclosureBody className="dcu-wb-project-body" open=\{isExpanded\}>[\s\S]*shownIds\.map/, '置顶项目必须和项目区一样可展开会话并具有展开动画')
+assert.match(workspaceBrowser, /<DisclosureBody className="dcu-wb-project-body" open=\{isExpanded\}>[\s\S]*renderedIds\.map/, '置顶项目必须和项目区一样可展开会话并具有展开动画')
 assert.doesNotMatch(workspaceBrowser, /onClick=\{\(\) => \{ if \(zone !== 'pinned'\) toggleGroup/, '置顶项目点击不得被拦截，必须能切换展开状态')
 assert.match(workspaceBrowser, /pinnedGroups.map\(workspace => renderGroup\(workspace, 'pinned'\)\)/, '置顶区必须只渲染置顶项目文件夹')
 assert.match(locales, /'workspace\.pinnedEmpty': '拖动项目到此处置顶'/, '置顶空态必须明确只接受项目')

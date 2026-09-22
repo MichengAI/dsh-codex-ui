@@ -16,6 +16,74 @@ export function isTaskSession(session: SessionSummary): boolean {
   return !isScheduleSession(session.id, session.displayTitle ?? session.title ?? '')
 }
 
+/** 安装包里项目会话列表的 maxItems，常量 rNc。 */
+export const PROJECT_SESSION_PREVIEW_LIMIT = 5
+/** 安装包里展开后每次追加的条数：maxItems + 10 * page。 */
+export const PROJECT_SESSION_PAGE_SIZE = 10
+
+export type ProjectSessionWindowState = {
+  expanded: boolean
+  page: number
+}
+
+export type ProjectSessionWindow = {
+  ids: readonly string[]
+  showMore: boolean
+}
+
+/**
+ * 对齐本机 Codex 26.915.4065.0 的项目会话列表。
+ * 未展开时显示 5 条；展开后每次再加 10 条。按钮文案保持「展开显示」，全部露出后消失。
+ * 当前会话落在窗口外时追加到末尾。
+ */
+export function projectSessionWindow(
+  ids: readonly string[],
+  state: ProjectSessionWindowState,
+  forcedId?: string,
+): ProjectSessionWindow {
+  const page = state.page < 1 ? 1 : state.page
+  const limit = state.expanded
+    ? PROJECT_SESSION_PREVIEW_LIMIT + PROJECT_SESSION_PAGE_SIZE * page
+    : PROJECT_SESSION_PREVIEW_LIMIT
+  const head = ids.slice(0, limit)
+  const visible = forcedId !== undefined && ids.includes(forcedId) && !head.includes(forcedId)
+    ? [...head, forcedId]
+    : head
+  return {
+    ids: visible,
+    showMore: visible.length < ids.length,
+  }
+}
+
+/**
+ * 折叠项目文件夹时清掉「展开显示」。
+ * 安装包 i$n：文件夹从展开变为折叠时，对 `project:${id}` 调用 sE(..., false)。
+ */
+export function collapseProjectSessionWindow(): ProjectSessionWindowState {
+  return { expanded: false, page: 1 }
+}
+
+/** 第一次展开把页码设为 1（可见 15 条），之后每点一次页码加 1。 */
+export function nextProjectSessionWindow(state: ProjectSessionWindowState | undefined): ProjectSessionWindowState {
+  const current = state ?? { expanded: false, page: 1 }
+  if (!current.expanded) return { expanded: true, page: 1 }
+  return { expanded: true, page: current.page + 1 }
+}
+
+/**
+ * 落点锚点不在当前可见行里时，把蓝线画在悬停行下方。
+ * 可见窗口截断后，下一行可能是被折起的会话。
+ */
+export function sessionDropAfterHovered(
+  renderedIds: readonly string[],
+  hoveredId: string,
+  beforeId: string | undefined,
+): boolean {
+  if (!renderedIds.includes(hoveredId)) return false
+  if (beforeId === undefined) return renderedIds[renderedIds.length - 1] === hoveredId
+  return !renderedIds.includes(beforeId)
+}
+
 /** 过滤不应出现在工作区树中的会话。 */
 export function visibleSessionIds<T extends SessionSummary>(
   ids: readonly string[],

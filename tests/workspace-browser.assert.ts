@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { expandedForCurrentSession, expandedForSessionMove, isTaskSession, moveBefore, orderByIds, pinnedHeaderDropIndicator, projectFolderPresentation, readSessionDrag, readWorkspaceDrag, readWorkspaceGroupDrag, reorderDropBeforeId, resolvePinnedSectionDrop, sessionDropAction, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag, writeWorkspaceGroupDrag } from '../src/client/workspace-browser.ts'
+import { collapseProjectSessionWindow, expandedForCurrentSession, expandedForSessionMove, isTaskSession, moveBefore, nextProjectSessionWindow, orderByIds, pinnedHeaderDropIndicator, projectFolderPresentation, projectSessionWindow, readSessionDrag, readWorkspaceDrag, readWorkspaceGroupDrag, reorderDropBeforeId, resolvePinnedSectionDrop, sessionDropAction, sessionDropAfterHovered, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag, writeWorkspaceGroupDrag } from '../src/client/workspace-browser.ts'
 
 const sessions = {
   a: { id: 'a', origin: 'user', blank: false },
@@ -171,3 +171,41 @@ assert.deepEqual(
   assert.equal(sessionDropAction('source', 'target'), 'move', '跨项目拖放必须执行会话迁移')
   assert.equal(sessionDropAction(undefined, 'target'), 'move', '未归属项目的最近会话拖入项目时必须执行会话迁移')
 }
+
+const twenty = Array.from({ length: 20 }, (_, index) => `s${index + 1}`)
+assert.deepEqual(
+  projectSessionWindow(twenty.slice(0, 4), { expanded: false, page: 1 }),
+  { ids: ['s1', 's2', 's3', 's4'], showMore: false },
+  '不超过 5 条时必须全部显示，且不出现展开按钮',
+)
+assert.deepEqual(
+  projectSessionWindow(twenty.slice(0, 6), { expanded: false, page: 1 }),
+  { ids: ['s1', 's2', 's3', 's4', 's5'], showMore: true },
+  '未展开时只显示前 5 条，并提供展开显示',
+)
+assert.deepEqual(
+  projectSessionWindow(twenty.slice(0, 6), { expanded: false, page: 1 }, 's6'),
+  { ids: ['s1', 's2', 's3', 's4', 's5', 's6'], showMore: false },
+  '当前会话落在前 5 条之外时必须追加到末尾；全部可见后不再显示按钮',
+)
+assert.deepEqual(nextProjectSessionWindow(undefined), { expanded: true, page: 1 }, '第一次展开显示把页码设为 1')
+assert.deepEqual(
+  projectSessionWindow(twenty, nextProjectSessionWindow(undefined)),
+  { ids: twenty.slice(0, 15), showMore: true },
+  '第一次展开显示 15 条，后面还有会话时按钮仍是展开显示',
+)
+const secondPage = nextProjectSessionWindow(nextProjectSessionWindow(undefined))
+assert.deepEqual(secondPage, { expanded: true, page: 2 }, '再次展开显示必须再加一页')
+assert.deepEqual(
+  projectSessionWindow(twenty, secondPage),
+  { ids: twenty, showMore: false },
+  '窗口盖住全部会话后，展开显示按钮必须消失',
+)
+assert.deepEqual(
+  projectSessionWindow(twenty, collapseProjectSessionWindow()),
+  { ids: twenty.slice(0, 5), showMore: true },
+  '折叠项目文件夹后必须回到前 5 条和展开显示',
+)
+assert.equal(sessionDropAfterHovered(['s1', 's2', 's3', 's4', 's5'], 's5', 's6'), true, '下一行被折起时，蓝线必须画在当前悬停行下方')
+assert.equal(sessionDropAfterHovered(['s1', 's2', 's3', 's4', 's5'], 's4', 's5'), false, '下一行仍可见时不得改画到悬停行下方')
+assert.equal(sessionDropAfterHovered(['s1', 's2', 's3', 's4', 's5'], 's5', undefined), true, '落到完整列表末尾时，蓝线画在最后一条可见会话下方')
