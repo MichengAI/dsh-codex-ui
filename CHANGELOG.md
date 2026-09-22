@@ -4,6 +4,24 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## suite-installer-v1.0.19 - 2026-09-22
+
+Install or maintain 11 first-party plugins in one step. Included plugins and versions:
+
+- `@michengai/dsh-archive-manager@1.0.2`
+- `@michengai/dsh-codex-ui@1.1.14`
+- `@michengai/dsh-skills-manager@1.0.1`
+- `@michengai/dsh-agency-agents@1.0.1`
+- `@michengai/dsh-im-connect@0.1.51`
+- `@michengai/dsh-automation@0.1.45`
+- `@michengai/dsh-btw@0.1.10`
+- `@michengai/dsh-simplify@0.1.7`
+- `@michengai/dsh-pua@0.3.16`
+- `@michengai/dsh-code-review@0.1.4`
+- `@michengai/dsh-codex-pet@0.1.7`
+
+The installer uses these exact versions for reproducible installation.
+
 ## 1.1.15 - 2026-09-22
 
 - Cap project session lists at 5 items like Codex Desktop. Show more reveals 10 more at a time, and collapsing the folder restores the 5-item window.

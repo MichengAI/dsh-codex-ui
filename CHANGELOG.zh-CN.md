@@ -4,6 +4,24 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## suite-installer-v1.0.19 - 2026-09-22
+
+一键维护安装 11 个自研插件。包含以下插件及版本：
+
+- `@michengai/dsh-archive-manager@1.0.2`
+- `@michengai/dsh-codex-ui@1.1.14`
+- `@michengai/dsh-skills-manager@1.0.1`
+- `@michengai/dsh-agency-agents@1.0.1`
+- `@michengai/dsh-im-connect@0.1.51`
+- `@michengai/dsh-automation@0.1.45`
+- `@michengai/dsh-btw@0.1.10`
+- `@michengai/dsh-simplify@0.1.7`
+- `@michengai/dsh-pua@0.3.16`
+- `@michengai/dsh-code-review@0.1.4`
+- `@michengai/dsh-codex-pet@0.1.7`
+
+安装器使用这些精确版本执行安装，确保可复现。
+
 ## 1.1.15 - 2026-09-22
 
 - 项目会话列表对齐 Codex：默认显示 5 条，「展开显示」每次再加 10 条；折叠文件夹后回到前 5 条。
