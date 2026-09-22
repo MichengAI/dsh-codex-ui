@@ -4,6 +4,11 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.15 - 2026-09-22
+
+- Cap project session lists at 5 items like Codex Desktop. Show more reveals 10 more at a time, and collapsing the folder restores the 5-item window.
+- Paint only the hovered session's after-line when the next insert anchor is folded.
+
 ## suite-installer-v1.0.18 - 2026-09-19
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:
