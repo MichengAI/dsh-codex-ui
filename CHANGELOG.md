@@ -4,6 +4,24 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## suite-installer-v1.0.20 - 2026-09-22
+
+Install or maintain 11 first-party plugins in one step. Included plugins and versions:
+
+- `@michengai/dsh-archive-manager@1.0.2`
+- `@michengai/dsh-codex-ui@1.1.15`
+- `@michengai/dsh-skills-manager@1.0.1`
+- `@michengai/dsh-agency-agents@1.0.1`
+- `@michengai/dsh-im-connect@0.1.51`
+- `@michengai/dsh-automation@0.1.45`
+- `@michengai/dsh-btw@0.1.10`
+- `@michengai/dsh-simplify@0.1.7`
+- `@michengai/dsh-pua@0.3.16`
+- `@michengai/dsh-code-review@0.1.4`
+- `@michengai/dsh-codex-pet@0.1.7`
+
+The installer uses these exact versions for reproducible installation.
+
 ## 1.1.16 - 2026-09-22
 
 - Follow the host `--dsw-font-family` in the sidebar, settings page, workspace tree, and composer filter instead of a hardcoded Inter stack.

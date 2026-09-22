@@ -4,6 +4,24 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## suite-installer-v1.0.20 - 2026-09-22
+
+一键维护安装 11 个自研插件。包含以下插件及版本：
+
+- `@michengai/dsh-archive-manager@1.0.2`
+- `@michengai/dsh-codex-ui@1.1.15`
+- `@michengai/dsh-skills-manager@1.0.1`
+- `@michengai/dsh-agency-agents@1.0.1`
+- `@michengai/dsh-im-connect@0.1.51`
+- `@michengai/dsh-automation@0.1.45`
+- `@michengai/dsh-btw@0.1.10`
+- `@michengai/dsh-simplify@0.1.7`
+- `@michengai/dsh-pua@0.3.16`
+- `@michengai/dsh-code-review@0.1.4`
+- `@michengai/dsh-codex-pet@0.1.7`
+
+安装器使用这些精确版本执行安装，确保可复现。
+
 ## 1.1.16 - 2026-09-22
 
 - 侧栏、设置页、工作区树和输入框筛选改为跟随宿主 `--dsw-font-family`，不再写死 Inter。
