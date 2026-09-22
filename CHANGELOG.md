@@ -4,6 +4,10 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.16 - 2026-09-22
+
+- Follow the host `--dsw-font-family` in the sidebar, settings page, workspace tree, and composer filter instead of a hardcoded Inter stack.
+
 ## suite-installer-v1.0.19 - 2026-09-22
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:
