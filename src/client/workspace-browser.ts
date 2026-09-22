@@ -71,17 +71,18 @@ export function nextProjectSessionWindow(state: ProjectSessionWindowState | unde
 }
 
 /**
- * 落点锚点不在当前可见行里时，把蓝线画在悬停行下方。
- * 可见窗口截断后，下一行可能是被折起的会话。
+ * 会话行蓝线的落点：只在被悬停的那一行下方，且仅当它后面那条会话被折起或不存在。
+ * 下一行仍可见时交给它自己的 before 线，避免两条平行蓝线。
  */
-export function sessionDropAfterHovered(
+export function sessionDropAfterRowId(
+  drop: { hoveredId?: string | undefined; beforeId?: string | undefined } | undefined,
   renderedIds: readonly string[],
-  hoveredId: string,
-  beforeId: string | undefined,
-): boolean {
-  if (!renderedIds.includes(hoveredId)) return false
-  if (beforeId === undefined) return renderedIds[renderedIds.length - 1] === hoveredId
-  return !renderedIds.includes(beforeId)
+): string | undefined {
+  const hoveredId = drop?.hoveredId
+  if (hoveredId === undefined || !renderedIds.includes(hoveredId)) return undefined
+  const beforeId = drop?.beforeId
+  if (beforeId !== undefined && renderedIds.includes(beforeId)) return undefined
+  return hoveredId
 }
 
 /** 过滤不应出现在工作区树中的会话。 */

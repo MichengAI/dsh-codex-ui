@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { collapseProjectSessionWindow, expandedForCurrentSession, expandedForSessionMove, isTaskSession, moveBefore, nextProjectSessionWindow, orderByIds, pinnedHeaderDropIndicator, projectFolderPresentation, projectSessionWindow, readSessionDrag, readWorkspaceDrag, readWorkspaceGroupDrag, reorderDropBeforeId, resolvePinnedSectionDrop, sessionDropAction, sessionDropAfterHovered, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag, writeWorkspaceGroupDrag } from '../src/client/workspace-browser.ts'
+import { collapseProjectSessionWindow, expandedForCurrentSession, expandedForSessionMove, isTaskSession, moveBefore, nextProjectSessionWindow, orderByIds, pinnedHeaderDropIndicator, projectFolderPresentation, projectSessionWindow, readSessionDrag, readWorkspaceDrag, readWorkspaceGroupDrag, reorderDropBeforeId, resolvePinnedSectionDrop, sessionDropAction, sessionDropAfterRowId, ungroupedSessionIds, visibleSessionIds, writeSessionDrag, writeWorkspaceDrag, writeWorkspaceGroupDrag } from '../src/client/workspace-browser.ts'
 
 const sessions = {
   a: { id: 'a', origin: 'user', blank: false },
@@ -206,6 +206,20 @@ assert.deepEqual(
   { ids: twenty.slice(0, 5), showMore: true },
   '折叠项目文件夹后必须回到前 5 条和展开显示',
 )
-assert.equal(sessionDropAfterHovered(['s1', 's2', 's3', 's4', 's5'], 's5', 's6'), true, '下一行被折起时，蓝线必须画在当前悬停行下方')
-assert.equal(sessionDropAfterHovered(['s1', 's2', 's3', 's4', 's5'], 's4', 's5'), false, '下一行仍可见时不得改画到悬停行下方')
-assert.equal(sessionDropAfterHovered(['s1', 's2', 's3', 's4', 's5'], 's5', undefined), true, '落到完整列表末尾时，蓝线画在最后一条可见会话下方')
+const visibleWindow = twenty.slice(0, 5)
+assert.equal(sessionDropAfterRowId({ hoveredId: 's5', beforeId: 's6' }, visibleWindow), 's5', '下一行被折起时，蓝线必须画在当前悬停行下方')
+assert.equal(sessionDropAfterRowId({ hoveredId: 's4', beforeId: 's5' }, visibleWindow), undefined, '下一行仍可见时不得改画到悬停行下方')
+assert.equal(sessionDropAfterRowId({ hoveredId: 's5', beforeId: undefined }, visibleWindow), 's5', '落到完整列表末尾时，蓝线画在最后一条可见会话下方')
+assert.deepEqual(
+  visibleWindow.filter(id => sessionDropAfterRowId({ hoveredId: 's5', beforeId: 's6' }, visibleWindow) === id),
+  ['s5'],
+  '折起锚点时不得把 after 线画满整列可见会话',
+)
+const renderedWithCurrentSession = ['a', 'b', 'c', 'd', 'e', 'g']
+assert.deepEqual(
+  renderedWithCurrentSession.filter(id => sessionDropAfterRowId({ hoveredId: 'e', beforeId: 'f' }, renderedWithCurrentSession) === id),
+  ['e'],
+  '当前会话被追加到末尾且下一行被折起时，蓝线只能出现在悬停行',
+)
+assert.equal(sessionDropAfterRowId({ hoveredId: 'f', beforeId: 'g' }, renderedWithCurrentSession), undefined, '悬停行不在可见窗口时不得画会话行蓝线')
+assert.equal(sessionDropAfterRowId({ beforeId: 's6' }, visibleWindow), undefined, '项目级拖放由容器高亮承担，不画会话行蓝线')
