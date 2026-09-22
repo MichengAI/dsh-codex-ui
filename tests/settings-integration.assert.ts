@@ -299,7 +299,7 @@ assert.match(workspaceBrowser, /id === dropAfterSessionId/, '会话行 after 线
 assert.doesNotMatch(workspaceBrowser, /sessionDropAfterHovered/, '不得再按行调用旧的 after 谓词')
 assert.match(workspaceBrowser, /\[id\]: collapseProjectSessionWindow\(\)/, '折叠项目文件夹必须清掉展开窗口')
 assert.match(workspaceBrowser, /onClick=\{\(\) => \{ toggleProject\(expandKey, workspaceId\) \}\}/, '点击项目必须走会重置窗口的 toggleProject')
-assert.match(workspaceBrowser, /onKeyDown=\{\(event\) => \{[\s\S]*?toggleProject\(expandKey, workspaceId\)/, '键盘展开折叠项目也必须走 toggleProject')
+assert.match(workspaceBrowser, /onKeyDown=\{\(event\) => \{\s*if \(event\.key === 'Enter' \|\| event\.key === ' '\)\s*\{\s*event\.preventDefault\(\)\s*;?\s*toggleProject\(expandKey, workspaceId\)/, '键盘展开折叠项目必须 Enter 与空格都走 toggleProject')
 assert.match(workspaceBrowser, /\[workspaceId\]: nextProjectSessionWindow\(current\[workspaceId\]\)/, '展开显示必须按 Codex 分页追加窗口')
 assert.match(workspaceBrowser, /\.dcu-wb-session-more button\{[^}]*font:13px\/20px var\(--dcu-font,var\(--dsw-font-family\)\)/, '展开显示按钮字体回退必须和侧栏兄弟规则一致')
 assert.doesNotMatch(workspaceBrowser, /onClick=\{\(\) => \{ if \(zone !== 'pinned'\) toggleGroup/, '置顶项目点击不得被拦截，必须能切换展开状态')
