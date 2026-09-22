@@ -106,7 +106,7 @@ assert.match(workspace, /\.dcu-wb-project-body>\.dcu-wb-session:first-child,\.dc
 assert.match(workspace, /\.dcu-wb-project-body:has\(>\.dcu-wb-session\)::after\{content:"";display:block;height:4px;pointer-events:none\}/, '会话列表末尾必须有与顶部一致的 4px 内部留白，避免贴住下一项目；留白随内容一起折叠')
 assert.match(workspace, /\.dcu-wb-tree\{[^}]*overflow-x:hidden/, '工作区树不得因长标题出现横向滚动条')
 assert.match(workspace, /\.dcu-wb-tree\{[^}]*padding-bottom:16px;scrollbar-gutter:auto/, '工作区树无滚动条时不得预留右侧滚动槽')
-assert.match(workspace, /\.dcu-wb-section-label\{color:var\(--dcu-sidebar-secondary\);font:13px\/20px var\(--dcu-font,var\(--dsw-font-family\)\);font-weight:400;letter-spacing:0;padding-left:0\}/, '置顶、项目和最近必须使用比导航正文更克制的 13px 二级标题排版')
+assert.match(workspace, /\.dcu-wb-section-label\{color:var\(--dcu-sidebar-secondary\);font:13px\/20px var\(--dsw-font-family\);font-weight:400;letter-spacing:0;padding-left:0\}/, '置顶、项目和最近必须使用比导航正文更克制的 13px 二级标题排版')
 assert.match(workspace, /body\.animate\(\[from, to\], \{ duration: DISCLOSURE_EXIT_MS, easing: 'cubic-bezier\(\.16, 1, \.3, 1\)', fill: 'none' \}\)/, '展开收起必须使用宿主兼容的逐像素高度动画')
 assert.match(workspace, /\.dcu-wb-section-label\{color:var\(--dcu-sidebar-secondary\);[^}]*padding-left:0\}/, '置顶、项目和最近必须与上方按钮的内容起点左对齐')
 assert.match(workspace, /deleteWorkspaceGroup\(current, deleteGroupId\)[\s\S]*t\('workspace\.deleteGroupAction'\)/, '删除分组弹窗的确认按钮必须使用独立文案')

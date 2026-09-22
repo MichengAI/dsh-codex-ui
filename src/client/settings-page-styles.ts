@@ -1,6 +1,6 @@
 /** Codex 设置页的局部 tokens 与布局，不覆盖宿主其他弹窗。 */
 export const settingsPageStyles = `
-.dcu-settings-page{--sp-bg:#fff;--sp-nav:var(--dcu-sidebar-background,#eef7f5);--sp-card:#fafafa;--sp-border:#e5e5e5;--sp-text:#303030;--sp-muted:#737373;--sp-hover:#e9e9e9;--sp-active:#e4e4e4;position:fixed;inset:0;z-index:1000;display:grid;grid-template-columns:clamp(240px,var(--dcu-sidebar-expanded-width,275px),min(520px,calc(100vw - 320px))) minmax(0,1fr);background:var(--sp-bg);color:var(--sp-text);font:14px/1.5 var(--dcu-font,system-ui);text-align:left;isolation:isolate}
+.dcu-settings-page{--sp-bg:#fff;--sp-nav:var(--dcu-sidebar-background,#eef7f5);--sp-card:#fafafa;--sp-border:#e5e5e5;--sp-text:#303030;--sp-muted:#737373;--sp-hover:#e9e9e9;--sp-active:#e4e4e4;position:fixed;inset:0;z-index:1000;display:grid;grid-template-columns:clamp(240px,var(--dcu-sidebar-expanded-width,275px),min(520px,calc(100vw - 320px))) minmax(0,1fr);background:var(--sp-bg);color:var(--sp-text);font:14px/1.5 var(--dsw-font-family);text-align:left;isolation:isolate}
 body[data-ds-dark-theme] .dcu-settings-page{--sp-bg:#181818;--sp-nav:var(--dcu-sidebar-background,#1d2120);--sp-card:#232323;--sp-border:#333;--sp-text:#dedede;--sp-muted:#a1a1a1;--sp-hover:#292c2b;--sp-active:#303332;color-scheme:dark}
 .dcu-settings-page *{box-sizing:border-box}
 .dcu-settings-page button,.dcu-settings-page input{font:inherit}
@@ -51,7 +51,7 @@ body[data-ds-dark-theme] .dcu-settings-nav{--sp-text:var(--dcu-sidebar-navigatio
 .dcu-settings-document button:hover:not(:disabled){background:color-mix(in srgb,var(--sp-text) 14%,transparent)}
 .dcu-settings-document button:focus-visible{outline:2px solid var(--sp-muted);outline-offset:3px}
 .dcu-settings-document button:disabled{opacity:.55;cursor:wait}
-.dcu-settings-trigger{appearance:none;box-sizing:border-box;display:flex;align-items:center;border:0;border-radius:8px;background:transparent;color:var(--dcu-sidebar-navigation,inherit);height:36px;min-height:36px;padding:0 4px;width:100%;font:400 14px/20px var(--dcu-font,system-ui);text-align:left;cursor:pointer;transition:background-color 160ms ease,color 160ms ease,transform 120ms ease}
+.dcu-settings-trigger{appearance:none;box-sizing:border-box;display:flex;align-items:center;border:0;border-radius:8px;background:transparent;color:var(--dcu-sidebar-navigation,inherit);height:36px;min-height:36px;padding:0 4px;width:100%;font:400 14px/20px var(--dsw-font-family);text-align:left;cursor:pointer;transition:background-color 160ms ease,color 160ms ease,transform 120ms ease}
 .dcu-settings-trigger-content{display:grid;grid-template-columns:20px minmax(0,1fr);column-gap:8px;align-items:center;width:100%;min-width:0}
 .dcu-settings-trigger-content svg{display:block;width:16px;height:16px;color:var(--dcu-sidebar-icon,currentColor);transition:transform 220ms cubic-bezier(.16,1,.3,1)}
 .dcu-settings-trigger:hover{background:var(--dcu-sidebar-hover,rgba(127,127,127,.12));color:var(--dcu-sidebar-primary,inherit)}

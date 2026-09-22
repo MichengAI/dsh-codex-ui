@@ -111,8 +111,10 @@ assert.match(sidebar, /\.dcu-im-tab\[data-on=true\]\{[^}]*font-weight:600/, '选
 assert.match(sidebar, /\.dcu-extension-items::before\{content:"";position:absolute;left:-16px/, '扩展树线必须与父级图标中心对齐')
 assert.match(sidebar, /\.dcu-extension-items \.dcu-menu-icon\{display:none\}/, '扩展树的子节点不得重复显示图标')
 assert.match(sidebar, /dcu-workspaces-tabs/, '有页签时不得再保留动作区和页签之间的第二条分隔线')
-assert.match(sidebar, /--dcu-font:Inter,ui-sans-serif,system-ui/, '侧栏必须使用 Codex 风格的系统无衬线字体栈')
-assert.match(sidebar, /\.dcu-settings-seat>button[^}]*color:var\(--dcu-sidebar-navigation\);font:14px\/20px var\(--dcu-font\);font-weight:400/, '底部设置入口必须与主导航保持同一文字层级')
+assert.match(sidebar, /\.dcu-root\{[^}]*font:14px\/20px var\(--dsw-font-family\)/, '侧栏必须跟随宿主 --dsw-font-family')
+assert.doesNotMatch(sidebar, /--dcu-font/, '侧栏不得再定义 --dcu-font')
+assert.doesNotMatch(sidebar, /Inter,ui-sans-serif/, '侧栏不得再写死 Inter 栈')
+assert.match(sidebar, /\.dcu-settings-seat>button[^}]*color:var\(--dcu-sidebar-navigation\);font:14px\/20px var\(--dsw-font-family\);font-weight:400/, '底部设置入口必须与主导航保持同一文字层级')
 
 assert.match(client, /observeConversationHeader/, '会话顶栏必须把对话/轨迹页签挪到子代理右侧')
 assert.match(navigator, /TURN_SUMMARY_LIMIT = 72/, '轮次摘要必须截断到 72 字符，防止长文本拖垮刻度')
