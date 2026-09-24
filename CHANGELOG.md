@@ -4,6 +4,14 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.17 - 2026-09-24
+
+- Mount the sidebar on `0.1.5` and `0.1.7`: fall back to the host icon export, and keep the turn navigator inside the conversation column instead of sliding it under the sidebar.
+- Wait for both `configForms` and `settingsScope` before adding Open configuration file, so older hosts no longer drop the entry.
+- Shrink the `0.1.7` sidebar column to the fixed 240px width, removing the gap left by the host default column.
+- Stop embedding or restyling the usage billing plugin. Its own footer entry still renders, and clicks open its own dialog.
+- Declare `0.1.7-rc.1` in peer dependencies, and stop declaring `0.1.6-alpha`.
+
 ## suite-installer-v1.0.20 - 2026-09-22
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:
