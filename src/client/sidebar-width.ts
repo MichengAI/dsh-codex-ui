@@ -7,16 +7,17 @@ export const SLIM_SIDEBAR_PX = CODEX_SIDEBAR_MIN_PX
 export type SidebarGridTracks = {
   sidebar: number
   middle: string
-  details: number
+  /** 第三列原文。0.1.5 是 `0px`，0.1.7 是 `minmax(0px, Npx)`，写回时不能改格式。 */
+  details: string
 }
 
 const visibleSidebarWidths = new WeakMap<HTMLElement, number>()
 
 /** 解析宿主 AppFrame 的 grid-template-columns。 */
 export function parseSidebarGrid(value: string): SidebarGridTracks | undefined {
-  const match = /^(\d+(?:\.\d+)?)px\s+(minmax\(0(?:px)?,\s*1fr\))\s+(\d+(?:\.\d+)?)px$/.exec(value.trim())
+  const match = /^(\d+(?:\.\d+)?)px\s+(minmax\(\d+(?:px)?,\s*1fr\))\s+(minmax\(0(?:px)?,\s*\d+(?:\.\d+)?px\)|\d+(?:\.\d+)?px)$/.exec(value.trim())
   if (match === null) return undefined
-  return { sidebar: Number(match[1]), middle: match[2], details: Number(match[3]) }
+  return { sidebar: Number(match[1]), middle: match[2], details: match[3] }
 }
 
 export function findSidebarFrame(root: ParentNode): HTMLElement | undefined {
@@ -33,7 +34,7 @@ export function applySidebarWidth(frame: HTMLElement, width: number): boolean {
   const tracks = parseSidebarGrid(frame.style.gridTemplateColumns)
   if (tracks === undefined || frame.hasAttribute('data-sidebar-collapsed')) return false
   visibleSidebarWidths.set(frame, width)
-  const next = `${width}px ${tracks.middle} ${tracks.details}px`
+  const next = `${width}px ${tracks.middle} ${tracks.details}`
   const changed = frame.style.gridTemplateColumns !== next
   if (changed) frame.style.gridTemplateColumns = next
   // 保存展开宽度，让内容在宿主网格动画中只被裁切，不逐帧重排。
