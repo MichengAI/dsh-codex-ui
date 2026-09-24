@@ -12,10 +12,6 @@ const expectedPaths = [
   '/api/dsh-codex-ui/open-in-explorer',
   '/api/dsh-codex-ui/preferences',
   '/api/dsh-codex-ui/session-move',
-  '/api/dsh-codex-ui/usage/frame',
-  '/api/dsh-codex-ui/usage/frame.js',
-  '/api/dsh-codex-ui/usage/frame.css',
-  '/api/dsh-codex-ui/usage/plugin.js',
 ]
 const oldPrefix = '/api/michengai/codex-ui/'
 

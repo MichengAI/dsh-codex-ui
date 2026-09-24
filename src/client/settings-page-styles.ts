@@ -80,19 +80,10 @@ body:has(.dcu-settings-page) :is([data-dcu-settings-isolated],[data-dcu-settings
 body:has(.dcu-settings-page) > [role=alert]{visibility:visible!important}
 html[data-dsh-native-backdrop=mica] .dcu-settings-page,html[data-dsh-native-backdrop=mica] body:has(.dcu-settings-page) .dcu-root{background:transparent}
 
-.dcu-settings-inner:has(.dcu-usage-section){height:100%;display:flex;flex-direction:column;padding-bottom:0}
-.dcu-settings-inner:has(.dcu-usage-section)>.dcu-settings-heading{display:none}
-.dcu-settings-inner:has(.dcu-usage-section)>[data-slot="settings.section"]{display:flex;flex:1;min-height:0;flex-direction:column}
 .dcu-plugin-config [data-plugin-panel]{height:auto;padding:0;overflow:visible;align-items:stretch;gap:24px}
 .dcu-plugin-config [data-plugin-panel]>*{max-width:none}
 .dcu-plugin-config [data-plugin-panel]>header :is(h1,p){display:none}
 .dcu-plugin-config [data-plugin-panel]>header{justify-content:flex-end}
-.dcu-usage-section{display:flex;flex-direction:column;flex:1;min-height:0;gap:16px}
-.dcu-usage-section h1{font-size:24px;font-weight:500;margin:0}
-.dcu-usage-section p{color:var(--sp-muted)}
-.dcu-usage-stage{position:relative;flex:1;min-height:420px;background:var(--sp-bg)}
-.dcu-usage-loading{position:absolute;inset:0;display:grid;place-items:center;margin:0}
-.dcu-usage-frame{position:absolute;inset:0;display:block;width:100%;height:100%;border:0;background:var(--sp-bg)}
 @media(prefers-reduced-motion:reduce){.dcu-settings-trigger,.dcu-settings-trigger-content svg,.dcu-settings-back,.dcu-settings-link{transition:none}.dcu-settings-trigger:hover svg,.dcu-settings-trigger:active{transform:none}.dcu-settings-page,.dcu-settings-nav,.dcu-settings-inner{animation:none}}
 .dcu-settings-page [data-slot="settings.section"]{min-width:0}
 .dcu-settings-inner:has(.dcu-connector-frame){height:100%;display:flex;flex-direction:column}

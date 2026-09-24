@@ -33,7 +33,6 @@ import { createCompanionTabSource } from './companion-slots.ts'
 import { createFooterActionSource } from './footer-actions.ts'
 import { openPathInHost, type HostOpenPathConnection } from './host-open-path.ts'
 import { observeSettingsNavIcons } from './settings-nav-icons.ts'
-import { registerUsageStatistics } from './usage-statistics.ts'
 import { registerPluginConfigSection } from './plugin-config.ts'
 import { registerSettingsPage } from './settings-page-registration.ts'
 import { observeSlimSidebar } from './sidebar-width.ts'
@@ -137,7 +136,6 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => observeHeroWidthHandles(t('home.resizeInput')), 'michengai-codex-ui: hero width handles')
   registerInputHistory(ctx)
   registerSettingsPage(ctx)
-  registerUsageStatistics(ctx)
   registerPluginConfigSection(ctx)
   // Host 与客户端共用 Cordis 的服务名；此处读取的是客户端 RPC 外观，而非 HostConnectionService。
   const connectionService: unknown = ctx.get('connection')

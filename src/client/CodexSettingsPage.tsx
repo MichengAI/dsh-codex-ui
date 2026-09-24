@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowLeft, Archive, BarChart3, Box, CircleHelp, Clock, Cpu, Link, MessageSquare, PanelRight, Search, Settings, SlidersHorizontal, Sparkles, Store, User } from 'lucide-react'
+import { ArrowLeft, Archive, Box, CircleHelp, Clock, Cpu, Link, MessageSquare, PanelRight, Search, Settings, SlidersHorizontal, Sparkles, Store, User } from 'lucide-react'
 import type { PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { ConnectionIndicator } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ConnectionState } from '@deepseek-ai/dsh-client-connection/client'
@@ -25,7 +25,6 @@ export type CodexSettingsPageProps = PropsRuntime<'sidebar.settings'>
   & PropsLocale<typeof NS> & SettingsPageInjected
 
 function sectionIcon(id: string) {
-  if (id === 'usage-statistics') return BarChart3
   if (id === 'market' || id === 'plugin-marketplace') return Store
   if (id === 'better-sidebar' || id === 'sidebar-cards') return PanelRight
   if (/model/.test(id)) return Cpu
