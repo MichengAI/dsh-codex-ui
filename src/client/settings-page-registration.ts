@@ -3,6 +3,7 @@ import { CodexGeneralSettings, CodexSettingsPage, type SettingsSource } from './
 import { NS } from './locales.ts'
 import type { SettingsRow } from './settings-page-model.ts'
 import type { ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
+import type { SettingsDescribeFace } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { createElement } from 'react'
 import { Settings } from 'lucide-react'
 import { SettingsDocumentAction } from './SettingsDocumentAction.tsx'
@@ -50,15 +51,26 @@ export function registerSettingsPage(ctx: Context): void {
   ctx.slots.inject('settings.trigger', () => !owned ? () => {} : ctx.slots.register({ name: 'settings.trigger', locale: NS },
     ({ wide }) => createElement('span', { className: 'dcu-settings-trigger-content' }, createElement(Settings, { size: 16, strokeWidth: 1.6 }), wide ? createElement('span', null, t('settings.title')) : null)))
   ctx.slots.inject('settings.close', () => !owned ? () => {} : ctx.slots.register({ name: 'settings.close', locale: NS }, () => t('settings.back')))
-  ctx.inject(['configForms', 'remote.settings'], settingsCtx => {
+  // 0.1.7 叫 configForms，0.1.5 叫 settingsScope。只等其中一个时，另一版的配置文件入口不会出现。
+  let documentBound = false
+  const bindSettingsDocument = (settingsCtx: Context, forms: { describe: () => SettingsDescribeFace }) => {
+    if (documentBound) return
     const service: unknown = settingsCtx.get('remote')
     const remote = service as { $host: { isLoopback: boolean }; settings: { openSettingsDocument: () => Promise<{ ok: boolean }> } }
     if (!remote.$host.isLoopback) return
-    const describe = settingsCtx.configForms.describe()
-    settingsCtx.slots.inject('settings.general.footer', () => !owned ? () => {} : settingsCtx.slots.register({
+    documentBound = true
+    const describe = forms.describe()
+    const remove = settingsCtx.slots.inject('settings.general.footer', () => !owned ? () => {} : settingsCtx.slots.register({
       name: 'settings.general.footer', id: 'open-document', locale: NS,
       inject: () => ({ describe, openDocument: () => remote.settings.openSettingsDocument() }),
     }, SettingsDocumentAction))
+    return () => { documentBound = false; remove() }
+  }
+  ctx.inject(['configForms', 'remote.settings'], settingsCtx => {
+    return bindSettingsDocument(settingsCtx, (settingsCtx as Context & { configForms: { describe: () => SettingsDescribeFace } }).configForms)
+  })
+  ctx.inject(['settingsScope', 'remote.settings'], settingsCtx => {
+    return bindSettingsDocument(settingsCtx, (settingsCtx as Context & { settingsScope: { describe: () => SettingsDescribeFace } }).settingsScope)
   })
   ctx.slots.inject('sidebar.settings', () => {
     if (occupied()) { warn(); return () => {} }

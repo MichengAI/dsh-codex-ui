@@ -33,7 +33,8 @@ class FrameBoundary extends React.Component<{ children: React.ReactNode }, { fai
   render() { return this.state.failed ? null : this.props.children }
 }
 const modules: Record<string, unknown> = { react: React, 'react-dom': ReactDOM, 'react/jsx-runtime': jsxRuntime,
-  '@deepseek-ai/dsh-client-ui-primitives': { IconChevronDownOutlineMedium, Menu, Modal: FrameModal, Tooltip }, '@deepseek-ai/dsh-client-store': storeModule }
+  // 费用插件按宿主编译时的导出名取值。0.1.7 包里是 Medium，已发布插件要的是 Outline14，两个名字必须指向同一个组件。
+  '@deepseek-ai/dsh-client-ui-primitives': { IconChevronDownOutlineMedium, IconChevronDownOutline14: IconChevronDownOutlineMedium, Menu, Modal: FrameModal, Tooltip }, '@deepseek-ai/dsh-client-store': storeModule }
 let plugin: { UsageBilling: React.ComponentType<Record<string, unknown>> } | undefined
 let mounted = false
 const bridge = () => (window as UsageFrameWindow).dcuUsageHost

@@ -88,7 +88,11 @@ test('未加载官方设置壳时，新壳唯一声明设置树并在重新挂�
   removeAgain()
 })
 
-test.each([false, true])('真实 Cordis 注入生命周期：loopback=%s 的配置文件入口', async (loopback) => {
+test.each([
+  ['configForms', false],
+  ['configForms', true],
+  ['settingsScope', true],
+] as const)('真实 Cordis 注入生命周期：%s loopback=%s 的配置文件入口', async (service, loopback) => {
   let runtime: { SlotRegistry: new (ctx: Context) => Context['slots'] } | undefined
   const code=readFileSync(require.resolve('@deepseek-ai/dsh-client-runtime/client'),'utf8')
   new Function('window',code)({__ModuleLoader__:{load:({factory}:{factory:(require:NodeRequire)=>typeof runtime})=>{runtime=factory(require)}}})
@@ -101,7 +105,7 @@ test.each([false, true])('真实 Cordis 注入生命周期：loopback=%s 的配�
   expect(ctx.slots.entriesOfSlot('settings.general.footer')).toHaveLength(0)
   const describe={getSnapshot:()=>({view:{hasDocument:true}}),subscribe:()=>()=>{},ensure:async()=>{}}
   const openSettingsDocument=vi.fn(async()=>({ok:true}))
-  const removeScope=ctx.provide('configForms',{describe:()=>describe} as never)
+  const removeScope=ctx.provide(service,{describe:()=>describe} as never)
   const removeRemote=ctx.provide('remote',{$host:{isLoopback:loopback},settings:{openSettingsDocument}} as never)
   const removeRemoteSettings=ctx.provide('remote.settings',{} as never)
   try {
