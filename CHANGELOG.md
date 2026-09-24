@@ -24,8 +24,7 @@ The installer uses these exact versions for reproducible installation.
 
 ## 1.1.17 - 2026-09-24
 
-- Works with the current DSH. The sidebar and its icons are available, a conversation has progress marks on the left, and Settings can open the configuration file.
-- The sidebar keeps its fixed width and sits flush against the conversation.
+- Settings no longer includes a billing panel. The billing button at the bottom of the sidebar opens the billing plugin's own window.
 
 ## suite-installer-v1.0.20 - 2026-09-22
 
