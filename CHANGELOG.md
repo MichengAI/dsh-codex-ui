@@ -24,6 +24,7 @@ The installer uses these exact versions for reproducible installation.
 
 ## 1.1.17 - 2026-09-24
 
+- Adds support for DSH `0.1.7-rc.1` and no longer includes `0.1.6-alpha`.
 - Settings no longer includes a billing panel. The billing button at the bottom of the sidebar opens the billing plugin's own window.
 
 ## suite-installer-v1.0.20 - 2026-09-22
