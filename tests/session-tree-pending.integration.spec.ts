@@ -51,8 +51,8 @@ function createSessionStore(session: SessionSummary) {
     ids: [session.id],
     byId: { [session.id]: session },
     phase: 'ready',
-    subagentsByParent: {},
-    jobsBySession: {},
+
+    projectionsBySession: {},
   }
   return <T,>(selector: (snapshot: SessionListState) => T): T => selector(state)
 }
@@ -261,8 +261,8 @@ test('任务树把会话拖到其他项目时先确认，取消不迁移且确�
     ids: [session.id, targetSession.id],
     byId: { [session.id]: session, [targetSession.id]: targetSession },
     phase: 'ready',
-    subagentsByParent: {},
-    jobsBySession: {},
+
+    projectionsBySession: {},
   }
   const useSessions = <T,>(selector: (snapshot: SessionListState) => T): T => selector(sessionState)
   const workspaces = {
@@ -348,8 +348,8 @@ test('项目跨分组拖动时高亮整个目标分组并保留精确插入', as
     ids: [],
     byId: {},
     phase: 'ready',
-    subagentsByParent: {},
-    jobsBySession: {},
+
+    projectionsBySession: {},
   }
   const useSessions = <T,>(selector: (snapshot: SessionListState) => T): T => selector(sessionState)
   const workspaces = {

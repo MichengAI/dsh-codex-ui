@@ -61,7 +61,8 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
   const wasOpen = useRef(false)
   const exitAnimation = useRef<Animation | null>(null)
   const active = rows.find(row => row.id === activeId) ?? rows[0]
-  const step = onboardingActive ? steps.find(item => !completed.has(item.id)) : undefined
+  // 内测声明会读取已停用的确认项并挡住输入框，这里不挂载该引导。
+  const step = onboardingActive ? steps.find(item => item.id !== 'welcome-notice' && !completed.has(item.id)) : undefined
   const close = useCallback(() => {
     if (exitAnimation.current !== null) return
     const finish = () => { exitAnimation.current = null; setOpen(false); setQuery('') }

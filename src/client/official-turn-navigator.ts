@@ -8,10 +8,11 @@ const OFFICIAL_TURN_NAVIGATOR_SUPPORTED_ATTRIBUTE = 'data-dcu-official-turn-navi
 const CAPABILITIES_ENDPOINT = `${CODEX_UI_API_ENDPOINTS.dependencies}?action=capabilities`
 
 function isOfficialTurnNavigator(element: Element): element is HTMLElement {
-  return element instanceof HTMLElement
-    && element.tagName === 'NAV'
-    && element.style.getPropertyValue('--turn-natural-height') !== ''
-    && element.querySelector('button[type="button"][aria-label]') !== null
+  if (!(element instanceof HTMLElement) || element.tagName !== 'NAV') return false
+  if (element.querySelector('button[type="button"][aria-label]') === null) return false
+  // 0.1.5 把自然高度写进行内样式；0.1.7 去掉了这个变量，刻度按钮改为带 data-index。
+  return element.style.getPropertyValue('--turn-natural-height') !== ''
+    || element.querySelector('button[type="button"][data-index][aria-label]') !== null
 }
 
 /** 标记实际挂载的官方轮次导航，避免依赖宿主样式文件名或会话 DOM 层级。 */

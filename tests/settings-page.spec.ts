@@ -119,6 +119,20 @@ test('隐藏或已隔离的无关对话框不阻止 Escape 返回', async () => 
   expect(settingsPage()).toBeNull()
 })
 
+test('不渲染内测声明引导，因此不会读取已停用的确认项', async () => {
+  const rendered: string[] = []
+  await mount({
+    onboarding: source([{ id: 'welcome-notice' }, { id: 'first-run' }]),
+    renderSlot: ((name: string, owner: { complete?: () => void }, options?: { only?: string }) => {
+      if (name !== 'settings.onboarding' || options?.only === undefined) return null
+      rendered.push(options.only)
+      return createElement('button', { 'data-onboarding-test': options.only, onClick: owner.complete }, '完成引导')
+    }) as CodexSettingsPageProps['renderSlot'],
+  })
+  expect(rendered).not.toContain('welcome-notice')
+  expect(inSettings('[data-onboarding-test="first-run"]')).not.toBeNull()
+})
+
 test('设置打开时内联引导仍可完成，迟挂载背景不能抢走焦点', async () => {
   await mount({
     onboarding: source([{ id: 'first-run' }]),

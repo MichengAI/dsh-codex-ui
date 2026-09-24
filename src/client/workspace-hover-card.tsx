@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { IconBranchOutline16, IconFolderClose16, IconSettingsOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconBranchOutlineMedium, IconFolderCloseMedium, IconSettingsOutlineMedium } from './host-icons.ts'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { MessageCircle } from 'lucide-react'
 import { NS } from './locales.ts'
@@ -29,16 +29,16 @@ export function WorkspaceHoverCard({ t, onEditWorkspace, onToggleWorkspacePin }:
     : t('workspace.taskCount', { count: hoverTip.count ?? 0 })
   return <div className={`dcu-wb-tip${workspace ? ' dcu-wb-tip-workspace' : ''}`} style={{ left: hoverTip.left, top: hoverTip.top }} onMouseEnter={keepTip} onMouseLeave={hideTip}>
     <div className="dcu-wb-tip-title">
-      {workspace && <span className="dcu-wb-folder"><IconFolderClose16 size={16} /></span>}
+      {workspace && <span className="dcu-wb-folder"><IconFolderCloseMedium size={16} /></span>}
       <span className="dcu-wb-tip-title-main">{hoverTip.title}</span>
       {workspaceId !== undefined
         ? <button type="button" className="dcu-wb-tip-pin" aria-label={t(hoverTip.pinned === true ? 'workspace.unpin' : 'workspace.pin')} onClick={() => { onToggleWorkspacePin(workspaceId); dismissTip() }}><PinIcon /></button>
         : hoverTip.time !== undefined && <span className="dcu-wb-tip-time">{hoverTip.time}</span>}
     </div>
     {workspace && hoverTip.count !== undefined && <div className="dcu-wb-tip-meta"><MessageCircle aria-hidden="true" size={16} strokeWidth={1.5} /><span>{taskSummary}</span></div>}
-    {workspace && hoverTip.path !== undefined && hoverTip.path !== '' && <div className="dcu-wb-tip-row dcu-wb-tip-path"><span className="dcu-wb-folder"><IconFolderClose16 size={16} /></span><span className="dcu-wb-tip-path-copy">{hoverTip.path}</span></div>}
-    {!workspace && hoverTip.project !== undefined && <div className="dcu-wb-tip-row"><span className="dcu-wb-folder"><IconFolderClose16 size={16} /></span><span>{hoverTip.project}</span></div>}
-    {!workspace && hoverTip.branch !== undefined && hoverTip.branch !== '' && <div className="dcu-wb-tip-row"><span className="dcu-wb-folder"><IconBranchOutline16 size={16} /></span><span>{hoverTip.branch}</span></div>}
-    {workspaceId !== undefined && <><div className="dcu-wb-tip-sep" /><button type="button" className="dcu-wb-tip-edit" onClick={() => { onEditWorkspace(workspaceId, hoverTip.title); dismissTip() }}><IconSettingsOutline16 size={16} />{t('workspace.edit')}</button></>}
+    {workspace && hoverTip.path !== undefined && hoverTip.path !== '' && <div className="dcu-wb-tip-row dcu-wb-tip-path"><span className="dcu-wb-folder"><IconFolderCloseMedium size={16} /></span><span className="dcu-wb-tip-path-copy">{hoverTip.path}</span></div>}
+    {!workspace && hoverTip.project !== undefined && <div className="dcu-wb-tip-row"><span className="dcu-wb-folder"><IconFolderCloseMedium size={16} /></span><span>{hoverTip.project}</span></div>}
+    {!workspace && hoverTip.branch !== undefined && hoverTip.branch !== '' && <div className="dcu-wb-tip-row"><span className="dcu-wb-folder"><IconBranchOutlineMedium size={16} /></span><span>{hoverTip.branch}</span></div>}
+    {workspaceId !== undefined && <><div className="dcu-wb-tip-sep" /><button type="button" className="dcu-wb-tip-edit" onClick={() => { onEditWorkspace(workspaceId, hoverTip.title); dismissTip() }}><IconSettingsOutlineMedium size={16} />{t('workspace.edit')}</button></>}
   </div>
 }

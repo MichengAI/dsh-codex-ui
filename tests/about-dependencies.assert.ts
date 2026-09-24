@@ -96,7 +96,7 @@ assert.match(about, /data-installed=false\]\{color:var\(--dsw-alias-state-error-
 assert.match(about, /https:\/\/github\.com\/MichengAI\/dsh-codex-ui['"]/, '关于页标题右侧必须提供 GitHub 项目入口')
 assert.match(about, /https:\/\/github\.com\/MichengAI\/dsh-codex-ui\/issues['"]/, '关于页标题右侧必须提供 GitHub 意见反馈入口')
 assert.match(about, /GithubMark16/, 'GitHub 项目入口必须使用 GitHub 品牌图标')
-assert.match(about, /IconListPenOutline16/, '意见反馈入口必须使用列表编辑图标')
+assert.match(about, /IconListPenOutlineMedium/, '意见反馈入口必须使用列表编辑图标')
 assert.match(about, /target="_blank" rel="noreferrer"/, 'GitHub 外链必须安全地在新窗口打开')
 assert.match(about, /about\.viewProject/, 'GitHub 项目入口必须使用可翻译文案')
 assert.match(about, /about\.feedback/, '意见反馈入口必须使用可翻译文案')

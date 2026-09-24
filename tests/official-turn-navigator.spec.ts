@@ -44,6 +44,32 @@ test('普通导航不会被误认为官方轮次导航', () => {
   expect(nav.hasAttribute('data-dcu-official-turn-navigator')).toBe(false)
 })
 
+test('0.1.7 官方导航不再内联高度变量时仍按刻度按钮识别', () => {
+  const nav = document.createElement('nav')
+  nav.setAttribute('aria-label', '轮次导航')
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.setAttribute('aria-label', '跳转到第 1 轮')
+  button.dataset.index = '0'
+  nav.append(button)
+  document.body.append(nav)
+
+  expect(markOfficialTurnNavigators(document)).toBe(1)
+  expect(nav.dataset.dcuOfficialTurnNavigator).toBe('true')
+})
+
+test('带标签的侧栏导航没有轮次刻度时不会被标记', () => {
+  const nav = document.createElement('nav')
+  nav.setAttribute('aria-label', '主导航')
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.setAttribute('aria-label', '新任务')
+  nav.append(button)
+  document.body.append(nav)
+
+  expect(markOfficialTurnNavigators(document)).toBe(0)
+})
+
 test('观察器会标记稍后挂载的官方导航并在停用时清理', async () => {
   const stop = observeOfficialTurnNavigators(document, async () => new Response(JSON.stringify({
     capabilities: { officialTurnNavigator: false },

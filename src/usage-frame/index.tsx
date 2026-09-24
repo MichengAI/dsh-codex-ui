@@ -3,7 +3,7 @@ import React, { useEffect, useId, useRef, useSyncExternalStore } from 'react'
 import * as ReactDOM from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import * as jsxRuntime from 'react/jsx-runtime'
-import { IconChevronDownOutline14, Menu, Modal, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconChevronDownOutlineMedium, Menu, Modal, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import * as storeModule from '@deepseek-ai/dsh-client-store'
 import type { UsageFrameWindow } from './contract.ts'
 // 在本承载文档中协调 Modal 的 Escape，避免所有打开的 Modal 同时关闭。
@@ -33,7 +33,7 @@ class FrameBoundary extends React.Component<{ children: React.ReactNode }, { fai
   render() { return this.state.failed ? null : this.props.children }
 }
 const modules: Record<string, unknown> = { react: React, 'react-dom': ReactDOM, 'react/jsx-runtime': jsxRuntime,
-  '@deepseek-ai/dsh-client-ui-primitives': { IconChevronDownOutline14, Menu, Modal: FrameModal, Tooltip }, '@deepseek-ai/dsh-client-store': storeModule }
+  '@deepseek-ai/dsh-client-ui-primitives': { IconChevronDownOutlineMedium, Menu, Modal: FrameModal, Tooltip }, '@deepseek-ai/dsh-client-store': storeModule }
 let plugin: { UsageBilling: React.ComponentType<Record<string, unknown>> } | undefined
 let mounted = false
 const bridge = () => (window as UsageFrameWindow).dcuUsageHost

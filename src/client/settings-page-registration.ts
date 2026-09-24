@@ -15,8 +15,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
 /** 用公开插槽替换设置壳，保留宿主的设置写入、连接恢复和首次使用引导。 */
 export function registerSettingsPage(ctx: Context): void {
-  const children = ['settings.trigger', 'settings.header', 'settings.action', 'settings.close', 'settings.section', 'settings.onboarding', 'settings.general.item']
-  const occupied = () => ctx.slots.entriesOfSlot('sidebar.settings').length > 0 || children.some(name => ctx.slots.snapshot(name).length > 0)
+  const shellSlots = ['settings.launcher', 'settings.trigger', 'settings.header', 'settings.action', 'settings.close', 'settings.section', 'settings.onboarding', 'settings.general.item']
+  const occupied = () => ctx.slots.entriesOfSlot('sidebar.settings').length > 0 || shellSlots.some(name => ctx.slots.snapshot(name).length > 0)
   const warn = () => console.warn('[michengai-codex-ui] 已存在设置外壳，保留宿主设置；独立设置页需要 bundle patch 停用 ui-settings-general。')
   if (occupied()) { warn(); return }
   let owned = false
@@ -50,11 +50,11 @@ export function registerSettingsPage(ctx: Context): void {
   ctx.slots.inject('settings.trigger', () => !owned ? () => {} : ctx.slots.register({ name: 'settings.trigger', locale: NS },
     ({ wide }) => createElement('span', { className: 'dcu-settings-trigger-content' }, createElement(Settings, { size: 16, strokeWidth: 1.6 }), wide ? createElement('span', null, t('settings.title')) : null)))
   ctx.slots.inject('settings.close', () => !owned ? () => {} : ctx.slots.register({ name: 'settings.close', locale: NS }, () => t('settings.back')))
-  ctx.inject(['settingsScope', 'remote.settings'], settingsCtx => {
+  ctx.inject(['configForms', 'remote.settings'], settingsCtx => {
     const service: unknown = settingsCtx.get('remote')
     const remote = service as { $host: { isLoopback: boolean }; settings: { openSettingsDocument: () => Promise<{ ok: boolean }> } }
     if (!remote.$host.isLoopback) return
-    const describe = settingsCtx.settingsScope.describe()
+    const describe = settingsCtx.configForms.describe()
     settingsCtx.slots.inject('settings.general.footer', () => !owned ? () => {} : settingsCtx.slots.register({
       name: 'settings.general.footer', id: 'open-document', locale: NS,
       inject: () => ({ describe, openDocument: () => remote.settings.openSettingsDocument() }),

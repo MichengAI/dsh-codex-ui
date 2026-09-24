@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { IconLinkOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconLinkOutlineMedium } from './host-icons.ts'
 import type { SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { CODEX_UI_API_ENDPOINTS } from '../business-api.ts'
@@ -121,7 +121,7 @@ function NativeConnectorList({ sessionStore, t }: Pick<ConnectorsSectionProps, '
   if (sessionId === undefined) return <div className="dcu-connector-empty">{t('connectors.openSession')}</div>
   if (state === 'loading') return <div className="dcu-connector-empty">{t('connectors.loading')}</div>
   if (state === 'failed') return <div className="dcu-connector-empty" role="alert">{t(businessRequestErrorKey(failure) ?? 'connectors.failed')}</div>
-  return <div className="dcu-connector-list">{connectors.map(connector => <article className="dcu-connector" key={connector.name}><div className="dcu-connector-head"><IconLinkOutline16 size={16} />{connector.name}</div><div className="dcu-connector-meta">{t('connectors.toolCount', { count: connector.tools.length })}</div>{connector.tools.map(tool => <div className="dcu-connector-tool" key={tool.name}>{tool.name}{tool.description !== '' && <span>{tool.description}</span>}</div>)}</article>)}{connectors.length === 0 && <div className="dcu-connector-empty">{t('connectors.empty')}</div>}</div>
+  return <div className="dcu-connector-list">{connectors.map(connector => <article className="dcu-connector" key={connector.name}><div className="dcu-connector-head"><IconLinkOutlineMedium size={16} />{connector.name}</div><div className="dcu-connector-meta">{t('connectors.toolCount', { count: connector.tools.length })}</div>{connector.tools.map(tool => <div className="dcu-connector-tool" key={tool.name}>{tool.name}{tool.description !== '' && <span>{tool.description}</span>}</div>)}</article>)}{connectors.length === 0 && <div className="dcu-connector-empty">{t('connectors.empty')}</div>}</div>
 }
 
 /** 安装 dsh-mcp-connector 时显示完整市场，否则回退到当前会话的 MCP 工具目录。 */

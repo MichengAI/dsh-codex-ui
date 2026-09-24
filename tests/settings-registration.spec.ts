@@ -44,7 +44,7 @@ test('复现旧宿主：原设置外壳存在时，新壳重复声明子插槽�
   } } })
   official!.apply(ctx)
   const original = slots.entriesOfSlot('sidebar.settings')[0]!
-  expect(() => slots.register({ name: 'sidebar.settings', priority: -1, children: original.children }, (() => null) as never)).toThrow(/settings.trigger.*already declared/)
+  expect(() => slots.register({ name: 'sidebar.settings', priority: -1, children: original.children }, (() => null) as never)).toThrow(/settings\.launcher.*already declared/)
   const warning = vi.spyOn(console, "warn").mockImplementation(() => {})
   expect(() => registerSettingsPage(ctx)).not.toThrow()
   expect(slots.entriesOfSlot("sidebar.settings")[0]).toBe(original)
@@ -69,7 +69,7 @@ test('发布配置停用官方首消息标题 LLM，但不关闭标题服务', (
   expect(readFileSync('src/session-title-plugin.ts', 'utf8')).toMatch(/ctx\.effect\(\(\) => registerSessionTitleProvider\(ctx\)/)
 })
 
-test('发布配置停用旧壳，新壳唯一声明设置树并在重新挂载后恢复功能贡献', () => {
+test('未加载官方设置壳时，新壳唯一声明设置树并在重新挂载后恢复功能贡献', () => {
   const patch = readFileSync('cordis.patch.yml', 'utf8')
   expect(patch).toMatch(/id: ui-settings-general\s+disabled: true/)
   const { slots, ctx, declare, dispose } = setup()
@@ -88,7 +88,6 @@ test('发布配置停用旧壳，新壳唯一声明设置树并在重新挂载�
   removeAgain()
 })
 
-
 test.each([false, true])('真实 Cordis 注入生命周期：loopback=%s 的配置文件入口', async (loopback) => {
   let runtime: { SlotRegistry: new (ctx: Context) => Context['slots'] } | undefined
   const code=readFileSync(require.resolve('@deepseek-ai/dsh-client-runtime/client'),'utf8')
@@ -102,7 +101,7 @@ test.each([false, true])('真实 Cordis 注入生命周期：loopback=%s 的配�
   expect(ctx.slots.entriesOfSlot('settings.general.footer')).toHaveLength(0)
   const describe={getSnapshot:()=>({view:{hasDocument:true}}),subscribe:()=>()=>{},ensure:async()=>{}}
   const openSettingsDocument=vi.fn(async()=>({ok:true}))
-  const removeScope=ctx.provide('settingsScope',{describe:()=>describe} as never)
+  const removeScope=ctx.provide('configForms',{describe:()=>describe} as never)
   const removeRemote=ctx.provide('remote',{$host:{isLoopback:loopback},settings:{openSettingsDocument}} as never)
   const removeRemoteSettings=ctx.provide('remote.settings',{} as never)
   try {

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { Button, IconArchiveOutline20, IconEllipsisOutline16, IconSettingsOutline16, Menu, Modal, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, Menu, Modal, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconArchiveOutlineMedium, IconEllipsisOutlineMedium, IconSettingsOutlineMedium } from './host-icons.ts'
 import { NS } from './locales.ts'
 import { WORKSPACE_TREE_STYLE } from './CodexWorkspaceBrowser.tsx'
 import { formatCompactTime, formatHoverTime, hoverCardAnchor } from './hover-tip.ts'
@@ -99,9 +100,9 @@ function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkS
   const { busy, error, setError, run } = useBusyAction(t, () => { setMenu(undefined) })
   const dialogs = useSessionDialogs({ archiveSession, deleteSession, forkSession, renameSession }, flags, run, () => { setMenu(undefined); setError(undefined) })
   const groupMenuItems: MenuEntry[] = [
-    { id: 'task-settings', label: t('schedule.taskSettings'), icon: <IconSettingsOutline16 size={16} /> },
+    { id: 'task-settings', label: t('schedule.taskSettings'), icon: <IconSettingsOutlineMedium size={16} /> },
     { type: 'separator', id: 'group-separator' },
-    { id: 'archive-group', label: t('schedule.archiveGroup'), icon: <IconArchiveOutline20 size={16} />, danger: true },
+    { id: 'archive-group', label: t('schedule.archiveGroup'), icon: <IconArchiveOutlineMedium size={16} />, danger: true },
   ]
   useEffect(() => { writeTreeExpansionState(browserStorage(), SCHEDULE_EXPANSION_STORAGE_KEY, expanded) }, [expanded])
   const groups = useMemo(() => {
@@ -145,7 +146,7 @@ function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkS
               portal
               dense
               compact
-              anchor={<button type="button" className="dcu-wb-more" aria-label={t('schedule.groupActions', { name: group.label })} onClick={(event) => { event.stopPropagation(); setMenu(undefined); setGroupMenu(current => current === group.id ? undefined : group.id) }}><IconEllipsisOutline16 size={16} /></button>}
+              anchor={<button type="button" className="dcu-wb-more" aria-label={t('schedule.groupActions', { name: group.label })} onClick={(event) => { event.stopPropagation(); setMenu(undefined); setGroupMenu(current => current === group.id ? undefined : group.id) }}><IconEllipsisOutlineMedium size={16} /></button>}
             />}
           />
           {isExpanded && <div className="dcu-wb-project-body">{group.sessions.map(session => {

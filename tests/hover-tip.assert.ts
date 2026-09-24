@@ -83,7 +83,7 @@ assert.doesNotMatch(hoverCard, /title=\{hoverTip\.path\}/, '悬停卡片路径�
 assert.match(hoverCard, /dcu-wb-tip-workspace/, '项目悬浮卡片必须使用独立的 Codex 尺寸样式')
 assert.match(hoverCard, /dcu-wb-tip-pin/, '项目悬浮卡片右上角必须提供置顶操作')
 assert.match(hoverCard, /MessageCircle/, '项目任务摘要必须使用 Codex 对话图标')
-assert.match(hoverCard, /IconSettingsOutline16/, '重命名项目必须使用 Codex 设置图标')
+assert.match(hoverCard, /IconSettingsOutlineMedium/, '重命名项目必须使用 Codex 设置图标')
 assert.doesNotMatch(hoverCard, /<svg/, '项目悬浮卡片不得保留手绘图标')
 
 const workspaceBrowser = readFileSync(new URL('../src/client/CodexWorkspaceBrowser.tsx', import.meta.url), 'utf8')

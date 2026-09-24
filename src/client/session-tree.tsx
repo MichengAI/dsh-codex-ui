@@ -1,17 +1,16 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type DragEvent, type MouseEvent, type ReactNode } from 'react'
+import { Menu, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
-  IconArchiveOutline20,
-  IconBranchOutline16,
-  IconCopyOutline16,
-  IconEditOutline16,
-  IconEllipsisOutline16,
-  IconFolderClose16,
-  IconFolderOpenOutline16,
-  IconLinkOutline16,
-  IconTrashOutline16,
-  Menu,
-  type MenuEntry,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+  IconArchiveOutlineMedium,
+  IconBranchOutlineMedium,
+  IconCopyOutlineMedium,
+  IconEditOutlineMedium,
+  IconEllipsisOutlineMedium,
+  IconFolderCloseMedium,
+  IconFolderOpenOutlineMedium,
+  IconLinkOutlineMedium,
+  IconTrashOutlineMedium,
+} from './host-icons.ts'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { Archive as LucideArchiveIcon, Eye, EyeOff, Pin as LucidePinIcon } from 'lucide-react'
 import { NS } from './locales.ts'
@@ -38,41 +37,41 @@ export type SessionHoverTip = {
 export function SessionHoverCard({ tip, onEnter, onLeave }: { tip: SessionHoverTip; onEnter: () => void; onLeave: () => void }) {
   return <div className="dcu-wb-tip" style={{ left: tip.left, top: tip.top }} onMouseEnter={onEnter} onMouseLeave={onLeave}>
     <div className="dcu-wb-tip-title"><span className="dcu-wb-tip-title-main">{tip.title}</span>{tip.time !== undefined && <span className="dcu-wb-tip-time">{tip.time}</span>}</div>
-    {tip.project !== undefined && <div className="dcu-wb-tip-row"><span className="dcu-wb-folder"><IconFolderClose16 size={16} /></span><span>{tip.project}</span></div>}
-    {tip.branch !== undefined && tip.branch !== '' && <div className="dcu-wb-tip-row"><span className="dcu-wb-folder"><IconBranchOutline16 size={16} /></span><span>{tip.branch}</span></div>}
+    {tip.project !== undefined && <div className="dcu-wb-tip-row"><span className="dcu-wb-folder"><IconFolderCloseMedium size={16} /></span><span>{tip.project}</span></div>}
+    {tip.branch !== undefined && tip.branch !== '' && <div className="dcu-wb-tip-row"><span className="dcu-wb-folder"><IconBranchOutlineMedium size={16} /></span><span>{tip.branch}</span></div>}
   </div>
 }
 
 export function sessionMenuItems(t: TranslateNS<typeof NS>, options: { unread: boolean; path?: string; includePath?: boolean; moveTargets?: readonly { id: string; label: string }[]; canDelete?: boolean }): MenuEntry[] {
   const items: MenuEntry[] = [
-    { id: 'rename', label: t('sessions.rename'), icon: <IconEditOutline16 size={16} /> },
+    { id: 'rename', label: t('sessions.rename'), icon: <IconEditOutlineMedium size={16} /> },
     { id: 'unread', label: t(options.unread ? 'sessions.markRead' : 'sessions.markUnread'), icon: options.unread ? <EyeOff aria-hidden="true" size={16} strokeWidth={1.5} /> : <Eye aria-hidden="true" size={16} strokeWidth={1.5} /> },
-    { id: 'archive', label: t('sessions.archive'), icon: <IconArchiveOutline20 size={16} /> },
+    { id: 'archive', label: t('sessions.archive'), icon: <IconArchiveOutlineMedium size={16} /> },
     { type: 'separator', id: 'main-separator' },
-    { id: 'fork', label: t('sessions.fork'), icon: <IconBranchOutline16 size={16} /> },
+    { id: 'fork', label: t('sessions.fork'), icon: <IconBranchOutlineMedium size={16} /> },
   ]
   if (options.includePath === true) {
-    items.push({ id: 'openPath', label: t('sessions.openPath'), icon: <IconFolderOpenOutline16 size={16} />, disabled: options.path === undefined })
+    items.push({ id: 'openPath', label: t('sessions.openPath'), icon: <IconFolderOpenOutlineMedium size={16} />, disabled: options.path === undefined })
   }
   if (options.moveTargets !== undefined) {
     items.push({
       id: 'moveWorkspace',
       label: t('sessions.moveWorkspace'),
-      icon: <IconFolderClose16 size={16} />,
+      icon: <IconFolderCloseMedium size={16} />,
       disabled: options.moveTargets.length === 0,
-      submenu: options.moveTargets.map(target => ({ id: target.id, label: target.label, icon: <IconFolderClose16 size={16} /> })),
+      submenu: options.moveTargets.map(target => ({ id: target.id, label: target.label, icon: <IconFolderCloseMedium size={16} /> })),
     })
   }
   items.push(
     { type: 'separator', id: 'copy-separator' },
-    { id: 'copyId', label: t('sessions.copyId'), icon: <IconLinkOutline16 size={16} /> },
-    { id: 'copyTitle', label: t('sessions.copyTitle'), icon: <IconCopyOutline16 size={16} /> },
-    ...(options.includePath === true ? [{ id: 'copyPath', label: t('sessions.copyPath'), icon: <IconCopyOutline16 size={16} />, disabled: options.path === undefined } satisfies MenuEntry] : []),
+    { id: 'copyId', label: t('sessions.copyId'), icon: <IconLinkOutlineMedium size={16} /> },
+    { id: 'copyTitle', label: t('sessions.copyTitle'), icon: <IconCopyOutlineMedium size={16} /> },
+    ...(options.includePath === true ? [{ id: 'copyPath', label: t('sessions.copyPath'), icon: <IconCopyOutlineMedium size={16} />, disabled: options.path === undefined } satisfies MenuEntry] : []),
   )
   if (options.canDelete !== false) {
     items.push(
       { type: 'separator', id: 'delete-separator' },
-      { id: 'delete', label: t('sessions.delete'), icon: <IconTrashOutline16 size={16} />, danger: true },
+      { id: 'delete', label: t('sessions.delete'), icon: <IconTrashOutlineMedium size={16} />, danger: true },
     )
   }
   return items
@@ -176,7 +175,7 @@ export function SessionRow({
       <button type="button" className="dcu-wb-more" aria-label={t('sessions.archive')} onClick={(event) => { event.stopPropagation(); onArchive() }}><QuickArchiveIcon /></button>
     </span>
     <span className="dcu-wb-actions">
-      <Menu open={menuOpen} onClose={() => { onMenuChange(false) }} items={menuItems} onSelect={onSelectAction} portal dense compact getAnchorRect={menuPoint === undefined ? undefined : () => pointerMenuRect(menuPoint.x, menuPoint.y)} anchor={<button type="button" className="dcu-wb-more dcu-wb-context-anchor" aria-label={t('sessions.actions', { name: title })} onClick={(event) => { event.stopPropagation(); onMenuChange(!menuOpen) }}><IconEllipsisOutline16 size={16} /></button>} />
+      <Menu open={menuOpen} onClose={() => { onMenuChange(false) }} items={menuItems} onSelect={onSelectAction} portal dense compact getAnchorRect={menuPoint === undefined ? undefined : () => pointerMenuRect(menuPoint.x, menuPoint.y)} anchor={<button type="button" className="dcu-wb-more dcu-wb-context-anchor" aria-label={t('sessions.actions', { name: title })} onClick={(event) => { event.stopPropagation(); onMenuChange(!menuOpen) }}><IconEllipsisOutlineMedium size={16} /></button>} />
     </span>
   </div>
 }
