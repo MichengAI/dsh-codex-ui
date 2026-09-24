@@ -24,10 +24,8 @@ The installer uses these exact versions for reproducible installation.
 
 ## 1.1.17 - 2026-09-24
 
-- The sidebar shows up again, and its icons are no longer missing.
-- The progress marks on the left of a conversation are visible and clickable again, instead of hidden behind the sidebar.
-- Open configuration file stays in Settings.
-- The extra gap between the conversation and the sidebar is gone.
+- Works with the current DSH. The sidebar and its icons are available, a conversation has progress marks on the left, and Settings can open the configuration file.
+- The sidebar keeps its fixed width and sits flush against the conversation.
 
 ## suite-installer-v1.0.20 - 2026-09-22
 
