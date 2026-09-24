@@ -4,6 +4,24 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## suite-installer-v1.0.21 - 2026-09-24
+
+Install or maintain 11 first-party plugins in one step. Included plugins and versions:
+
+- `@michengai/dsh-archive-manager@1.0.4`
+- `@michengai/dsh-codex-ui@1.1.17`
+- `@michengai/dsh-skills-manager@1.1.3`
+- `@michengai/dsh-agency-agents@1.0.3`
+- `@michengai/dsh-im-connect@0.1.54`
+- `@michengai/dsh-automation@0.1.50`
+- `@michengai/dsh-btw@0.1.12`
+- `@michengai/dsh-simplify@0.1.9`
+- `@michengai/dsh-pua@0.3.17`
+- `@michengai/dsh-code-review@0.1.5`
+- `@michengai/dsh-codex-pet@0.1.9`
+
+The installer uses these exact versions for reproducible installation.
+
 ## 1.1.17 - 2026-09-24
 
 - Mount the sidebar on `0.1.5` and `0.1.7`: fall back to the host icon export, and keep the turn navigator inside the conversation column instead of sliding it under the sidebar.
