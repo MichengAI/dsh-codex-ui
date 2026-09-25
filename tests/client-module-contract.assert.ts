@@ -46,7 +46,7 @@ assert.equal(manifest.dsh?.client?.inject?.includes('@deepseek-ai/dsh-client-ui-
 assert.equal(manifest.dsh?.client?.inject?.includes('@deepseek-ai/dsh-client-ui-slots'), false, '仅类型导入不得产生运行时模块声明')
 
 const supportedDshRange = '>=0.1.0-rc.5 <0.2.0 || 0.1.5-rc.1 || 0.1.5-rc.2 || 0.1.7-rc.1'
-const hostDevDshVersion = '0.1.7-rc.1'
+const hostDevDshVersion = '0.1.7-rc.2'
 const highestPublishedClientRuntime = '0.1.1-rc.2'
 const versionedClientPackages = [
   '@deepseek-ai/dsh-client-locale',

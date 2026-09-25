@@ -25,6 +25,7 @@ function setup() {
   const ctx = {
     slots: new Proxy(slots, { get: (target, key) => key === 'inject' ? inject : typeof Reflect.get(target, key) === 'function' ? Reflect.get(target, key).bind(target) : Reflect.get(target, key) }),
     locale: { bind: () => (key: string) => key, register: () => () => {}, getSnapshot: () => ({ revision: 0 }), subscribe: () => () => {} },
+    shortcuts: { register: () => () => {} },
     get: () => ({ state: { getSnapshot: () => 'connected', subscribe: () => () => {} } }),
     remote: { $host: { isLoopback: false } },
     inject: () => () => {},
