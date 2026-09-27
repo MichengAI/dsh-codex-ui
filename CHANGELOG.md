@@ -4,6 +4,10 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.20 - 2026-09-27
+
+- Opening Plugin configuration in Settings no longer removes that sidebar item, and the official plugin manager page opens.
+
 ## suite-installer-v1.0.25 - 2026-09-27
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:
