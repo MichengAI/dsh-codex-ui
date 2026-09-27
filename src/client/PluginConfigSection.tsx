@@ -15,7 +15,15 @@ export function bindPluginConfigLocale(bind: (ns: string) => PluginConfigTransla
   }
 }
 
-const FORWARDED_CONFIG_SLOTS = new Set(['plugins.item', 'plugins.bundle.config', 'plugins.row.config'])
+const FORWARDED_CONFIG_SLOTS = new Set([
+  'plugins.item',
+  'plugins.bundle.activation',
+  'plugins.bundle.config',
+  'plugins.row.config',
+  'plugins.detail.actions',
+  'plugins.detail.badge',
+  'plugins.detail.section',
+])
 
 export type PluginConfigSlots = {
   entriesOfSlot(name: string): readonly {
@@ -105,12 +113,10 @@ function DelegatedOfficialSlot({ slots, name, owner, opts, bindLocale }: {
   return nodes.length > 0 ? <div data-slot={name} style={{ display: 'contents' }}>{nodes}</div> : opts?.fallback ?? null
 }
 
-function wrapRenderSlot(settingsRenderSlot: unknown, slots: PluginConfigSlots | undefined, bindLocale?: PluginConfigLocale): RenderSlot {
+function wrapRenderSlot(slots: PluginConfigSlots | undefined, bindLocale?: PluginConfigLocale): RenderSlot {
   return (name, owner = {}, opts) => {
-    if (slots !== undefined && FORWARDED_CONFIG_SLOTS.has(name)) {
-      return <DelegatedOfficialSlot slots={slots} name={name} owner={owner} opts={opts} bindLocale={bindLocale} />
-    }
-    return typeof settingsRenderSlot === 'function' ? (settingsRenderSlot as RenderSlot)(name, owner, opts) : null
+    if (slots === undefined || !FORWARDED_CONFIG_SLOTS.has(name)) return opts?.fallback ?? null
+    return <DelegatedOfficialSlot slots={slots} name={name} owner={owner} opts={opts} bindLocale={bindLocale} />
   }
 }
 
@@ -122,7 +128,9 @@ export function PluginConfigSection({ Official, officialLabel, slots, bindLocale
   bindLocale?: PluginConfigLocale
 } & Record<string, unknown>): ReactNode {
   return <section className="dcu-plugin-config" aria-label={officialLabel}>
-    {createElement(Official, { ...official, renderSlot: wrapRenderSlot(official.renderSlot, slots, bindLocale) })}
+    <SlotEntryBoundary fallback={null}>
+      {createElement(Official, { ...official, renderSlot: wrapRenderSlot(slots, bindLocale) })}
+    </SlotEntryBoundary>
   </section>
 }
 

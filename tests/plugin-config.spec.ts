@@ -72,6 +72,37 @@ test('官方 main 插件页存在时才注册插件配置，卸载后撤销，�
   removeRoot()
 })
 
+test('插件配置必须带上官方 store，官方页才能读到导航状态', async () => {
+  const slots = new SlotCore()
+  const removeRoot = slots.register({
+    name: 'root',
+    children: {
+      'settings.section': { kind: 'list', scope: 'root' },
+      main: { kind: 'keyed', scope: 'root' },
+    },
+  } as never, (() => null) as never)
+  const navigation = {
+    getSnapshot: () => ({ view: { kind: 'list' } }),
+    subscribe: () => () => {},
+    actions: { setView: () => {} },
+  }
+  const store = { create: () => navigation, useStore: () => navigation.getSnapshot() }
+  const { ctx, disposers } = createCtx(slots)
+  registerPluginConfigSection(ctx)
+  slots.register({
+    name: 'main',
+    key: 'plugins',
+    locale: 'pluginManager',
+    inject: () => ({ ensure() {} }),
+    store,
+  } as never, officialPage as never)
+  await Promise.resolve()
+  const config = slots.entriesOfSlot('settings.section').find(entry => entry.options.id === PLUGIN_CONFIG_SECTION_ID)
+  expect(config?.store).toBe(store)
+  disposers.reverse().forEach(dispose => dispose())
+  removeRoot()
+})
+
 test('插件配置必须带上官方 inject 和文案，才能画出宿主插件设置页', async () => {
   const slots = new SlotCore()
   const removeRoot = slots.register({
@@ -230,4 +261,52 @@ test('插件配置转交官方 bundle.config，PUA 设置不能被空 renderSlot
   expect(container.querySelector('.dcu-plugin-config')?.getAttribute('aria-label')).toBe('插件配置')
   expect(container.querySelector('[data-official-plugins]')).not.toBeNull()
   expect(container.querySelector('[data-pua-config]')?.textContent).toBe('PUA 配置')
+})
+
+test('官方详情插槽必须转交，不能落到会抛错的设置页出口', async () => {
+  const slots = new SlotCore()
+  const removeRoot = slots.register({
+    name: 'root',
+    children: { main: { kind: 'keyed', scope: 'root' } },
+  } as never, (() => null) as never)
+  const removeOfficial = slots.register({
+    name: 'main',
+    key: 'plugins',
+    children: { 'plugins.detail.section': { kind: 'list', scope: 'root' } },
+  } as never, (() => null) as never)
+  slots.register({
+    name: 'plugins.detail.section',
+    id: 'extra',
+  } as never, (() => createElement('section', { 'data-detail-section': true }, '详情')) as never)
+  function officialList(props: Record<string, unknown>): ReactNode {
+    const renderSlot = props.renderSlot as ((name: string, owner: object) => ReactNode) | undefined
+    return createElement('div', { 'data-official-plugins': true }, renderSlot?.('plugins.detail.section', { subject: { kind: 'item', id: 'bash' } }))
+  }
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+  await act(async () => {
+    root.render(createElement(PluginConfigSection, {
+      Official: officialList,
+      officialLabel: '插件配置',
+      slots,
+      renderSlot: () => { throw new Error('settings renderSlot') },
+    }))
+  })
+  cleanups.push(() => { root.unmount(); removeOfficial(); removeRoot() })
+  expect(container.querySelector('[data-detail-section]')?.textContent).toBe('详情')
+})
+
+test('官方页自身抛错时不得拆掉插件配置分区', async () => {
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+  await act(async () => {
+    root.render(createElement(PluginConfigSection, {
+      Official: () => { throw new Error('official page crashed') },
+      officialLabel: '插件配置',
+    }))
+  })
+  cleanups.push(() => { root.unmount() })
+  expect(container.querySelector('.dcu-plugin-config')).not.toBeNull()
 })

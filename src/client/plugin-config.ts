@@ -40,7 +40,8 @@ export function registerPluginConfigSection(ctx: Context): void {
         order: PLUGIN_CONFIG_SECTION_ORDER,
         label: () => t('settings.pluginConfig'),
         locale: entry.locale,
-        inject: entry.inject,
+        inject: entry.inject as (actions?: unknown) => Record<string, unknown>,
+        ...(entry.store === undefined ? {} : { store: entry.store }),
       }, createPluginConfigSection(Official, () => t('settings.pluginConfig'), ctx.slots, bindPluginConfigLocale(ns => {
         const translate = ctx.locale.bind(ns as never)
         return (key, params) => translate(key as never, params as never)

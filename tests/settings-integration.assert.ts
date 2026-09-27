@@ -35,6 +35,8 @@ assert.match(pluginConfig, /ctx.locale.bind\(ns as never\)/, '官方插件卡片
 assert.match(pluginConfigSection, /bindHookSources\(keyedHooks/, '官方 keyedHooks 必须绑成 use 钩子')
 assert.match(pluginConfigSection, /'plugins.item'/, '插件配置必须转交官方 plugins.item，不能吞掉宿主插件设置页')
 assert.match(pluginConfigSection, /'plugins.bundle.config'/, '插件配置必须转交官方 bundle.config，不能吞掉 PUA 设置')
+assert.match(pluginConfig, /store: entry\.store/, '插件配置必须带上官方 store，官方页才能读到导航状态')
+assert.match(pluginConfigSection, /'plugins.detail.section'/, '插件配置必须转交官方详情插槽，不能落到设置页出口')
 assert.match(pluginConfigSection, /bindInjectFace|hookPropName/, '官方插件卡片必须带上 inject 钩子，不能裸挂组件')
 assert.match(pluginConfigSection, /getDerivedStateFromError/, '单张官方卡片崩溃时不得拆掉整页插件配置')
 assert.doesNotMatch(pluginConfigSection, /emptyRenderSlot|renderSlot: empty/, '插件配置不得再用空 renderSlot 挡住官方配置插槽')
