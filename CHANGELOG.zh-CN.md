@@ -4,6 +4,10 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 1.1.19 - 2026-09-27
+
+- 宿主兼容声明改为逐个列出已支持的 DSH RC，并加入 `0.1.7-rc.2`。
+
 ## suite-installer-v1.0.23 - 2026-09-25
 
 一键维护安装 11 个自研插件。包含以下插件及版本：

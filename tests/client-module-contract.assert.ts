@@ -45,7 +45,7 @@ assert.equal(manifest.files?.includes('dist'), false, '发布文件不得继续�
 assert.equal(manifest.dsh?.client?.inject?.includes('@deepseek-ai/dsh-client-ui-primitives'), false, '静态模块不应误写成信息性的 dsh.client.inject 边')
 assert.equal(manifest.dsh?.client?.inject?.includes('@deepseek-ai/dsh-client-ui-slots'), false, '仅类型导入不得产生运行时模块声明')
 
-const supportedDshRange = '>=0.1.0-rc.5 <0.2.0 || 0.1.5-rc.1 || 0.1.5-rc.2 || 0.1.7-rc.1'
+const supportedDshRange = '0.1.0-rc.8 || 0.1.1-rc.2 || 0.1.2-rc.1 || 0.1.5-rc.1 || 0.1.5-rc.2 || 0.1.7-rc.1 || 0.1.7-rc.2'
 const hostDevDshVersion = '0.1.7-rc.2'
 const highestPublishedClientRuntime = '0.1.1-rc.2'
 const versionedClientPackages = [
@@ -65,7 +65,7 @@ for (const packageName of versionedClientPackages) {
   assert.equal(manifest.peerDependencies?.[packageName], supportedDshRange, `${packageName} 必须使用统一的 DSH Peer 范围`)
   assert.equal(manifest.devDependencies?.[packageName], hostDevDshVersion, `${packageName} 必须钉在当前宿主开发版本`)
 }
-assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-runtime'], '>=0.1.0-rc.5 <0.2.0 || 0.1.1-rc.2', '客户端运行时必须覆盖自己钉住的 0.1.1-rc.2')
+assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-runtime'], '0.1.0-rc.8 || 0.1.1-rc.2', '客户端运行时没有 0.1.7 包，只能显式声明已发布的 rc')
 assert.equal(manifest.devDependencies?.['@deepseek-ai/dsh-client-runtime'], highestPublishedClientRuntime, '客户端运行时没有 0.1.7 包，必须使用其已发布最高版本')
 for (const [packageName, version] of Object.entries(manifest.devDependencies ?? {})) {
   if (!packageName.startsWith('@deepseek-ai/dsh-')) continue
@@ -73,7 +73,7 @@ for (const [packageName, version] of Object.entries(manifest.devDependencies ?? 
   assert.equal(version, hostDevDshVersion, `${packageName} 必须钉在当前宿主开发版本`)
 }
 assert.equal(manifest.peerDependencies?.['@deepseek-ai/cordis'], '>=4.0.2 <5.0.0', 'Cordis 必须覆盖宿主认证服务的兼容范围')
-assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-connection'], '>=0.1.2-rc.1 <0.2.0 || 0.1.5-rc.1 || 0.1.5-rc.2 || 0.1.7-rc.1', '业务 REST 必须声明提供 requestRejection 的最低宿主版本')
+assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-connection'], '0.1.2-rc.1 || 0.1.5-rc.1 || 0.1.5-rc.2 || 0.1.7-rc.1 || 0.1.7-rc.2', '业务 REST 必须从提供 requestRejection 的 0.1.2-rc.1 起显式列出 rc，含 0.1.7-rc.2')
 assert.equal(manifest.devDependencies?.['@deepseek-ai/cordis'], '4.0.4', 'Cordis 编译版本必须对齐当前 DSH 开发依赖')
 assert.equal(manifest.peerDependencies?.['@michengai/dsh-agency-agents'], undefined, '不得把专家插件写成 Codex UI 的 peer')
 assert.equal(manifest.peerDependencies?.['@michengai/dsh-skills-manager'], undefined, '不得把技能插件写成 Codex UI 的 peer')
