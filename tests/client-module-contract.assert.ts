@@ -65,8 +65,9 @@ for (const packageName of versionedClientPackages) {
   assert.equal(manifest.peerDependencies?.[packageName], supportedDshRange, `${packageName} 必须使用统一的 DSH Peer 范围`)
   assert.equal(manifest.devDependencies?.[packageName], hostDevDshVersion, `${packageName} 必须钉在当前宿主开发版本`)
 }
-assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-runtime'], '0.1.0-rc.8 || 0.1.1-rc.2', '客户端运行时没有 0.1.7 包，只能显式声明已发布的 rc')
-assert.equal(manifest.devDependencies?.['@deepseek-ai/dsh-client-runtime'], highestPublishedClientRuntime, '客户端运行时没有 0.1.7 包，必须使用其已发布最高版本')
+assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-runtime'], undefined, '客户端不再导入运行时包，不得写成 peer，否则桌面安装门会拿宿主版本去对这条范围')
+assert.equal(manifest.dsh?.client?.inject?.includes('@deepseek-ai/dsh-client-runtime'), false, '客户端不再 require 运行时包，不得写成 inject')
+assert.equal(manifest.devDependencies?.['@deepseek-ai/dsh-client-runtime'], highestPublishedClientRuntime, '测试仍要加载已发布最高版的客户端运行时')
 for (const [packageName, version] of Object.entries(manifest.devDependencies ?? {})) {
   if (!packageName.startsWith('@deepseek-ai/dsh-')) continue
   if (packageName === '@deepseek-ai/dsh-client-runtime') continue

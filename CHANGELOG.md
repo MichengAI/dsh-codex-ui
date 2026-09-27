@@ -4,6 +4,10 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.21 - 2026-09-27
+
+- Updating or installing on DSH `0.1.7-rc.2` is no longer rejected by the compatibility check.
+
 ## suite-installer-v1.0.27 - 2026-09-27
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:
