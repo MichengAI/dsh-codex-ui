@@ -67,6 +67,46 @@ test('任何一段失败不得返回部分总量，并短暂缓存失败', async
   expect(await npmTotalDownloads('dshmarket')).toBe(3702)
 })
 
+test('查创建日耗尽超时后，下载量请求仍要发出', async () => {
+  const controllers: AbortController[] = []
+  vi.spyOn(AbortSignal, 'timeout').mockImplementation(() => {
+    const controller = new AbortController()
+    controllers.push(controller)
+    return controller.signal
+  })
+  const fetcher = vi.fn(async (url: string, init?: { signal?: AbortSignal }) => {
+    if (url.startsWith('https://registry.npmjs.org/')) {
+      controllers[0]?.abort()
+      return { ok: true, json: async () => ({ time: { created: '2026-08-16T01:00:00Z' } }) }
+    }
+    if (init?.signal?.aborted) throw new DOMException('The operation was aborted due to timeout', 'TimeoutError')
+    const match = /point\/([^:]+):([^/]+)\/(.+)$/.exec(url)!
+    return { ok: true, json: async () => ({ package: decodeURIComponent(match[3]!), downloads: 10, start: match[1], end: match[2] }) }
+  })
+  vi.stubGlobal('fetch', fetcher)
+  const { npmTotalDownloads } = await import('../src/npm-downloads.ts')
+  expect(await npmTotalDownloads('dshmarket')).toBe(10)
+})
+
+test('同时查询多个包时，在飞请求不超过 4 个', async () => {
+  let inFlight = 0
+  let maxInFlight = 0
+  const fetcher = vi.fn(async (url: string) => {
+    inFlight += 1
+    maxInFlight = Math.max(maxInFlight, inFlight)
+    await new Promise(resolve => { setTimeout(resolve, 20) })
+    inFlight -= 1
+    if (url.startsWith('https://registry.npmjs.org/')) return { ok: true, json: async () => ({ time: { created: '2026-08-16T01:00:00Z' } }) }
+    const match = /point\/([^:]+):([^/]+)\/(.+)$/.exec(url)!
+    return { ok: true, json: async () => ({ package: decodeURIComponent(match[3]!), downloads: 7, start: match[1], end: match[2] }) }
+  })
+  vi.stubGlobal('fetch', fetcher)
+  const { npmTotalDownloads } = await import('../src/npm-downloads.ts')
+  const totals = await Promise.all(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map(name => npmTotalDownloads(name)))
+  expect(totals).toEqual([7, 7, 7, 7, 7, 7, 7, 7])
+  expect(maxInFlight).toBeLessThanOrEqual(4)
+})
+
 test('成功数据六小时后重新查询', async () => {
   const fetcher = mockNpm()
   const { npmTotalDownloads } = await import('../src/npm-downloads.ts')
