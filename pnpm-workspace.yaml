@@ -28,6 +28,12 @@ packageExtensions:
       shiki: ^4.3.1
       simple-icons: 16.31.0
       '@deepseek-ai/dsh-util-code-language': 0.1.7-rc.2
+  # 0.2.0-rc.1 的 client-store 直接 import zustand v4 子路径与 immer，
+  # 却没有在 dependencies/peerDependencies 里声明；补上才能被解析。
+  '@deepseek-ai/dsh-client-store':
+    dependencies:
+      immer: ^10.1.1
+      zustand: ^4.4.7
 
 allowBuilds:
   esbuild: true
