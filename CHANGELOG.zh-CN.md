@@ -4,6 +4,12 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 1.1.22 - 2026-09-29
+
+- 宿主兼容范围从 DSH `0.1.2-rc.1` 起，逐个列出直到 `0.2.0-rc.1` 的全部候选版：`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.5-rc.3`、`0.1.7-rc.1`、`0.1.7-rc.2` 与 `0.2.0-rc.1`。这补上了此前漏掉的 `0.1.5-rc.3`，并与其余自研插件保持一致；`0.1.0-rc.8` 与 `0.1.1-rc.2` 不再声明支持。
+- 开发依赖钉到 DSH `0.2.0-rc.1`，否则最新候选版宿主会因兼容检查直接停用本插件。
+- 移除已停更的 `@deepseek-ai/dsh-client-runtime` 开发依赖。设置生命周期用例改为挂载官方 `@deepseek-ai/dsh-client-ui-renderer/client` 装配包里的生产 `SlotRegistry`，该包已从 peer、客户端 inject 与测试中彻底消失。
+
 ## suite-installer-v1.0.28 - 2026-09-27
 
 一键维护安装 11 个自研插件。包含以下插件及版本：

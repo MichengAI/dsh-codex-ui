@@ -9,10 +9,7 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["node"],
-    "paths": {
-      "@dsh-runtime-client-bundle": ["./node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js"]
-    }
+    "types": ["node"]
   },
   "include": ["src", "tests"]
 }

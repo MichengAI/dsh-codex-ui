@@ -4,6 +4,7 @@ import { Context } from '@deepseek-ai/cordis'
 import { SlotCore, type PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
 import { expect, test, vi } from 'vitest'
 import { registerSettingsPage } from '../src/client/settings-page-registration.ts'
+import { loadClientBundle } from './client-module-loader.ts'
 import { CodexSettingsPage, CodexGeneralSettings } from '../src/client/CodexSettingsPage.tsx'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({ ConnectionIndicator: () => null }))
@@ -94,11 +95,9 @@ test.each([
   ['configForms', true],
   ['settingsScope', true],
 ] as const)('真实 Cordis 注入生命周期：%s loopback=%s 的配置文件入口', async (service, loopback) => {
-  let runtime: { SlotRegistry: new (ctx: Context) => Context['slots'] } | undefined
-  const code=readFileSync(require.resolve('@deepseek-ai/dsh-client-runtime/client'),'utf8')
-  new Function('window',code)({__ModuleLoader__:{load:({factory}:{factory:(require:NodeRequire)=>typeof runtime})=>{runtime=factory(require)}}})
+  const { SlotRegistry } = loadClientBundle('@deepseek-ai/dsh-client-ui-renderer/client') as { SlotRegistry: new (ctx: Context) => Context['slots'] }
   const ctx=new Context()
-  new runtime!.SlotRegistry(ctx)
+  new SlotRegistry(ctx)
   const removeLocale=ctx.provide('locale', {bind:()=> (key:string)=>key,getSnapshot:()=>({revision:0}),subscribe:()=>()=>{}} as never)
   const removeConnection=ctx.provide('connection',{state:{getSnapshot:()=> 'connected',subscribe:()=>()=>{}},reconnect:()=>{}} as never)
   const removeRoot=ctx.slots.register({name:'root',children:{'sidebar.settings':{kind:'single',scope:'root'}}},(_props: PropsRenderSlots<'sidebar.settings'>)=>null)

@@ -4,6 +4,12 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.22 - 2026-09-29
+
+- Host support now starts at DSH `0.1.2-rc.1` and lists every release candidate through `0.2.0-rc.1`: `0.1.2-rc.1`, `0.1.5-rc.1`, `0.1.5-rc.2`, `0.1.5-rc.3`, `0.1.7-rc.1`, `0.1.7-rc.2`, and `0.2.0-rc.1`. This adds the previously missing `0.1.5-rc.3` and matches the other first-party plugins; `0.1.0-rc.8` and `0.1.1-rc.2` are no longer declared.
+- Development dependencies are pinned to DSH `0.2.0-rc.1`, so the plugin installs on the newest release candidate instead of being disabled by the host compatibility check.
+- Dropped the abandoned `@deepseek-ai/dsh-client-runtime` development dependency. The settings lifecycle spec now mounts the production `SlotRegistry` from the official `@deepseek-ai/dsh-client-ui-renderer/client` bundle, so the package is gone from peers, client inject, and tests alike.
+
 ## suite-installer-v1.0.28 - 2026-09-27
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:
