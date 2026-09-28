@@ -4,6 +4,24 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## suite-installer-v1.0.29 - 2026-09-29
+
+一键维护安装 11 个自研插件。包含以下插件及版本：
+
+- `@michengai/dsh-archive-manager@1.0.7`
+- `@michengai/dsh-codex-ui@1.1.21`
+- `@michengai/dsh-skills-manager@1.1.5`
+- `@michengai/dsh-agency-agents@1.0.6`
+- `@michengai/dsh-im-connect@0.1.57`
+- `@michengai/dsh-automation@0.1.52`
+- `@michengai/dsh-btw@0.1.14`
+- `@michengai/dsh-simplify@0.1.11`
+- `@michengai/dsh-pua@0.3.19`
+- `@michengai/dsh-code-review@0.1.8`
+- `@michengai/dsh-codex-pet@0.1.11`
+
+安装器使用这些精确版本执行安装，确保可复现。
+
 ## 1.1.22 - 2026-09-29
 
 - 宿主兼容范围从 DSH `0.1.2-rc.1` 起，逐个列出直到 `0.2.0-rc.1` 的全部候选版：`0.1.2-rc.1`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.5-rc.3`、`0.1.7-rc.1`、`0.1.7-rc.2` 与 `0.2.0-rc.1`。这补上了此前漏掉的 `0.1.5-rc.3`，并与其余自研插件保持一致；`0.1.0-rc.8` 与 `0.1.1-rc.2` 不再声明支持。

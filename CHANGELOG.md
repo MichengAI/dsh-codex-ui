@@ -4,6 +4,24 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## suite-installer-v1.0.29 - 2026-09-29
+
+Install or maintain 11 first-party plugins in one step. Included plugins and versions:
+
+- `@michengai/dsh-archive-manager@1.0.7`
+- `@michengai/dsh-codex-ui@1.1.21`
+- `@michengai/dsh-skills-manager@1.1.5`
+- `@michengai/dsh-agency-agents@1.0.6`
+- `@michengai/dsh-im-connect@0.1.57`
+- `@michengai/dsh-automation@0.1.52`
+- `@michengai/dsh-btw@0.1.14`
+- `@michengai/dsh-simplify@0.1.11`
+- `@michengai/dsh-pua@0.3.19`
+- `@michengai/dsh-code-review@0.1.8`
+- `@michengai/dsh-codex-pet@0.1.11`
+
+The installer uses these exact versions for reproducible installation.
+
 ## 1.1.22 - 2026-09-29
 
 - Host support now starts at DSH `0.1.2-rc.1` and lists every release candidate through `0.2.0-rc.1`: `0.1.2-rc.1`, `0.1.5-rc.1`, `0.1.5-rc.2`, `0.1.5-rc.3`, `0.1.7-rc.1`, `0.1.7-rc.2`, and `0.2.0-rc.1`. This adds the previously missing `0.1.5-rc.3` and matches the other first-party plugins; `0.1.0-rc.8` and `0.1.1-rc.2` are no longer declared.
