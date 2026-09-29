@@ -4,6 +4,24 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## suite-installer-v1.0.30 - 2026-09-29
+
+一键维护安装 11 个自研插件。包含以下插件及版本：
+
+- `@michengai/dsh-archive-manager@1.0.7`
+- `@michengai/dsh-codex-ui@1.1.22`
+- `@michengai/dsh-skills-manager@1.1.5`
+- `@michengai/dsh-agency-agents@1.0.6`
+- `@michengai/dsh-im-connect@0.1.57`
+- `@michengai/dsh-automation@0.1.52`
+- `@michengai/dsh-btw@0.1.14`
+- `@michengai/dsh-simplify@0.1.11`
+- `@michengai/dsh-pua@0.3.19`
+- `@michengai/dsh-code-review@0.1.8`
+- `@michengai/dsh-codex-pet@0.1.11`
+
+安装器使用这些精确版本执行安装，确保可复现。
+
 ## 1.1.23 - 2026-09-29
 
 - 在官方 DeepSeek Harness 桌面端的关于页安装或更新其他插件时，不再把桌面宿主打崩。
