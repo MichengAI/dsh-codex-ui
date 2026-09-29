@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { readFile, rm, unlink, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path'
@@ -49,6 +49,17 @@ export type DependencyRuntime = {
   profileDir: string
   runtimeRoots: readonly string[]
   desktopPnpm?: DesktopPnpmService
+  /** 当前进程不是 dsh CLI 时，从公开 profileContext 解析出的 CLI 入口。 */
+  cliEntry?: string
+  /** 官方 Desktop Host 交给包管理的环境；只合并字符串项。 */
+  pluginEnv?: NodeJS.ProcessEnv
+}
+
+type LaunchedProfileService = {
+  name?: unknown
+  dir?: unknown
+  installAnchor?: unknown
+  packageManager?: { env?: unknown }
 }
 
 export type DependencyRuntimeOptions = {
@@ -113,13 +124,71 @@ export function resolveDependencyRuntime(ctx?: OptionalServiceContext, options: 
       desktopPnpm,
     }
   }
-  const profileDir = resolve(env.DSH_PROFILE_DIR ?? resolve(home, '.dsh', 'profiles', 'web'))
+  const launched = optionalService<LaunchedProfileService>(ctx, 'profileContext')
+  const launchedDir = typeof launched?.dir === 'string' && isAbsolute(launched.dir) ? resolve(launched.dir) : undefined
+  const launchedName = validProfileName(launched?.name) ? launched.name : undefined
+  const hostProfileDir = isOfficialDesktopHostEntry(argv[1]) && existsSync(resolve(cwd, 'package.json')) ? resolve(cwd) : undefined
+  const profileDir = launchedDir ?? hostProfileDir ?? resolve(env.DSH_PROFILE_DIR ?? resolve(home, '.dsh', 'profiles', 'web'))
   const selected = profileNameFromArgv(argv)
-  const profileName = validProfileName(selected) ? selected : validProfileName(basename(profileDir)) ? basename(profileDir) : 'web'
+  const profileName = launchedName ?? (validProfileName(selected) ? selected : validProfileName(basename(profileDir)) ? basename(profileDir) : 'web')
+  const cliEntry = resolveCliFromInstallAnchor(launched?.installAnchor) ?? resolveCliBesideDesktopHost(argv[1])
   const cliRuntimeRoot = argv[1] === undefined ? undefined : resolveDshRuntimeRoot(argv[1], cwd)
-  const runtimeRoots = [env.DSH_RUNTIME_DIR, cliRuntimeRoot]
+  const anchorRoot = cliEntry === undefined ? undefined : resolveDshRuntimeRoot(cliEntry)
+  const runtimeRoots = [env.DSH_RUNTIME_DIR, anchorRoot, cliRuntimeRoot]
     .filter((root): root is string => root !== undefined && root !== '')
-  return { environmentKind: 'cli', profileName, profileDir, runtimeRoots }
+  const pluginEnv = stringEnvironment(launched?.packageManager?.env)
+  return {
+    environmentKind: 'cli',
+    profileName,
+    profileDir,
+    runtimeRoots,
+    ...(cliEntry === undefined ? {} : { cliEntry }),
+    ...(pluginEnv === undefined ? {} : { pluginEnv }),
+  }
+}
+
+function stringEnvironment(value: unknown): NodeJS.ProcessEnv | undefined {
+  if (value === null || typeof value !== 'object') return undefined
+  const env: NodeJS.ProcessEnv = {}
+  for (const [key, item] of Object.entries(value)) {
+    if (typeof item === 'string') env[key] = item
+  }
+  return Object.keys(env).length === 0 ? undefined : env
+}
+
+/** 从公开 profileContext.installAnchor 读出 dsh bin，不把 Desktop Host 入口当成 CLI。 */
+export function resolveCliFromInstallAnchor(anchor: unknown): string | undefined {
+  if (typeof anchor !== 'string' || anchor === '' || !isAbsolute(anchor)) return undefined
+  try {
+    const manifest = JSON.parse(readFileSync(anchor, 'utf8')) as { bin?: unknown }
+    const bin = manifest.bin
+    const relative = typeof bin === 'string'
+      ? bin
+      : bin !== null && typeof bin === 'object' && typeof (bin as { dsh?: unknown }).dsh === 'string'
+        ? (bin as { dsh: string }).dsh
+        : undefined
+    if (relative === undefined || relative === '') return undefined
+    const entry = resolve(dirname(anchor), relative)
+    return existsSync(entry) ? entry : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** 官方 Desktop Host 是 Electron 的 IPC 子进程；父进程只接受带 type 的事件。 */
+export function isOfficialDesktopHostEntry(entry = process.argv[1]): boolean {
+  if (entry === undefined || entry === '') return false
+  return entry.replaceAll('\\', '/').includes('/dsh-desktop-host/')
+}
+
+/** 从公开包布局定位同一次安装里的 dsh CLI，不读取 launcher 私有 service。 */
+export function resolveCliBesideDesktopHost(entry = process.argv[1]): string | undefined {
+  if (!isOfficialDesktopHostEntry(entry)) return undefined
+  const normalized = entry.replaceAll('\\', '/')
+  const marker = '/node_modules/@deepseek-ai/dsh-desktop-host/'
+  const index = normalized.toLowerCase().lastIndexOf(marker)
+  if (index < 0) return undefined
+  return resolveCliFromInstallAnchor(resolve(entry.slice(0, index), 'node_modules', '@deepseek-ai', 'dsh', 'package.json'))
 }
 
 function profileDirectory(runtime: DependencyRuntime): string {
@@ -386,13 +455,38 @@ export function resolveDshCliEntry(entry = process.argv[1], cwd = process.cwd())
 
 export function requestDesktopHotUpdate(send: NodeJS.Process['send'] = process.send): boolean {
   if (typeof send !== 'function') return false
-  send(APPLY_PLUGIN_UPDATES_IPC)
-  return true
+  try {
+    // process.send 依赖 this。拆出来调用会在严格模式下读到 undefined.connected，并把 Desktop Host 打成未捕获异常。
+    if (send === process.send) {
+      if (process.connected !== true) return false
+      process.send?.(APPLY_PLUGIN_UPDATES_IPC)
+    } else {
+      send(APPLY_PLUGIN_UPDATES_IPC)
+    }
+    return true
+  } catch {
+    return false
+  }
 }
 
-/** Desktop 的包管理服务会自行安排重载；只有独立 Web 子进程需要通知父进程。 */
-export function canRequestParentReload(runtime: DependencyRuntime, send: NodeJS.Process['send'] = process.send): boolean {
-  return runtime.environmentKind === 'cli' && typeof send === 'function'
+/** Desktop 的包管理服务会自行安排重载；只有父进程能识别该消息的独立 Web 子进程才通知。 */
+export function canRequestParentReload(
+  runtime: DependencyRuntime,
+  send: NodeJS.Process['send'] = process.send,
+  entry = process.argv[1],
+): boolean {
+  return runtime.environmentKind === 'cli'
+    && !isOfficialDesktopHostEntry(entry)
+    && typeof send === 'function'
+    && (send !== process.send || process.connected === true)
+}
+
+/** 响应已经发出后再通知父进程；通知失败不能变成未捕获异常。 */
+export function scheduleParentPluginReload(delayMs = 150): void {
+  const timer = setTimeout(() => {
+    try { requestDesktopHotUpdate() } catch { /* 宿主必须留下来接收安装结果 */ }
+  }, delayMs)
+  timer.unref?.()
 }
 
 export function isRestartableInstallError(error: unknown): boolean {
@@ -785,10 +879,11 @@ export function runDshPlugin(args: readonly string[], runtime: DependencyRuntime
     const handle = withPnpmEntry(() => desktopPnpm.runPlugin(args, runtime.profileDir))
     return monitorDesktopPlugin(handle, timeoutMs)
   }
-  const entry = resolveDshCliEntry()
+  const entry = runtime.cliEntry ?? resolveDshCliEntry()
+  if (isOfficialDesktopHostEntry(entry)) throw new Error('无法定位 DSH CLI。请从 DSH 命令启动 Web 服务后重试。')
   const child = spawn(process.execPath, [...pluginExecArgv(), entry, 'plugin', '--profile', runtime.profileName, ...args], {
     cwd: process.cwd(),
-    env: pluginSpawnEnv(),
+    env: { ...pluginSpawnEnv(), ...runtime.pluginEnv },
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
   })

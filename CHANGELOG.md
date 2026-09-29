@@ -4,6 +4,11 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.23 - 2026-09-29
+
+- Installing or updating other plugins from the About page in official DeepSeek Harness Desktop no longer crashes the desktop host.
+- Those installs are written to the current desktop profile. Restart the app once afterward so the new plugin can load.
+
 ## suite-installer-v1.0.29 - 2026-09-29
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:

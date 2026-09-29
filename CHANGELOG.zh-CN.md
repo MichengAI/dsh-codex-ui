@@ -4,6 +4,11 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 1.1.23 - 2026-09-29
+
+- 在官方 DeepSeek Harness 桌面端的关于页安装或更新其他插件时，不再把桌面宿主打崩。
+- 安装会写入当前桌面 profile。装完后需要手动重启一次，新插件才会加载。
+
 ## suite-installer-v1.0.29 - 2026-09-29
 
 一键维护安装 11 个自研插件。包含以下插件及版本：

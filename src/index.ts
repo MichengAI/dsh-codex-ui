@@ -2,7 +2,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { apply as registerSettingsSchema } from '@deepseek-ai/dsh-client-ui-settings-general'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
-import { canRequestParentReload, dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, requestDesktopHotUpdate, resolveDependencyRuntime, runtimeSupportsOfficialTurnNavigator, updateAllDependencies } from './dependency-manager.ts'
+import { canRequestParentReload, dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, resolveDependencyRuntime, runtimeSupportsOfficialTurnNavigator, scheduleParentPluginReload, updateAllDependencies } from './dependency-manager.ts'
 import { authorizedExplorerWorkspacePath } from './explorer-path-policy.ts'
 import { hostServices } from './host-services.ts'
 import { ForegroundExplorer } from './native-explorer.ts'
@@ -208,7 +208,7 @@ export function apply(ctx: Context): void {
               }, runtime)
               response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
               response.end(JSON.stringify({ dependencies, restartRequired: updatedCount > 0, autoReload }))
-              if (restartAfterResponse) setTimeout(() => { requestDesktopHotUpdate() }, 150).unref?.()
+              if (restartAfterResponse) scheduleParentPluginReload()
               return
             }
             const runtime = resolveDependencyRuntime(ctx)
@@ -221,7 +221,7 @@ export function apply(ctx: Context): void {
             }, runtime)
             response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
             response.end(JSON.stringify({ dependencies, restartRequired: true, autoReload }))
-            if (restartAfterResponse) setTimeout(() => { requestDesktopHotUpdate() }, 150).unref?.()
+            if (restartAfterResponse) scheduleParentPluginReload()
             return
           }
           response.writeHead(405)

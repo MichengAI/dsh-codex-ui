@@ -3,11 +3,11 @@ import { EventEmitter } from 'node:events'
 import { existsSync, readFileSync } from 'node:fs'
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import type { ChildProcess } from 'node:child_process'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { PassThrough } from 'node:stream'
 import { pathToFileURL } from 'node:url'
-import { applyRequiredBuildPolicies, beginInstallProgress, canRequestParentReload, dependencyStatuses, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, PLUGIN_MOUNT_TIMEOUT_MS, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, supportsOfficialTurnNavigator, updatableDependencyIds, withPnpmEntry } from '../src/dependency-manager.ts'
+import { applyRequiredBuildPolicies, beginInstallProgress, canRequestParentReload, dependencyStatuses, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialDesktopHostEntry, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, PLUGIN_MOUNT_TIMEOUT_MS, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveCliBesideDesktopHost, resolveCliFromInstallAnchor, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, supportsOfficialTurnNavigator, updatableDependencyIds, withPnpmEntry } from '../src/dependency-manager.ts'
 import { publicDependencyError } from '../src/index.ts'
 
 const sourceRoot = resolve('fixtures', 'deepseek-harness')
@@ -409,9 +409,75 @@ assert.ok(PLUGIN_MOUNT_TIMEOUT_MS >= 15_000, '等待 Desktop 写入 bundles 至�
 assert.equal(requestDesktopHotUpdate(undefined), false)
 assert.equal(canRequestParentReload(desktopRuntime, () => true), false, 'Desktop 包管理服务负责重载，插件不得重复发送 IPC')
 assert.equal(canRequestParentReload(customRuntime, () => true), true, '独立 Web 子进程可以请求父进程重载')
+const desktopHostEntry = '/runtime/node_modules/@deepseek-ai/dsh-desktop-host/lib/index.js'
+assert.equal(isOfficialDesktopHostEntry(desktopHostEntry), true)
+assert.equal(canRequestParentReload(customRuntime, () => true, desktopHostEntry), false, '官方 Desktop Host 的父进程不接受 apply-plugin-updates，不得通知')
+assert.equal(requestDesktopHotUpdate(() => { throw new TypeError("Cannot read properties of undefined (reading 'connected')") }), false, '热更新通知失败必须吞掉，不能打崩宿主')
 let sent
 assert.equal(requestDesktopHotUpdate((message) => { sent = message; return true }), true)
 assert.equal(sent, 'apply-plugin-updates')
+const previousSend = process.send
+const previousConnected = process.connected
+try {
+  let receiver: unknown
+  process.send = function (this: unknown, message: unknown) {
+    receiver = this
+    sent = message
+    return true
+  } as typeof process.send
+  process.connected = true
+  assert.equal(requestDesktopHotUpdate(), true, '真实 IPC 发送必须保留 process 作为 this')
+  assert.equal(receiver, process)
+  assert.equal(sent, 'apply-plugin-updates')
+  process.connected = false
+  assert.equal(requestDesktopHotUpdate(), false, 'IPC 已断开时不得再发送')
+  assert.equal(canRequestParentReload(customRuntime), false, 'IPC 已断开时必须走本地安装，不能空等父进程')
+} finally {
+  process.send = previousSend
+  process.connected = previousConnected
+}
+
+const hostProfileRoot = await mkdtemp(join(tmpdir(), 'dcu-desktop-host-'))
+const hostProfileDir = join(hostProfileRoot, 'profiles', 'desktop')
+const hostCli = join(hostProfileRoot, 'runtime', 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
+const hostAnchor = join(hostProfileRoot, 'runtime', 'node_modules', '@deepseek-ai', 'dsh', 'package.json')
+await mkdir(dirname(hostCli), { recursive: true })
+await mkdir(hostProfileDir, { recursive: true })
+await writeFile(hostAnchor, JSON.stringify({ bin: { dsh: 'lib/bin.js' } }))
+await writeFile(hostCli, '')
+const hostRuntime = resolveDependencyRuntime({
+  get: name => name === 'profileContext' ? {
+    name: 'desktop',
+    dir: hostProfileDir,
+    installAnchor: hostAnchor,
+    packageManager: { env: { PATH: '/desktop/bin', ELECTRON_RUN_AS_NODE: '1', ignored: 1 } },
+  } : undefined,
+}, {
+  env: {},
+  argv: ['/node', desktopHostEntry, hostProfileRoot],
+  homeDir: join(hostProfileRoot, 'home'),
+})
+assert.equal(resolveCliFromInstallAnchor(hostAnchor), hostCli)
+assert.equal(hostRuntime.environmentKind, 'cli', '没有 Desktop 包管理服务时不能假装托管重载')
+assert.equal(hostRuntime.profileName, 'desktop')
+assert.equal(hostRuntime.profileDir, hostProfileDir, '官方 Desktop Host 必须安装到当前 profile，而不是默认 web')
+assert.equal(hostRuntime.cliEntry, hostCli, 'Desktop Host 入口不能拿来执行 dsh plugin')
+assert.equal(hostRuntime.pluginEnv?.PATH, '/desktop/bin')
+assert.equal(hostRuntime.pluginEnv?.ignored, undefined, '包管理环境只保留字符串项')
+assert.equal(canRequestParentReload(hostRuntime, () => true, desktopHostEntry), false)
+const besideHostEntry = join(hostProfileRoot, 'runtime', 'node_modules', '@deepseek-ai', 'dsh-desktop-host', 'lib', 'index.js')
+assert.equal(resolveCliBesideDesktopHost(besideHostEntry), hostCli, '没有 profileContext 时也必须从同一次安装定位 dsh CLI')
+await writeFile(join(hostProfileDir, 'package.json'), '{}')
+const cwdRuntime = resolveDependencyRuntime(undefined, {
+  env: {},
+  argv: ['/node', besideHostEntry],
+  cwd: hostProfileDir,
+  homeDir: join(hostProfileRoot, 'home'),
+})
+assert.equal(cwdRuntime.profileDir, hostProfileDir, '官方 Desktop Host 的工作目录就是当前 profile')
+assert.equal(cwdRuntime.cliEntry, hostCli)
+assert.equal(canRequestParentReload(cwdRuntime, () => true, besideHostEntry), false)
+await rm(hostProfileRoot, { recursive: true, force: true })
 
 
 assert.equal(isOfficialRuntimePackage('@deepseek-ai/dsh'), true)
