@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { readFile, rm, unlink, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path'
+import { basename, delimiter, dirname, isAbsolute, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { npmTotalDownloads } from './npm-downloads.ts'
 import { MANAGED_DEPENDENCIES, SUITE_MEMBER_PACKAGES, SUITE_PACKAGE, managedDependency, type ManagedDependencyId } from './dependencies.ts'
@@ -49,17 +49,25 @@ export type DependencyRuntime = {
   profileDir: string
   runtimeRoots: readonly string[]
   desktopPnpm?: DesktopPnpmService
+  /** 官方 Desktop 交给 profile 的 pnpm 启动方式。没有 desktopPnpm 时用它安装，不再去启动 asar 里的 CLI。 */
+  packageManager?: ProfilePackageManager
   /** 当前进程不是 dsh CLI 时，从公开 profileContext 解析出的 CLI 入口。 */
   cliEntry?: string
   /** 官方 Desktop Host 交给包管理的环境；只合并字符串项。 */
   pluginEnv?: NodeJS.ProcessEnv
 }
 
+type ProfilePackageManager = {
+  command: string
+  args: readonly string[]
+  env?: NodeJS.ProcessEnv
+}
+
 type LaunchedProfileService = {
   name?: unknown
   dir?: unknown
   installAnchor?: unknown
-  packageManager?: { env?: unknown }
+  packageManager?: { command?: unknown; args?: unknown; env?: unknown }
 }
 
 export type DependencyRuntimeOptions = {
@@ -137,6 +145,7 @@ export function resolveDependencyRuntime(ctx?: OptionalServiceContext, options: 
   const runtimeRoots = [env.DSH_RUNTIME_DIR, anchorRoot, cliRuntimeRoot]
     .filter((root): root is string => root !== undefined && root !== '')
   const pluginEnv = stringEnvironment(launched?.packageManager?.env)
+  const packageManager = profilePackageManager(launched?.packageManager) ?? desktopPackageManagerFromArgv(argv)
   return {
     environmentKind: 'cli',
     profileName,
@@ -144,6 +153,34 @@ export function resolveDependencyRuntime(ctx?: OptionalServiceContext, options: 
     runtimeRoots,
     ...(cliEntry === undefined ? {} : { cliEntry }),
     ...(pluginEnv === undefined ? {} : { pluginEnv }),
+    ...(packageManager === undefined ? {} : { packageManager }),
+  }
+}
+
+function profilePackageManager(value: LaunchedProfileService['packageManager']): ProfilePackageManager | undefined {
+  if (typeof value?.command !== 'string' || value.command === '') return undefined
+  if (!Array.isArray(value.args) || !value.args.every(item => typeof item === 'string')) return undefined
+  const env = stringEnvironment(value.env)
+  return { command: value.command, args: value.args, ...(env === undefined ? {} : { env }) }
+}
+
+/** 官方 Desktop Host 把 pnpm 入口放在 argv[5]，bin 放在 argv[6]，不提供 desktopPnpm。 */
+export function desktopPackageManagerFromArgv(
+  argv: readonly string[],
+  command = process.execPath,
+): ProfilePackageManager | undefined {
+  if (!isOfficialDesktopHostEntry(argv[1])) return undefined
+  const pnpm = argv[5]
+  if (typeof pnpm !== 'string' || !isAbsolute(pnpm) || !existsSync(pnpm)) return undefined
+  const bin = argv[6]
+  const path = typeof bin === 'string' && bin !== '' ? `${bin}${delimiter}${process.env.PATH ?? ''}` : process.env.PATH
+  return {
+    command,
+    args: ['--expose-internals', pnpm],
+    env: {
+      ELECTRON_RUN_AS_NODE: '1',
+      ...(typeof path === 'string' && path !== '' ? { PATH: path } : {}),
+    },
   }
 }
 
@@ -532,6 +569,23 @@ async function removePendingUpdate(packageName: string, runtime: DependencyRunti
   }
 }
 
+/** pnpm add 不会写 bundles。官方 Desktop 直接调宿主 pnpm 时，要自己把插件挂进 profile。 */
+export async function declareProfileBundle(packageName: string, runtime: DependencyRuntime): Promise<void> {
+  if (isOfficialRuntimePackage(packageName)) return
+  const manifestPath = resolve(profileDirectory(runtime), 'package.json')
+  let manifest: ProfileManifest
+  try {
+    manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as ProfileManifest
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    manifest = {}
+  }
+  const bundles = manifest.dsh?.profile?.bundles ?? []
+  if (bundles.includes(packageName)) return
+  manifest.dsh = { ...manifest.dsh, profile: { ...manifest.dsh?.profile, bundles: [...bundles, packageName] } }
+  await writeFile(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`, 'utf8')
+}
+
 async function recordDeclaredVersion(packageName: string, version: string, runtime: DependencyRuntime): Promise<void> {
   const manifestPath = resolve(profileDirectory(runtime), 'package.json')
   let manifest: { dependencies?: Record<string, string> }
@@ -879,6 +933,16 @@ export function runDshPlugin(args: readonly string[], runtime: DependencyRuntime
     const handle = withPnpmEntry(() => desktopPnpm.runPlugin(args, runtime.profileDir))
     return monitorDesktopPlugin(handle, timeoutMs)
   }
+  const packageManager = runtime.packageManager
+  if (packageManager !== undefined) {
+    const child = spawn(packageManager.command, [...packageManager.args, ...args], {
+      cwd: runtime.profileDir,
+      env: { ...pluginSpawnEnv(), ...runtime.pluginEnv, ...packageManager.env },
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    return monitorPluginChild(child, timeoutMs, 'desktop')
+  }
   const entry = runtime.cliEntry ?? resolveDshCliEntry()
   if (isOfficialDesktopHostEntry(entry)) throw new Error('无法定位 DSH CLI。请从 DSH 命令启动 Web 服务后重试。')
   const child = spawn(process.execPath, [...pluginExecArgv(), entry, 'plugin', '--profile', runtime.profileName, ...args], {
@@ -988,6 +1052,7 @@ async function installDependenciesLocked(
     for (const batch of batches) {
       await runDshPlugin(['add', '--config.minimumReleaseAge=0', ...batch.map(target => `${target.packageName}@${target.version}`), '--registry=https://registry.npmjs.org/'], runtime)
       for (const target of batch) {
+        if (runtime.packageManager !== undefined) await declareProfileBundle(target.packageName, runtime)
         await waitUntilPluginMounted(target.packageName, target.version, runtime)
         if (!isOfficialRuntimePackage(target.packageName)) await recordDeclaredVersion(target.packageName, target.version, runtime)
         await removePendingUpdate(target.packageName, runtime)

@@ -7,7 +7,7 @@ import { dirname, join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { PassThrough } from 'node:stream'
 import { pathToFileURL } from 'node:url'
-import { applyRequiredBuildPolicies, beginInstallProgress, canRequestParentReload, dependencyStatuses, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialDesktopHostEntry, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, PLUGIN_MOUNT_TIMEOUT_MS, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveCliBesideDesktopHost, resolveCliFromInstallAnchor, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, supportsOfficialTurnNavigator, updatableDependencyIds, withPnpmEntry } from '../src/dependency-manager.ts'
+import { applyRequiredBuildPolicies, beginInstallProgress, canRequestParentReload, declareProfileBundle, dependencyStatuses, desktopPackageManagerFromArgv, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialDesktopHostEntry, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, PLUGIN_MOUNT_TIMEOUT_MS, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveCliBesideDesktopHost, resolveCliFromInstallAnchor, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, supportsOfficialTurnNavigator, updatableDependencyIds, withPnpmEntry } from '../src/dependency-manager.ts'
 import { publicDependencyError } from '../src/index.ts'
 
 const sourceRoot = resolve('fixtures', 'deepseek-harness')
@@ -477,6 +477,23 @@ const cwdRuntime = resolveDependencyRuntime(undefined, {
 assert.equal(cwdRuntime.profileDir, hostProfileDir, '官方 Desktop Host 的工作目录就是当前 profile')
 assert.equal(cwdRuntime.cliEntry, hostCli)
 assert.equal(canRequestParentReload(cwdRuntime, () => true, besideHostEntry), false)
+const packagedPnpm = join(hostProfileRoot, 'runtime', 'pnpm', 'bin', 'pnpm.mjs')
+const packagedBin = join(hostProfileRoot, 'runtime', 'bin')
+await mkdir(dirname(packagedPnpm), { recursive: true })
+await writeFile(packagedPnpm, '')
+const packagedRuntime = resolveDependencyRuntime(undefined, {
+  env: { PATH: '/existing' },
+  argv: ['/node', besideHostEntry, hostProfileRoot, hostProfileDir, join(hostProfileRoot, 'runtime', 'primary-runtime'), packagedPnpm, packagedBin],
+  cwd: hostProfileDir,
+  homeDir: join(hostProfileRoot, 'home'),
+})
+assert.equal(packagedRuntime.packageManager?.command, process.execPath, '没有 desktopPnpm 时必须改用宿主带上的 pnpm')
+assert.deepEqual(packagedRuntime.packageManager?.args, ['--expose-internals', packagedPnpm])
+assert.equal(packagedRuntime.packageManager?.env?.ELECTRON_RUN_AS_NODE, '1')
+assert.equal(desktopPackageManagerFromArgv(['/node', '/not-a-host']), undefined, '普通 CLI 不得伪装成 Desktop pnpm')
+await declareProfileBundle('@michengai/dsh-im-connect', packagedRuntime)
+const declaredBundles = JSON.parse(readFileSync(join(hostProfileDir, 'package.json'), 'utf8')) as { dsh: { profile: { bundles: string[] } } }
+assert.deepEqual(declaredBundles.dsh.profile.bundles, ['@michengai/dsh-im-connect'], '直接调用宿主 pnpm 后必须把插件写进 bundles')
 await rm(hostProfileRoot, { recursive: true, force: true })
 
 

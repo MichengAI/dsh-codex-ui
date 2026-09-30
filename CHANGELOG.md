@@ -4,6 +4,11 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.24 - 2026-09-30
+
+- About-page installs on official Desktop now use the host's bundled pnpm instead of launching the dsh command inside the app archive.
+- Host support includes DSH `0.2.0-rc.2`. The sidebar, layout, and slot contracts match `0.2.0-rc.1`; without this declaration the new Desktop disables the plugin. Development dependencies are pinned to `0.2.0-rc.2`.
+
 ## suite-installer-v1.0.30 - 2026-09-29
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:

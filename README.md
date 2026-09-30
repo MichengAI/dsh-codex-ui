@@ -24,7 +24,7 @@ Working across several projects and conversations in DSH Web? DSH Codex UI helps
 
 ## Host compatibility
 
-This working tree explicitly declares DSH `0.1.2-rc.1`, `0.1.5-rc.1`, `0.1.5-rc.2`, `0.1.5-rc.3`, `0.1.7-rc.1`, `0.1.7-rc.2`, and `0.2.0-rc.1`. Development dependencies are pinned to `0.2.0-rc.1`. No code references `@deepseek-ai/dsh-client-runtime`: it is not a peer, not a client inject, and no longer a development dependency now that the settings-lifecycle spec mounts the production `SlotRegistry` from the official `@deepseek-ai/dsh-client-ui-renderer/client` bundle. Isolated host checks cover `0.1.2-rc.1`, `0.1.5-rc.1`, `0.1.5-rc.2`, `0.1.5-rc.3`, `0.1.7-rc.1`, `0.1.7-rc.2`, and `0.2.0-rc.1`.
+This working tree explicitly declares DSH `0.1.2-rc.1`, `0.1.5-rc.1`, `0.1.5-rc.2`, `0.1.5-rc.3`, `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, and `0.2.0-rc.2`. Development dependencies are pinned to `0.2.0-rc.2`. No code references `@deepseek-ai/dsh-client-runtime`: it is not a peer, not a client inject, and no longer a development dependency now that the settings-lifecycle spec mounts the production `SlotRegistry` from the official `@deepseek-ai/dsh-client-ui-renderer/client` bundle. Isolated host checks cover `0.1.2-rc.1`, `0.1.5-rc.1`, `0.1.5-rc.2`, `0.1.5-rc.3`, `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, and `0.2.0-rc.2`.
 
 ## What you can do
 
