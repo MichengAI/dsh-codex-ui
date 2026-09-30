@@ -14,6 +14,7 @@ const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.
   devDependencies?: Record<string, string>
 }
 const bundle = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
+const hostBundle = readFileSync(new URL('../lib/index.mjs', import.meta.url), 'utf8')
 const runtimeRequires = [...new Set([...bundle.matchAll(/\brequire\("([^"]+)"\)/g)].map(match => match[1]))].sort()
 const staticWebModules = [
   '@deepseek-ai/dsh-client-ui-primitives',
@@ -24,6 +25,7 @@ const staticWebModules = [
 ].sort()
 
 assert.deepEqual(runtimeRequires, staticWebModules, '客户端 bundle 只能要求 DSH Web 启动器稳定提供的静态模块')
+assert.doesNotMatch(hostBundle, /from ["']@deepseek-ai\/dsh-client-ui-settings-general["']/, '宿主入口不得再按包名导入 settings-general，否则会向上解析到旧副本')
 assert.equal(manifest.packageManager, 'pnpm@11.22.0', '仓库固定使用统一 pnpm 版本')
 assert.equal(manifest.engines?.node, '^22.19.0 || >=24.0.0', '仓库使用统一 Node LTS 基线')
 assert.doesNotMatch(bundle, /createLucideIcon\("alarm-clock"/, '客户端 bundle 不得包含未使用的 Lucide 图标')

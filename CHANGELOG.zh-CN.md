@@ -4,6 +4,10 @@
 
 本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 1.1.25 - 2026-09-30
+
+- 官方桌面端不再因为 profile 上级残留旧版 `dsh-client-ui-settings-general` 而启动失败。插件不再按包名导入该模块。
+
 ## suite-installer-v1.0.31 - 2026-09-30
 
 一键维护安装 11 个自研插件。包含以下插件及版本：

@@ -4,6 +4,10 @@
 
 This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.25 - 2026-09-30
+
+- Official Desktop no longer fails to start when an old `dsh-client-ui-settings-general` package remains above the profile. The plugin no longer imports that package by name.
+
 ## suite-installer-v1.0.31 - 2026-09-30
 
 Install or maintain 11 first-party plugins in one step. Included plugins and versions:
