@@ -1,6 +1,6 @@
 {
   "name": "@michengai/dsh-codex-suite-installer",
-  "version": "1.0.31",
+  "version": "1.0.32",
   "description": "轻量 DSH Codex Suite 安装器：将十一个成员装为同一 profile 的直接插件",
   "license": "Apache-2.0",
   "type": "module",
@@ -26,15 +26,15 @@
   },
   "dshCodexSuite": {
     "members": {
-      "@michengai/dsh-archive-manager": "1.0.8",
-      "@michengai/dsh-codex-ui": "1.1.23",
+      "@michengai/dsh-archive-manager": "1.0.9",
+      "@michengai/dsh-codex-ui": "1.1.24",
       "@michengai/dsh-skills-manager": "1.1.6",
       "@michengai/dsh-agency-agents": "1.0.7",
       "@michengai/dsh-im-connect": "0.1.58",
       "@michengai/dsh-automation": "0.1.53",
       "@michengai/dsh-btw": "0.1.15",
       "@michengai/dsh-simplify": "0.1.12",
-      "@michengai/dsh-pua": "0.3.20",
+      "@michengai/dsh-pua": "0.3.21",
       "@michengai/dsh-code-review": "0.1.9",
       "@michengai/dsh-codex-pet": "0.1.12"
     }
