@@ -2,111 +2,21 @@
 
 [English](CHANGELOG.md)
 
-本日志记录 DSH Codex UI 及其一键安装器的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
-
-## suite-installer-v1.0.33 - 2026-09-30
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.9`
-- `@michengai/dsh-codex-ui@1.1.25`
-- `@michengai/dsh-skills-manager@1.1.7`
-- `@michengai/dsh-agency-agents@1.0.7`
-- `@michengai/dsh-im-connect@0.1.58`
-- `@michengai/dsh-automation@0.1.53`
-- `@michengai/dsh-btw@0.1.15`
-- `@michengai/dsh-simplify@0.1.12`
-- `@michengai/dsh-pua@0.3.21`
-- `@michengai/dsh-code-review@0.1.9`
-- `@michengai/dsh-codex-pet@0.1.12`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
-## suite-installer-v1.0.32 - 2026-09-30
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.9`
-- `@michengai/dsh-codex-ui@1.1.24`
-- `@michengai/dsh-skills-manager@1.1.6`
-- `@michengai/dsh-agency-agents@1.0.7`
-- `@michengai/dsh-im-connect@0.1.58`
-- `@michengai/dsh-automation@0.1.53`
-- `@michengai/dsh-btw@0.1.15`
-- `@michengai/dsh-simplify@0.1.12`
-- `@michengai/dsh-pua@0.3.21`
-- `@michengai/dsh-code-review@0.1.9`
-- `@michengai/dsh-codex-pet@0.1.12`
-
-安装器使用这些精确版本执行安装，确保可复现。
+本日志记录 DSH Codex UI 的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
 ## 1.1.25 - 2026-09-30
 
 - 官方桌面端不再因为 profile 上级残留旧版 `dsh-client-ui-settings-general` 而启动失败。插件不再按包名导入该模块。
-
-## suite-installer-v1.0.31 - 2026-09-30
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.8`
-- `@michengai/dsh-codex-ui@1.1.23`
-- `@michengai/dsh-skills-manager@1.1.6`
-- `@michengai/dsh-agency-agents@1.0.7`
-- `@michengai/dsh-im-connect@0.1.58`
-- `@michengai/dsh-automation@0.1.53`
-- `@michengai/dsh-btw@0.1.15`
-- `@michengai/dsh-simplify@0.1.12`
-- `@michengai/dsh-pua@0.3.20`
-- `@michengai/dsh-code-review@0.1.9`
-- `@michengai/dsh-codex-pet@0.1.12`
-
-安装器使用这些精确版本执行安装，确保可复现。
 
 ## 1.1.24 - 2026-09-30
 
 - 官方桌面端关于页安装其他插件时，改用宿主自带的 pnpm，不再去启动 asar 里的 dsh 命令。
 - 宿主兼容范围加入 DSH `0.2.0-rc.2`。侧栏、布局和插槽合约与 `0.2.0-rc.1` 相同；不声明这个版本时，新桌面端会因兼容检查停用本插件。开发依赖钉到 `0.2.0-rc.2`。
 
-## suite-installer-v1.0.30 - 2026-09-29
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.7`
-- `@michengai/dsh-codex-ui@1.1.22`
-- `@michengai/dsh-skills-manager@1.1.5`
-- `@michengai/dsh-agency-agents@1.0.6`
-- `@michengai/dsh-im-connect@0.1.57`
-- `@michengai/dsh-automation@0.1.52`
-- `@michengai/dsh-btw@0.1.14`
-- `@michengai/dsh-simplify@0.1.11`
-- `@michengai/dsh-pua@0.3.19`
-- `@michengai/dsh-code-review@0.1.8`
-- `@michengai/dsh-codex-pet@0.1.11`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 1.1.23 - 2026-09-29
 
 - 在官方 DeepSeek Harness 桌面端的关于页安装或更新其他插件时，不再把桌面宿主打崩。
 - 安装会写入当前桌面 profile。装完后需要手动重启一次，新插件才会加载。
-
-## suite-installer-v1.0.29 - 2026-09-29
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.7`
-- `@michengai/dsh-codex-ui@1.1.21`
-- `@michengai/dsh-skills-manager@1.1.5`
-- `@michengai/dsh-agency-agents@1.0.6`
-- `@michengai/dsh-im-connect@0.1.57`
-- `@michengai/dsh-automation@0.1.52`
-- `@michengai/dsh-btw@0.1.14`
-- `@michengai/dsh-simplify@0.1.11`
-- `@michengai/dsh-pua@0.3.19`
-- `@michengai/dsh-code-review@0.1.8`
-- `@michengai/dsh-codex-pet@0.1.11`
-
-安装器使用这些精确版本执行安装，确保可复现。
 
 ## 1.1.22 - 2026-09-29
 
@@ -114,292 +24,40 @@
 - 开发依赖钉到 DSH `0.2.0-rc.1`，否则最新候选版宿主会因兼容检查直接停用本插件。
 - 移除已停更的 `@deepseek-ai/dsh-client-runtime` 开发依赖。设置生命周期用例改为挂载官方 `@deepseek-ai/dsh-client-ui-renderer/client` 装配包里的生产 `SlotRegistry`，该包已从 peer、客户端 inject 与测试中彻底消失。
 
-## suite-installer-v1.0.28 - 2026-09-27
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.6`
-- `@michengai/dsh-codex-ui@1.1.20`
-- `@michengai/dsh-skills-manager@1.1.4`
-- `@michengai/dsh-agency-agents@1.0.5`
-- `@michengai/dsh-im-connect@0.1.55`
-- `@michengai/dsh-automation@0.1.51`
-- `@michengai/dsh-btw@0.1.13`
-- `@michengai/dsh-simplify@0.1.10`
-- `@michengai/dsh-pua@0.3.18`
-- `@michengai/dsh-code-review@0.1.7`
-- `@michengai/dsh-codex-pet@0.1.10`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 1.1.21 - 2026-09-27
 
 - 在 DSH `0.1.7-rc.2` 上可以正常更新安装，不再被兼容检查拒绝。
-
-## suite-installer-v1.0.27 - 2026-09-27
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.5`
-- `@michengai/dsh-codex-ui@1.1.20`
-- `@michengai/dsh-skills-manager@1.1.4`
-- `@michengai/dsh-agency-agents@1.0.5`
-- `@michengai/dsh-im-connect@0.1.55`
-- `@michengai/dsh-automation@0.1.51`
-- `@michengai/dsh-btw@0.1.13`
-- `@michengai/dsh-simplify@0.1.10`
-- `@michengai/dsh-pua@0.3.18`
-- `@michengai/dsh-code-review@0.1.7`
-- `@michengai/dsh-codex-pet@0.1.10`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
-## suite-installer-v1.0.26 - 2026-09-27
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.5`
-- `@michengai/dsh-codex-ui@1.1.19`
-- `@michengai/dsh-skills-manager@1.1.4`
-- `@michengai/dsh-agency-agents@1.0.5`
-- `@michengai/dsh-im-connect@0.1.55`
-- `@michengai/dsh-automation@0.1.51`
-- `@michengai/dsh-btw@0.1.13`
-- `@michengai/dsh-simplify@0.1.10`
-- `@michengai/dsh-pua@0.3.18`
-- `@michengai/dsh-code-review@0.1.7`
-- `@michengai/dsh-codex-pet@0.1.10`
-
-安装器使用这些精确版本执行安装，确保可复现。
 
 ## 1.1.20 - 2026-09-27
 
 - 设置里的「插件配置」点一次后不再从侧栏消失，可以正常打开官方插件管理页。
 
-## suite-installer-v1.0.25 - 2026-09-27
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.5`
-- `@michengai/dsh-codex-ui@1.1.19`
-- `@michengai/dsh-skills-manager@1.1.4`
-- `@michengai/dsh-agency-agents@1.0.5`
-- `@michengai/dsh-im-connect@0.1.55`
-- `@michengai/dsh-automation@0.1.51`
-- `@michengai/dsh-btw@0.1.13`
-- `@michengai/dsh-simplify@0.1.10`
-- `@michengai/dsh-pua@0.3.18`
-- `@michengai/dsh-code-review@0.1.7`
-- `@michengai/dsh-codex-pet@0.1.10`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
-## suite-installer-v1.0.24 - 2026-09-27
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.5`
-- `@michengai/dsh-codex-ui@1.1.18`
-- `@michengai/dsh-skills-manager@1.1.4`
-- `@michengai/dsh-agency-agents@1.0.5`
-- `@michengai/dsh-im-connect@0.1.55`
-- `@michengai/dsh-automation@0.1.51`
-- `@michengai/dsh-btw@0.1.13`
-- `@michengai/dsh-simplify@0.1.10`
-- `@michengai/dsh-pua@0.3.18`
-- `@michengai/dsh-code-review@0.1.7`
-- `@michengai/dsh-codex-pet@0.1.10`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 1.1.19 - 2026-09-27
 
 - 宿主兼容声明改为逐个列出已支持的 DSH RC，并加入 `0.1.7-rc.2`。
 
-## suite-installer-v1.0.23 - 2026-09-25
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.5`
-- `@michengai/dsh-codex-ui@1.1.18`
-- `@michengai/dsh-skills-manager@1.1.4`
-- `@michengai/dsh-agency-agents@1.0.5`
-- `@michengai/dsh-im-connect@0.1.55`
-- `@michengai/dsh-automation@0.1.51`
-- `@michengai/dsh-btw@0.1.13`
-- `@michengai/dsh-simplify@0.1.10`
-- `@michengai/dsh-pua@0.3.18`
-- `@michengai/dsh-code-review@0.1.7`
-- `@michengai/dsh-codex-pet@0.1.10`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
-## suite-installer-v1.0.22 - 2026-09-25
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.5`
-- `@michengai/dsh-codex-ui@1.1.17`
-- `@michengai/dsh-skills-manager@1.1.4`
-- `@michengai/dsh-agency-agents@1.0.5`
-- `@michengai/dsh-im-connect@0.1.55`
-- `@michengai/dsh-automation@0.1.51`
-- `@michengai/dsh-btw@0.1.13`
-- `@michengai/dsh-simplify@0.1.10`
-- `@michengai/dsh-pua@0.3.18`
-- `@michengai/dsh-code-review@0.1.7`
-- `@michengai/dsh-codex-pet@0.1.10`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 1.1.18 - 2026-09-25
 
 - 开发与说明对齐当前 DSH `0.1.7-rc.2`。安装要求不变。
-
-## suite-installer-v1.0.21 - 2026-09-24
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.4`
-- `@michengai/dsh-codex-ui@1.1.17`
-- `@michengai/dsh-skills-manager@1.1.3`
-- `@michengai/dsh-agency-agents@1.0.3`
-- `@michengai/dsh-im-connect@0.1.54`
-- `@michengai/dsh-automation@0.1.50`
-- `@michengai/dsh-btw@0.1.12`
-- `@michengai/dsh-simplify@0.1.9`
-- `@michengai/dsh-pua@0.3.17`
-- `@michengai/dsh-code-review@0.1.5`
-- `@michengai/dsh-codex-pet@0.1.9`
-
-安装器使用这些精确版本执行安装，确保可复现。
 
 ## 1.1.17 - 2026-09-24
 
 - 新增适配 DSH `0.1.7-rc.1`，不再包含 `0.1.6-alpha`。
 - 设置页不再放入费用面板。侧栏底部的费用按钮打开费用插件自己的窗口。
 
-## suite-installer-v1.0.20 - 2026-09-22
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.2`
-- `@michengai/dsh-codex-ui@1.1.15`
-- `@michengai/dsh-skills-manager@1.0.1`
-- `@michengai/dsh-agency-agents@1.0.1`
-- `@michengai/dsh-im-connect@0.1.51`
-- `@michengai/dsh-automation@0.1.45`
-- `@michengai/dsh-btw@0.1.10`
-- `@michengai/dsh-simplify@0.1.7`
-- `@michengai/dsh-pua@0.3.16`
-- `@michengai/dsh-code-review@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.7`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 1.1.16 - 2026-09-22
 
 - 侧栏、设置页、工作区树和输入框筛选改为跟随宿主 `--dsw-font-family`，不再写死 Inter。
-
-## suite-installer-v1.0.19 - 2026-09-22
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@1.0.2`
-- `@michengai/dsh-codex-ui@1.1.14`
-- `@michengai/dsh-skills-manager@1.0.1`
-- `@michengai/dsh-agency-agents@1.0.1`
-- `@michengai/dsh-im-connect@0.1.51`
-- `@michengai/dsh-automation@0.1.45`
-- `@michengai/dsh-btw@0.1.10`
-- `@michengai/dsh-simplify@0.1.7`
-- `@michengai/dsh-pua@0.3.16`
-- `@michengai/dsh-code-review@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.7`
-
-安装器使用这些精确版本执行安装，确保可复现。
 
 ## 1.1.15 - 2026-09-22
 
 - 项目会话列表对齐 Codex：默认显示 5 条，「展开显示」每次再加 10 条；折叠文件夹后回到前 5 条。
 - 下一会话被折起时，拖放蓝线只画在悬停行下方。
 
-## suite-installer-v1.0.18 - 2026-09-19
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@0.1.44`
-- `@michengai/dsh-codex-ui@1.1.14`
-- `@michengai/dsh-skills-manager@0.1.53`
-- `@michengai/dsh-agency-agents@0.1.44`
-- `@michengai/dsh-im-connect@0.1.51`
-- `@michengai/dsh-automation@0.1.45`
-- `@michengai/dsh-btw@0.1.10`
-- `@michengai/dsh-simplify@0.1.7`
-- `@michengai/dsh-pua@0.3.16`
-- `@michengai/dsh-code-review@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.7`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
-## suite-installer-v1.0.17 - 2026-09-19
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@0.1.44`
-- `@michengai/dsh-codex-ui@1.1.13`
-- `@michengai/dsh-skills-manager@0.1.53`
-- `@michengai/dsh-agency-agents@0.1.44`
-- `@michengai/dsh-im-connect@0.1.51`
-- `@michengai/dsh-automation@0.1.45`
-- `@michengai/dsh-btw@0.1.10`
-- `@michengai/dsh-simplify@0.1.7`
-- `@michengai/dsh-pua@0.3.16`
-- `@michengai/dsh-code-review@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.7`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 1.1.14 - 2026-09-19
 
 - 紧凑顶栏：标准模式 / Agent Team 贴在标题旁，对话 / 轨迹靠右。长标题单行截断，不再把右栏掉到第二行。
 - 设置页不再藏起官方挂到 body 的插件 Toast；只有 body 直接子级的 alert 跳过隔离和焦点陷阱。
-
-## suite-installer-v1.0.16 - 2026-09-18
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@0.1.44`
-- `@michengai/dsh-codex-ui@1.1.12`
-- `@michengai/dsh-skills-manager@0.1.53`
-- `@michengai/dsh-agency-agents@0.1.44`
-- `@michengai/dsh-im-connect@0.1.51`
-- `@michengai/dsh-automation@0.1.45`
-- `@michengai/dsh-btw@0.1.10`
-- `@michengai/dsh-simplify@0.1.7`
-- `@michengai/dsh-pua@0.3.16`
-- `@michengai/dsh-code-review@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.7`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
-## suite-installer-v1.0.15 - 2026-09-17
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@0.1.43`
-- `@michengai/dsh-codex-ui@1.1.12`
-- `@michengai/dsh-skills-manager@0.1.52`
-- `@michengai/dsh-agency-agents@0.1.43`
-- `@michengai/dsh-im-connect@0.1.50`
-- `@michengai/dsh-automation@0.1.44`
-- `@michengai/dsh-btw@0.1.8`
-- `@michengai/dsh-simplify@0.1.5`
-- `@michengai/dsh-pua@0.3.13`
-- `@michengai/dsh-code-review@0.1.2`
-- `@michengai/dsh-codex-pet@0.1.6`
-
-安装器使用这些精确版本执行安装，确保可复现。
 
 ## 1.1.13 - 2026-09-18
 
@@ -415,71 +73,17 @@
 - 标题被截断时，悬停或打开菜单会横向滚动全文；系统减动效时保持省略号。
 - 相对时间每分钟对齐刷新。行内英文用 now，悬停卡片用 Just now。
 
-## suite-installer-v1.0.14 - 2026-09-16
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@0.1.43`
-- `@michengai/dsh-codex-ui@1.1.11`
-- `@michengai/dsh-skills-manager@0.1.52`
-- `@michengai/dsh-agency-agents@0.1.43`
-- `@michengai/dsh-im-connect@0.1.50`
-- `@michengai/dsh-automation@0.1.44`
-- `@michengai/dsh-btw@0.1.8`
-- `@michengai/dsh-simplify@0.1.5`
-- `@michengai/dsh-pua@0.3.13`
-- `@michengai/dsh-code-review@0.1.2`
-- `@michengai/dsh-codex-pet@0.1.6`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 1.1.11 - 2026-09-16
 
 - 设置页和用量统计改为挂到 `document.body`。侧栏收缩后，宿主或插件若给窄轨加了 transform，全屏页不再被困在 56px 里挤成竖排。
 - 侧栏底部按 slot id 跳过 dsh-context 的 `context-overview`，其余底部动作（含费用统计）仍按 id 单独渲染。没有 id 的底部动作不渲染。会话里的上下文页还在。
 - 置顶为空时，从项目区拖入仍会置顶；松手时即使蓝线落点被清掉也不丢。
 
-## suite-installer-v1.0.13 - 2026-09-16
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@0.1.43`
-- `@michengai/dsh-codex-ui@1.1.10`
-- `@michengai/dsh-skills-manager@0.1.52`
-- `@michengai/dsh-agency-agents@0.1.43`
-- `@michengai/dsh-im-connect@0.1.50`
-- `@michengai/dsh-automation@0.1.44`
-- `@michengai/dsh-btw@0.1.8`
-- `@michengai/dsh-simplify@0.1.5`
-- `@michengai/dsh-pua@0.3.13`
-- `@michengai/dsh-code-review@0.1.2`
-- `@michengai/dsh-codex-pet@0.1.6`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 1.1.10 - 2026-09-16
 
 - 冷启动也能自动命名：独立挂上 `@michengai/dsh-codex-ui/session-title`，等 `sessionTitle` 与 `llm` 就绪后再占 first-prompt；卸载时回收提供方。
 - 类型词跟随宿主 settings 的界面语言。主题跟用户消息语言，模型串语言时改用原文。
 - Peer 声明支持 DSH `0.1.6-alpha.1`。开发依赖钉在该版本；`dsh-client-runtime` 没有 0.1.6 包，仍用 `0.1.1-rc.2`。
-
-## suite-installer-v1.0.12 - 2026-09-16
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@0.1.43`
-- `@michengai/dsh-codex-ui@1.1.9`
-- `@michengai/dsh-skills-manager@0.1.52`
-- `@michengai/dsh-agency-agents@0.1.43`
-- `@michengai/dsh-im-connect@0.1.50`
-- `@michengai/dsh-automation@0.1.44`
-- `@michengai/dsh-btw@0.1.8`
-- `@michengai/dsh-simplify@0.1.5`
-- `@michengai/dsh-pua@0.3.13`
-- `@michengai/dsh-code-review@0.1.2`
-- `@michengai/dsh-codex-pet@0.1.6`
-
-安装器使用这些精确版本执行安装，确保可复现。
 
 ## 1.1.9 - 2026-09-16
 
@@ -489,167 +93,31 @@
 - 工作区树改用官方打开/闭合文件夹图标，运行指示与项目标题对齐。
 - 会话跨项目移动兼容 DSH 0.1.6；磁盘上没有工件时返回不存在，双代际目录会一并改写旧代际的工作目录。
 
-## suite-installer-v1.0.11 - 2026-09-15
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@0.1.42`
-- `@michengai/dsh-codex-ui@1.1.8`
-- `@michengai/dsh-skills-manager@0.1.50`
-- `@michengai/dsh-agency-agents@0.1.42`
-- `@michengai/dsh-im-connect@0.1.49`
-- `@michengai/dsh-automation@0.1.42`
-- `@michengai/dsh-btw@0.1.7`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-pua@0.3.11`
-- `@michengai/dsh-code-review@0.1.0`
-- `@michengai/dsh-codex-pet@0.1.5`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 1.1.8 - 2026-09-15
 
 - 新会话在第一条用户消息后，按「表情 + 类型｜主题」自动命名一次，例如「⚡ 优化｜批次文字显示」。不再写入日期。
 - 手动改名后由宿主钉死，后续消息不会再覆盖。
 
-## suite-installer-v1.0.10 - 2026-09-14
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@0.1.42`
-- `@michengai/dsh-codex-ui@1.1.7`
-- `@michengai/dsh-skills-manager@0.1.50`
-- `@michengai/dsh-agency-agents@0.1.42`
-- `@michengai/dsh-im-connect@0.1.49`
-- `@michengai/dsh-automation@0.1.42`
-- `@michengai/dsh-btw@0.1.7`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-pua@0.3.11`
-- `@michengai/dsh-code-review@0.1.0`
-- `@michengai/dsh-codex-pet@0.1.5`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 1.1.7 - 2026-09-14
 
 - 恢复侧栏用量入口的插件原生样式，移除 Codex UI 对卡片、图标、文字和宽窄态外观的覆盖；点击入口仍打开现有用量统计设置页。
-
-## suite-installer-v1.0.9 - 2026-09-14
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@0.1.41`
-- `@michengai/dsh-codex-ui@1.1.6`
-- `@michengai/dsh-skills-manager@0.1.50`
-- `@michengai/dsh-agency-agents@0.1.42`
-- `@michengai/dsh-im-connect@0.1.48`
-- `@michengai/dsh-automation@0.1.41`
-- `@michengai/dsh-btw@0.1.7`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-pua@0.3.11`
-- `@michengai/dsh-code-review@0.1.0`
-- `@michengai/dsh-codex-pet@0.1.5`
-
-安装器使用这些精确版本执行安装，确保可复现。
 
 ## 1.1.6 - 2026-09-14
 
 - 修复窄窗口下首次打开或刷新 Web 时，侧栏初始收起可能导致页面卡住的问题。
 
-## suite-installer-v1.0.8 - 2026-09-14
-
-一键维护安装 11 个自研插件。包含以下插件及版本：
-
-- `@michengai/dsh-archive-manager@0.1.40`
-- `@michengai/dsh-codex-ui@1.1.5`
-- `@michengai/dsh-skills-manager@0.1.50`
-- `@michengai/dsh-agency-agents@0.1.42`
-- `@michengai/dsh-im-connect@0.1.47`
-- `@michengai/dsh-automation@0.1.40`
-- `@michengai/dsh-btw@0.1.7`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-pua@0.3.11`
-- `@michengai/dsh-code-review@0.1.0`
-- `@michengai/dsh-codex-pet@0.1.5`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
-## suite-installer-v1.0.7 - 2026-09-14
-
-从官方 npm 解析并锁定以下成员版本：
-
-- `@michengai/dsh-archive-manager@0.1.40`
-- `@michengai/dsh-codex-ui@1.1.5`
-- `@michengai/dsh-skills-manager@0.1.50`
-- `@michengai/dsh-agency-agents@0.1.42`
-- `@michengai/dsh-im-connect@0.1.47`
-- `@michengai/dsh-automation@0.1.40`
-- `@michengai/dsh-btw@0.1.7`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.5`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 1.1.5 - 2026-09-14
 
 - 关于页支持点击插件标题或完整包名，在新标签页打开项目主页；应用市场跳转至官网。
-
-## suite-installer-v1.0.6 - 2026-09-14
-
-从官方 npm 解析并锁定以下成员版本：
-
-- `@michengai/dsh-archive-manager@0.1.40`
-- `@michengai/dsh-codex-ui@1.1.4`
-- `@michengai/dsh-skills-manager@0.1.50`
-- `@michengai/dsh-agency-agents@0.1.42`
-- `@michengai/dsh-im-connect@0.1.47`
-- `@michengai/dsh-automation@0.1.40`
-- `@michengai/dsh-btw@0.1.7`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.5`
-
-安装器使用这些精确版本执行安装，确保可复现。
 
 ## 1.1.4 - 2026-09-14
 
 - 在「设置 → 关于」集中管理配套插件，补齐 PUA、Code Review 和 Codex Pet，并统一插件排序。
 - 在插件名称后显示 npm 累计下载量，以紧凑的图标和文字呈现。
 
-## suite-installer-v1.0.5 - 2026-09-12
-
-从官方 npm 解析并锁定以下成员版本：
-
-- `@michengai/dsh-archive-manager@0.1.39`
-- `@michengai/dsh-codex-ui@1.1.3`
-- `@michengai/dsh-skills-manager@0.1.48`
-- `@michengai/dsh-agency-agents@0.1.41`
-- `@michengai/dsh-im-connect@0.1.45`
-- `@michengai/dsh-automation@0.1.39`
-- `@michengai/dsh-btw@0.1.6`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.5`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 1.1.3 - 2026-09-12
 
 - 配合 Pet 0.1.5 或更新版本，进入设置页后宠物仍可显示、点击和通过键盘操作；其他背景内容继续保持隔离。
-
-## suite-installer-v1.0.4 - 2026-09-11
-
-从官方 npm 解析并锁定以下成员版本：
-
-- `@michengai/dsh-archive-manager@0.1.38`
-- `@michengai/dsh-codex-ui@1.1.2`
-- `@michengai/dsh-skills-manager@0.1.48`
-- `@michengai/dsh-agency-agents@0.1.40`
-- `@michengai/dsh-im-connect@0.1.45`
-- `@michengai/dsh-automation@0.1.38`
-- `@michengai/dsh-btw@0.1.6`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.4`
-
-安装器使用这些精确版本执行安装，确保可复现。
 
 ## 1.1.2 - 2026-09-11
 
@@ -658,58 +126,12 @@
 - 连接器页面统一中性灰配色，保留错误与警告状态色；使用统计与其他设置页统一为最大 864px 宽度。
 - 频道会话归档后立即从侧栏隐藏，旧轮询响应不再使其重新出现；归档失败保留会话并提示错误。
 
-## suite-installer-v1.0.3 - 2026-09-09
-
-从官方 npm 解析并锁定以下成员版本：
-
-- `@michengai/dsh-archive-manager@0.1.34`
-- `@michengai/dsh-codex-ui@1.1.1`
-- `@michengai/dsh-skills-manager@0.1.44`
-- `@michengai/dsh-agency-agents@0.1.36`
-- `@michengai/dsh-im-connect@0.1.39`
-- `@michengai/dsh-automation@0.1.35`
-- `@michengai/dsh-btw@0.1.4`
-- `@michengai/dsh-simplify@0.1.2`
-- `@michengai/dsh-codex-pet@0.1.2`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
-## suite-installer-v1.0.2 - 2026-09-09
-
-从官方 npm 解析并锁定以下成员版本：
-
-- `@michengai/dsh-archive-manager@0.1.34`
-- `@michengai/dsh-codex-ui@1.1.1`
-- `@michengai/dsh-skills-manager@0.1.44`
-- `@michengai/dsh-agency-agents@0.1.36`
-- `@michengai/dsh-im-connect@0.1.39`
-- `@michengai/dsh-automation@0.1.35`
-- `@michengai/dsh-btw@0.1.4`
-- `@michengai/dsh-simplify@0.1.2`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 1.1.1 - 2026-09-09
 
 - 关于页在定时任务下新增 Codex 宠物，支持版本检查、安装和更新。
 - 欢迎页 LOGO 放大至 46px，标题字号放大至 34px。
 - 修复 Desktop 透明设置页下会话列表文字重叠：隔离分支的后代同步隐藏，避免内部显式 `visibility:visible` 穿透；退出设置后恢复原有显示。
 - 同步隐藏设置页主动隔离的背景浮层，包含挂载到 body 的 portal；退出时恢复原始隔离状态，保留引导模态。
-
-## suite-installer-v1.0.1 - 2026-09-09
-
-从官方 npm 解析并锁定以下成员版本：
-
-- `@michengai/dsh-archive-manager@0.1.34`
-- `@michengai/dsh-codex-ui@1.1.0`
-- `@michengai/dsh-skills-manager@0.1.44`
-- `@michengai/dsh-agency-agents@0.1.35`
-- `@michengai/dsh-im-connect@0.1.39`
-- `@michengai/dsh-automation@0.1.35`
-- `@michengai/dsh-btw@0.1.4`
-- `@michengai/dsh-simplify@0.1.2`
-
-安装器使用这些精确版本执行安装，确保可复现。
 
 ## 1.1.0 - 2026-09-09
 
@@ -726,21 +148,6 @@
 - 新建会话支持两侧拖拽调宽，与会话页共用宽度记忆，未设置时默认为 640px；中间引导卡片不随输入区调宽。
 - 隐藏任务侧栏滚动条并保留滚动，修复 Git 分支菜单向下展开及首帧样式跳变。
 
-## suite-installer-v1.0.0 - 2026-09-08
-
-从官方 npm 解析并锁定以下成员版本：
-
-- `@michengai/dsh-archive-manager@0.1.33`
-- `@michengai/dsh-codex-ui@1.0.0`
-- `@michengai/dsh-skills-manager@0.1.43`
-- `@michengai/dsh-agency-agents@0.1.34`
-- `@michengai/dsh-im-connect@0.1.38`
-- `@michengai/dsh-automation@0.1.34`
-- `@michengai/dsh-btw@0.1.4`
-- `@michengai/dsh-simplify@0.1.2`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 1.0.0 - 2026-09-08
 
 - 发布 1.0.0：将项目与会话导航、插件入口和独立设置视图整合为完整的 Codex 风格体验。
@@ -752,21 +159,6 @@
 - 为插件市场和侧边卡片分别使用商店与侧栏布局图标，避免与默认盒子图标混淆。
 - 保留宿主配置、引导和连接恢复接口，以及已安装插件原有功能；社区插件内部样式不在本次统一范围。
 
-## suite-installer-v0.1.31 - 2026-09-08
-
-从官方 npm 解析并锁定以下成员版本：
-
-- `@michengai/dsh-archive-manager@0.1.32`
-- `@michengai/dsh-codex-ui@0.2.113`
-- `@michengai/dsh-skills-manager@0.1.43`
-- `@michengai/dsh-agency-agents@0.1.34`
-- `@michengai/dsh-im-connect@0.1.38`
-- `@michengai/dsh-automation@0.1.34`
-- `@michengai/dsh-btw@0.1.4`
-- `@michengai/dsh-simplify@0.1.2`
-
-安装器使用这些精确版本执行安装，确保可复现。
-
 ## 0.2.113 - 2026-09-08
 
 ### 修复
@@ -774,21 +166,6 @@
 - 修复侧栏收缩时中文被挤成竖排、菜单与页脚文字错位的问题。
 - 修复与 `dsh-better-sidebar` 同时使用时，侧栏展开和收起缺少过渡动画的问题，并保留右侧面板动画。
 - 同步侧栏宽度与内容淡入淡出的节奏，消除重复宽度更新造成的额外开销；快速切换和拖拽保持正常响应。
-
-## suite-installer-v0.1.30 - 2026-09-08
-
-从官方 npm 解析并锁定以下成员版本：
-
-- `@michengai/dsh-archive-manager@0.1.32`
-- `@michengai/dsh-codex-ui@0.2.112`
-- `@michengai/dsh-skills-manager@0.1.43`
-- `@michengai/dsh-agency-agents@0.1.34`
-- `@michengai/dsh-im-connect@0.1.38`
-- `@michengai/dsh-automation@0.1.34`
-- `@michengai/dsh-btw@0.1.4`
-- `@michengai/dsh-simplify@0.1.2`
-
-安装器使用这些精确版本执行安装，确保可复现。
 
 ## 0.2.112 - 2026-09-08
 
@@ -831,21 +208,11 @@
 
 - 新增业务路由注册和认证回归测试，覆盖新旧路径、401、403、认证不可用、请求头原样转交及宿主认证放行的外部 Origin 写请求。
 
-## suite-installer-v0.1.29 - 2026-09-08
-
-- 将套件更新至 Codex UI `0.2.111` 和 IM Connect `0.1.38`，保证频道侧栏兼容已认证的 `/api/dsh-im-connect/channels` 接口。
-- 从官方 npm 刷新成员精确版本，保证一键安装可复现。
-
 ## 0.2.111 - 2026-09-08
 
 ### 修复
 
 - 频道侧栏改用 `/api/dsh-im-connect/channels`，与删除旧管理地址后的 IM Connect `0.1.38` 保持一致。
-
-## suite-installer-v0.1.28 - 2026-09-08
-
-- 将套件中的 Codex UI 更新至 `0.2.110`，包含独立 DSH Web 的插件更新恢复指引。
-- 从官方 npm 刷新成员精确版本，保证一键安装可复现。
 
 ## 0.2.110 - 2026-09-08
 
@@ -858,10 +225,6 @@
 
 - 新增 Web 专属安装错误及其简体中文、英文文案的回归覆盖。
 
-## suite-installer-v0.1.27 - 2026-09-07
-
-- 将套件中的 Codex UI 更新至 `0.2.108`，包含分组重命名、删除菜单和数量对齐优化；从官方 npm 刷新并锁定成员版本。
-
 ## 0.2.108 - 2026-09-07
 
 - 为每个自定义工作区分组新增重命名和删除菜单；项目标题栏仅保留新增分组按钮。重命名保留项目归属、排序和展开状态。
@@ -869,44 +232,20 @@
 - 防止新建分组时输入法选词误触发提交，修复名称校验失败影响偏好同步的问题。
 - 统一不依赖系统语言环境的大小写判重规则，同时兼容保留旧分组名称和成员数据。
 
-## suite-installer-v0.1.26 - 2026-09-07
-
-- 从官方 npm 刷新直装成员版本，包含 IM Connect `0.1.37`，该版本已撤回未完成的主动投递功能。
-
-## suite-installer-v0.1.25 - 2026-09-07
-
-- 将套件中的 Codex UI 更新至 `0.2.107`，并从官方 npm 刷新直装成员版本，保证安装可复现。
-
 ## 0.2.107 - 2026-09-07
 
 - 在 Codex UI 大标题旁显示当前运行版本，并将频道、定时的会话分组布局与任务页对齐。
 - 将依赖更新请求限制为本机同源调用，并避免 Desktop 重复发送重载 IPC，同时保留独立 Web 的重载能力。
 - 统一包契约为 Node.js 22.19.0+ 与 pnpm 11.22.0。
 
-## suite-installer-v0.1.24 — 2026-09-07
-
-- 套件新增 BTW 旁问和 Simplify 代码简化，一次安装八个配套插件。
-- 从官方 npm 刷新并锁定成员版本，保证安装结果可复现。
-- 为支持 Simplify，要求 Node.js 22.19.0 或更高版本。
-
 ## 0.2.106 — 2026-09-07
 
 - 新增 Wallpaper Engine 侧栏玻璃兼容，并保持设置和搜索弹窗定位、点击正常。
 - 将费用插件入口融入侧栏，统一与设置入口的图标大小、颜色、字号和间距，保留费用详情及收缩态入口。
 
-## suite-installer-v0.1.23 — 2026-09-07
-
-- 更新套件中的 Codex UI 至 `0.2.106`，包含侧栏玻璃兼容和费用入口样式适配。
-- 其他套件成员保持不变。
-
 ## 0.2.105 — 2026-09-06
 
 - 关于页在 BTW 下方新增 Simplify，支持查看版本状态、安装、更新和批量更新。
-
-## suite-installer-v0.1.22 — 2026-09-06
-
-- 更新套件中的 Codex UI 至 `0.2.105`，在关于页新增 Simplify 管理入口。
-- 更新 Automation 至 `0.1.32`，其他套件成员保持不变。
 
 ## 0.2.104 — 2026-09-06
 
@@ -914,14 +253,7 @@
 - 关于页新增 BTW 旁问插件，支持查看版本、安装和更新。
 - 将“归档会话管理”更名为“归档会话”。
 
-## suite-installer-v0.1.21 — 2026-09-06
-
-- 更新套件中的 Codex UI 至 `0.2.104`，新增上下键输入历史和 BTW 旁问插件入口。
-- 同步更新 Skills Manager、Agency Agents 和 Automation。
-
 ## 0.2.103 — 2026-09-04
-
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.20`。
 
 ### 修复
 
@@ -934,13 +266,7 @@
 
 - 新增依赖路由跨站拒绝、错误脱敏、本地化刷新失败、连接器探测、观察器范围、循环错误、安装器保序、无效 bundle 基线和 Windows 命令引用的行为覆盖。
 
-### 依赖
-
-- Suite Installer 发布 workflow 会解析 Codex UI `0.2.103`，并发布配套的 `0.1.20` 版本。
-
 ## 0.2.102 — 2026-09-03
-
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.19`。
 
 ### 新增
 
@@ -962,13 +288,7 @@
 - 强化项目分组初始化与持久化、宿主兼容回退、结构化用户错误、未读状态更新，以及会话移动回滚失败提示。
 - 补齐新版侧边栏、菜单、确认弹窗、错误提示和设置操作的简体中文与英文文案。
 
-### 依赖
-
-- Suite Installer 发布 workflow 会在本版本发布后解析 Codex UI `0.2.102`。
-
 ## 0.2.101 — 2026-09-01
-
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.18`。
 
 ### 修复
 
@@ -979,13 +299,7 @@
 
 - 在原有 `SessionSummary` 快照覆盖之外，为三棵树补充真实待处理交互 Store 路径的 DOM 集成测试。
 
-### 依赖
-
-- Suite Installer 发布 workflow 会在本版本发布后解析 Codex UI `0.2.101`。
-
 ## 0.2.100 — 2026-09-01
-
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.17`。
 
 ### 修复
 
@@ -997,38 +311,20 @@
 
 - 使用完整类型约束的 `SessionListState` 和 `SessionSummary` 快照，为三棵树补充待处理状态 DOM 渲染测试。
 
-### 依赖
-
-- Suite Installer 发布 workflow 会在本版本发布后解析 Codex UI `0.2.100`。
-
 ## 0.2.99 — 2026-09-01
-
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.16`。
 
 ### 修复
 
 - 恢复主会话正文中用户提问气泡的完整显示，避免长问题被溢出、高度上限或多行省略规则截断。
 - 保留 DSH 官方用户气泡 DOM，只为新增用户气泡补充稳定兼容标记。
 
-### 依赖
-
-- Suite Installer 发布 workflow 会在本版本发布后解析 Codex UI `0.2.99`。
-
 ## 0.2.98 — 2026-09-01
-
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.15`。
 
 ### 修复
 
 - 让会话分段页签的滑块能够以页签容器自身作为同步根节点，选中“轨迹”或“上下文”后高亮背景不再停留在“对话”。
 
-### 依赖
-
-- 准备 Suite Installer `0.1.15`，在本版本发布后解析 Codex UI `0.2.98`。
-
 ## 0.2.97 — 2026-09-01
-
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.14`。
 
 ### 兼容性
 
@@ -1042,26 +338,14 @@
 - 严格校验安装进度数据，并为 Desktop 较慢的 bundles 写入留出更充足的等待时间。
 - 对轮次导航 DOM 监听增加相关变更过滤和逐帧合并，避免流式回答触发反复全文档扫描。
 
-### 依赖
-
-- 准备 Suite Installer `0.1.14`，在本版本发布后解析全部配套插件的最新精确版本。
-
 ## 0.2.96 — 2026-09-01
-
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.13`。
 
 ### 修复
 
 - 未安装 IM 配套插件时，点击 IM 助理会立即进入“关于”，不再先显示通用设置并等待缺失分区超时；已安装时仍正常进入 IM 设置。
 - “关于”页安装插件前会预先将非必要的 `protobufjs` 与 `koffi` 安装脚本声明为禁用，避免 pnpm 写入 ignored-build 占位配置并阻断安全安装。
 
-### 依赖
-
-- 发布时通过官方 npm 源重新解析 Suite Installer 全部成员的最新精确版本。
-
 ## 0.2.95 — 2026-09-01
-
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.12`。
 
 ### 修复
 
@@ -1069,8 +353,6 @@
 - 将企业微信频道中被裁切的白底图标替换为紧凑的多色品牌标记，在侧边栏尺寸下仍能清晰识别。
 
 ## 0.2.94 — 2026-08-30
-
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.11`。
 
 ### 安全性
 
@@ -1092,8 +374,6 @@
 
 ## 0.2.92 — 2026-08-28
 
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.9`。
-
 ### 安全修复
 
 - 旧版 Suite 及其安装器清单更新为 `@michengai/dsh-im-connect@0.1.26`。
@@ -1108,8 +388,6 @@
 
 ## 0.2.90 — 2026-08-27
 
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.7`。
-
 ### 调整
 
 - 侧边栏展开宽度按本机 Codex 桌面客户端对齐：默认 275px、最小 240px、最大 520px，并受可用视口宽度限制。
@@ -1121,8 +399,6 @@
 - 防止 DOM 宽度适配器在宿主拖动和重渲染期间重复换算自身已映射的输出。
 
 ## 0.2.89 — 2026-08-27
-
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.6`。
 
 ### 新增
 
@@ -1147,8 +423,6 @@
 
 ## 0.2.88 — 2026-08-26
 
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.5`。
-
 ### 调整
 
 - 安装外部可选插件 `dsh-mcp-connector` 时，用其完整的市场与连接管理界面替换轻量的“设置 → 连接器”工具列表。
@@ -1161,11 +435,9 @@
 - 让内嵌市场跟随 DSH 当前选择的明暗主题；不修改外部插件，也不将其变为强制依赖。
 - 轻量安装器同步固定 Codex UI `0.2.88`；旧聚合 Suite 继续保持私有且不发布。
 
-发布包：[`@michengai/dsh-codex-ui@0.2.88`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.88) 与 [`@michengai/dsh-codex-suite-installer@0.1.5`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.5)。
+发布包：[`@michengai/dsh-codex-ui@0.2.88`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.88)。
 
 ## 0.2.87 — 2026-08-26
-
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.4`。
 
 ### 修复
 
@@ -1178,11 +450,9 @@
 
 - 轻量安装器同步固定 Codex UI `0.2.87`、IM Connect `0.1.24` 和 Automation `0.1.15`；旧聚合 Suite 继续保持私有且不发布。
 
-发布包：[`@michengai/dsh-codex-ui@0.2.87`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.87) 与 [`@michengai/dsh-codex-suite-installer@0.1.4`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.4)。
+发布包：[`@michengai/dsh-codex-ui@0.2.87`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.87)。
 
 ## 0.2.86 — 2026-08-25
-
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.3`。
 
 ### 调整
 
@@ -1196,11 +466,9 @@
 - 增加宿主 DOM 归属、精确盒模型尺寸、无障碍名称和顶栏间距的回归测试。
 - 轻量安装器同步固定 Codex UI `0.2.86`；旧聚合 Suite 继续保持私有，不参与发布。
 
-发布包：[`@michengai/dsh-codex-ui@0.2.86`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.86) 与 [`@michengai/dsh-codex-suite-installer@0.1.3`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.3)。
+发布包：[`@michengai/dsh-codex-ui@0.2.86`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.86)。
 
 ## 0.2.85 — 2026-08-25
-
-配套版本：`@michengai/dsh-codex-suite-installer@0.1.2`。
 
 ### 调整
 
@@ -1211,11 +479,9 @@
 
 - `@michengai/dsh-codex-suite-installer` 作为唯一一键安装方式；旧 `@michengai/dsh-codex-suite` 标记为私有工作区包，仅保留源码支持存量迁移，不再打包或发布新版本。
 
-发布包：[`@michengai/dsh-codex-ui@0.2.85`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.85) 与 [`@michengai/dsh-codex-suite-installer@0.1.2`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.2)。
+发布包：[`@michengai/dsh-codex-ui@0.2.85`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.85)。
 
 ## 0.2.84 — 2026-08-25
-
-配套版本：`@michengai/dsh-codex-suite@0.1.16` 与 `@michengai/dsh-codex-suite-installer@0.1.1`。
 
 ### 新增
 
@@ -1225,22 +491,18 @@
 
 - 明确 `dshmarket` 与 `dsh-find-plugin` 均为 Suite 外的可选独立插件，需要时可在“关于”页分别安装和更新。
 
-发布包：[`@michengai/dsh-codex-ui@0.2.84`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.84)、[`@michengai/dsh-codex-suite@0.1.16`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.16) 与 [`@michengai/dsh-codex-suite-installer@0.1.1`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.1)。
+发布包：[`@michengai/dsh-codex-ui@0.2.84`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.84)。
 
 ## 0.2.83 — 2026-08-24
-
-配套版本：`@michengai/dsh-codex-suite@0.1.15` 与 `@michengai/dsh-codex-suite-installer@0.1.0`。
 
 ### 修复
 
 - 将直接成员 CLI 拆成无运行时依赖的轻量安装器包，避免 `npx` 启动前解析聚合 Suite 的整棵 DSH 依赖树。
 - `@michengai/dsh-codex-suite` 继续兼容旧版 `dsh plugin add`，所有推荐安装命令改用 `@michengai/dsh-codex-suite-installer`。
 
-发布包：[`@michengai/dsh-codex-ui@0.2.83`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.83)、[`@michengai/dsh-codex-suite@0.1.15`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.15) 与 [`@michengai/dsh-codex-suite-installer@0.1.0`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.0)。
+发布包：[`@michengai/dsh-codex-ui@0.2.83`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.83)。
 
 ## 0.2.82 — 2026-08-24
-
-配套版本：`@michengai/dsh-codex-suite@0.1.14`。
 
 ### 修复
 
@@ -1248,16 +510,7 @@
 - 新建自定义 Web profile 时自动复用同一 `DSH_HOME`，并把 DSH 内置 `dsh-web-app` 放在成员 bundle 之前。
 - “关于”页遇到旧版聚合 Suite 时，先把全部六个成员提升为直接依赖，再移除聚合包，避免只保留本次点击的一个插件。
 
-### Suite 0.1.14
-
-- 新增跨平台 `dsh-codex-suite` 命令、旧 Suite 自动迁移、配置 dump 验证和 dry-run。
-- 保留精确成员版本组合，不修改上游 DSH，也不创建独立 DSH Home。
-
-发布包：[`@michengai/dsh-codex-ui@0.2.82`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.82) 与 [`@michengai/dsh-codex-suite@0.1.14`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.14)。
-
 ## 0.2.81 — 2026-08-24
-
-配套版本：`@michengai/dsh-codex-suite@0.1.13`。
 
 ### 新增
 
@@ -1270,31 +523,14 @@
 - 保留单插件安装和更新入口，同时阻止重叠请求。
 - 增加可见加载反馈、键盘焦点样式、可访问的忙碌/状态提示、中英文文案，以及批量筛选和接口约束的回归测试。
 
-### Suite 0.1.13
-
-- 将 `@michengai/dsh-codex-ui` 固定为 `0.2.81`；其他 Suite 成员继续使用当前已验证版本。
-
-发布包：[`@michengai/dsh-codex-ui@0.2.81`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.81) 与 [`@michengai/dsh-codex-suite@0.1.13`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.13)。
-
 ## 0.2.80 — 2026-08-23
-
-配套版本：`@michengai/dsh-codex-suite@0.1.12`。
 
 ### 文档
 
 - 新增中英文更新日志，展示最近五个 UI 发布版本。
 - 在中英文 README 中加入更新日志入口，并将日志纳入 npm 包。
 
-### Suite 0.1.12
-
-- 将全部聚合插件刷新到 2026-08-23 发布的更新日志版本。
-- 固定 Agency Agents `0.1.21`、Archive Manager `0.1.13`、Automation `0.1.14`、IM Connect `0.1.23` 和 Skills Manager `0.1.24`。
-
-发布包：[`@michengai/dsh-codex-ui@0.2.80`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.80) 与 [`@michengai/dsh-codex-suite@0.1.12`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.12)。
-
 ## 0.2.79 — 2026-08-23
-
-配套版本：`@michengai/dsh-codex-suite@0.1.11`。
 
 ### 修复
 
@@ -1309,16 +545,7 @@
 - 保留减少动态效果模式，尊重用户的 `prefers-reduced-motion` 设置。
 - 增加收缩和重新展开的双向回归测试，并验证工作区树不会额外渲染。
 
-### Suite 0.1.11
-
-- 将 `@michengai/dsh-codex-ui` 固定为 `0.2.79`。
-- 将 `@michengai/dsh-im-connect` 更新为 `0.1.22`。
-
-发布提交：[`e8d2f4b`](https://github.com/MichengAI/dsh-codex-ui/commit/e8d2f4b)。
-
 ## 0.2.78 — 2026-08-23
-
-配套版本：`@michengai/dsh-codex-suite@0.1.9`，以及仅刷新依赖的 `0.1.10`。
 
 ### 调整
 
@@ -1326,16 +553,7 @@
 - 为展开态、窄轨态、搜索弹窗和工作区分区增加仅使用合成层的轻量显现动画。
 - 侧栏模式切换时继续保留大型工作区树实例。
 
-### Suite 0.1.9–0.1.10
-
-- 刷新 Suite 全部成员的固定版本。
-- Suite `0.1.10` 将 Automation 更新到 `0.1.13`、IM Connect 更新到 `0.1.20`，UI 包版本保持不变。
-
-发布提交：[`b7980e3`](https://github.com/MichengAI/dsh-codex-ui/commit/b7980e3)、[`cc71abf`](https://github.com/MichengAI/dsh-codex-ui/commit/cc71abf)。
-
 ## 0.2.77 — 2026-08-23
-
-配套版本：`@michengai/dsh-codex-suite@0.1.8`。
 
 ### 新增
 

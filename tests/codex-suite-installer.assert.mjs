@@ -39,14 +39,10 @@ assert.equal(installerManifest.dependencies, undefined, '轻量 npx 安装器不
 assert.deepEqual(Object.keys(installerManifest.dshCodexSuite?.members ?? {}), MEMBER_PACKAGES)
 assert.match(rootManifest.version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/, '根包必须使用发布版 semver')
 // 安装器是独立发布快照；工作区 UI 可先进入下一待发布版本，不能迫使安装器引用未发布包。
+// 组合包只升版本号，不写入 UI 更新日志。
 for (const file of ['CHANGELOG.md', 'CHANGELOG.zh-CN.md']) {
   const log = readFileSync(new URL('../' + file, import.meta.url), 'utf8')
-  const heading = '## suite-installer-v' + installerManifest.version + ' - '
-  const section = log.split(heading)[1]?.split('\n## ')[0]
-  assert.ok(section, '安装器版本必须有对应双语发布记录')
-  for (const [name, version] of Object.entries(installerManifest.dshCodexSuite.members)) {
-    assert.ok(section.includes(name + '@' + version), '安装器成员必须与自身发布快照一致：' + name)
-  }
+  assert.equal(log.includes('suite-installer-v'), false, 'UI 更新日志不得记录组合包版本：' + file)
 }
 for (const packageName of MEMBER_PACKAGES) {
   assert.match(installerManifest.dshCodexSuite.members[packageName], /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/, `安装器必须锁定 ${packageName} 的精确发布版 semver`)

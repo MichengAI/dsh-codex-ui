@@ -2,111 +2,21 @@
 
 [简体中文](CHANGELOG.zh-CN.md)
 
-This changelog records recent releases of DSH Codex UI and its one-click installer. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
-
-## suite-installer-v1.0.33 - 2026-09-30
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.9`
-- `@michengai/dsh-codex-ui@1.1.25`
-- `@michengai/dsh-skills-manager@1.1.7`
-- `@michengai/dsh-agency-agents@1.0.7`
-- `@michengai/dsh-im-connect@0.1.58`
-- `@michengai/dsh-automation@0.1.53`
-- `@michengai/dsh-btw@0.1.15`
-- `@michengai/dsh-simplify@0.1.12`
-- `@michengai/dsh-pua@0.3.21`
-- `@michengai/dsh-code-review@0.1.9`
-- `@michengai/dsh-codex-pet@0.1.12`
-
-The installer uses these exact versions for reproducible installation.
-
-## suite-installer-v1.0.32 - 2026-09-30
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.9`
-- `@michengai/dsh-codex-ui@1.1.24`
-- `@michengai/dsh-skills-manager@1.1.6`
-- `@michengai/dsh-agency-agents@1.0.7`
-- `@michengai/dsh-im-connect@0.1.58`
-- `@michengai/dsh-automation@0.1.53`
-- `@michengai/dsh-btw@0.1.15`
-- `@michengai/dsh-simplify@0.1.12`
-- `@michengai/dsh-pua@0.3.21`
-- `@michengai/dsh-code-review@0.1.9`
-- `@michengai/dsh-codex-pet@0.1.12`
-
-The installer uses these exact versions for reproducible installation.
+This changelog records recent releases of DSH Codex UI. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
 ## 1.1.25 - 2026-09-30
 
 - Official Desktop no longer fails to start when an old `dsh-client-ui-settings-general` package remains above the profile. The plugin no longer imports that package by name.
-
-## suite-installer-v1.0.31 - 2026-09-30
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.8`
-- `@michengai/dsh-codex-ui@1.1.23`
-- `@michengai/dsh-skills-manager@1.1.6`
-- `@michengai/dsh-agency-agents@1.0.7`
-- `@michengai/dsh-im-connect@0.1.58`
-- `@michengai/dsh-automation@0.1.53`
-- `@michengai/dsh-btw@0.1.15`
-- `@michengai/dsh-simplify@0.1.12`
-- `@michengai/dsh-pua@0.3.20`
-- `@michengai/dsh-code-review@0.1.9`
-- `@michengai/dsh-codex-pet@0.1.12`
-
-The installer uses these exact versions for reproducible installation.
 
 ## 1.1.24 - 2026-09-30
 
 - About-page installs on official Desktop now use the host's bundled pnpm instead of launching the dsh command inside the app archive.
 - Host support includes DSH `0.2.0-rc.2`. The sidebar, layout, and slot contracts match `0.2.0-rc.1`; without this declaration the new Desktop disables the plugin. Development dependencies are pinned to `0.2.0-rc.2`.
 
-## suite-installer-v1.0.30 - 2026-09-29
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.7`
-- `@michengai/dsh-codex-ui@1.1.22`
-- `@michengai/dsh-skills-manager@1.1.5`
-- `@michengai/dsh-agency-agents@1.0.6`
-- `@michengai/dsh-im-connect@0.1.57`
-- `@michengai/dsh-automation@0.1.52`
-- `@michengai/dsh-btw@0.1.14`
-- `@michengai/dsh-simplify@0.1.11`
-- `@michengai/dsh-pua@0.3.19`
-- `@michengai/dsh-code-review@0.1.8`
-- `@michengai/dsh-codex-pet@0.1.11`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 1.1.23 - 2026-09-29
 
 - Installing or updating other plugins from the About page in official DeepSeek Harness Desktop no longer crashes the desktop host.
 - Those installs are written to the current desktop profile. Restart the app once afterward so the new plugin can load.
-
-## suite-installer-v1.0.29 - 2026-09-29
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.7`
-- `@michengai/dsh-codex-ui@1.1.21`
-- `@michengai/dsh-skills-manager@1.1.5`
-- `@michengai/dsh-agency-agents@1.0.6`
-- `@michengai/dsh-im-connect@0.1.57`
-- `@michengai/dsh-automation@0.1.52`
-- `@michengai/dsh-btw@0.1.14`
-- `@michengai/dsh-simplify@0.1.11`
-- `@michengai/dsh-pua@0.3.19`
-- `@michengai/dsh-code-review@0.1.8`
-- `@michengai/dsh-codex-pet@0.1.11`
-
-The installer uses these exact versions for reproducible installation.
 
 ## 1.1.22 - 2026-09-29
 
@@ -114,292 +24,40 @@ The installer uses these exact versions for reproducible installation.
 - Development dependencies are pinned to DSH `0.2.0-rc.1`, so the plugin installs on the newest release candidate instead of being disabled by the host compatibility check.
 - Dropped the abandoned `@deepseek-ai/dsh-client-runtime` development dependency. The settings lifecycle spec now mounts the production `SlotRegistry` from the official `@deepseek-ai/dsh-client-ui-renderer/client` bundle, so the package is gone from peers, client inject, and tests alike.
 
-## suite-installer-v1.0.28 - 2026-09-27
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.6`
-- `@michengai/dsh-codex-ui@1.1.20`
-- `@michengai/dsh-skills-manager@1.1.4`
-- `@michengai/dsh-agency-agents@1.0.5`
-- `@michengai/dsh-im-connect@0.1.55`
-- `@michengai/dsh-automation@0.1.51`
-- `@michengai/dsh-btw@0.1.13`
-- `@michengai/dsh-simplify@0.1.10`
-- `@michengai/dsh-pua@0.3.18`
-- `@michengai/dsh-code-review@0.1.7`
-- `@michengai/dsh-codex-pet@0.1.10`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 1.1.21 - 2026-09-27
 
 - Updating or installing on DSH `0.1.7-rc.2` is no longer rejected by the compatibility check.
-
-## suite-installer-v1.0.27 - 2026-09-27
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.5`
-- `@michengai/dsh-codex-ui@1.1.20`
-- `@michengai/dsh-skills-manager@1.1.4`
-- `@michengai/dsh-agency-agents@1.0.5`
-- `@michengai/dsh-im-connect@0.1.55`
-- `@michengai/dsh-automation@0.1.51`
-- `@michengai/dsh-btw@0.1.13`
-- `@michengai/dsh-simplify@0.1.10`
-- `@michengai/dsh-pua@0.3.18`
-- `@michengai/dsh-code-review@0.1.7`
-- `@michengai/dsh-codex-pet@0.1.10`
-
-The installer uses these exact versions for reproducible installation.
-
-## suite-installer-v1.0.26 - 2026-09-27
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.5`
-- `@michengai/dsh-codex-ui@1.1.19`
-- `@michengai/dsh-skills-manager@1.1.4`
-- `@michengai/dsh-agency-agents@1.0.5`
-- `@michengai/dsh-im-connect@0.1.55`
-- `@michengai/dsh-automation@0.1.51`
-- `@michengai/dsh-btw@0.1.13`
-- `@michengai/dsh-simplify@0.1.10`
-- `@michengai/dsh-pua@0.3.18`
-- `@michengai/dsh-code-review@0.1.7`
-- `@michengai/dsh-codex-pet@0.1.10`
-
-The installer uses these exact versions for reproducible installation.
 
 ## 1.1.20 - 2026-09-27
 
 - Opening Plugin configuration in Settings no longer removes that sidebar item, and the official plugin manager page opens.
 
-## suite-installer-v1.0.25 - 2026-09-27
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.5`
-- `@michengai/dsh-codex-ui@1.1.19`
-- `@michengai/dsh-skills-manager@1.1.4`
-- `@michengai/dsh-agency-agents@1.0.5`
-- `@michengai/dsh-im-connect@0.1.55`
-- `@michengai/dsh-automation@0.1.51`
-- `@michengai/dsh-btw@0.1.13`
-- `@michengai/dsh-simplify@0.1.10`
-- `@michengai/dsh-pua@0.3.18`
-- `@michengai/dsh-code-review@0.1.7`
-- `@michengai/dsh-codex-pet@0.1.10`
-
-The installer uses these exact versions for reproducible installation.
-
-## suite-installer-v1.0.24 - 2026-09-27
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.5`
-- `@michengai/dsh-codex-ui@1.1.18`
-- `@michengai/dsh-skills-manager@1.1.4`
-- `@michengai/dsh-agency-agents@1.0.5`
-- `@michengai/dsh-im-connect@0.1.55`
-- `@michengai/dsh-automation@0.1.51`
-- `@michengai/dsh-btw@0.1.13`
-- `@michengai/dsh-simplify@0.1.10`
-- `@michengai/dsh-pua@0.3.18`
-- `@michengai/dsh-code-review@0.1.7`
-- `@michengai/dsh-codex-pet@0.1.10`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 1.1.19 - 2026-09-27
 
 - Lists supported DSH release candidates explicitly, including `0.1.7-rc.2`.
 
-## suite-installer-v1.0.23 - 2026-09-25
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.5`
-- `@michengai/dsh-codex-ui@1.1.18`
-- `@michengai/dsh-skills-manager@1.1.4`
-- `@michengai/dsh-agency-agents@1.0.5`
-- `@michengai/dsh-im-connect@0.1.55`
-- `@michengai/dsh-automation@0.1.51`
-- `@michengai/dsh-btw@0.1.13`
-- `@michengai/dsh-simplify@0.1.10`
-- `@michengai/dsh-pua@0.3.18`
-- `@michengai/dsh-code-review@0.1.7`
-- `@michengai/dsh-codex-pet@0.1.10`
-
-The installer uses these exact versions for reproducible installation.
-
-## suite-installer-v1.0.22 - 2026-09-25
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.5`
-- `@michengai/dsh-codex-ui@1.1.17`
-- `@michengai/dsh-skills-manager@1.1.4`
-- `@michengai/dsh-agency-agents@1.0.5`
-- `@michengai/dsh-im-connect@0.1.55`
-- `@michengai/dsh-automation@0.1.51`
-- `@michengai/dsh-btw@0.1.13`
-- `@michengai/dsh-simplify@0.1.10`
-- `@michengai/dsh-pua@0.3.18`
-- `@michengai/dsh-code-review@0.1.7`
-- `@michengai/dsh-codex-pet@0.1.10`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 1.1.18 - 2026-09-25
 
 - Aligns development and documentation with the current DSH `0.1.7-rc.2`. Installation requirements are unchanged.
-
-## suite-installer-v1.0.21 - 2026-09-24
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.4`
-- `@michengai/dsh-codex-ui@1.1.17`
-- `@michengai/dsh-skills-manager@1.1.3`
-- `@michengai/dsh-agency-agents@1.0.3`
-- `@michengai/dsh-im-connect@0.1.54`
-- `@michengai/dsh-automation@0.1.50`
-- `@michengai/dsh-btw@0.1.12`
-- `@michengai/dsh-simplify@0.1.9`
-- `@michengai/dsh-pua@0.3.17`
-- `@michengai/dsh-code-review@0.1.5`
-- `@michengai/dsh-codex-pet@0.1.9`
-
-The installer uses these exact versions for reproducible installation.
 
 ## 1.1.17 - 2026-09-24
 
 - Adds support for DSH `0.1.7-rc.1` and no longer includes `0.1.6-alpha`.
 - Settings no longer includes a billing panel. The billing button at the bottom of the sidebar opens the billing plugin's own window.
 
-## suite-installer-v1.0.20 - 2026-09-22
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.2`
-- `@michengai/dsh-codex-ui@1.1.15`
-- `@michengai/dsh-skills-manager@1.0.1`
-- `@michengai/dsh-agency-agents@1.0.1`
-- `@michengai/dsh-im-connect@0.1.51`
-- `@michengai/dsh-automation@0.1.45`
-- `@michengai/dsh-btw@0.1.10`
-- `@michengai/dsh-simplify@0.1.7`
-- `@michengai/dsh-pua@0.3.16`
-- `@michengai/dsh-code-review@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.7`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 1.1.16 - 2026-09-22
 
 - Follow the host `--dsw-font-family` in the sidebar, settings page, workspace tree, and composer filter instead of a hardcoded Inter stack.
-
-## suite-installer-v1.0.19 - 2026-09-22
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@1.0.2`
-- `@michengai/dsh-codex-ui@1.1.14`
-- `@michengai/dsh-skills-manager@1.0.1`
-- `@michengai/dsh-agency-agents@1.0.1`
-- `@michengai/dsh-im-connect@0.1.51`
-- `@michengai/dsh-automation@0.1.45`
-- `@michengai/dsh-btw@0.1.10`
-- `@michengai/dsh-simplify@0.1.7`
-- `@michengai/dsh-pua@0.3.16`
-- `@michengai/dsh-code-review@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.7`
-
-The installer uses these exact versions for reproducible installation.
 
 ## 1.1.15 - 2026-09-22
 
 - Cap project session lists at 5 items like Codex Desktop. Show more reveals 10 more at a time, and collapsing the folder restores the 5-item window.
 - Paint only the hovered session's after-line when the next insert anchor is folded.
 
-## suite-installer-v1.0.18 - 2026-09-19
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@0.1.44`
-- `@michengai/dsh-codex-ui@1.1.14`
-- `@michengai/dsh-skills-manager@0.1.53`
-- `@michengai/dsh-agency-agents@0.1.44`
-- `@michengai/dsh-im-connect@0.1.51`
-- `@michengai/dsh-automation@0.1.45`
-- `@michengai/dsh-btw@0.1.10`
-- `@michengai/dsh-simplify@0.1.7`
-- `@michengai/dsh-pua@0.3.16`
-- `@michengai/dsh-code-review@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.7`
-
-The installer uses these exact versions for reproducible installation.
-
-## suite-installer-v1.0.17 - 2026-09-19
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@0.1.44`
-- `@michengai/dsh-codex-ui@1.1.13`
-- `@michengai/dsh-skills-manager@0.1.53`
-- `@michengai/dsh-agency-agents@0.1.44`
-- `@michengai/dsh-im-connect@0.1.51`
-- `@michengai/dsh-automation@0.1.45`
-- `@michengai/dsh-btw@0.1.10`
-- `@michengai/dsh-simplify@0.1.7`
-- `@michengai/dsh-pua@0.3.16`
-- `@michengai/dsh-code-review@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.7`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 1.1.14 - 2026-09-19
 
 - Keep official header actions beside the session title and conversation tabs on the right. Long titles stay on one 34px row instead of wrapping the corner slot down.
 - Settings isolation leaves official body-level plugin toasts visible and inside the focus trap. Only `body > [role=alert]` skips isolation.
-
-## suite-installer-v1.0.16 - 2026-09-18
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@0.1.44`
-- `@michengai/dsh-codex-ui@1.1.12`
-- `@michengai/dsh-skills-manager@0.1.53`
-- `@michengai/dsh-agency-agents@0.1.44`
-- `@michengai/dsh-im-connect@0.1.51`
-- `@michengai/dsh-automation@0.1.45`
-- `@michengai/dsh-btw@0.1.10`
-- `@michengai/dsh-simplify@0.1.7`
-- `@michengai/dsh-pua@0.3.16`
-- `@michengai/dsh-code-review@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.7`
-
-The installer uses these exact versions for reproducible installation.
-
-## suite-installer-v1.0.15 - 2026-09-17
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@0.1.43`
-- `@michengai/dsh-codex-ui@1.1.12`
-- `@michengai/dsh-skills-manager@0.1.52`
-- `@michengai/dsh-agency-agents@0.1.43`
-- `@michengai/dsh-im-connect@0.1.50`
-- `@michengai/dsh-automation@0.1.44`
-- `@michengai/dsh-btw@0.1.8`
-- `@michengai/dsh-simplify@0.1.5`
-- `@michengai/dsh-pua@0.3.13`
-- `@michengai/dsh-code-review@0.1.2`
-- `@michengai/dsh-codex-pet@0.1.6`
-
-The installer uses these exact versions for reproducible installation.
 
 ## 1.1.13 - 2026-09-18
 
@@ -415,71 +73,17 @@ The installer uses these exact versions for reproducible installation.
 - Truncated session titles scroll on hover or when the menu is open. Reduced motion keeps the ellipsis.
 - Relative times refresh every minute. Inline English uses now; hover cards use Just now.
 
-## suite-installer-v1.0.14 - 2026-09-16
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@0.1.43`
-- `@michengai/dsh-codex-ui@1.1.11`
-- `@michengai/dsh-skills-manager@0.1.52`
-- `@michengai/dsh-agency-agents@0.1.43`
-- `@michengai/dsh-im-connect@0.1.50`
-- `@michengai/dsh-automation@0.1.44`
-- `@michengai/dsh-btw@0.1.8`
-- `@michengai/dsh-simplify@0.1.5`
-- `@michengai/dsh-pua@0.3.13`
-- `@michengai/dsh-code-review@0.1.2`
-- `@michengai/dsh-codex-pet@0.1.6`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 1.1.11 - 2026-09-16
 
 - Open the settings page (and usage statistics) through a `document.body` portal so a collapsed 56px rail cannot trap the overlay in a transform containing block.
 - Skip the dsh-context `context-overview` footer action by slot id and render the remaining footer actions one by one. Usage statistics stays visible. Footer actions without an id are dropped. The per-session Context tab is unchanged.
 - Pin a dragged project into an empty pinned section even when dragleave clears the insertion target.
 
-## suite-installer-v1.0.13 - 2026-09-16
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@0.1.43`
-- `@michengai/dsh-codex-ui@1.1.10`
-- `@michengai/dsh-skills-manager@0.1.52`
-- `@michengai/dsh-agency-agents@0.1.43`
-- `@michengai/dsh-im-connect@0.1.50`
-- `@michengai/dsh-automation@0.1.44`
-- `@michengai/dsh-btw@0.1.8`
-- `@michengai/dsh-simplify@0.1.5`
-- `@michengai/dsh-pua@0.3.13`
-- `@michengai/dsh-code-review@0.1.2`
-- `@michengai/dsh-codex-pet@0.1.6`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 1.1.10 - 2026-09-16
 
 - Cold start registers session titles through a dedicated `@michengai/dsh-codex-ui/session-title` plugin after `sessionTitle` and `llm` are ready, and recycles the provider on unload.
 - Type words follow the host settings locale. The theme follows the user message; a language mismatch falls back to the message text.
 - Peer range now includes DSH `0.1.6-alpha.1`. Development dependencies are pinned to that host, except `dsh-client-runtime`, which stays on `0.1.1-rc.2`.
-
-## suite-installer-v1.0.12 - 2026-09-16
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@0.1.43`
-- `@michengai/dsh-codex-ui@1.1.9`
-- `@michengai/dsh-skills-manager@0.1.52`
-- `@michengai/dsh-agency-agents@0.1.43`
-- `@michengai/dsh-im-connect@0.1.50`
-- `@michengai/dsh-automation@0.1.44`
-- `@michengai/dsh-btw@0.1.8`
-- `@michengai/dsh-simplify@0.1.5`
-- `@michengai/dsh-pua@0.3.13`
-- `@michengai/dsh-code-review@0.1.2`
-- `@michengai/dsh-codex-pet@0.1.6`
-
-The installer uses these exact versions for reproducible installation.
 
 ## 1.1.9 - 2026-09-16
 
@@ -489,167 +93,31 @@ The installer uses these exact versions for reproducible installation.
 - The workspace tree uses official open and closed folder glyphs, and the running indicator aligns with project titles.
 - Moving a session to another project works on DSH 0.1.6. A missing artifact is reported as not found, and leftover generation files get their working directory rewritten.
 
-## suite-installer-v1.0.11 - 2026-09-15
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@0.1.42`
-- `@michengai/dsh-codex-ui@1.1.8`
-- `@michengai/dsh-skills-manager@0.1.50`
-- `@michengai/dsh-agency-agents@0.1.42`
-- `@michengai/dsh-im-connect@0.1.49`
-- `@michengai/dsh-automation@0.1.42`
-- `@michengai/dsh-btw@0.1.7`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-pua@0.3.11`
-- `@michengai/dsh-code-review@0.1.0`
-- `@michengai/dsh-codex-pet@0.1.5`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 1.1.8 - 2026-09-15
 
 - After the first user message, new chats are titled once as emoji, type, and theme, for example `⚡ 优化｜批次文字显示`. Dates are not written.
 - A manual rename is pinned by the host and later messages do not overwrite it.
 
-## suite-installer-v1.0.10 - 2026-09-14
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@0.1.42`
-- `@michengai/dsh-codex-ui@1.1.7`
-- `@michengai/dsh-skills-manager@0.1.50`
-- `@michengai/dsh-agency-agents@0.1.42`
-- `@michengai/dsh-im-connect@0.1.49`
-- `@michengai/dsh-automation@0.1.42`
-- `@michengai/dsh-btw@0.1.7`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-pua@0.3.11`
-- `@michengai/dsh-code-review@0.1.0`
-- `@michengai/dsh-codex-pet@0.1.5`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 1.1.7 - 2026-09-14
 
 - Restore the billing plugin's native sidebar entry styles by removing Codex UI overrides for its card, icons, text, and expanded/collapsed appearance. Clicking the entry still opens the existing usage statistics settings page.
-
-## suite-installer-v1.0.9 - 2026-09-14
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@0.1.41`
-- `@michengai/dsh-codex-ui@1.1.6`
-- `@michengai/dsh-skills-manager@0.1.50`
-- `@michengai/dsh-agency-agents@0.1.42`
-- `@michengai/dsh-im-connect@0.1.48`
-- `@michengai/dsh-automation@0.1.41`
-- `@michengai/dsh-btw@0.1.7`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-pua@0.3.11`
-- `@michengai/dsh-code-review@0.1.0`
-- `@michengai/dsh-codex-pet@0.1.5`
-
-The installer uses these exact versions for reproducible installation.
 
 ## 1.1.6 - 2026-09-14
 
 - Fix the Web page freezing on initial load or refresh in a narrow window when the sidebar starts collapsed.
 
-## suite-installer-v1.0.8 - 2026-09-14
-
-Install or maintain 11 first-party plugins in one step. Included plugins and versions:
-
-- `@michengai/dsh-archive-manager@0.1.40`
-- `@michengai/dsh-codex-ui@1.1.5`
-- `@michengai/dsh-skills-manager@0.1.50`
-- `@michengai/dsh-agency-agents@0.1.42`
-- `@michengai/dsh-im-connect@0.1.47`
-- `@michengai/dsh-automation@0.1.40`
-- `@michengai/dsh-btw@0.1.7`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-pua@0.3.11`
-- `@michengai/dsh-code-review@0.1.0`
-- `@michengai/dsh-codex-pet@0.1.5`
-
-The installer uses these exact versions for reproducible installation.
-
-## suite-installer-v1.0.7 - 2026-09-14
-
-Resolved and pinned the following member versions from the official npm registry:
-
-- `@michengai/dsh-archive-manager@0.1.40`
-- `@michengai/dsh-codex-ui@1.1.5`
-- `@michengai/dsh-skills-manager@0.1.50`
-- `@michengai/dsh-agency-agents@0.1.42`
-- `@michengai/dsh-im-connect@0.1.47`
-- `@michengai/dsh-automation@0.1.40`
-- `@michengai/dsh-btw@0.1.7`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.5`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 1.1.5 - 2026-09-14
 
 - Click a plugin title or full package name on the About page to open its project homepage in a new tab; App Market opens its official website.
-
-## suite-installer-v1.0.6 - 2026-09-14
-
-Resolved and pinned the following member versions from the official npm registry:
-
-- `@michengai/dsh-archive-manager@0.1.40`
-- `@michengai/dsh-codex-ui@1.1.4`
-- `@michengai/dsh-skills-manager@0.1.50`
-- `@michengai/dsh-agency-agents@0.1.42`
-- `@michengai/dsh-im-connect@0.1.47`
-- `@michengai/dsh-automation@0.1.40`
-- `@michengai/dsh-btw@0.1.7`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.5`
-
-The installer uses these exact versions for reproducible installation.
 
 ## 1.1.4 - 2026-09-14
 
 - Manage companion plugins in Settings → About, with PUA, Code Review, and Codex Pet included in a consistent order.
 - Show total npm downloads beside each plugin name using a compact icon and text.
 
-## suite-installer-v1.0.5 - 2026-09-12
-
-Resolved and pinned the following member versions from the official npm registry:
-
-- `@michengai/dsh-archive-manager@0.1.39`
-- `@michengai/dsh-codex-ui@1.1.3`
-- `@michengai/dsh-skills-manager@0.1.48`
-- `@michengai/dsh-agency-agents@0.1.41`
-- `@michengai/dsh-im-connect@0.1.45`
-- `@michengai/dsh-automation@0.1.39`
-- `@michengai/dsh-btw@0.1.6`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.5`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 1.1.3 - 2026-09-12
 
 - With Pet 0.1.5 or later, keep the pet visible and accessible by mouse and keyboard on settings pages while other background content remains isolated.
-
-## suite-installer-v1.0.4 - 2026-09-11
-
-Resolved and pinned the following member versions from the official npm registry:
-
-- `@michengai/dsh-archive-manager@0.1.38`
-- `@michengai/dsh-codex-ui@1.1.2`
-- `@michengai/dsh-skills-manager@0.1.48`
-- `@michengai/dsh-agency-agents@0.1.40`
-- `@michengai/dsh-im-connect@0.1.45`
-- `@michengai/dsh-automation@0.1.38`
-- `@michengai/dsh-btw@0.1.6`
-- `@michengai/dsh-simplify@0.1.4`
-- `@michengai/dsh-codex-pet@0.1.4`
-
-The installer uses these exact versions for reproducible installation.
 
 ## 1.1.2 - 2026-09-11
 
@@ -658,58 +126,12 @@ The installer uses these exact versions for reproducible installation.
 - Unify connector pages with a neutral palette while preserving warning and error colors, and align usage statistics with the standard 864px settings width.
 - Hide archived channel conversations immediately and prevent stale polling responses from restoring them; failed archival keeps the conversation visible and shows an error.
 
-## suite-installer-v1.0.3 - 2026-09-09
-
-Resolved and pinned the following member versions from the official npm registry:
-
-- `@michengai/dsh-archive-manager@0.1.34`
-- `@michengai/dsh-codex-ui@1.1.1`
-- `@michengai/dsh-skills-manager@0.1.44`
-- `@michengai/dsh-agency-agents@0.1.36`
-- `@michengai/dsh-im-connect@0.1.39`
-- `@michengai/dsh-automation@0.1.35`
-- `@michengai/dsh-btw@0.1.4`
-- `@michengai/dsh-simplify@0.1.2`
-- `@michengai/dsh-codex-pet@0.1.2`
-
-The installer uses these exact versions for reproducible installation.
-
-## suite-installer-v1.0.2 - 2026-09-09
-
-Resolved and pinned the following member versions from the official npm registry:
-
-- `@michengai/dsh-archive-manager@0.1.34`
-- `@michengai/dsh-codex-ui@1.1.1`
-- `@michengai/dsh-skills-manager@0.1.44`
-- `@michengai/dsh-agency-agents@0.1.36`
-- `@michengai/dsh-im-connect@0.1.39`
-- `@michengai/dsh-automation@0.1.35`
-- `@michengai/dsh-btw@0.1.4`
-- `@michengai/dsh-simplify@0.1.2`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 1.1.1 - 2026-09-09
 
 - Add Codex Pet below scheduled tasks in About, with version checks and installation/update actions.
 - Enlarge the welcome logo to 46px and the headline to 34px.
 - Hide descendants of isolated branches beneath transparent Desktop settings, preventing explicit `visibility:visible` rules from showing conversation text through the page. Restore normal visibility when settings close.
 - Hide background portals explicitly isolated by settings, including those mounted under body, and restore their original isolation state on exit while preserving onboarding dialogs.
-
-## suite-installer-v1.0.1 - 2026-09-09
-
-Resolved and pinned the following member versions from the official npm registry:
-
-- `@michengai/dsh-archive-manager@0.1.34`
-- `@michengai/dsh-codex-ui@1.1.0`
-- `@michengai/dsh-skills-manager@0.1.44`
-- `@michengai/dsh-agency-agents@0.1.35`
-- `@michengai/dsh-im-connect@0.1.39`
-- `@michengai/dsh-automation@0.1.35`
-- `@michengai/dsh-btw@0.1.4`
-- `@michengai/dsh-simplify@0.1.2`
-
-The installer uses these exact versions for reproducible installation.
 
 ## 1.1.0 - 2026-09-09
 
@@ -726,21 +148,6 @@ The installer uses these exact versions for reproducible installation.
 - Add draggable width handles to new conversations with shared width preferences and a 640px default; keep guide cards independent of composer resizing.
 - Hide the task sidebar scrollbar while preserving scrolling, and fix downward Git menus and first-frame style changes.
 
-## suite-installer-v1.0.0 - 2026-09-08
-
-Resolved and pinned the following member versions from the official npm registry:
-
-- `@michengai/dsh-archive-manager@0.1.33`
-- `@michengai/dsh-codex-ui@1.0.0`
-- `@michengai/dsh-skills-manager@0.1.43`
-- `@michengai/dsh-agency-agents@0.1.34`
-- `@michengai/dsh-im-connect@0.1.38`
-- `@michengai/dsh-automation@0.1.34`
-- `@michengai/dsh-btw@0.1.4`
-- `@michengai/dsh-simplify@0.1.2`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 1.0.0 - 2026-09-08
 
 - Release 1.0.0, bringing project and conversation navigation, plugin entry points, and standalone settings together in a cohesive Codex-style experience.
@@ -752,21 +159,6 @@ The installer uses these exact versions for reproducible installation.
 - Give the plugin marketplace and side cards distinct store and sidebar-layout icons instead of the generic box.
 - Preserve host configuration, onboarding, connection recovery, and installed plugin functionality; community plugin internal styling remains outside this change.
 
-## suite-installer-v0.1.31 - 2026-09-08
-
-Resolved and pinned the following member versions from the official npm registry:
-
-- `@michengai/dsh-archive-manager@0.1.32`
-- `@michengai/dsh-codex-ui@0.2.113`
-- `@michengai/dsh-skills-manager@0.1.43`
-- `@michengai/dsh-agency-agents@0.1.34`
-- `@michengai/dsh-im-connect@0.1.38`
-- `@michengai/dsh-automation@0.1.34`
-- `@michengai/dsh-btw@0.1.4`
-- `@michengai/dsh-simplify@0.1.2`
-
-The installer uses these exact versions for reproducible installation.
-
 ## 0.2.113 - 2026-09-08
 
 ### Fixed
@@ -774,21 +166,6 @@ The installer uses these exact versions for reproducible installation.
 - Fixed Chinese text wrapping into vertical columns and misaligned menu and footer text while collapsing the sidebar.
 - Restored sidebar expand and collapse transitions when used alongside `dsh-better-sidebar`, while preserving right-panel animations.
 - Synchronized sidebar width and content fades, removed redundant width updates, and kept rapid toggling and dragging responsive.
-
-## suite-installer-v0.1.30 - 2026-09-08
-
-Resolved and pinned the following member versions from the official npm registry:
-
-- `@michengai/dsh-archive-manager@0.1.32`
-- `@michengai/dsh-codex-ui@0.2.112`
-- `@michengai/dsh-skills-manager@0.1.43`
-- `@michengai/dsh-agency-agents@0.1.34`
-- `@michengai/dsh-im-connect@0.1.38`
-- `@michengai/dsh-automation@0.1.34`
-- `@michengai/dsh-btw@0.1.4`
-- `@michengai/dsh-simplify@0.1.2`
-
-The installer uses these exact versions for reproducible installation.
 
 ## 0.2.112 - 2026-09-08
 
@@ -831,21 +208,11 @@ The installer uses these exact versions for reproducible installation.
 
 - Added business-route registration and authentication regression coverage for the new and removed paths, 401, 403, unavailable authentication, unchanged request-header forwarding, and an external-origin write authorized by the host boundary.
 
-## suite-installer-v0.1.29 - 2026-09-08
-
-- Updated the suite to Codex UI `0.2.111` and IM Connect `0.1.38`, keeping the channel sidebar compatible with the authenticated `/api/dsh-im-connect/channels` endpoint.
-- Refreshed exact member versions from the official npm registry for reproducible one-click installation.
-
 ## 0.2.111 - 2026-09-08
 
 ### Fixed
 
 - Updated the channel sidebar to use `/api/dsh-im-connect/channels`, matching IM Connect `0.1.38` after removal of the old management endpoint.
-
-## suite-installer-v0.1.28 - 2026-09-08
-
-- Updated the bundled Codex UI to `0.2.110`, including standalone DSH Web plugin-update recovery guidance.
-- Refreshed exact member versions from the official npm registry for reproducible one-click installation.
 
 ## 0.2.110 - 2026-09-08
 
@@ -858,10 +225,6 @@ The installer uses these exact versions for reproducible installation.
 
 - Added regression coverage for Web-specific installer errors and their Simplified Chinese and English localization.
 
-## suite-installer-v0.1.27 - 2026-09-07
-
-- Updated the bundled Codex UI to `0.2.108`, including group rename/delete menus and aligned group counts; refreshed exact member versions from the official npm registry.
-
 ## 0.2.108 - 2026-09-07
 
 - Added rename and delete actions to each custom workspace group; the Projects header now keeps only the create-group button. Renaming preserves group membership, ordering, and expansion.
@@ -869,44 +232,20 @@ The installer uses these exact versions for reproducible installation.
 - Prevented IME confirmation from submitting new groups and kept rejected names from interfering with preference synchronization.
 - Made case-insensitive name checks independent of system locale while preserving legacy stored group names and memberships.
 
-## suite-installer-v0.1.26 - 2026-09-07
-
-- Refreshed direct member pins from the official npm registry, including IM Connect `0.1.37`, which withdraws its unfinished proactive delivery feature.
-
-## suite-installer-v0.1.25 - 2026-09-07
-
-- Updated the bundled Codex UI to `0.2.107` and refreshed direct member versions from the official npm registry for reproducible installation.
-
 ## 0.2.107 - 2026-09-07
 
 - Displayed the running Codex UI version beside the About title and aligned Channel and Schedule session-group layout with Tasks.
 - Restricted dependency update requests to loopback same-origin callers and avoided redundant Desktop reload IPC while preserving independent Web reloads.
 - Standardized the package contract on Node.js 22.19.0+ and pnpm 11.22.0.
 
-## suite-installer-v0.1.24 — 2026-09-07
-
-- Added BTW side questions and Simplify code cleanup to the Suite, installing all eight companion plugins together.
-- Refreshed and pinned member versions from the official npm registry for reproducible installations.
-- Requires Node.js 22.19.0 or later to support Simplify.
-
 ## 0.2.106 — 2026-09-07
 
 - Added Wallpaper Engine sidebar glass support while keeping settings and search dialogs correctly positioned and clickable.
 - Integrated the billing plugin entry into the sidebar, aligning icon size, colors, typography, and spacing with Settings while preserving billing details and the collapsed entry.
 
-## suite-installer-v0.1.23 — 2026-09-07
-
-- Updated the bundled Codex UI to `0.2.106`, including sidebar glass support and billing entry styling.
-- Other Suite members remain unchanged.
-
 ## 0.2.105 — 2026-09-06
 
 - Added Simplify directly below BTW on the About page, with version status, install, update, and bulk-update support.
-
-## suite-installer-v0.1.22 — 2026-09-06
-
-- Updated the bundled Codex UI to `0.2.105`, adding Simplify management to the About page.
-- Updated Automation to `0.1.32`; other Suite members remain unchanged.
 
 ## 0.2.104 — 2026-09-06
 
@@ -914,14 +253,7 @@ The installer uses these exact versions for reproducible installation.
 - Added BTW to the About page, with version information and install/update actions.
 - Shortened the archive plugin label to "Archived conversations".
 
-## suite-installer-v0.1.21 — 2026-09-06
-
-- Updated the bundled Codex UI to `0.2.104`, adding Up/Down input history and a BTW entry on the About page.
-- Updated Skills Manager, Agency Agents, and Automation.
-
 ## 0.2.103 — 2026-09-04
-
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.20`.
 
 ### Fixed
 
@@ -934,13 +266,7 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.20`.
 
 - Added behavior coverage for cross-site dependency-route rejection, error redaction, localized refresh failures, connector probing, observer scope, cyclic errors, installer ordering, invalid bundle baselines, and Windows command quoting.
 
-### Dependencies
-
-- The Suite Installer release workflow will resolve Codex UI `0.2.103` and publish the companion `0.1.20` release.
-
 ## 0.2.102 — 2026-09-03
-
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.19`.
 
 ### Added
 
@@ -962,13 +288,7 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.19`.
 - Hardened workspace-group hydration and persistence, host compatibility fallbacks, structured user-facing errors, unread state updates, and move rollback failure messaging.
 - Completed Simplified Chinese and English coverage for the updated sidebar, menus, confirmations, errors, and settings actions.
 
-### Dependencies
-
-- The Suite Installer release workflow will resolve Codex UI `0.2.102` after this release is published.
-
 ## 0.2.101 — 2026-09-01
-
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.18`.
 
 ### Fixed
 
@@ -979,13 +299,7 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.18`.
 
 - Added DOM integration coverage for all three trees using the real pending-interaction store path, alongside the existing `SessionSummary` snapshot coverage.
 
-### Dependencies
-
-- The Suite Installer release workflow will resolve Codex UI `0.2.101` after this release is published.
-
 ## 0.2.100 — 2026-09-01
-
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.17`.
 
 ### Fixed
 
@@ -997,38 +311,20 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.17`.
 
 - Added DOM rendering coverage for pending-interaction states in all three trees using fully typed `SessionListState` and `SessionSummary` snapshots.
 
-### Dependencies
-
-- The Suite Installer release workflow will resolve Codex UI `0.2.100` after this release is published.
-
 ## 0.2.99 — 2026-09-01
-
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.16`.
 
 ### Fixed
 
 - Restored full rendering for user question bubbles in the main conversation body so long prompts are not hidden by overflow, max-height, or multi-line clamp rules.
 - Kept the official DSH user bubble DOM intact while applying a stable compatibility marker to newly mounted user bubbles.
 
-### Dependencies
-
-- The Suite Installer release workflow will resolve Codex UI `0.2.99` after this release is published.
-
 ## 0.2.98 — 2026-09-01
-
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.15`.
 
 ### Fixed
 
 - Kept the segmented conversation-tab slider aligned with the host-selected view by recognizing the tab list itself as a synchronization root, preventing the highlight from remaining on Chat after selecting Trace or Context.
 
-### Dependencies
-
-- Prepared Suite Installer `0.1.15` to resolve Codex UI `0.2.98` after this release is published.
-
 ## 0.2.97 — 2026-09-01
-
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.14`.
 
 ### Compatibility
 
@@ -1042,26 +338,14 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.14`.
 - Added strict progress payload validation and extended slow Desktop bundle reconciliation tolerance.
 - Filtered and frame-coalesced navigator DOM observation so streaming responses do not trigger repeated document-wide scans.
 
-### Dependencies
-
-- Prepared Suite Installer `0.1.14` to resolve the latest exact companion versions after this release is published.
-
 ## 0.2.96 — 2026-09-01
-
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.13`.
 
 ### Fixed
 
 - Opened About immediately when the IM companion is not installed instead of showing General settings while waiting for a missing section to time out; the installed IM settings route is unchanged.
 - Predeclared the nonessential `protobufjs` and `koffi` install scripts as disabled before About-page plugin installs, preventing pnpm's ignored-build placeholder from blocking an otherwise safe install.
 
-### Dependencies
-
-- Refreshed the Suite Installer against the latest exact member versions from the official npm registry at release time.
-
 ## 0.2.95 — 2026-09-01
-
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.12`.
 
 ### Fixed
 
@@ -1069,8 +353,6 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.12`.
 - Replaced the clipped white-tile WeCom channel icon with a compact multicolor brand mark that remains legible at sidebar size.
 
 ## 0.2.94 — 2026-08-30
-
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.11`.
 
 ### Safety
 
@@ -1092,8 +374,6 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.11`.
 
 ## 0.2.92 — 2026-08-28
 
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.9`.
-
 ### Security
 
 - Updated the legacy Suite and its installer manifest to `@michengai/dsh-im-connect@0.1.26`.
@@ -1108,8 +388,6 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.9`.
 
 ## 0.2.90 — 2026-08-27
 
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.7`.
-
 ### Changed
 
 - Matched the expandable sidebar to the installed Codex desktop client: 275px default width, 240px minimum, and 520px maximum, capped by available viewport width.
@@ -1121,8 +399,6 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.7`.
 - Prevented the DOM width adapter from reapplying its own mapped output during host drag and rerender cycles.
 
 ## 0.2.89 — 2026-08-27
-
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.6`.
 
 ### Added
 
@@ -1147,8 +423,6 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.6`.
 
 ## 0.2.88 — 2026-08-26
 
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.5`.
-
 ### Changed
 
 - Replaced the lightweight **Settings → Connectors** tool list with the complete `dsh-mcp-connector` marketplace and connection manager whenever that optional external plugin is installed.
@@ -1161,11 +435,9 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.5`.
 - Synchronized the embedded marketplace with the DSH-selected light or dark theme without modifying the externally maintained plugin or making it a required dependency.
 - Updated the lightweight installer to pin Codex UI `0.2.88`; the legacy aggregate Suite remains private and unpublished.
 
-Published packages: [`@michengai/dsh-codex-ui@0.2.88`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.88) and [`@michengai/dsh-codex-suite-installer@0.1.5`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.5).
+Published packages: [`@michengai/dsh-codex-ui@0.2.88`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.88).
 
 ## 0.2.87 — 2026-08-26
-
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.4`.
 
 ### Fixed
 
@@ -1178,11 +450,9 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.4`.
 
 - Updated the lightweight installer to pin Codex UI `0.2.87`, IM Connect `0.1.24`, and Automation `0.1.15`; the legacy aggregate Suite remains private and unpublished.
 
-Published packages: [`@michengai/dsh-codex-ui@0.2.87`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.87) and [`@michengai/dsh-codex-suite-installer@0.1.4`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.4).
+Published packages: [`@michengai/dsh-codex-ui@0.2.87`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.87).
 
 ## 0.2.86 — 2026-08-25
-
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.3`.
 
 ### Changed
 
@@ -1196,11 +466,9 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.3`.
 - Added regression coverage for stable DOM ownership, exact border-box sizing, accessible labels, and header spacing.
 - Updated the lightweight installer to pin Codex UI `0.2.86`; the legacy aggregate Suite remains private and is not released.
 
-Published packages: [`@michengai/dsh-codex-ui@0.2.86`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.86) and [`@michengai/dsh-codex-suite-installer@0.1.3`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.3).
+Published packages: [`@michengai/dsh-codex-ui@0.2.86`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.86).
 
 ## 0.2.85 — 2026-08-25
-
-Companion release: `@michengai/dsh-codex-suite-installer@0.1.2`.
 
 ### Changed
 
@@ -1211,11 +479,9 @@ Companion release: `@michengai/dsh-codex-suite-installer@0.1.2`.
 
 - Made `@michengai/dsh-codex-suite-installer` the only supported one-click installation path. The legacy `@michengai/dsh-codex-suite` workspace package is now private and retained only as migration source; it will no longer be packed or released.
 
-Published packages: [`@michengai/dsh-codex-ui@0.2.85`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.85) and [`@michengai/dsh-codex-suite-installer@0.1.2`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.2).
+Published packages: [`@michengai/dsh-codex-ui@0.2.85`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.85).
 
 ## 0.2.84 — 2026-08-25
-
-Companion releases: `@michengai/dsh-codex-suite@0.1.16` and `@michengai/dsh-codex-suite-installer@0.1.1`.
 
 ### Added
 
@@ -1225,22 +491,18 @@ Companion releases: `@michengai/dsh-codex-suite@0.1.16` and `@michengai/dsh-code
 
 - Clarified that `dshmarket` and `dsh-find-plugin` are optional standalone plugins outside the Suite and can be installed or updated separately from About.
 
-Published packages: [`@michengai/dsh-codex-ui@0.2.84`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.84), [`@michengai/dsh-codex-suite@0.1.16`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.16), and [`@michengai/dsh-codex-suite-installer@0.1.1`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.1).
+Published packages: [`@michengai/dsh-codex-ui@0.2.84`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.84).
 
 ## 0.2.83 — 2026-08-24
-
-Companion releases: `@michengai/dsh-codex-suite@0.1.15` and `@michengai/dsh-codex-suite-installer@0.1.0`.
 
 ### Fixed
 
 - Split the direct-member CLI into a dependency-free installer package so `npx` does not resolve the aggregate Suite's full DSH runtime tree before it can start.
 - Kept `@michengai/dsh-codex-suite` as the compatibility package for the old `dsh plugin add` path, while all recommended commands now use `@michengai/dsh-codex-suite-installer`.
 
-Published packages: [`@michengai/dsh-codex-ui@0.2.83`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.83), [`@michengai/dsh-codex-suite@0.1.15`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.15), and [`@michengai/dsh-codex-suite-installer@0.1.0`](https://www.npmjs.com/package/@michengai/dsh-codex-suite-installer/v/0.1.0).
+Published packages: [`@michengai/dsh-codex-ui@0.2.83`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.83).
 
 ## 0.2.82 — 2026-08-24
-
-Companion release: `@michengai/dsh-codex-suite@0.1.14`.
 
 ### Fixed
 
@@ -1248,16 +510,7 @@ Companion release: `@michengai/dsh-codex-suite@0.1.14`.
 - Made clean custom Web profiles reuse the same `DSH_HOME` while placing DSH's built-in `dsh-web-app` before the member bundles.
 - When About encounters a legacy aggregate Suite, it now promotes all six members before removing the aggregate package instead of retaining only the clicked plugin.
 
-### Suite 0.1.14
-
-- Added the cross-platform `dsh-codex-suite` command, legacy migration, config-dump validation, and dry-run support.
-- Preserved exact member version coordination without modifying upstream DSH or creating a separate DSH Home.
-
-Published packages: [`@michengai/dsh-codex-ui@0.2.82`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.82) and [`@michengai/dsh-codex-suite@0.1.14`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.14).
-
 ## 0.2.81 — 2026-08-24
-
-Companion release: `@michengai/dsh-codex-suite@0.1.13`.
 
 ### Added
 
@@ -1270,31 +523,14 @@ Companion release: `@michengai/dsh-codex-suite@0.1.13`.
 - Preserved individual install and update actions while preventing overlapping requests.
 - Added visible loading feedback, keyboard focus treatment, accessible busy/status announcements, bilingual copy, and regression coverage for the batch selection and endpoint contract.
 
-### Suite 0.1.13
-
-- Pinned `@michengai/dsh-codex-ui` to `0.2.81`; all other Suite member pins remain on their currently verified releases.
-
-Published packages: [`@michengai/dsh-codex-ui@0.2.81`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.81) and [`@michengai/dsh-codex-suite@0.1.13`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.13).
-
 ## 0.2.80 — 2026-08-23
-
-Companion release: `@michengai/dsh-codex-suite@0.1.12`.
 
 ### Documentation
 
 - Added bilingual changelogs covering the five most recent UI releases.
 - Linked the release history from both README editions and included it in the npm package.
 
-### Suite 0.1.12
-
-- Refreshed every bundled plugin to the changelog release published on 2026-08-23.
-- Pinned Agency Agents `0.1.21`, Archive Manager `0.1.13`, Automation `0.1.14`, IM Connect `0.1.23`, and Skills Manager `0.1.24`.
-
-Published packages: [`@michengai/dsh-codex-ui@0.2.80`](https://www.npmjs.com/package/@michengai/dsh-codex-ui/v/0.2.80) and [`@michengai/dsh-codex-suite@0.1.12`](https://www.npmjs.com/package/@michengai/dsh-codex-suite/v/0.1.12).
-
 ## 0.2.79 — 2026-08-23
-
-Companion release: `@michengai/dsh-codex-suite@0.1.11`.
 
 ### Fixed
 
@@ -1309,16 +545,7 @@ Companion release: `@michengai/dsh-codex-suite@0.1.11`.
 - Preserved the reduced-motion path for users who disable interface motion.
 - Added regression coverage for both collapse and re-expansion without workspace-tree rerenders.
 
-### Suite 0.1.11
-
-- Pinned `@michengai/dsh-codex-ui` to `0.2.79`.
-- Updated `@michengai/dsh-im-connect` to `0.1.22`.
-
-Release commit: [`e8d2f4b`](https://github.com/MichengAI/dsh-codex-ui/commit/e8d2f4b).
-
 ## 0.2.78 — 2026-08-23
-
-Companion releases: `@michengai/dsh-codex-suite@0.1.9` and dependency-only refresh `0.1.10`.
 
 ### Changed
 
@@ -1326,16 +553,7 @@ Companion releases: `@michengai/dsh-codex-suite@0.1.9` and dependency-only refre
 - Added compositor-only reveal motion for expanded and compact shells, search, and workspace sections.
 - Kept the large workspace tree mounted while switching sidebar modes.
 
-### Suite 0.1.9–0.1.10
-
-- Refreshed all Suite member pins.
-- Suite `0.1.10` advanced Automation to `0.1.13` and IM Connect to `0.1.20` without changing the UI package version.
-
-Release commits: [`b7980e3`](https://github.com/MichengAI/dsh-codex-ui/commit/b7980e3), [`cc71abf`](https://github.com/MichengAI/dsh-codex-ui/commit/cc71abf).
-
 ## 0.2.77 — 2026-08-23
-
-Companion release: `@michengai/dsh-codex-suite@0.1.8`.
 
 ### Added
 

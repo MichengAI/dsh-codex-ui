@@ -10,6 +10,8 @@ import { parseDocument } from 'workflow-yaml'
   const installer = readFileSync('.github/workflows/release-suite-installer.yml', 'utf8')
   const uiRelease = readFileSync('.github/workflows/release.yml', 'utf8')
   assert.ok(!/gh release (create|edit)\b/.test(installer), 'Installer 只打 tag，不创建 GitHub Release')
+  assert.ok(!installer.includes('CHANGELOG'), 'Installer 发布不得改写 UI 更新日志')
+  assert.ok(!installer.includes('extract-release-notes'), 'Installer 不再从更新日志提取组合包说明')
   assert.ok(installer.includes('git tag -a'), 'Installer 发布后仍须创建 suite-installer-v* 标签')
   assert.ok(uiRelease.includes('gh release create') && uiRelease.includes('gh release edit'), 'UI 标签仍须同步 GitHub Release 说明')
 }
@@ -41,7 +43,7 @@ for (const name of ['ci.yml', 'publish.yml', 'release.yml', 'release-suite-insta
 
 const directory = mkdtempSync(join(tmpdir(), 'dcu-release-contract-'))
 try {
-  for (const file of ['scripts/prepare-suite-installer-release.mjs', 'scripts/extract-release-notes.mjs', 'scripts/release-changelog.mjs', 'packages/dsh-codex-suite-installer/installer.mjs', 'packages/dsh-codex-suite-installer/package.json', 'packages/dsh-codex-suite/package.json']) {
+  for (const file of ['package.json', 'scripts/prepare-suite-installer-release.mjs', 'scripts/extract-release-notes.mjs', 'scripts/release-changelog.mjs', 'packages/dsh-codex-suite-installer/installer.mjs', 'packages/dsh-codex-suite-installer/package.json', 'packages/dsh-codex-suite/package.json']) {
     mkdirSync(dirname(join(directory, file)), { recursive: true })
     copyFileSync(resolve(file), join(directory, file))
   }
@@ -51,17 +53,17 @@ try {
   const run = (script, args = []) => spawnSync(process.execPath, ['--import', './mock-registry.mjs', `scripts/${script}`, ...args], { cwd: directory, encoding: 'utf8' })
   const prepared = run('prepare-suite-installer-release.mjs', ['--release-notes', 'prepared.md'])
   assert.equal(prepared.status, 0, prepared.stderr)
-  const version = JSON.parse(readFileSync(join(directory, 'packages/dsh-codex-suite-installer/package.json'), 'utf8')).version
-  const extracted = run('extract-release-notes.mjs', [`suite-installer-v${version}`, 'extracted.md'])
-  assert.equal(extracted.status, 0, extracted.stderr)
-  assert.equal(readFileSync(join(directory, 'extracted.md'), 'utf8'), readFileSync(join(directory, 'prepared.md'), 'utf8'))
+  const notes = readFileSync(join(directory, 'prepared.md'), 'utf8')
+  assert.match(notes, /## 中文说明/)
+  assert.match(notes, /## English/)
+  assert.match(notes, /@michengai\/dsh-codex-ui@1\.2\.3/)
   for (const file of ['CHANGELOG.md', 'CHANGELOG.zh-CN.md']) {
-    const body = readFileSync(join(directory, file), 'utf8')
-    assert.ok(body.includes('Historical entry') && body.includes('Pending work'))
-    assert.ok(body.includes(`## suite-installer-v${version} - `))
+    assert.equal(readFileSync(join(directory, file), 'utf8'), fixture, '组合包发布不得写入 UI 更新日志')
   }
-  assert.equal(run('prepare-suite-installer-release.mjs', ['--version', version]).status, 0)
-  assert.equal(readFileSync(join(directory, 'CHANGELOG.md'), 'utf8').split(`## suite-installer-v${version} - `).length, 2, '重试不得产生重复版本章节')
+  assert.equal(run('prepare-suite-installer-release.mjs', ['--version', JSON.parse(readFileSync(join(directory, 'packages/dsh-codex-suite-installer/package.json'), 'utf8')).version]).status, 0)
+  assert.equal(readFileSync(join(directory, 'CHANGELOG.md'), 'utf8'), fixture, '重试仍不得写入 UI 更新日志')
+  const uiVersion = JSON.parse(readFileSync(join(directory, 'package.json'), 'utf8')).version
+  writeFileSync(join(directory, 'CHANGELOG.md'), `## ${uiVersion} - 2026-01-01\n\nUI note\n\n`)
   writeFileSync(join(directory, 'CHANGELOG.zh-CN.md'), fixture)
-  assert.notEqual(run('extract-release-notes.mjs', [`suite-installer-v${version}`, 'incomplete.md']).status, 0, '缺少一种语言必须阻止发布')
+  assert.notEqual(run('extract-release-notes.mjs', [`v${uiVersion}`, 'incomplete.md']).status, 0, '缺少一种语言必须阻止发布')
 } finally { rmSync(directory, { recursive: true, force: true }) }

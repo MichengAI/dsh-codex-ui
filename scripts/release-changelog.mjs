@@ -1,4 +1,4 @@
-/** 安装器发布的双语事实源；生成同一成员清单并更新独立版本章节。 */
+/** 安装器发布说明的双语事实源。组合包只升版本号，不写入 UI 更新日志。 */
 export function installerReleaseBodies(members) {
   const list = Object.entries(members).map(([name, version]) => `- \`${name}@${version}\``).join('\n')
   return {
