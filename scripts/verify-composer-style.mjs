@@ -38,6 +38,41 @@ try {
     assert.ok((await measure()).height > before.height, '多行输入必须自然撑高')
     await page.keyboard.press('Tab')
     assert.equal(await page.locator('button').first().evaluate(el => getComputedStyle(el).outlineWidth), '2px')
+    /* 皮肤令牌改写的守卫（放在本轮其余检查之后：它会改写样式表，不再影响几何断言）。
+       皮肤（动态壁纸等）会在令牌源头重写 --dsw-alias-label-primary 与
+       --dsw-alias-bg-base：发送键的底色或前景一旦取自这两个令牌，就会变成
+       「黑圆 + 看不见的箭头」——宿主箭头是 fill="currentColor"，前景透明等于没有箭头，
+       深浅主题都会发生。
+       先把宿主自身 .primary 的 background/color 改为 initial（按选择器扫样式表，只动那一条，
+       不是追加一条同属性规则 —— 后者会把本插件规则一起压住，让断言永远为真）；
+       本插件规则特异性更高，仍然生效，因此下面量到的就是它解析出来的颜色。
+       宿主 .primary 带 transition:background-color .1s，必须禁用过渡，否则量到中间色。 */
+    await page.evaluate(() => {
+      for (const sheet of document.styleSheets) {
+        for (const rule of sheet.cssRules) {
+          if (rule.selectorText?.endsWith('_primary') && rule.style.background) {
+            rule.style.backgroundColor = 'initial'
+            rule.style.color = 'initial'
+          }
+        }
+      }
+      const tag = document.createElement('style')
+      tag.textContent = '*{transition:none!important;animation:none!important}'
+      document.head.append(tag)
+    })
+    const buttonPaint = () => page.locator('button[aria-label="发送"]').evaluate(el => {
+      const s = getComputedStyle(el)
+      return { background: s.backgroundColor, color: s.color }
+    })
+    const paintHost = await buttonPaint()
+    assert.notEqual(paintHost.background, 'rgba(0, 0, 0, 0)', '发送键底色必须是不透明实色')
+    assert.notEqual(paintHost.color, 'rgba(0, 0, 0, 0)', '发送键前景（箭头 currentColor）必须是不透明实色')
+    await page.addStyleTag({ content: 'body{--dsw-alias-label-primary:rgb(0, 0, 0);--dsw-alias-bg-base:transparent}' })
+    const paintSkin = await buttonPaint()
+    assert.equal(paintSkin.background, paintHost.background, '皮肤改写别名令牌不得改变发送键底色')
+    assert.equal(paintSkin.color, paintHost.color, '皮肤改写别名令牌不得改变发送键前景')
+    assert.notEqual(paintSkin.background, 'rgba(0, 0, 0, 0)', '皮肤改写后底色仍须是不透明实色')
+    assert.notEqual(paintSkin.color, 'rgba(0, 0, 0, 0)', '皮肤改写后前景仍须是不透明实色')
   }
   console.log('输入框：深浅主题 × 3 个视口，圆角、焦点稳定、按钮尺寸、多行与溢出检查通过。')
 } finally { await browser.close() }
