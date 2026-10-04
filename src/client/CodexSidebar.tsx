@@ -132,16 +132,11 @@ body[data-ds-dark-theme] [data-conversation-scroll]{--dcu-composer-bg:var(--dsw-
 [data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div>div{gap:4px}
 [data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div>div>div{gap:4px}
 [data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div :is(button,select):not([role]){min-height:28px;height:28px}
-/* 发送键的颜色必须走按钮语义令牌，不能走 --dsw-alias-label-primary /
-   --dsw-alias-bg-base：那两个是「文字色 / 表面色」，动态壁纸等皮肤会在令牌源头
-   改写它们（wallpaper-engine 把 label-primary 钉成 rgb(0,0,0)、把 bg-base 设为
-   transparent 以实现玻璃可读性与透明化）。一旦被改写，按钮就变成「黑圆 + 看不见
-   的箭头」——宿主箭头是 fill="currentColor"，前景一透明就等于没有箭头，深浅主题
-   都会发生。--dsw-alias-button-info-fill 与宿主自身 .primary 规则同源（浅色
-   #4176e6 / 深色同族），皮肤不会改它；前景用实色白，配合 :disabled 的 opacity
-   仍能得到「淡蓝底 + 白箭头」的禁用态。 */
-[data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div button[class$=_primary]{width:28px;transform:none;background:var(--dsw-alias-button-info-fill,#4176e6);color:#fff}
-[data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div button[class$=_primary]:hover:not(:disabled){background:var(--dsw-alias-button-info-hover,#7aaaff)}
+/* 保留 Codex 黑白发送键；使用独立主题颜色，避免壁纸的透明表面令牌影响 currentColor 箭头。 */
+[data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div button[class$=_primary]{width:28px;transform:none;background:#0f1115;color:#fff}
+[data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div button[class$=_primary]:hover:not(:disabled){background:#40434a}
+body[data-ds-dark-theme] [data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div button[class$=_primary]{background:#fff;color:#0f1115}
+body[data-ds-dark-theme] [data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div button[class$=_primary]:hover:not(:disabled){background:#d5d7dc}
 [data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div :is(button,select):focus-visible{outline:2px solid var(--dsw-alias-label-secondary);outline-offset:2px}
 @supports(corner-shape:superellipse(1.5)){[data-conversation-scroll] [data-composer-card]{border-radius:25px;corner-shape:superellipse(1.5)}}
 @media(max-width:639px){[data-conversation-scroll]{--dcu-composer-shadow:0 0 0 1px #0000000a,0 2px 8px #0000000a,0 4px 40px 8px #00000006}}

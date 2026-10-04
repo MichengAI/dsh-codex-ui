@@ -65,6 +65,8 @@ try {
       return { background: s.backgroundColor, color: s.color }
     })
     const paintHost = await buttonPaint()
+    assert.equal(paintHost.background, dark ? 'rgb(255, 255, 255)' : 'rgb(15, 17, 21)', '发送键保持 Codex 深浅主题底色')
+    assert.equal(paintHost.color, dark ? 'rgb(15, 17, 21)' : 'rgb(255, 255, 255)', '箭头保持 Codex 深浅主题前景色')
     assert.notEqual(paintHost.background, 'rgba(0, 0, 0, 0)', '发送键底色必须是不透明实色')
     assert.notEqual(paintHost.color, 'rgba(0, 0, 0, 0)', '发送键前景（箭头 currentColor）必须是不透明实色')
     await page.addStyleTag({ content: 'body{--dsw-alias-label-primary:rgb(0, 0, 0);--dsw-alias-bg-base:transparent}' })
