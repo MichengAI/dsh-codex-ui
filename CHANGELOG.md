@@ -4,6 +4,11 @@
 
 This changelog records recent releases of DSH Codex UI. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.26 - 2026-10-04
+
+- Fix the invisible send arrow when wallpapers or skins make surface color tokens transparent. Preserve the Codex monochrome style: black with a white arrow in light mode, white with a dark arrow in dark mode, with matching hover states.
+- Add send-button regression checks for light/dark themes and skin color-token overrides.
+
 ## 1.1.25 - 2026-09-30
 
 - Official Desktop no longer fails to start when an old `dsh-client-ui-settings-general` package remains above the profile. The plugin no longer imports that package by name.
