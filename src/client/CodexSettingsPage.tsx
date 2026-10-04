@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { ArrowLeft, Archive, Box, CircleHelp, Clock, Cpu, Link, MessageSquare, PanelRight, Search, Settings, SlidersHorizontal, Sparkles, Store, User } from 'lucide-react'
 import type { PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
@@ -10,6 +10,7 @@ import { settingsPageStyles } from './settings-page-styles.ts'
 import { settingsElementAvailable, settingsOverlays } from './settings-focus.ts'
 import { SETTINGS_OPEN_SECTION_EVENT } from './settings-navigation.ts'
 import { isBlankOnboardingSession } from './session-host.ts'
+import { settingsSidebarWidth } from './sidebar-width.ts'
 
 const groupLabels = { personal: 'settings.personal', integrations: 'settings.integrations', records: 'settings.records', permissions: 'settings.permissions', general: 'settings.general', editor: 'settings.editor' } as const
 
@@ -88,6 +89,9 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     return () => element?.removeEventListener(SETTINGS_OPEN_SECTION_EVENT, navigate)
   }, [rows, t, openSection])
   useEffect(() => () => { exitAnimation.current?.cancel() }, [])
+  useLayoutEffect(() => {
+    if (open && page.current !== null) page.current.style.setProperty('--dcu-sidebar-expanded-width', `${settingsSidebarWidth(document)}px`)
+  }, [open])
 
   useEffect(() => { if (!onboardingActive) setCompleted(new Set()) }, [onboardingActive])
   useEffect(() => {

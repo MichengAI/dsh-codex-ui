@@ -35,6 +35,22 @@ async function mount(extra: Partial<CodexSettingsPageProps> = {}, parent: HTMLEl
   return { container, trigger }
 }
 
+test('设置 portal 使用主侧栏宽度，重新打开与折叠时保持展开宽度', async () => {
+  const frame = document.createElement('div')
+  frame.style.gridTemplateColumns = '316px minmax(0px, 1fr) 0px'
+  frame.style.setProperty('--dcu-sidebar-expanded-width', '316px')
+  document.body.append(frame)
+  const { trigger } = await mount({}, frame)
+  expect(settingsPage()?.parentElement).toBe(document.body)
+  expect(settingsPage()?.style.getPropertyValue('--dcu-sidebar-expanded-width')).toBe('316px')
+  await act(async () => { inSettings<HTMLButtonElement>('.dcu-settings-back')!.click() })
+  frame.style.setProperty('--dcu-sidebar-expanded-width', '360px')
+  frame.style.gridTemplateColumns = '0px minmax(0px, 1fr) 0px'
+  frame.setAttribute('data-sidebar-collapsed', '')
+  await act(async () => { trigger.click() })
+  expect(settingsPage()?.style.getPropertyValue('--dcu-sidebar-expanded-width')).toBe('360px')
+})
+
 test('关闭后普通入口回到常规，快捷入口仍能指定分区', async () => {
   const { container, trigger } = await mount()
   await act(async () => { openSettingsSection(container, '模型'); await new Promise(resolve => setTimeout(resolve, 50)) })

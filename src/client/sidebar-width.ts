@@ -29,6 +29,15 @@ export function findSidebarFrame(root: ParentNode): HTMLElement | undefined {
   return undefined
 }
 
+/** Settings is portaled to body, so explicitly carry over the expanded width. */
+export function settingsSidebarWidth(root: ParentNode): number {
+  const frame = findSidebarFrame(root)
+  const expanded = Number.parseFloat(frame?.style.getPropertyValue('--dcu-sidebar-expanded-width') ?? '')
+  if (Number.isFinite(expanded) && expanded >= CODEX_SIDEBAR_MIN_PX) return expanded
+  const width = frame === undefined ? undefined : parseSidebarGrid(frame.style.gridTemplateColumns)?.sidebar
+  return width !== undefined && width >= CODEX_SIDEBAR_MIN_PX ? width : CODEX_SIDEBAR_MIN_PX
+}
+
 /** 同步侧栏网格和拖拽柄，保证两者始终使用同一个可见宽度。 */
 export function applySidebarWidth(frame: HTMLElement, width: number): boolean {
   const tracks = parseSidebarGrid(frame.style.gridTemplateColumns)
