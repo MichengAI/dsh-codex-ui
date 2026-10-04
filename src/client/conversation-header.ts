@@ -15,7 +15,7 @@ export const HEADER_SESSION_MENU_EVENT = 'dcu-header-session-menu'
 // 只收缩 crumbs（min-width:0）。标题截断依赖宿主 .crumbs{overflow:hidden} 和
 // .crumb{text-overflow:ellipsis}，插件不重复写 overflow。控件带恒为 34px 单行。
 export const CONVERSATION_HEADER_STYLE = `
-header:has([data-dcu-inline-tabs]){box-sizing:border-box;display:flex;flex-wrap:nowrap;align-items:center;gap:10px;min-height:34px;padding-top:3px;padding-bottom:3px;border-bottom:0}
+header:has([data-dcu-inline-tabs]){box-sizing:border-box;display:flex;flex-wrap:nowrap;align-items:center;gap:10px;min-height:var(--dcu-header-height,34px);padding-top:calc((var(--dcu-header-height,34px) - 28px)/2);padding-bottom:calc((var(--dcu-header-height,34px) - 28px)/2);border-bottom:0}
 header:has([data-dcu-inline-tabs]):after{display:none;content:none}
 header:has([data-dcu-inline-tabs]) [class*="titleRow"],header:has([data-dcu-inline-tabs]) [class*="titleCluster"]{display:contents}
 header:has([data-dcu-inline-tabs]) [class*="crumbs"]{order:1;flex:0 1 auto;min-width:0}

@@ -39,7 +39,7 @@ assert.match(header, /\[role=tab\]:after/, '对话轨迹页签必须去掉下划
 assert.match(header, /aria-selected=true/, '选中页签必须能识别当前项')
 assert.match(header, /data-dcu-tab-slider/, '对话轨迹必须使用滑动选中块')
 assert.match(header, /button-info-fill/, '选中页签必须使用原来的蓝色')
-assert.match(header, /min-height:34px[^}]*padding-top:3px;padding-bottom:3px/, '紧凑顶栏必须给 28px 控件保留上下各 3px 空间')
+assert.match(header, /min-height:var\(--dcu-header-height,34px\)[^}]*padding-top:calc\(\(var\(--dcu-header-height,34px\) - 28px\)\/2\);padding-bottom:calc\(\(var\(--dcu-header-height,34px\) - 28px\)\/2\)/, '紧凑顶栏共用高度变量，给 28px 控件保留居中空间')
 assert.match(header, /header:has\(\[data-dcu-inline-tabs\]\):after\{display:none;content:none\}/, '紧凑顶栏必须移除宿主分割线')
 assert.doesNotMatch(header, /padding-top:0/, '顶栏控件不得再次贴到窗口上边缘')
 assert.match(header, /header:has\(\[data-dcu-inline-tabs\]\)\{[^}]*border-bottom:0/, '紧凑顶栏必须彻底移除宿主底部分割线')
