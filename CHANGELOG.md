@@ -4,6 +4,10 @@
 
 This changelog records recent releases of DSH Codex UI. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## Unreleased
+
+- Fix the missing expand button after collapsing the desktop sidebar (#34). Windows retains a titlebar entry through the host overlay, and macOS uses the host window leading slot. Both work on settings pages while preserving the Web icon rail.
+
 ## 1.1.26 - 2026-10-04
 
 - Fix the invisible send arrow when wallpapers or skins make surface color tokens transparent. Preserve the Codex monochrome style: black with a white arrow in light mode, white with a dark arrow in dark mode, with matching hover states.
