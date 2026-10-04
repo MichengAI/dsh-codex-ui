@@ -6,6 +6,9 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 
 ## Unreleased
 
+## 1.1.27 - 2026-10-05
+
+- Retain glass styling for the wallpaper plugin. The wallpaper plugin enables and configures this effect; it does not activate independently in Codex UI.
 - Match the settings navigation width to the expanded main sidebar, including after resizing the sidebar.
 - Align the sidebar and conversation header on a shared 34px control band. Use a 28px expand button at the top of the compact rail, retaining its center alignment during collapse transitions and keeping other rail navigation buttons at 36px.
 - Fix the missing expand button after collapsing the desktop sidebar (#34). Windows retains a titlebar entry through the host overlay, and macOS uses the host window leading slot. Both work on settings pages while preserving the Web icon rail.
