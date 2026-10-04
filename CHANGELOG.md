@@ -7,6 +7,7 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 ## Unreleased
 
 - Fix the missing expand button after collapsing the desktop sidebar (#34). Windows retains a titlebar entry through the host overlay, and macOS uses the host window leading slot. Both work on settings pages while preserving the Web icon rail.
+- Supply the required unique ID for the window overlay registration to prevent client activation failure. Add startup and disposal checks using the real host slot registry.
 
 ## 1.1.26 - 2026-10-04
 

@@ -1,4 +1,6 @@
 import { IconPanelLeftOutlineMedium } from './host-icons.ts'
+import type { Context } from '@deepseek-ai/cordis'
+import { NS } from './locales.ts'
 
 export const SIDEBAR_EXPAND_STYLE = `
 .dcu-shell-expand{appearance:none;border:0;background:transparent;color:var(--dsw-alias-label-secondary);display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border-radius:50%;cursor:pointer;-webkit-app-region:no-drag}
@@ -25,4 +27,20 @@ export function SidebarExpandControl({ toggleSidebar, t, windows = false }: {
     aria-label={t('sidebar.expand')} onClick={toggleSidebar}>
     <IconPanelLeftOutlineMedium size={16} />
   </button></>
+}
+
+export function registerSidebarExpandControls(ctx: Context): void {
+  ctx.slots.inject('shell.leading', () => ctx.slots.register({
+    name: 'shell.leading',
+    registrant: 'michengai-codex-ui',
+    locale: NS,
+    inject: () => ({ toggleSidebar: () => { ctx.layout.toggleSidebar() }, windows: false }),
+  }, SidebarExpandControl))
+  ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+    name: 'shell.overlay',
+    id: 'michengai-codex-ui-sidebar-expand',
+    registrant: 'michengai-codex-ui',
+    locale: NS,
+    inject: () => ({ toggleSidebar: () => { ctx.layout.toggleSidebar() }, windows: true }),
+  }, SidebarExpandControl))
 }

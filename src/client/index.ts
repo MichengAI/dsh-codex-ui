@@ -25,7 +25,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import { CodexSidebar } from './CodexSidebar.tsx'
-import { SidebarExpandControl } from './SidebarExpandControl.tsx'
+import { registerSidebarExpandControls } from './SidebarExpandControl.tsx'
 import { AboutSection } from './AboutSection.tsx'
 import { CodexWorkspaceBrowser } from './CodexWorkspaceBrowser.tsx'
 import { ConnectorsSection } from './ConnectorsSection.tsx'
@@ -155,14 +155,7 @@ export function apply(ctx: ClientContext): void {
   const companionSlots = createCompanionTabSource(ctx.slots)
   const globalPanels = createGlobalPanelSource(ctx.slots, ctx.locale)
   const footerActions = createFooterActionSource(ctx.slots)
-  for (const name of ['shell.leading', 'shell.overlay'] as const) {
-    ctx.slots.inject(name, () => ctx.slots.register({
-      name,
-      registrant: 'michengai-codex-ui',
-      locale: NS,
-      inject: () => ({ toggleSidebar: () => { ctx.layout.toggleSidebar() }, windows: name === 'shell.overlay' }),
-    }, SidebarExpandControl))
-  }
+  registerSidebarExpandControls(ctx)
   ctx.slots.inject('sidebar', () => ctx.slots.register({
     name: 'sidebar',
     registrant: 'michengai-codex-ui',
