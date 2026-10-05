@@ -1,5 +1,7 @@
 import { openConversation, openConversationWithDraft, selectGlobalPanel } from './session-navigation.ts'
 import { createNavigationHistory } from './navigation-history.ts'
+import { createWorkspaceShortcutSource } from './workspace-shortcuts.ts'
+import { registerWorkspaceDirectoryFlow, WORKSPACE_DIRECTORY_FLOW } from './workspace-directory-flow.ts'
 import {
   archiveHostSession,
   currentSessionId,
@@ -157,6 +159,9 @@ export function apply(ctx: ClientContext): void {
   const footerActions = createFooterActionSource(ctx.slots)
   const navigationHistory = createNavigationHistory(ctx.sessions.list, id => openConversation(ctx, ctx.layout, id))
   ctx.effect(() => () => { navigationHistory.dispose() }, 'michengai-codex-ui: navigation history')
+  const workspaceShortcuts = createWorkspaceShortcutSource(ctx.slots)
+  ctx.effect(() => () => { workspaceShortcuts.dispose() }, 'michengai-codex-ui: workspace shortcuts')
+  registerWorkspaceDirectoryFlow(ctx)
   ctx.slots.inject('sidebar', () => ctx.slots.register({
     name: 'sidebar',
     registrant: 'michengai-codex-ui',
@@ -164,6 +169,7 @@ export function apply(ctx: ClientContext): void {
     children: {
       'sidebar.panellist': { kind: 'list', scope: 'root' },
       'sidebar.workspaces': { kind: 'single', scope: 'root' },
+      [WORKSPACE_DIRECTORY_FLOW]: { kind: 'single', scope: 'root' },
       'sidebar.settings': { kind: 'single', scope: 'root' },
       'sidebar.footer.action': { kind: 'list', scope: 'root' },
       'sidebar.channels': { kind: 'single', scope: 'root' },
@@ -172,6 +178,7 @@ export function apply(ctx: ClientContext): void {
     inject: () => ({
       newConversationDraft,
       navigationHistory,
+      workspaceShortcuts,
       prefillNewConversation: (text: string) => {
         const id = currentSessionId(ctx.sessions.list.getSnapshot())
         const binding = id === undefined ? undefined : ctx.sessions.binding(id as SessionId)

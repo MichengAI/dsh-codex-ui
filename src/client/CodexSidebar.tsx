@@ -27,6 +27,8 @@ import { NEW_CONVERSATION_STYLE } from './new-conversation-style.ts'
 import { COMPOSER_TOOL_MENU_STYLE } from './composer-tool-menus.ts'
 import { DesktopNavigationControls } from './DesktopNavigationControls.tsx'
 import type { NavigationHistory } from './navigation-history.ts'
+import { WorkspaceShortcutBridge } from './WorkspaceShortcutBridge.tsx'
+import type { WorkspaceShortcutSource } from './workspace-shortcuts.ts'
 import type { DraftPresenceSource } from './new-conversation-draft.ts'
 import { NewConversationSuggestions, type PrefillResult } from './NewConversationSuggestions.tsx'
 import type { FooterAction, FooterActionSource } from './footer-actions.ts'
@@ -56,6 +58,7 @@ function writeExtensionsOpen(open: boolean): void {
 
 type CodexSidebarInjected = {
   navigationHistory?: NavigationHistory
+  workspaceShortcuts?: WorkspaceShortcutSource
   newConversationDraft?: DraftPresenceSource
   prefillNewConversation?: (text: string) => PrefillResult
   openSession: (sessionId: SessionId) => void
@@ -79,7 +82,7 @@ type CodexSidebarInjected = {
 
 export type CodexSidebarProps =
   Omit<PropsRuntime<'sidebar'>, 'usePanelInfo'>
-  & PropsRenderSlots<'sidebar.panellist' | 'sidebar.workspaces' | 'sidebar.settings' | 'sidebar.footer.action' | 'sidebar.channels' | 'sidebar.schedule'>
+  & PropsRenderSlots<'sidebar.panellist' | 'sidebar.workspaces' | 'sidebar.codex.directoryFlow' | 'sidebar.settings' | 'sidebar.footer.action' | 'sidebar.channels' | 'sidebar.schedule'>
   & PropsLocale<typeof NS>
   & CodexSidebarInjected
 
@@ -250,7 +253,7 @@ const SidebarSearch = forwardRef<SidebarSearchHandle, SidebarSearchProps>(functi
 })
 
 /** Codex 风格的 DSH 侧栏，只替换导航外观，项目浏览和设置仍由 DSH 官方组件提供。 */
-export function CodexSidebar({ navigationHistory, globalPanels, footerActions, selectPanel, usePanelInfo = useLegacyPanelInfo, collapsed, width, openSession, startSession, toggleSidebar, archiveSession, canDeleteSession, deleteSession, forkSession, moveSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useSessionPendingInteraction, useSessionStatus, useWorkspaces, prefillNewConversation, newConversationDraft }: CodexSidebarProps) {
+export function CodexSidebar({ workspaceShortcuts, navigationHistory, globalPanels, footerActions, selectPanel, usePanelInfo = useLegacyPanelInfo, collapsed, width, openSession, startSession, toggleSidebar, archiveSession, canDeleteSession, deleteSession, forkSession, moveSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useSessionPendingInteraction, useSessionStatus, useWorkspaces, prefillNewConversation, newConversationDraft }: CodexSidebarProps) {
   const panels = useSyncExternalStore(globalPanels?.subscribe ?? subscribeEmptyCompanionTabs, globalPanels?.getSnapshot ?? getEmptyPanels, globalPanels?.getSnapshot ?? getEmptyPanels)
   const visibleFooterActions = useSyncExternalStore(footerActions?.subscribe ?? subscribeEmptyCompanionTabs, footerActions?.getSnapshot ?? getEmptyFooterActions, footerActions?.getSnapshot ?? getEmptyFooterActions)
   const activePanelId = usePanelInfo(info => info.activePanelId)
@@ -445,6 +448,7 @@ export function CodexSidebar({ navigationHistory, globalPanels, footerActions, s
     <footer className="dcu-foot"><div className="dcu-footer-actions">{footerActions === undefined ? renderSlot('sidebar.footer.action', { wide: !visualCompact }) : visibleFooterActions.map(action => <Fragment key={action.id}>{renderSlot('sidebar.footer.action', { wide: !visualCompact }, { only: action.id })}</Fragment>)}</div><div ref={settingsSeat} className="dcu-settings-seat">{renderSlot('sidebar.settings', { wide: !visualCompact })}</div></footer>
     {/* 逐条 only:id 各生成一个 data-slot 锚点；插件可能给锚点写 width:100%，footer-actions 必须保持竖排。 */}
     <SidebarSearch ref={search} imSettingsAvailable={showChannels} openPlugins={openPlugins} settingsSeat={settingsSeat} openSession={openSession} startSession={startSession} t={t} useSessions={useSessions} useWorkspaces={useWorkspaces} />
+    {workspaceShortcuts && <WorkspaceShortcutBridge source={workspaceShortcuts} openSearch={() => { search.current?.open() }} startSession={id => { startSession(id as WorkspaceId) }} renderDirectoryFlow={owner => renderSlot('sidebar.codex.directoryFlow', owner)} t={t} />}
   </aside>
 }
 

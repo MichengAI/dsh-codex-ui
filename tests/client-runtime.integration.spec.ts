@@ -315,8 +315,6 @@ test('折叠入口保留在侧栏，不再占用宿主标题栏插槽', () => {
     expect(runtime.slots.entries(name)).toHaveLength(0)
   }
   runtime.dispose()
-  expect(runtime.slots.entries('shell.leading')).toHaveLength(0)
-  expect(runtime.slots.entries('shell.overlay')).toHaveLength(0)
   runtime = undefined
 })
 

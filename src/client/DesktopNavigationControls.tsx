@@ -8,7 +8,7 @@ html[data-windows-titlebar] .dcu-desktop-navigation{display:flex;position:fixed;
 .dcu-desktop-navigation button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}
 .dcu-desktop-navigation button:disabled{opacity:.35;cursor:default}
 .dcu-desktop-navigation button:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:-2px}
-html[data-windows-titlebar]:has(.dcu-desktop-navigation){--dsh-windows-menu-start:84px}
+html[data-windows-titlebar]:not([data-fullscreen]):has(.dcu-desktop-navigation){--dsh-windows-menu-start:84px}
 html[data-windows-titlebar][data-fullscreen] .dcu-desktop-navigation{display:none}
 `
 

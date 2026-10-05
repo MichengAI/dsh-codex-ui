@@ -4,6 +4,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-slots'
 export const NS = 'michengai.codexUi'
 
 export const zh = {
+  'workspace.addFailed': '无法添加工作区',
   'navigation.back': '后退',
   'navigation.forward': '前进',
   'home.resizeInput': '拖动调整输入区宽度',
@@ -292,6 +293,7 @@ export const zh = {
 } as const
 
 export const en: Record<keyof typeof zh, string> = {
+  'workspace.addFailed': 'Could not add workspace',
   'navigation.back': 'Back',
   'navigation.forward': 'Forward',
   'home.resizeInput': 'Drag to resize the input area',

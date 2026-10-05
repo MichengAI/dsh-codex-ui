@@ -6,7 +6,9 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 
 ## Unreleased
 
+- Restore the official session-search and add-workspace shortcuts when Codex replaces the workspace sidebar (#35). Preserve command IDs and custom key bindings, reuse the host directory picker, and keep both actions available in the collapsed rail.
 - Keep the same 56px icon rail on Desktop and Web when the sidebar collapses, with back/forward session navigation in the Windows caption instead of duplicate sidebar/new-task controls.
+
 ## 1.1.27 - 2026-10-05
 
 - Retain glass styling for the wallpaper plugin. The wallpaper plugin enables and configures this effect; it does not activate independently in Codex UI.

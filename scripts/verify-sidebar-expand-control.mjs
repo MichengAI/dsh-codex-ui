@@ -67,6 +67,9 @@ try {
     }
     await page.evaluate(() => document.documentElement.setAttribute('data-fullscreen',''))
     assert.equal(await caption.isVisible(),false,'Fullscreen retains rail actions without caption overlap')
+    if (platform === 'windows') {
+      assert.notEqual(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--dsh-windows-menu-start').trim()),'84px','Fullscreen must release the plugin menu offset')
+    }
     await page.getByRole('button',{name:'展开侧边栏',exact:true}).click()
     await page.evaluate(async () => { for(let i=0;i<4;i++) await new Promise(requestAnimationFrame) })
     assert.equal(await page.evaluate(() => parseFloat(getComputedStyle(document.getElementById('frame')).gridTemplateColumns)),360,platform + ': restore resized width')

@@ -72,8 +72,8 @@ export function applySlimSidebar(frame: HTMLElement): boolean {
     if (changed) frame.style.gridTemplateColumns = next
     // Windows caption material follows the visible column; keep the saved expanded width intact.
     if (frame.ownerDocument.documentElement.hasAttribute('data-windows-titlebar')
-      && frame.style.getPropertyValue('--dsh-windows-sidebar-width') !== '56px') {
-      frame.style.setProperty('--dsh-windows-sidebar-width', '56px')
+      && frame.style.getPropertyValue('--dsh-windows-sidebar-width') !== `${CODEX_SIDEBAR_RAIL_PX}px`) {
+      frame.style.setProperty('--dsh-windows-sidebar-width', `${CODEX_SIDEBAR_RAIL_PX}px`)
     }
     return changed
   }
