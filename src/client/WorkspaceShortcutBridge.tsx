@@ -8,7 +8,7 @@ export function WorkspaceShortcutBridge({ source, openSearch, startSession, rend
   openSearch: () => void
   startSession: (id: string) => void
   renderDirectoryFlow: (owner: DirectoryFlowOwnerProps) => ReactNode
-  t: (key: 'workspace.addFailed' | 'sessions.close') => string
+  t: (key: 'workspace.addFailed' | 'workspace.retry' | 'workspace.chooseAgain' | 'sessions.close') => string
 }) {
   const { searchRequest, addRequested, bindings } = useSyncExternalStore(source.subscribe, source.getSnapshot, source.getSnapshot)
   const seenSearch = useRef(searchRequest)
@@ -18,10 +18,11 @@ export function WorkspaceShortcutBridge({ source, openSearch, startSession, rend
   const [error, setError] = useState<string>()
   const mounted = useRef(true)
   const pending = useRef(false)
+  const pickedPath = useRef<string | undefined>(undefined)
   const currentBindings = useRef(bindings)
   currentBindings.current = bindings
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
-  useEffect(() => { pending.current = false; setBusy(false); setError(undefined) }, [bindings])
+  useEffect(() => { pending.current = false; pickedPath.current = undefined; setBusy(false); setError(undefined) }, [bindings])
   useEffect(() => {
     if (searchRequest === seenSearch.current) return
     seenSearch.current = searchRequest
@@ -34,28 +35,41 @@ export function WorkspaceShortcutBridge({ source, openSearch, startSession, rend
   }, [bindings, addRequested, busy, error])
   const fail = (message: string): void => { bindings?.closeAddWorkspace(); setError(message) }
   const isCurrent = (): boolean => mounted.current && source.getSnapshot().bindings === bindings && currentBindings.current === bindings
+  const pick = (path: string): void => {
+    if (!bindings || pending.current) return
+    pickedPath.current = path
+    pending.current = true
+    setError(undefined)
+    setBusy(true)
+    void bindings.createWorkspace({ path }).then(workspace => {
+      if (!isCurrent()) return
+      bindings.closeAddWorkspace()
+      startSession(workspace.workspaceId)
+    }).catch(reason => {
+      if (isCurrent()) fail(reason instanceof Error ? reason.message : String(reason))
+    }).finally(() => {
+      if (isCurrent()) { pending.current = false; setBusy(false) }
+    })
+  }
+  const chooseAgain = (): void => {
+    setError(undefined)
+    pickedPath.current = undefined
+    bindings?.setDirectoryBusy(false)
+    bindings?.requestAddWorkspace?.()
+  }
   return <>
     {renderDirectoryFlow({
       open: addRequested, busy,
       onCancel: () => { bindings?.closeAddWorkspace() },
-      onError: fail,
-      onPicked: path => {
-        if (!bindings || pending.current) return
-        pending.current = true
-        setBusy(true)
-        void bindings.createWorkspace({ path }).then(workspace => {
-          if (!isCurrent()) return
-          bindings.closeAddWorkspace()
-          startSession(workspace.workspaceId)
-        }).catch(reason => {
-          if (isCurrent()) fail(reason instanceof Error ? reason.message : String(reason))
-        }).finally(() => {
-          if (isCurrent()) { pending.current = false; setBusy(false) }
-        })
-      },
+      onError: message => { pickedPath.current = undefined; fail(message) },
+      onPicked: pick,
     })}
     <Modal open={error !== undefined} onClose={() => { setError(undefined) }} title={t('workspace.addFailed')}
-      closeLabel={t('sessions.close')} footer={<Button onClick={() => { setError(undefined) }}>{t('sessions.close')}</Button>}>
+      closeLabel={t('sessions.close')} footer={<>
+        {pickedPath.current !== undefined && <Button disabled={busy} onClick={() => { pick(pickedPath.current!) }}>{t('workspace.retry')}</Button>}
+        {bindings?.requestAddWorkspace && <Button disabled={busy} onClick={chooseAgain}>{t('workspace.chooseAgain')}</Button>}
+        <Button onClick={() => { setError(undefined) }}>{t('sessions.close')}</Button>
+      </>}>
       <p role="alert">{error}</p>
     </Modal>
   </>

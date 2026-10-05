@@ -16,6 +16,7 @@ function fixture() {
   const set = (patch: Partial<typeof state>) => { state = { ...state, ...patch }; for (const listener of listeners) listener() }
   const bindings = {
     hooks: { workspaceShortcuts: { getSnapshot: () => state, subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } } } },
+    requestAddWorkspace: vi.fn(() => { set({ addRequested: true }) }),
     closeAddWorkspace: vi.fn(() => { set({ addRequested: false }) }),
     setDirectoryBusy: vi.fn(),
     createWorkspace: vi.fn(async (_input: { path: string }) => ({ workspaceId: 'new-workspace' })),
@@ -82,6 +83,18 @@ test('bridge opens search and adopts one directory, with cancellation and error 
     await act(async () => { owner!.onPicked('D:/denied') })
     expect(document.querySelector('[role="alert"]')?.textContent).toBe('Denied')
     expect(start).toHaveBeenCalledTimes(1)
+    const button = (label: string) => Array.from(document.querySelectorAll('button')).find(item => item.textContent === label)!
+    await act(async () => { button('workspace.retry').click() })
+    expect(f.bindings.createWorkspace).toHaveBeenLastCalledWith({ path: 'D:/denied' })
+    expect(start).toHaveBeenCalledTimes(2)
+    f.bindings.createWorkspace.mockRejectedValueOnce(new Error('Again'))
+    await act(async () => { f.set({ addRequested: true }); owner!.onPicked('D:/other') })
+    await act(async () => { button('workspace.chooseAgain').click() })
+    expect(f.bindings.requestAddWorkspace).toHaveBeenCalledTimes(1)
+    expect(owner!.open).toBe(true)
+    expect(document.querySelector('[role="alert"]')).toBeNull()
+    await act(async () => { owner!.onError('Picker failed') })
+    expect(button('workspace.retry')).toBeUndefined()
     await act(async () => { f.replace(false) })
     expect(document.querySelector('[role="alert"]')).toBeNull()
   } finally {
@@ -135,6 +148,9 @@ test('collapsed sidebar keeps both shortcut outlets without rerendering the work
     expect(container.querySelector('.dcu-search-scrim')).not.toBeNull()
     await act(async () => { f.set({ addRequested: true }) })
     expect(owner!.open).toBe(true)
+    await act(async () => { container.querySelector<HTMLButtonElement>('[aria-label="sidebar.search"]')!.click() })
+    expect(owner!.open).toBe(false)
+    expect(container.querySelector('.dcu-search-scrim')).not.toBeNull()
     expect(treeRenders).toBe(initial)
   } finally { await act(async () => { root.unmount() }); f.source.dispose(); container.remove() }
 })
