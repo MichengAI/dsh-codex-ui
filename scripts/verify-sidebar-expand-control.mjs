@@ -1,74 +1,84 @@
+/** Verify the retained rail against the installed host's actual frame CSS. */
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import ts from 'typescript'
 import { chromium } from 'playwright'
-
-const source = readFileSync('src/client/SidebarExpandControl.tsx', 'utf8')
-const stylesheet = source.match(/SIDEBAR_EXPAND_STYLE = `([\s\S]*?)`/)?.[1]
+const sidebar = readFileSync('src/client/CodexSidebar.tsx', 'utf8')
+const stylesheet = sidebar.match(/const stylesheet = `([\s\S]*?)`/)?.[1]
+const captionStyle = readFileSync('src/client/DesktopNavigationControls.tsx', 'utf8').match(/CONTROLS_STYLE = `([\s\S]*?)`/)?.[1]
+const host = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8')
+const hostStyle = host.match(/const css = ("(?:[^"\\]|\\.)*");/)
 assert.ok(stylesheet)
+assert.ok(captionStyle)
+assert.ok(hostStyle)
+const css = JSON.parse(hostStyle[1])
+const classOf = suffix => css.match(new RegExp('\\.([A-Za-z0-9_]+_' + suffix + ')\\{'))?.[1]
+const implementation = ts.transpileModule(readFileSync('src/client/sidebar-width.ts', 'utf8'), {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
+}).outputText.replace(/^export /gm, '')
 const browser = await chromium.launch({ headless: true })
 try {
   const page = await browser.newPage()
-  for (const panel of ['conversation', 'settings']) {
-    await page.setContent(`<style>
-      html{--dsh-windows-titlebar-height:40px}body{margin:0}
-      #frame{display:grid;grid-template-columns:0px 1fr;height:600px;position:relative;overflow:hidden;padding-top:40px}
-      #sidebar{min-width:0;overflow:hidden}#overlay{position:absolute;inset:0;pointer-events:none}#overlay>*{pointer-events:auto}
-    </style><div id="frame" data-sidebar-collapsed="true"><aside id="sidebar">clipped sidebar</aside>
-      <main><header style="display:flex"><span id="title">${panel}</span><nav data-dcu-inline-tabs></nav></header></main><div id="overlay" data-shell-overlay><button type="button" class="dcu-shell-expand dcu-shell-expand-windows" aria-label="展开侧边栏">☰</button></div></div>`)
-    await page.addStyleTag({ content: stylesheet })
-    const button = page.getByRole('button', { name: '展开侧边栏' })
-    assert.equal(await button.isVisible(), false, 'Web must keep its rail without a duplicate window button')
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  for (const platform of ['web', 'windows', 'darwin']) {
+    await page.setContent('<style>html,body{height:100%;margin:0}html{--dsh-windows-titlebar-height:40px}</style><div id="frame" class="' + classOf('frame') + '" style="grid-template-columns:320px minmax(0px, 1fr) minmax(0px, 180px)"><div class="' + classOf('sidebarCol') + '"><aside class="dcu-root dcu-compact"><div class="dcu-compact-shell"><button class="dcu-icon" aria-label="展开侧边栏">☰</button><nav class="dcu-compact-nav"><button class="dcu-icon" aria-label="新建任务">+</button><button class="dcu-icon" aria-label="搜索会话">⌕</button><button class="dcu-icon" aria-label="设置">⚙</button></nav></div></aside></div><main class="' + classOf('centerCol') + '">Conversation</main><div class="' + classOf('rightbarCol') + '"></div></div>')
+    await page.addStyleTag({content:css + stylesheet})
+    await page.addStyleTag({content:captionStyle})
     await page.evaluate(() => {
-      document.documentElement.setAttribute('data-windows-titlebar', '')
-      document.querySelector('button').onclick = () => {
-        const frame = document.querySelector('#frame')
-        frame.removeAttribute('data-sidebar-collapsed')
-        frame.style.gridTemplateColumns = '280px 1fr'
-      }
+      const caption = document.createElement('div')
+      caption.className = 'dcu-desktop-navigation'
+      caption.innerHTML = '<button aria-label="后退">←</button><button aria-label="前进">→</button>'
+      document.querySelector('.dcu-root').append(caption)
     })
-    assert.equal(await button.isVisible(), true, `${panel}: zero-width sidebar must retain expand entry`)
-    assert.deepEqual(await button.boundingBox(), { x: 12, y: 6, width: 28, height: 28 })
-    assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--dsh-windows-menu-start').trim()), '48px', 'Titlebar menu must reserve the expand button space')
-    await button.click()
-    assert.equal(await button.isVisible(), false, 'Expanded sidebar must hide extra button')
-    await page.evaluate(() => {
-      const frame = document.querySelector('#frame')
-      frame.setAttribute('data-sidebar-collapsed', 'true')
-      frame.style.gridTemplateColumns = '0px 1fr'
-      document.documentElement.setAttribute('data-fullscreen', '')
-      frame.style.paddingTop = '0px'
-    })
-    assert.equal((await button.boundingBox()).y, 3, 'Fullscreen must keep entry within visible viewport')
-    assert.ok((await page.locator('#title').boundingBox()).x >= 60, 'Fullscreen expand entry must not cover conversation title')
-    await button.focus()
-    await page.keyboard.press('Enter')
-    assert.equal(await button.isVisible(), false, 'Keyboard must expand sidebar')
-    await page.evaluate(() => {
+    await page.evaluate(platform => {
       document.documentElement.removeAttribute('data-windows-titlebar')
+      document.documentElement.removeAttribute('data-platform')
       document.documentElement.removeAttribute('data-fullscreen')
-      document.documentElement.setAttribute('data-platform', 'darwin')
-      const frame = document.querySelector('#frame')
-      frame.setAttribute('data-sidebar-collapsed', 'true')
-      frame.style.gridTemplateColumns = '0px 1fr'
-      const leading = document.createElement('div')
-      leading.dataset.shellLeading = ''
-      leading.style.cssText = 'position:absolute;left:88px;top:11px'
-      leading.innerHTML = '<button class="dcu-shell-expand" aria-label="macOS 展开侧边栏">☰</button>'
-      leading.querySelector('button').onclick = () => {
+      if (platform === 'windows') document.documentElement.setAttribute('data-windows-titlebar', '')
+      if (platform === 'darwin') document.documentElement.setAttribute('data-platform', 'darwin')
+    }, platform)
+    await page.addScriptTag({content:implementation})
+    await page.evaluate(() => {
+      window.disposeRail = observeSlimSidebar()
+      const frame = document.getElementById('frame')
+      applySidebarWidth(frame, 360)
+      frame.setAttribute('data-sidebar-collapsed', '')
+      frame.style.gridTemplateColumns = '0px minmax(0px, 1fr) minmax(0px, 180px)'
+      document.querySelector('[aria-label="展开侧边栏"]').onclick = () => {
         frame.removeAttribute('data-sidebar-collapsed')
-        frame.style.gridTemplateColumns = '280px 1fr'
-        leading.remove()
+        frame.style.gridTemplateColumns = '280px minmax(0px, 1fr) minmax(0px, 180px)'
+        document.querySelector('.dcu-root').classList.remove('dcu-compact')
       }
-      frame.append(leading)
     })
-    const macButton = page.getByRole('button', { name: 'macOS 展开侧边栏' })
-    assert.equal(await macButton.isVisible(), true)
-    assert.deepEqual(await macButton.boundingBox(), { x: 88, y: 11, width: 28, height: 28 })
-    await macButton.click()
-    assert.equal(await macButton.count(), 0, 'Host must unmount macOS leading seat after expansion')
-    await page.evaluate(() => { document.documentElement.removeAttribute('data-platform') })
+    await page.evaluate(async () => { for(let i=0;i<4;i++) await new Promise(requestAnimationFrame) })
+    assert.equal(await page.evaluate(() => parseFloat(getComputedStyle(document.getElementById('frame')).gridTemplateColumns)),56,platform)
+    assert.equal(await page.evaluate(() => document.getElementById('frame').style.getPropertyValue('--dcu-sidebar-expanded-width')),'360px')
+    const caption = page.getByRole('button', {name:'后退',exact:true})
+    assert.equal(await caption.isVisible(),platform === 'windows')
+    if (platform === 'windows') {
+      assert.deepEqual(await caption.boundingBox(),{x:12,y:6,width:28,height:28})
+      assert.ok(await caption.evaluate(el => { const r=el.getBoundingClientRect(); return el.contains(document.elementFromPoint(r.x+14,r.y+14)) }))
+      assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--dsh-windows-menu-start').trim()),'84px')
+    }
+    for (const name of ['展开侧边栏','新建任务','搜索会话','设置']) {
+      const button = page.getByRole('button',{name,exact:true})
+      assert.ok(await button.isVisible(),platform + ': ' + name)
+      assert.ok(await button.evaluate(el => { const r=el.getBoundingClientRect(); return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)) }),platform + ': rail action must be hit-testable')
+    }
+    await page.evaluate(() => document.documentElement.setAttribute('data-fullscreen',''))
+    assert.equal(await caption.isVisible(),false,'Fullscreen retains rail actions without caption overlap')
+    await page.getByRole('button',{name:'展开侧边栏',exact:true}).click()
+    await page.evaluate(async () => { for(let i=0;i<4;i++) await new Promise(requestAnimationFrame) })
+    assert.equal(await page.evaluate(() => parseFloat(getComputedStyle(document.getElementById('frame')).gridTemplateColumns)),360,platform + ': restore resized width')
+    await page.evaluate(() => {
+      const frame = document.getElementById('frame')
+      frame.setAttribute('data-sidebar-collapsed', '')
+      frame.style.gridTemplateColumns = '0px minmax(0px, 1fr) minmax(0px, 180px)'
+    })
+    await page.evaluate(async () => { for(let i=0;i<4;i++) await new Promise(requestAnimationFrame) })
+    assert.equal(await page.evaluate(() => parseFloat(document.getElementById('frame').style.gridTemplateColumns)),56,platform + ': host re-render must retain rail')
+    await page.evaluate(() => window.disposeRail())
+    assert.equal(await page.evaluate(() => parseFloat(document.getElementById('frame').style.gridTemplateColumns)),platform === 'web' ? 56 : 0,platform + ': unload restores host track')
   }
-  console.log('✓ desktop sidebar expand controls: zero track, settings, fullscreen, keyboard, web and macOS seat')
-} finally {
-  await browser.close()
-}
+  console.log('✓ Desktop/Web 56px rail: real host CSS, actions, fullscreen, resized width and rightbar tracks')
+} finally { await browser.close() }

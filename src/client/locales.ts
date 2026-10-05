@@ -4,6 +4,8 @@ import type {} from '@deepseek-ai/dsh-client-ui-slots'
 export const NS = 'michengai.codexUi'
 
 export const zh = {
+  'navigation.back': '后退',
+  'navigation.forward': '前进',
   'home.resizeInput': '拖动调整输入区宽度',
   'home.projectSearch': '搜索项目',
   'home.projectEmpty': '没有匹配的项目',
@@ -290,6 +292,8 @@ export const zh = {
 } as const
 
 export const en: Record<keyof typeof zh, string> = {
+  'navigation.back': 'Back',
+  'navigation.forward': 'Forward',
   'home.resizeInput': 'Drag to resize the input area',
   'home.projectSearch': 'Search projects',
   'home.projectEmpty': 'No matching projects',

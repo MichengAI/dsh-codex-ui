@@ -308,18 +308,12 @@ test('未安装 IM 和定时插件时配套插槽没有注册项', async () => {
   expect(runtime.slots.entries('sidebar.schedule')).toHaveLength(0)
 })
 
-test('桌面展开入口注册在宿主窗口插槽中，卸载时移除', () => {
+test('折叠入口保留在侧栏，不再占用宿主标题栏插槽', () => {
   runtime = new ClientApplyHarness()
-  const toggleSidebar = vi.spyOn(runtime.ctx.layout, 'toggleSidebar')
   runtime.mount()
   for (const name of ['shell.leading', 'shell.overlay']) {
-    const entries = runtime.slots.entries(name)
-    expect(entries).toHaveLength(1)
-    const props = (entries[0].inject as () => { toggleSidebar: () => void; windows: boolean })()
-    expect(props.windows).toBe(name === 'shell.overlay')
-    props.toggleSidebar()
+    expect(runtime.slots.entries(name)).toHaveLength(0)
   }
-  expect(toggleSidebar).toHaveBeenCalledTimes(2)
   runtime.dispose()
   expect(runtime.slots.entries('shell.leading')).toHaveLength(0)
   expect(runtime.slots.entries('shell.overlay')).toHaveLength(0)

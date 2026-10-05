@@ -6,7 +6,6 @@ const sidebar = readFileSync(new URL('../src/client/CodexSidebar.tsx', import.me
 const footerActions = readFileSync(new URL('../src/client/footer-actions.ts', import.meta.url), 'utf8')
 const navigator = readFileSync(new URL('../src/client/TurnNavigator.tsx', import.meta.url), 'utf8')
 const client = readFileSync(new URL('../src/client/index.ts', import.meta.url), 'utf8')
-const expandControl = readFileSync(new URL('../src/client/SidebarExpandControl.tsx', import.meta.url), 'utf8')
 const settings = readFileSync(new URL('../src/client/settings-page-styles.ts', import.meta.url), 'utf8')
 const settingsPage = readFileSync(new URL('../src/client/CodexSettingsPage.tsx', import.meta.url), 'utf8')
 
@@ -26,8 +25,7 @@ assert.doesNotMatch(sidebar, /\[data-chat-flow\]\{gap:/, '不得在宿主逐行�
 assert.doesNotMatch(sidebar, /\[data-composer-card\]\{[^}]*min-height:/, '输入卡片由编辑区和工具栏自然撑高，不额外强制整卡最小高度')
 assert.match(sidebar, /\[data-input-mirror\]\{min-height:44px/, '空输入镜像高度必须接近 Codex 单行区')
 assert.match(client, /conversation\.session\.header\.utilities/, '轮次导航必须挂在原生会话扩展位')
-assert.match(expandControl, /\.dcu-shell-expand-windows\{display:none;position:fixed;left:12px;top:calc\(\(var\(--dsh-windows-titlebar-height,40px\) - 28px\) \/ 2\)/, '桌面展开入口必须位于标题栏，不覆盖会话标题')
-assert.match(expandControl, /html\[data-windows-titlebar\] \[data-sidebar-collapsed\] \[data-shell-overlay\]/, 'Windows 覆盖层展开入口必须限制在桌面折叠态')
+assert.doesNotMatch(client, /registerSidebarExpandControls/, '折叠入口统一保留在窄轨，不再注册标题栏按钮')
 assert.match(navigator, /conversationAnchor/, '轮次跳转必须使用集中管理的 DSH 聊天锚点适配层')
 assert.match(navigator, /turns\.label/, '轮次导航必须有无障碍名称')
 assert.match(navigator, /focus-visible/, '轮次导航必须支持键盘聚焦展开')

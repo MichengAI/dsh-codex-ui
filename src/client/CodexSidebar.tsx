@@ -25,6 +25,8 @@ import type { UseSessionPendingInteraction, UseSessionStatus } from './session-p
 import { browserStorage, readTreeExpansionState, writeTreeExpansionState } from './tree-expansion.ts'
 import { NEW_CONVERSATION_STYLE } from './new-conversation-style.ts'
 import { COMPOSER_TOOL_MENU_STYLE } from './composer-tool-menus.ts'
+import { DesktopNavigationControls } from './DesktopNavigationControls.tsx'
+import type { NavigationHistory } from './navigation-history.ts'
 import type { DraftPresenceSource } from './new-conversation-draft.ts'
 import { NewConversationSuggestions, type PrefillResult } from './NewConversationSuggestions.tsx'
 import type { FooterAction, FooterActionSource } from './footer-actions.ts'
@@ -53,6 +55,7 @@ function writeExtensionsOpen(open: boolean): void {
 }
 
 type CodexSidebarInjected = {
+  navigationHistory?: NavigationHistory
   newConversationDraft?: DraftPresenceSource
   prefillNewConversation?: (text: string) => PrefillResult
   openSession: (sessionId: SessionId) => void
@@ -247,7 +250,7 @@ const SidebarSearch = forwardRef<SidebarSearchHandle, SidebarSearchProps>(functi
 })
 
 /** Codex 风格的 DSH 侧栏，只替换导航外观，项目浏览和设置仍由 DSH 官方组件提供。 */
-export function CodexSidebar({ globalPanels, footerActions, selectPanel, usePanelInfo = useLegacyPanelInfo, collapsed, width, openSession, startSession, toggleSidebar, archiveSession, canDeleteSession, deleteSession, forkSession, moveSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useSessionPendingInteraction, useSessionStatus, useWorkspaces, prefillNewConversation, newConversationDraft }: CodexSidebarProps) {
+export function CodexSidebar({ navigationHistory, globalPanels, footerActions, selectPanel, usePanelInfo = useLegacyPanelInfo, collapsed, width, openSession, startSession, toggleSidebar, archiveSession, canDeleteSession, deleteSession, forkSession, moveSession, renameSession, openPath, companionSlots, renderSlot, t, useSessions, useSessionPendingInteraction, useSessionStatus, useWorkspaces, prefillNewConversation, newConversationDraft }: CodexSidebarProps) {
   const panels = useSyncExternalStore(globalPanels?.subscribe ?? subscribeEmptyCompanionTabs, globalPanels?.getSnapshot ?? getEmptyPanels, globalPanels?.getSnapshot ?? getEmptyPanels)
   const visibleFooterActions = useSyncExternalStore(footerActions?.subscribe ?? subscribeEmptyCompanionTabs, footerActions?.getSnapshot ?? getEmptyFooterActions, footerActions?.getSnapshot ?? getEmptyFooterActions)
   const activePanelId = usePanelInfo(info => info.activePanelId)
@@ -407,6 +410,7 @@ export function CodexSidebar({ globalPanels, footerActions, selectPanel, usePane
 
   return <aside className={`dcu-root${visualCompact ? ' dcu-compact' : ''}${collapsing ? ' dcu-collapsing' : ''}`} aria-label={t('sidebar.label')}>
     <style>{stylesheet}</style>
+    {navigationHistory && <DesktopNavigationControls history={navigationHistory} t={t} />}
     <style>{NEW_CONVERSATION_STYLE}</style>
     <style>{COMPOSER_TOOL_MENU_STYLE}</style>
     <NewConversationSuggestions t={t} prefill={prefillNewConversation} draftSource={newConversationDraft} />

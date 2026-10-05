@@ -1,5 +1,6 @@
 /** OpenAI Codex desktop sidebar geometry, measured from the installed client bundle. */
 export const CODEX_SIDEBAR_MIN_PX = 240
+export const CODEX_SIDEBAR_RAIL_PX = 56
 
 /** Backward-compatible name for the width used while a collapsed rail expands. */
 export const SLIM_SIDEBAR_PX = CODEX_SIDEBAR_MIN_PX
@@ -59,12 +60,23 @@ export function applySidebarWidth(frame: HTMLElement, width: number): boolean {
 /** 自动宽度调整与初始化过渡共用前置条件；手动拖拽不受此限制。 */
 function canApplySlimSidebar(frame: HTMLElement): boolean {
   return !frame.hasAttribute('data-dragging')
-    && !frame.hasAttribute('data-sidebar-collapsed')
     && parseSidebarGrid(frame.style.gridTemplateColumns) !== undefined
 }
 
 export function applySlimSidebar(frame: HTMLElement): boolean {
   if (!canApplySlimSidebar(frame)) return false
+  if (frame.hasAttribute('data-sidebar-collapsed')) {
+    const tracks = parseSidebarGrid(frame.style.gridTemplateColumns)!
+    const next = `${CODEX_SIDEBAR_RAIL_PX}px ${tracks.middle} ${tracks.details}`
+    const changed = frame.style.gridTemplateColumns !== next
+    if (changed) frame.style.gridTemplateColumns = next
+    // Windows caption material follows the visible column; keep the saved expanded width intact.
+    if (frame.ownerDocument.documentElement.hasAttribute('data-windows-titlebar')
+      && frame.style.getPropertyValue('--dsh-windows-sidebar-width') !== '56px') {
+      frame.style.setProperty('--dsh-windows-sidebar-width', '56px')
+    }
+    return changed
+  }
   const initialized = frame.hasAttribute('data-dcu-codex-sidebar-initialized')
   const width = initialized ? visibleSidebarWidths.get(frame) ?? CODEX_SIDEBAR_MIN_PX : CODEX_SIDEBAR_MIN_PX
   const changed = applySidebarWidth(frame, width)
@@ -109,6 +121,10 @@ export function observeSlimSidebar(): () => void {
       if (frame !== undefined) {
         // 尚不能应用宽度时不要写入过渡样式，否则初始化标记缺失会让监听反复触发自身。
         if (!canApplySlimSidebar(frame)) return
+        if (frame.hasAttribute('data-sidebar-collapsed')) {
+          applySlimSidebar(frame)
+          return
+        }
         const restoreTransition = frame.hasAttribute('data-dcu-codex-sidebar-initialized')
           ? undefined
           : pauseInitialSidebarTransition(frame)
@@ -135,5 +151,15 @@ export function observeSlimSidebar(): () => void {
     observer.disconnect()
     frameObserver?.disconnect()
     if (pending !== undefined) window.cancelAnimationFrame(pending)
+    // Return Desktop's collapsed track to the host when this UI is unloaded.
+    const html = document.documentElement
+    if (frame?.hasAttribute('data-sidebar-collapsed')
+      && (html.hasAttribute('data-windows-titlebar') || html.dataset.platform === 'darwin')) {
+      const tracks = parseSidebarGrid(frame.style.gridTemplateColumns)
+      if (tracks?.sidebar === CODEX_SIDEBAR_RAIL_PX) {
+        frame.style.gridTemplateColumns = `0px ${tracks.middle} ${tracks.details}`
+        if (html.hasAttribute('data-windows-titlebar')) frame.style.setProperty('--dsh-windows-sidebar-width', '0px')
+      }
+    }
   }
 }

@@ -1,4 +1,5 @@
 import { openConversation, openConversationWithDraft, selectGlobalPanel } from './session-navigation.ts'
+import { createNavigationHistory } from './navigation-history.ts'
 import {
   archiveHostSession,
   currentSessionId,
@@ -25,7 +26,6 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import { CodexSidebar } from './CodexSidebar.tsx'
-import { registerSidebarExpandControls } from './SidebarExpandControl.tsx'
 import { AboutSection } from './AboutSection.tsx'
 import { CodexWorkspaceBrowser } from './CodexWorkspaceBrowser.tsx'
 import { ConnectorsSection } from './ConnectorsSection.tsx'
@@ -155,7 +155,8 @@ export function apply(ctx: ClientContext): void {
   const companionSlots = createCompanionTabSource(ctx.slots)
   const globalPanels = createGlobalPanelSource(ctx.slots, ctx.locale)
   const footerActions = createFooterActionSource(ctx.slots)
-  registerSidebarExpandControls(ctx)
+  const navigationHistory = createNavigationHistory(ctx.sessions.list, id => openConversation(ctx, ctx.layout, id))
+  ctx.effect(() => () => { navigationHistory.dispose() }, 'michengai-codex-ui: navigation history')
   ctx.slots.inject('sidebar', () => ctx.slots.register({
     name: 'sidebar',
     registrant: 'michengai-codex-ui',
@@ -170,6 +171,7 @@ export function apply(ctx: ClientContext): void {
     },
     inject: () => ({
       newConversationDraft,
+      navigationHistory,
       prefillNewConversation: (text: string) => {
         const id = currentSessionId(ctx.sessions.list.getSnapshot())
         const binding = id === undefined ? undefined : ctx.sessions.binding(id as SessionId)
