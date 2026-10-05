@@ -140,6 +140,8 @@ Check that the installation profile matches the one running DSH Web, then restar
 
 ## Development and contributing
 
+GitHub and npm both include a ready-to-run `lib`. After changing source, run `pnpm build` before committing.
+
 ### Install from source
 
 Use this for debugging or unpublished changes. The cloned directory becomes the plugin source path:

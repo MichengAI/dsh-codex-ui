@@ -6,6 +6,8 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 
 ## Unreleased
 
+- Installing from GitHub now includes the compiled runtime, so no manual build is required.
+
 ## 1.1.28 - 2026-10-05
 
 - Restore the official session-search and add-workspace shortcuts when Codex replaces the workspace sidebar (#35). Preserve command IDs and custom key bindings, reuse the host directory picker, and keep both actions available in the collapsed rail.

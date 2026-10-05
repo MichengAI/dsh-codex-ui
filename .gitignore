@@ -1,6 +1,5 @@
 node_modules
 /.pnpm-store/
-lib
 .codegraph/
 *.tgz
 docs/

@@ -140,6 +140,8 @@ dsh --profile web --dump-config
 
 ## 开发与贡献
 
+GitHub 与 npm 都包含可直接运行的 `lib`。修改源码后，提交前运行 `pnpm build`。
+
 ### 从源码安装
 
 适用于调试或使用未发布改动。克隆后的目录会直接作为插件安装路径：
