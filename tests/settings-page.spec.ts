@@ -3,7 +3,7 @@ import { act, createElement, type ReactNode } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { CodexSettingsPage, type CodexSettingsPageProps } from '../src/client/CodexSettingsPage.tsx'
 import { filterSettingsRows, generalItemGroup, settingsGroup } from '../src/client/settings-page-model.ts'
-import { openSettingsSection } from '../src/client/settings-navigation.ts'
+import { openSettingsRoot, openSettingsSection } from '../src/client/settings-navigation.ts'
 import { zh } from '../src/client/locales.ts'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({ ConnectionIndicator: () => null }))
@@ -59,9 +59,30 @@ test('桌面账号入口占用底部时不渲染自己的设置按钮', async ()
   expect(container.querySelector('[data-dcu-settings-trigger]')).toBeNull()
   const launcher = container.querySelector<HTMLButtonElement>('[data-account-launcher]')
   expect(launcher?.textContent).toBe('登录')
+  launcher?.focus()
   await act(async () => { launcher?.click() })
   expect(openSettings).toHaveBeenCalled()
   expect(settingsPage()).not.toBeNull()
+  await act(async () => { inSettings<HTMLButtonElement>('.dcu-settings-back')!.click() })
+  expect(document.activeElement).toBe(launcher)
+
+  // 账号入口可以打开菜单，没有 dialog 属性；导航应直接调用设置壳。
+  const rendered: string[] = []
+  const observer = new MutationObserver(() => { rendered.push(inSettings('[aria-current="page"]')?.textContent ?? '') })
+  observer.observe(document.body, { childList: true, subtree: true })
+  await act(async () => { openSettingsSection(container, '模型') })
+  observer.disconnect()
+  expect(inSettings('[aria-current="page"]')?.textContent).toBe('模型')
+  expect(rendered).not.toContain('常规')
+  expect(openSettings).toHaveBeenCalledTimes(1)
+  await act(async () => { inSettings<HTMLButtonElement>('.dcu-settings-back')!.click() })
+  await act(async () => { openSettingsRoot(container) })
+  expect(inSettings('[aria-current="page"]')?.textContent).toBe('常规')
+  await act(async () => { openSettingsSection(container, '第三方插件') })
+  expect(inSettings('[aria-current="page"]')?.textContent).toBe('第三方插件')
+  await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })) })
+  expect(settingsPage()).toBeNull()
+  expect(document.activeElement).toBe(launcher)
 })
 
 test('设置 portal 使用主侧栏宽度，重新打开与折叠时保持展开宽度', async () => {

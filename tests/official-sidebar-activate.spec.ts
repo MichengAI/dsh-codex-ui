@@ -26,7 +26,7 @@ test('官方侧栏已声明 panellist 时，本插件仍能激活并在卸载后
     inject: () => () => {},
     effect: (callback: () => (() => void) | void) => { const off = callback(); if (typeof off === 'function') disposers.push(off); return off },
   }
-  const register = slots.register as (options: { name: string; children?: Record<string, { kind: string; scope: string }> }, component: () => null) => () => void
+  const register = slots.register.bind(slots) as (options: { name: string; children?: Record<string, { kind: string; scope: string }> }, component: () => null) => () => void
   register({ name: 'root', children: { sidebar: { kind: 'single', scope: 'root' } } }, () => null)
   const official = () => null
   register({

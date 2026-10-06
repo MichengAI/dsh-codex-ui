@@ -1,6 +1,6 @@
 /**
- * DSH 设置壳暂未提供按 section id 打开的公开 API。该兼容层只从本插件渲染
- * 的设置入口触发，再按壳的可访问名称选择页面；宿主升级时可集中替换。
+ * 自有设置壳通过事件直接打开分区，不依赖账号入口的按钮或菜单结构。
+ * 保留的宿主设置壳仍从设置入口触发，再按可访问名称选择页面。
  */
 export function pickSettingsSectionButton<T extends { textContent: string | null }>(
   buttons: readonly T[],
@@ -35,15 +35,19 @@ let cancelPendingNavigation: (() => void) | undefined
 export const SETTINGS_NAVIGATION_TIMEOUT_MS = 4_000
 export const SETTINGS_TRIGGER_SELECTOR = '[data-dcu-settings-trigger],[aria-haspopup="dialog"]'
 export const SETTINGS_OPEN_SECTION_EVENT = 'dcu-settings-open-section'
+export const SETTINGS_OPEN_ROOT_EVENT = 'dcu-settings-open-root'
+const SETTINGS_OWNER_SELECTOR = '[data-dcu-settings-owner]'
 
 /** 根入口与分区跳转使用同一触发器合约，兼容保留的宿主设置壳。 */
 export function openSettingsRoot(root: HTMLElement | null): void {
+  const owner = root?.querySelector<HTMLElement>(SETTINGS_OWNER_SELECTOR)
+  if (owner && !owner.dispatchEvent(new CustomEvent(SETTINGS_OPEN_ROOT_EVENT, { cancelable: true }))) return
   root?.querySelector<HTMLButtonElement>(SETTINGS_TRIGGER_SELECTOR)?.click()
 }
 
 export function openSettingsSection(root: HTMLElement | null, label: string | readonly string[], onMissing?: () => void, onSelected?: () => void): void {
   const labels = typeof label === 'string' ? [label] : label
-  const trigger = root?.querySelector<HTMLButtonElement>(SETTINGS_TRIGGER_SELECTOR)
+  const trigger = root?.querySelector<HTMLElement>(SETTINGS_OWNER_SELECTOR) ?? root?.querySelector<HTMLButtonElement>(SETTINGS_TRIGGER_SELECTOR)
   if (trigger === null || trigger === undefined) {
     onMissing?.()
     return

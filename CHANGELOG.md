@@ -6,6 +6,8 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 
 ## Unreleased
 
+- Desktop settings shortcuts open the requested section directly while keeping the official account launcher. Closing Settings restores keyboard focus.
+
 - Installing from GitHub now includes the compiled runtime, so no manual build is required.
 - The installed-plugin list shows “Codex UI” and a localized description instead of only the package name. The session-title component shows “Codex session titles”. Titles and descriptions come from `meta.title` and `meta.description` in `locale/zh.json`, `locale/en.json`, and `locale/session-title/`.
 - Desktop keeps the official avatar and sign-in control at the bottom of the sidebar. Web still uses the plugin settings button when that account launcher is absent.

@@ -8,7 +8,7 @@ import { NS } from './locales.ts'
 import { filterSettingsRows, generalItemGroup, settingsGroup, type SettingsRow } from './settings-page-model.ts'
 import { settingsPageStyles } from './settings-page-styles.ts'
 import { settingsElementAvailable, settingsOverlays } from './settings-focus.ts'
-import { SETTINGS_OPEN_SECTION_EVENT } from './settings-navigation.ts'
+import { SETTINGS_OPEN_ROOT_EVENT, SETTINGS_OPEN_SECTION_EVENT } from './settings-navigation.ts'
 import { isBlankOnboardingSession } from './session-host.ts'
 import { settingsSidebarWidth } from './sidebar-width.ts'
 
@@ -57,6 +57,8 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
   const [recovered, setRecovered] = useState(false)
   const previousConnection = useRef(connection)
   const trigger = useRef<HTMLButtonElement>(null)
+  const launcherRoot = useRef<HTMLDivElement>(null)
+  const returnFocus = useRef<HTMLElement | null>(null)
   const page = useRef<HTMLDivElement>(null)
   const back = useRef<HTMLButtonElement>(null)
   const onboardingRoot = useRef<HTMLDivElement>(null)
@@ -76,9 +78,13 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     exitAnimation.current = animation
     animation.onfinish = finish
   }, [])
-  const openSection = useCallback((id: string) => { exitAnimation.current?.cancel(); exitAnimation.current = null; setActiveId(id); setOpen(true) }, [])
+  const openSection = useCallback((id: string) => {
+    if (page.current === null) returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    exitAnimation.current?.cancel(); exitAnimation.current = null; setActiveId(id); setOpen(true)
+  }, [])
   useEffect(() => {
-    const element = trigger.current
+    const element = launcherRoot.current ?? trigger.current
+    const openRoot = (event: Event) => { event.preventDefault(); openSection('general') }
     const navigate = (event: Event) => {
       const labels: unknown = (event as CustomEvent).detail?.labels
       if (!Array.isArray(labels)) return
@@ -89,8 +95,12 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
       openSection(row.id)
     }
     element?.addEventListener(SETTINGS_OPEN_SECTION_EVENT, navigate)
-    return () => element?.removeEventListener(SETTINGS_OPEN_SECTION_EVENT, navigate)
-  }, [rows, t, openSection])
+    element?.addEventListener(SETTINGS_OPEN_ROOT_EVENT, openRoot)
+    return () => {
+      element?.removeEventListener(SETTINGS_OPEN_SECTION_EVENT, navigate)
+      element?.removeEventListener(SETTINGS_OPEN_ROOT_EVENT, openRoot)
+    }
+  }, [rows, t, openSection, hostAccountLauncher])
   useEffect(() => () => { exitAnimation.current?.cancel() }, [])
   useLayoutEffect(() => {
     if (open && page.current !== null) page.current.style.setProperty('--dcu-sidebar-expanded-width', `${settingsSidebarWidth(document)}px`)
@@ -106,7 +116,13 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     return () => { window.clearTimeout(timer) }
   }, [connection])
   useEffect(() => {
-    if (wasOpen.current && !open) trigger.current?.focus()
+    if (wasOpen.current && !open) {
+      const previous = returnFocus.current
+      const target = hostAccountLauncher
+        ? previous?.isConnected && previous !== document.body ? previous : launcherRoot.current?.querySelector<HTMLElement>('button,a[href],[tabindex="0"]')
+        : trigger.current
+      target?.focus()
+    }
     wasOpen.current = open
     if (!open || page.current === null) return
     if (settingsElementAvailable(page.current) && settingsOverlays().length === 0) back.current?.focus()
@@ -177,7 +193,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
         else element.setAttribute('data-dcu-settings-isolated', previous.marker)
       }
     }
-  }, [open, close, step?.id])
+  }, [open, close, step?.id, hostAccountLauncher])
   useEffect(() => { if (main.current !== null) main.current.scrollTop = 0 }, [active?.id])
 
   const visible = filterSettingsRows(rows, query)
@@ -186,7 +202,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
   return <>
     <style>{settingsPageStyles}</style>
     {hostAccountLauncher
-      ? renderSlot('settings.launcher', { wide, settingsOpen: open, openSettings: () => { openSection('general') }, openOnboarding: id => { openSection(id) } })
+      ? <div ref={launcherRoot} data-dcu-settings-owner style={{ display: 'contents' }}>{renderSlot('settings.launcher', { wide, settingsOpen: open, openSettings: () => { openSection('general') }, openOnboarding: id => { openSection(id) } })}</div>
       : <button ref={trigger} type="button" className="dcu-settings-trigger" data-dcu-settings-trigger data-wide={wide} aria-expanded={open} aria-label={t('settings.title')} onClick={() => { openSection('general') }}>
         {renderSlot('settings.trigger', { wide })}
       </button>}
