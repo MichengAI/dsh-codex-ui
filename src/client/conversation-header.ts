@@ -245,5 +245,7 @@ export function observeConversationHeader(doc: Document = document): () => void 
     observer.disconnect()
     stopWatchingTabs?.()
     if (frame !== undefined) window.cancelAnimationFrame(frame)
+    doc.getElementById(CONVERSATION_HEADER_STYLE_ID)?.remove()
+    doc.querySelectorAll('[data-dcu-title-folder], [data-dcu-title-more], [data-dcu-tab-slider]').forEach(node => node.remove())
   }
 }

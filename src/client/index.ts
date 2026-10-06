@@ -2,6 +2,7 @@ import { openConversation, openConversationWithDraft, selectGlobalPanel } from '
 import { createNavigationHistory } from './navigation-history.ts'
 import { createWorkspaceShortcutSource } from './workspace-shortcuts.ts'
 import { registerWorkspaceDirectoryFlow, WORKSPACE_DIRECTORY_FLOW } from './workspace-directory-flow.ts'
+import { registerAfterOfficialWave } from './official-slot-shadow.ts'
 import {
   archiveHostSession,
   currentSessionId,
@@ -162,44 +163,69 @@ export function apply(ctx: ClientContext): void {
   const workspaceShortcuts = createWorkspaceShortcutSource(ctx.slots)
   ctx.effect(() => () => { workspaceShortcuts.dispose() }, 'michengai-codex-ui: workspace shortcuts')
   registerWorkspaceDirectoryFlow(ctx)
-  ctx.slots.inject('sidebar', () => ctx.slots.register({
-    name: 'sidebar',
-    registrant: 'michengai-codex-ui',
-    locale: NS,
-    children: {
-      'sidebar.panellist': { kind: 'list', scope: 'root' },
-      'sidebar.workspaces': { kind: 'single', scope: 'root' },
-      [WORKSPACE_DIRECTORY_FLOW]: { kind: 'single', scope: 'root' },
-      'sidebar.settings': { kind: 'single', scope: 'root' },
-      'sidebar.footer.action': { kind: 'list', scope: 'root' },
-      'sidebar.channels': { kind: 'single', scope: 'root' },
-      'sidebar.schedule': { kind: 'single', scope: 'root' },
-    },
-    inject: () => ({
-      newConversationDraft,
-      navigationHistory,
-      workspaceShortcuts,
-      prefillNewConversation: (text: string) => {
-        const id = currentSessionId(ctx.sessions.list.getSnapshot())
-        const binding = id === undefined ? undefined : ctx.sessions.binding(id as SessionId)
-        return prefillNewConversation(binding === undefined ? undefined : ctx.conversation.input.for(binding.ctx), text)
-      },
-      openSession: (sessionId: SessionId) => { openConversation(ctx, ctx.layout, sessionId) },
-      startSession: (workspaceId?: WorkspaceId) => { startWorkspaceSession(ctx, workspaceId) },
-      toggleSidebar: () => { ctx.layout.toggleSidebar() },
-      archiveSession,
-      canDeleteSession: () => hasArchiveSessionDelete(ctx.get('remote.workspaceRegistry')),
-      deleteSession,
-      forkSession,
-      moveSession,
-      renameSession,
-      openPath,
-      companionSlots,
-      globalPanels,
-      footerActions,
-      selectPanel: (id: string | null) => { selectGlobalPanel(ctx.layout, id) },
-    }),
-  }, CodexSidebar))
+  const ownSidebarChildren = {
+    'sidebar.panellist': { kind: 'list' as const, scope: 'root' as const },
+    [WORKSPACE_DIRECTORY_FLOW]: { kind: 'single' as const, scope: 'root' as const },
+    'sidebar.channels': { kind: 'single' as const, scope: 'root' as const },
+    'sidebar.schedule': { kind: 'single' as const, scope: 'root' as const },
+  }
+  const sharedSidebarChildren = {
+    'sidebar.workspaces': { kind: 'single' as const, scope: 'root' as const },
+    'sidebar.settings': { kind: 'single' as const, scope: 'root' as const },
+    'sidebar.footer.action': { kind: 'list' as const, scope: 'root' as const },
+  }
+  const officialSidebarReady = (): boolean => ctx.slots.entries('sidebar').some(entry => entry.component !== CodexSidebar)
+  ctx.slots.inject('sidebar', () => registerAfterOfficialWave(ctx.slots, 'sidebar', officialSidebarReady, () => {
+    const declared = (name: string): boolean => {
+      const spec = ctx.slots.spec as ((this: unknown, key: string) => unknown) | undefined
+      return typeof spec === 'function' && spec.call(ctx.slots, name) !== undefined
+    }
+    // 0.2 官方侧栏已经声明 panellist。重复声明会让本插件激活失败。
+    const children: Record<string, { kind: 'single' | 'list'; scope: 'root' }> = {}
+    for (const [name, spec] of Object.entries({ ...sharedSidebarChildren, ...ownSidebarChildren })) {
+      if (!declared(name)) children[name] = spec
+    }
+    const register = (next: typeof children): () => void => {
+      try {
+        return ctx.slots.register({
+          name: 'sidebar', priority: -1, registrant: 'michengai-codex-ui', locale: NS,
+          children: next as typeof ownSidebarChildren & typeof sharedSidebarChildren,
+          inject: () => ({
+            newConversationDraft,
+            navigationHistory,
+            workspaceShortcuts,
+            prefillNewConversation: (text: string) => {
+              const id = currentSessionId(ctx.sessions.list.getSnapshot())
+              const binding = id === undefined ? undefined : ctx.sessions.binding(id as SessionId)
+              return prefillNewConversation(binding === undefined ? undefined : ctx.conversation.input.for(binding.ctx), text)
+            },
+            openSession: (sessionId: SessionId) => { openConversation(ctx, ctx.layout, sessionId) },
+            startSession: (workspaceId?: WorkspaceId) => { startWorkspaceSession(ctx, workspaceId) },
+            toggleSidebar: () => { ctx.layout.toggleSidebar() },
+            archiveSession,
+            canDeleteSession: () => hasArchiveSessionDelete(ctx.get('remote.workspaceRegistry')),
+            deleteSession,
+            forkSession,
+            moveSession,
+            renameSession,
+            openPath,
+            companionSlots,
+            globalPanels,
+            footerActions,
+            selectPanel: (id: string | null) => { selectGlobalPanel(ctx.layout, id) },
+          }),
+        }, CodexSidebar)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        const conflict = /slot "([^"]+)" is already declared/.exec(message)
+        if (conflict === null || next[conflict[1]] === undefined) throw error
+        const rest = { ...next }
+        delete rest[conflict[1]]
+        return register(rest)
+      }
+    }
+    return register(children)
+  }))
 
   ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({
     name: 'conversation.session.header.utilities', id: 'turn-navigator', order: 100, locale: NS,

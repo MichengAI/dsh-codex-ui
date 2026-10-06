@@ -14,6 +14,58 @@ export type SidebarGridTracks = {
 
 const visibleSidebarWidths = new WeakMap<HTMLElement, number>()
 
+type HostSidebarSnapshot = {
+  grid: string
+  handleLeft: string
+  windowsWidth: string
+}
+
+const hostSidebarSnapshots = new WeakMap<HTMLElement, HostSidebarSnapshot>()
+
+/** 记下插件改写前的宿主列宽。已经带初始化标记的列宽是本插件留下的，不能当成宿主原值。 */
+export function rememberHostSidebar(frame: HTMLElement): void {
+  if (hostSidebarSnapshots.has(frame) || frame.hasAttribute('data-dcu-codex-sidebar-initialized')) return
+  const handle = frame.querySelector<HTMLElement>('[data-side="sidebar"]')
+  hostSidebarSnapshots.set(frame, {
+    grid: frame.style.gridTemplateColumns,
+    handleLeft: handle?.style.left ?? '',
+    windowsWidth: frame.style.getPropertyValue('--dsh-windows-sidebar-width'),
+  })
+}
+
+/** 停用或卸载时撤回列宽、拖拽柄和初始化标记，让官方侧栏按宿主宽度重排。 */
+export function restoreHostSidebar(frame: HTMLElement): void {
+  frame.removeAttribute('data-dcu-codex-sidebar-initialized')
+  frame.style.removeProperty('--dcu-sidebar-expanded-width')
+  const html = frame.ownerDocument.documentElement
+  const tracks = parseSidebarGrid(frame.style.gridTemplateColumns)
+  if (frame.hasAttribute('data-sidebar-collapsed')) {
+    const collapsedDesktop = html.hasAttribute('data-windows-titlebar') || html.dataset.platform === 'darwin'
+    if (collapsedDesktop && tracks?.sidebar === CODEX_SIDEBAR_RAIL_PX) {
+      frame.style.gridTemplateColumns = `0px ${tracks.middle} ${tracks.details}`
+      if (html.hasAttribute('data-windows-titlebar')) frame.style.setProperty('--dsh-windows-sidebar-width', '0px')
+    }
+    return
+  }
+  const snapshot = hostSidebarSnapshots.get(frame)
+  const handle = frame.querySelector<HTMLElement>('[data-side="sidebar"]')
+  if (snapshot !== undefined) {
+    frame.style.gridTemplateColumns = snapshot.grid
+    if (handle !== null) {
+      if (snapshot.handleLeft === '') handle.style.removeProperty('left')
+      else handle.style.left = snapshot.handleLeft
+    }
+    if (snapshot.windowsWidth === '') frame.style.removeProperty('--dsh-windows-sidebar-width')
+    else frame.style.setProperty('--dsh-windows-sidebar-width', snapshot.windowsWidth)
+    return
+  }
+  // 本会话已经把宿主列宽覆盖成 240，且没有快照时退回官方默认 280。
+  if (tracks?.sidebar === CODEX_SIDEBAR_MIN_PX) {
+    frame.style.gridTemplateColumns = `280px ${tracks.middle} ${tracks.details}`
+    if (handle !== null) handle.style.left = '280px'
+  }
+}
+
 /** 解析宿主 AppFrame 的 grid-template-columns。 */
 export function parseSidebarGrid(value: string): SidebarGridTracks | undefined {
   const match = /^(\d+(?:\.\d+)?)px\s+(minmax\(\d+(?:px)?,\s*1fr\))\s+(minmax\(0(?:px)?,\s*\d+(?:\.\d+)?px\)|\d+(?:\.\d+)?px)$/.exec(value.trim())
@@ -119,6 +171,7 @@ export function observeSlimSidebar(): () => void {
     try {
       if (frame === undefined || !frame.isConnected) watchFrame(findSidebarFrame(document))
       if (frame !== undefined) {
+        rememberHostSidebar(frame)
         // 尚不能应用宽度时不要写入过渡样式，否则初始化标记缺失会让监听反复触发自身。
         if (!canApplySlimSidebar(frame)) return
         if (frame.hasAttribute('data-sidebar-collapsed')) {
@@ -151,15 +204,6 @@ export function observeSlimSidebar(): () => void {
     observer.disconnect()
     frameObserver?.disconnect()
     if (pending !== undefined) window.cancelAnimationFrame(pending)
-    // Return Desktop's collapsed track to the host when this UI is unloaded.
-    const html = document.documentElement
-    if (frame?.hasAttribute('data-sidebar-collapsed')
-      && (html.hasAttribute('data-windows-titlebar') || html.dataset.platform === 'darwin')) {
-      const tracks = parseSidebarGrid(frame.style.gridTemplateColumns)
-      if (tracks?.sidebar === CODEX_SIDEBAR_RAIL_PX) {
-        frame.style.gridTemplateColumns = `0px ${tracks.middle} ${tracks.details}`
-        if (html.hasAttribute('data-windows-titlebar')) frame.style.setProperty('--dsh-windows-sidebar-width', '0px')
-      }
-    }
+    if (frame !== undefined) restoreHostSidebar(frame)
   }
 }

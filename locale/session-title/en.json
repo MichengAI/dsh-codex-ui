@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Codex session titles",
+    "description": "Generate a structured title from the first message."
+  }
+}

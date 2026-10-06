@@ -33,11 +33,15 @@ function setup() {
     effect: (callback: () => () => void) => { const off = callback(); disposers.push(off); return off },
   } as unknown as Context
   const declare = () => slots.register({ name: 'root', children: { 'sidebar.settings': { kind: 'single', scope: 'root' } } }, (_props: PropsRenderSlots<'sidebar.settings'>) => null)
-  return { slots, ctx, declare, dispose: () => disposers.reverse().forEach(off => off()) }
+  return { slots, ctx, declare, disposers, dispose: () => disposers.reverse().forEach(off => off()) }
+}
+
+async function flushSlotWave(): Promise<void> {
+  for (let i = 0; i < 4; i += 1) await new Promise(resolve => queueMicrotask(() => resolve(undefined)))
 }
 
 test('复现旧宿主：原设置外壳存在时，新壳重复声明子插槽而失败', () => {
-  const { slots, ctx, declare, dispose } = setup()
+  const { slots, ctx, declare, dispose, disposers } = setup()
   const removeRoot = declare()
   let official: { apply: (ctx: Context) => void } | undefined
   const code = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-settings-general/client'), 'utf8')
@@ -46,13 +50,13 @@ test('复现旧宿主：原设置外壳存在时，新壳重复声明子插槽�
   } } })
   official!.apply(ctx)
   const original = slots.entriesOfSlot('sidebar.settings')[0]!
+  const before = disposers.length
   expect(() => slots.register({ name: 'sidebar.settings', priority: -1, children: original.children }, (() => null) as never)).toThrow(/settings\.launcher.*already declared/)
-  const warning = vi.spyOn(console, "warn").mockImplementation(() => {})
   expect(() => registerSettingsPage(ctx)).not.toThrow()
-  expect(slots.entriesOfSlot("sidebar.settings")[0]).toBe(original)
-  expect(slots.entriesOfSlot("settings.trigger")).toHaveLength(1)
-  expect(warning).toHaveBeenCalled()
-  warning.mockRestore()
+  expect(slots.entriesOfSlot('sidebar.settings')[0]?.component).toBe(CodexSettingsPage)
+  expect(slots.entries('sidebar.settings').some(entry => entry.component === original.component)).toBe(true)
+  while (disposers.length > before) disposers.pop()?.()
+  expect(slots.entriesOfSlot('sidebar.settings')[0]?.component).toBe(original.component)
   dispose()
   removeRoot()
 })
@@ -71,12 +75,14 @@ test('发布配置停用官方首消息标题 LLM，但不关闭标题服务', (
   expect(readFileSync('src/session-title-plugin.ts', 'utf8')).toMatch(/ctx\.effect\(\(\) => registerSessionTitleProvider\(ctx\)/)
 })
 
-test('未加载官方设置壳时，新壳唯一声明设置树并在重新挂载后恢复功能贡献', () => {
+test('未加载官方设置壳时，新壳唯一声明设置树并在重新挂载后恢复功能贡献', async () => {
   const patch = readFileSync('cordis.patch.yml', 'utf8')
   expect(patch).toMatch(/id: ui-settings-general\s+disabled: true/)
+  expect(patch).toMatch(/id: ui-sidebar\s+disabled: true/)
   const { slots, ctx, declare, dispose } = setup()
   registerSettingsPage(ctx)
   const removeRoot = declare()
+  await flushSlotWave()
   const row = () => null
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({ name: 'settings.general.item', id: 'theme' }, row))
   expect(slots.entriesOfSlot('sidebar.settings')[0]?.component).toBe(CodexSettingsPage)
@@ -85,6 +91,7 @@ test('未加载官方设置壳时，新壳唯一声明设置树并在重新挂�
   removeRoot()
   expect(slots.entriesOfSlot('settings.general.item')).toEqual([])
   const removeAgain = declare()
+  await flushSlotWave()
   expect(slots.entriesOfSlot('settings.general.item')[0]?.component).toBe(row)
   dispose()
   removeAgain()
@@ -126,13 +133,14 @@ test.each([
 })
 
 
-test('配套插件先注入时等待设置树声明，不会误判为旧壳', () => {
+test('配套插件先注入时等待设置树声明，不会误判为旧壳', async () => {
   const { slots, ctx, declare, dispose } = setup()
   const row = () => null
   ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'early-plugin' }, row))
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({ name: 'settings.general.item', id: 'early-item' }, row))
   const removeRoot = declare()
   registerSettingsPage(ctx)
+  await flushSlotWave()
   expect(slots.entriesOfSlot('sidebar.settings')[0]?.component).toBe(CodexSettingsPage)
   expect(slots.entriesOfSlot('settings.section').some(entry => entry.options.id === 'early-plugin')).toBe(true)
   expect(slots.entriesOfSlot('settings.general.item')[0]?.component).toBe(row)

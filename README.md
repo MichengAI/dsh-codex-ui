@@ -102,7 +102,7 @@ dsh plugin --profile web add @michengai/dsh-codex-ui@latest --registry=https://r
 dsh --profile web --dump-config
 ```
 
-Restart DSH Web and hard-refresh the browser (usually `Ctrl+Shift+R`). Once the new sidebar appears, you are ready to use it. Uninstalling the plugin restores the default sidebar.
+Restart DSH Web and hard-refresh the browser (usually `Ctrl+Shift+R`). Once the new sidebar appears, you are ready to use it. Disabling or uninstalling restores the official sidebar. If the profile `cordis.patch.yml` still has `disabled: true` for `ui-sidebar` or `ui-settings-general`, delete those rows and reload.
 
 ## Usage
 

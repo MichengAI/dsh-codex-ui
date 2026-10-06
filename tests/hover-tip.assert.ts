@@ -4,7 +4,7 @@ import { JSDOM } from 'jsdom'
 import { HOVER_TIP_SHOW_DELAY_MS, WORKSPACE_HOVER_CARD_WIDTH } from '../src/client/hover-shell.tsx'
 import { clampHoverCardPosition, formatCompactTime, formatHoverTime, hoverCardAnchor } from '../src/client/hover-tip.ts'
 import { sidebarWidthDuringDrag, shouldCollapseOnSidebarDrag } from '../src/client/sidebar-drag.ts'
-import { applySidebarWidth, applySlimSidebar, parseSidebarGrid } from '../src/client/sidebar-width.ts'
+import { applySidebarWidth, applySlimSidebar, observeSlimSidebar, parseSidebarGrid, restoreHostSidebar } from '../src/client/sidebar-width.ts'
 
 assert.deepEqual(hoverCardAnchor({ right: 260, top: 120 }), { left: 268, top: 120 })
 assert.deepEqual(clampHoverCardPosition(10, 10, 240, 120, 800, 600), { left: 10, top: 10 })
@@ -70,6 +70,24 @@ const hostFrame = new JSDOM('<div id="host" style="grid-template-columns: 280px 
 assert.equal(applySlimSidebar(hostFrame), true, '0.1.7 默认 280px 列必须能被收成内容宽度')
 assert.equal(hostFrame.style.gridTemplateColumns, '240px minmax(0px, 1fr) minmax(0px, 480px)', '收窄侧栏时必须保留 0.1.7 右栏轨道')
 assert.equal(hostFrame.style.getPropertyValue('--dcu-sidebar-expanded-width'), '240px')
+restoreHostSidebar(hostFrame)
+assert.equal(hostFrame.style.gridTemplateColumns, '280px minmax(0px, 1fr) minmax(0px, 480px)', '没有快照时卸载必须退回官方默认 280px')
+assert.equal(hostFrame.hasAttribute('data-dcu-codex-sidebar-initialized'), false)
+assert.equal(hostFrame.style.getPropertyValue('--dcu-sidebar-expanded-width'), '')
+
+const restoreDom = new JSDOM('<body><div id="frame" style="grid-template-columns: 320px minmax(0px, 1fr) 0px"><div data-side="sidebar" style="left:320px"></div></div></body>', { pretendToBeVisual: true })
+const previousWindow = globalThis.window
+const previousDocument = globalThis.document
+Object.assign(globalThis, { window: restoreDom.window, document: restoreDom.window.document, MutationObserver: restoreDom.window.MutationObserver })
+restoreDom.window.requestAnimationFrame = (callback: FrameRequestCallback) => { callback(0); return 1 }
+restoreDom.window.cancelAnimationFrame = () => {}
+const disposeSlim = observeSlimSidebar()
+const restoreFrame = restoreDom.window.document.getElementById('frame') as HTMLElement
+assert.equal(restoreFrame.style.gridTemplateColumns, '240px minmax(0px, 1fr) 0px')
+disposeSlim()
+assert.equal(restoreFrame.style.gridTemplateColumns, '320px minmax(0px, 1fr) 0px', '卸载必须恢复插件改写前的宿主列宽')
+assert.equal(restoreFrame.querySelector<HTMLElement>('[data-side="sidebar"]')?.style.left, '320px')
+Object.assign(globalThis, { window: previousWindow, document: previousDocument })
 
 const sidebarWidth = readFileSync(new URL('../src/client/sidebar-width.ts', import.meta.url), 'utf8')
 assert.doesNotMatch(sidebarWidth, /slimedSidebarWidth|slimedGridTemplate|HOST_SIDEBAR_/, '固定侧边栏宽度不得保留旧的宽度映射逻辑')

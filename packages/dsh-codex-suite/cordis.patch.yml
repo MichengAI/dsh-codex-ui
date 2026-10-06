@@ -19,7 +19,8 @@
     - id: ui-workspace-archive-manager
       name: '@michengai/dsh-archive-manager'
 
-# dsh-codex-ui：替换默认侧栏，并用规范标题覆盖官方首消息 LLM。
+# dsh-codex-ui：启用时停用官方侧栏，避免重复声明子插槽导致客户端激活失败。
+# 标题服务同时只接受一个提供方，所以仍停用官方首消息 LLM。
 - id: ui-sidebar
   disabled: true
 - id: session-title-llm

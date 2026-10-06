@@ -42,6 +42,9 @@ assert.deepEqual(manifest.exports?.['./session-title'], {
   types: './lib/session-title-plugin.d.mts',
   default: './lib/session-title-plugin.mjs',
 }, '会话标题提供方必须作为独立宿主入口发布')
+assert.equal(manifest.exports?.['./locale/*.json'], './locale/*.json', '已安装列表必须能解析 locale/en.json 与 locale/zh.json')
+assert.equal(manifest.exports?.['./session-title/locale/*.json'], './locale/session-title/*.json', '会话标题子入口必须有自己的显示名')
+assert.equal(manifest.files?.includes('locale'), true, '发布文件必须包含插件显示名语言包')
 assert.equal(manifest.files?.includes('lib'), true, '发布文件必须包含 lib 目录')
 assert.equal(manifest.files?.includes('dist'), false, '发布文件不得继续包含旧 dist 目录')
 assert.equal(manifest.dsh?.client?.inject?.includes('@deepseek-ai/dsh-client-ui-primitives'), false, '静态模块不应误写成信息性的 dsh.client.inject 边')

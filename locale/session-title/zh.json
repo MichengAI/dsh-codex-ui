@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Codex 会话标题",
+    "description": "用首条消息生成规范会话标题。"
+  }
+}

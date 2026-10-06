@@ -102,7 +102,7 @@ dsh plugin --profile web add @michengai/dsh-codex-ui@latest --registry=https://r
 dsh --profile web --dump-config
 ```
 
-安装后重启 DSH Web，并硬刷新浏览器（通常为 `Ctrl+Shift+R`）。看到新的侧栏后即可开始使用；卸载插件会恢复默认侧栏。
+安装后重启 DSH Web，并硬刷新浏览器（通常为 `Ctrl+Shift+R`）。看到新的侧栏后即可开始使用。禁用或卸载后官方侧栏会回来。若 profile 的 `cordis.patch.yml` 里还有 `ui-sidebar` 或 `ui-settings-general` 的 `disabled: true`，删掉这两行后再重载。
 
 ## 使用
 

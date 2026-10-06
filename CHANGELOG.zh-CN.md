@@ -7,6 +7,9 @@
 ## 未发布
 
 - 从 GitHub 安装时已包含运行文件，不必再手动构建。
+- 已安装插件列表显示「Codex UI」和中文简介，不再只用包名。会话标题子入口显示「Codex 会话标题」。显示名来自 `locale/zh.json`、`locale/en.json` 和 `locale/session-title/` 的 `meta.title`、`meta.description`。
+- 禁用或卸载时恢复官方侧栏和设置壳。不再在补丁里关闭 `ui-sidebar` 和 `ui-settings-general`，改为用更低优先级覆盖；撤销登记后官方实现仍在。标题服务仍暂时停用官方 `session-title-llm`，因为宿主同时只接受一个标题提供方。若 profile 的 `cordis.patch.yml` 里仍有这两行 `disabled: true`，需要删掉后重载。
+- 禁用或卸载时恢复宿主侧栏列宽。不再把官方侧栏留在 240px，并撤掉插件写上的宽度变量和顶栏样式。
 
 ## 1.1.28 - 2026-10-05
 

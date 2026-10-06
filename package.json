@@ -34,11 +34,14 @@
       "types": "./lib/session-title-plugin.d.mts",
       "default": "./lib/session-title-plugin.mjs"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./session-title/locale/*.json": "./locale/session-title/*.json"
   },
   "files": [
     "lib",
     "assets",
+    "locale",
     "cordis.patch.yml",
     "CHANGELOG.md",
     "CHANGELOG.zh-CN.md",
