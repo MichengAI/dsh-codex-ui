@@ -42,6 +42,26 @@ async function flushSlotWave(): Promise<void> {
   for (let i = 0; i < 4; i += 1) await new Promise(resolve => queueMicrotask(() => resolve(undefined)))
 }
 
+test('快捷键服务晚于设置壳注册时仍能读到 catalog', async () => {
+  const { slots, ctx, declare, dispose } = setup()
+  const removeRoot = declare()
+  const pending: Array<(shortcutCtx: { shortcuts: { catalog: { getSnapshot: () => readonly { id: string; keys: readonly string[]; aria?: string }[]; subscribe: (listener: () => void) => () => void } } }) => (() => void) | void> = []
+  ctx.inject = ((names: string[], callback: (shortcutCtx: { shortcuts: { catalog: { getSnapshot: () => readonly { id: string; keys: readonly string[]; aria?: string }[]; subscribe: (listener: () => void) => () => void } } }) => (() => void) | void) => {
+    if (names.includes('shortcuts')) pending.push(callback)
+    return () => {}
+  }) as unknown as Context['inject']
+  registerSettingsPage(ctx)
+  await flushSlotWave()
+  const injected = (slots.entriesOfSlot('sidebar.settings')[0]!.inject as unknown as () => SettingsPageInjected)()
+  expect(injected.shortcuts?.getSnapshot()).toEqual([])
+  const rows = [{ id: 'settings.open', keys: ['Ctrl', ','] as const, aria: 'Control+Comma' }]
+  const stop = pending[0]?.({ shortcuts: { catalog: { getSnapshot: () => rows, subscribe: () => () => {} } } })
+  expect(injected.shortcuts?.getSnapshot()).toEqual(rows)
+  stop?.()
+  expect(injected.shortcuts?.getSnapshot()).toEqual([])
+  dispose(); removeRoot()
+})
+
 test('账号入口晚注册和撤销时设置壳订阅翻转，保留分区导航', async () => {
   const { slots, ctx, declare, dispose } = setup()
   const removeRoot = declare()

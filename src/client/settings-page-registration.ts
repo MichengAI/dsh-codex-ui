@@ -16,6 +16,27 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 /** 用更低优先级覆盖设置壳。官方壳仍登记，停用或卸载时撤销本插件登记后恢复。 */
+type ShortcutRow = { id: string; keys: readonly string[]; aria?: string }
+
+/** 快捷键服务可能晚于本插件启动。等到它就绪后再读 catalog，避免注册时一次取值把提示永久丢掉。 */
+const emptyShortcuts: readonly ShortcutRow[] = []
+
+function liveShortcutCatalog(ctx: Context): SettingsSource<ShortcutRow> {
+  const listeners = new Set<() => void>()
+  let catalog: SettingsSource<ShortcutRow> | undefined
+  const notify = (): void => { for (const listener of listeners) listener() }
+  ctx.inject(['shortcuts'], shortcutCtx => {
+    catalog = (shortcutCtx as Context & { shortcuts: { catalog: SettingsSource<ShortcutRow> } }).shortcuts.catalog
+    const unsubscribe = catalog.subscribe(notify)
+    notify()
+    return () => { unsubscribe(); catalog = undefined; notify() }
+  })
+  return {
+    getSnapshot: () => catalog?.getSnapshot() ?? emptyShortcuts,
+    subscribe: listener => { listeners.add(listener); return () => { listeners.delete(listener) } },
+  }
+}
+
 function accountLauncherPresence(slots: Context['slots']): { getSnapshot: () => boolean; subscribe: (listener: () => void) => () => void } {
   const read = (): boolean => {
     try { return slots.entriesOfSlot('settings.launcher').length > 0 }
@@ -40,7 +61,7 @@ export function registerSettingsPage(ctx: Context): void {
   // Host 和 Client 共享服务名；当前入口读取的是浏览器连接外观。
   const service: unknown = ctx.get('connection')
   const connection = service as ConnectionHandle
-  const shortcutService = ctx.get('shortcuts') as { catalog?: SettingsSource<{ id: string; keys: readonly string[]; aria?: string }> } | undefined
+  const shortcuts = liveShortcutCatalog(ctx)
   const source = (name: 'settings.section' | 'settings.onboarding' | 'settings.general.item'): SettingsSource<SettingsRow> => {
     let revision = ''
     let cached: readonly SettingsRow[] = []
@@ -107,7 +128,7 @@ export function registerSettingsPage(ctx: Context): void {
     }
     return ctx.slots.register({
       name: 'sidebar.settings', priority: -1, locale: NS, children,
-      inject: () => ({ sections, onboarding, connectionState: connection.state, reconnect: () => { connection.reconnect() }, accountLauncher: accountLauncherPresence(ctx.slots), shortcuts: shortcutService?.catalog }),
+      inject: () => ({ sections, onboarding, connectionState: connection.state, reconnect: () => { connection.reconnect() }, accountLauncher: accountLauncherPresence(ctx.slots), shortcuts }),
     }, CodexSettingsPage)
   }))
   ctx.slots.inject('settings.section', () => registerAfterOfficialWave(ctx.slots, 'settings.section', () => declared('settings.general.item'), () => {

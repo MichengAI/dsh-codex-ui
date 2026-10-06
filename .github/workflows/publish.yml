@@ -74,6 +74,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # 1.1.29 只发布插件，不启动整合包安装器。
+          if [[ "$GITHUB_REF_NAME" == "v1.1.29" ]]; then
+            echo "plugin-only release; skip suite installer"
+            exit 0
+          fi
           # 1.0 里程碑同步安装器版本；后续常规发布仍使用其独立 patch 递增。
           if [[ "$GITHUB_REF_NAME" == "v1.0.0" ]]; then
             gh workflow run release-suite-installer.yml --repo "$GITHUB_REPOSITORY" --ref main -f version=1.0.0
