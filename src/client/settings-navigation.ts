@@ -36,6 +36,7 @@ export const SETTINGS_NAVIGATION_TIMEOUT_MS = 4_000
 export const SETTINGS_TRIGGER_SELECTOR = '[data-dcu-settings-trigger],[aria-haspopup="dialog"]'
 export const SETTINGS_OPEN_SECTION_EVENT = 'dcu-settings-open-section'
 export const SETTINGS_OPEN_ROOT_EVENT = 'dcu-settings-open-root'
+export type SettingsNavigationRequest = { labels: readonly string[]; result?: 'selected' | 'missing' }
 const SETTINGS_OWNER_SELECTOR = '[data-dcu-settings-owner]'
 
 /** 根入口与分区跳转使用同一触发器合约，兼容保留的宿主设置壳。 */
@@ -56,6 +57,14 @@ export function openSettingsSection(root: HTMLElement | null, label: string | re
   cancelPendingNavigation?.()
   // 自有设置壳在一次状态提交中打开目标分区；旧壳仍走下方 DOM 导航。
   const request = new CustomEvent(SETTINGS_OPEN_SECTION_EVENT, { detail: { labels }, cancelable: true })
+  const detail: SettingsNavigationRequest = { labels }
+  const ownerRequest = new CustomEvent(SETTINGS_OPEN_SECTION_EVENT, { detail, cancelable: true })
+  if (trigger.hasAttribute('data-dcu-settings-owner')) {
+    trigger.dispatchEvent(ownerRequest)
+    if (detail.result === 'selected') onSelected?.()
+    else onMissing?.()
+    return
+  }
   if (!trigger.dispatchEvent(request)) { onSelected?.(); return }
   const pageSelector = trigger.hasAttribute('data-dcu-settings-trigger') ? '[data-dcu-settings-page]' : '[role="dialog"]'
   if (!opening && document.querySelector(pageSelector) === null) trigger.click()

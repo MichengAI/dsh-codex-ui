@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module'
-import { act, createElement, type ReactNode } from 'react'
+import { act, createElement, useLayoutEffect, type ReactNode } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { CodexSettingsPage, type CodexSettingsPageProps } from '../src/client/CodexSettingsPage.tsx'
 import { filterSettingsRows, generalItemGroup, settingsGroup } from '../src/client/settings-page-model.ts'
@@ -65,6 +65,14 @@ test('桌面账号入口占用底部时不渲染自己的设置按钮', async ()
   expect(settingsPage()).not.toBeNull()
   await act(async () => { inSettings<HTMLButtonElement>('.dcu-settings-back')!.click() })
   expect(document.activeElement).toBe(launcher)
+  const onMissing = vi.fn()
+  const onSelected = vi.fn()
+  const warn = vi.spyOn(console, 'warn')
+  await act(async () => { openSettingsSection(container, '不存在的分区', onMissing, onSelected) })
+  expect(onMissing).toHaveBeenCalledTimes(1)
+  expect(onSelected).not.toHaveBeenCalled()
+  expect(warn).not.toHaveBeenCalled()
+  expect(settingsPage()).toBeNull()
 
   // 账号入口可以打开菜单，没有 dialog 属性；导航应直接调用设置壳。
   const rendered: string[] = []
@@ -83,6 +91,41 @@ test('桌面账号入口占用底部时不渲染自己的设置按钮', async ()
   await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })) })
   expect(settingsPage()).toBeNull()
   expect(document.activeElement).toBe(launcher)
+})
+
+test.each([
+  [{ id: 'settings.open', keys: ['Ctrl', ','], aria: 'Control+Comma' }],
+  [{ id: 'settings.open', keys: [] }],
+  [],
+])('提交布局阶段可打开账号设置，并传递有效快捷键 %#', async (...shortcutRows: { id: string; keys: readonly string[]; aria?: string }[]) => {
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+  const launcherProps = vi.fn()
+  function Parent() {
+    useLayoutEffect(() => { openSettingsRoot(container) }, [])
+    return createElement(CodexSettingsPage, {
+      wide: true, sections: source(rows), onboarding: source([]),
+      connectionState: { getSnapshot: () => 'connected', subscribe: () => () => {} }, reconnect: () => {},
+      accountLauncher: { getSnapshot: () => true, subscribe: () => () => {} },
+      shortcuts: source(shortcutRows),
+      useSessions: (selector: (value: object) => unknown) => selector({ phase: 'ready', byId: {} }),
+      t: (key: keyof typeof zh) => zh[key],
+      renderSlot: (name: string, owner: object) => {
+        if (name !== 'settings.launcher') return null
+        launcherProps(owner)
+        return createElement('button', { 'aria-haspopup': 'menu' }, 'Account')
+      },
+    } as CodexSettingsPageProps)
+  }
+  cleanups.push(() => root.unmount())
+  await act(async () => { root.render(createElement(Parent)) })
+  expect(settingsPage()).not.toBeNull()
+  expect(inSettings('[aria-current="page"]')?.textContent).toBe('常规')
+  const owner = launcherProps.mock.calls.at(-1)![0]
+  const shortcut = shortcutRows[0]
+  if (shortcut?.keys.length) expect(owner.settingsShortcut).toEqual({ keys: shortcut.keys, aria: shortcut.aria })
+  else expect(owner).not.toHaveProperty('settingsShortcut')
 })
 
 test('设置 portal 使用主侧栏宽度，重新打开与折叠时保持展开宽度', async () => {

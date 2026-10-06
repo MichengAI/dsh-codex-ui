@@ -8,7 +8,7 @@ import { NS } from './locales.ts'
 import { filterSettingsRows, generalItemGroup, settingsGroup, type SettingsRow } from './settings-page-model.ts'
 import { settingsPageStyles } from './settings-page-styles.ts'
 import { settingsElementAvailable, settingsOverlays } from './settings-focus.ts'
-import { SETTINGS_OPEN_ROOT_EVENT, SETTINGS_OPEN_SECTION_EVENT } from './settings-navigation.ts'
+import { SETTINGS_OPEN_ROOT_EVENT, SETTINGS_OPEN_SECTION_EVENT, type SettingsNavigationRequest } from './settings-navigation.ts'
 import { isBlankOnboardingSession } from './session-host.ts'
 import { settingsSidebarWidth } from './sidebar-width.ts'
 
@@ -22,6 +22,7 @@ export type SettingsPageInjected = {
   reconnect: () => void
   /** Desktop 账号插件占用 settings.launcher 时，底部必须留给头像和登录，不能换成设置按钮。 */
   accountLauncher?: { getSnapshot: () => boolean; subscribe: (listener: () => void) => () => void }
+  shortcuts?: SettingsSource<{ id: string; keys: readonly string[]; aria?: string }>
 }
 export type CodexSettingsPageProps = PropsRuntime<'sidebar.settings'>
   & PropsRenderSlots<'settings.launcher' | 'settings.trigger' | 'settings.header' | 'settings.action' | 'settings.close' | 'settings.section' | 'settings.onboarding'>
@@ -44,11 +45,16 @@ function sectionIcon(id: string) {
 }
 
 /** 独立设置视图复用原始 section/close 合约，退出时保留底层会话与输入状态。 */
-export function CodexSettingsPage({ wide, sections, onboarding, connectionState, reconnect, accountLauncher, useSessions, renderSlot, t }: CodexSettingsPageProps) {
+const noShortcuts: readonly { id: string; keys: readonly string[]; aria?: string }[] = []
+const emptyShortcuts = { subscribe: () => () => {}, getSnapshot: () => noShortcuts }
+
+export function CodexSettingsPage({ wide, sections, onboarding, connectionState, reconnect, accountLauncher, shortcuts = emptyShortcuts, useSessions, renderSlot, t }: CodexSettingsPageProps) {
   const rows = useSyncExternalStore(sections.subscribe, sections.getSnapshot)
   const steps = useSyncExternalStore(onboarding.subscribe, onboarding.getSnapshot)
   const connection = useSyncExternalStore(connectionState.subscribe, connectionState.getSnapshot)
   const hostAccountLauncher = useSyncExternalStore(accountLauncher?.subscribe ?? (() => () => {}), accountLauncher?.getSnapshot ?? (() => false))
+  const shortcutRows = useSyncExternalStore(shortcuts.subscribe, shortcuts.getSnapshot)
+  const settingsShortcut = shortcutRows.find(row => row.id === 'settings.open')
   const onboardingActive = useSessions(state => isBlankOnboardingSession(state))
   const [completed, setCompleted] = useState<ReadonlySet<string>>(() => new Set())
   const [open, setOpen] = useState(false)
@@ -82,15 +88,23 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
     if (page.current === null) returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     exitAnimation.current?.cancel(); exitAnimation.current = null; setActiveId(id); setOpen(true)
   }, [])
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = launcherRoot.current ?? trigger.current
     const openRoot = (event: Event) => { event.preventDefault(); openSection('general') }
     const navigate = (event: Event) => {
-      const labels: unknown = (event as CustomEvent).detail?.labels
+      const detail = (event as CustomEvent<SettingsNavigationRequest>).detail
+      const labels: unknown = detail?.labels
       if (!Array.isArray(labels)) return
       const row = labels.flatMap(label => rows.filter(item => (item.id === 'general' ? t('settings.general') : item.label) === label))[0]
-      if (!row) return
+      if (!row) {
+        if (element === launcherRoot.current) {
+          event.preventDefault()
+          detail.result = 'missing'
+        }
+        return
+      }
       event.preventDefault()
+      detail.result = 'selected'
       setQuery('')
       openSection(row.id)
     }
@@ -202,7 +216,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
   return <>
     <style>{settingsPageStyles}</style>
     {hostAccountLauncher
-      ? <div ref={launcherRoot} data-dcu-settings-owner style={{ display: 'contents' }}>{renderSlot('settings.launcher', { wide, settingsOpen: open, openSettings: () => { openSection('general') }, openOnboarding: id => { openSection(id) } })}</div>
+      ? <div ref={launcherRoot} data-dcu-settings-owner style={{ display: 'contents' }}>{renderSlot('settings.launcher', { wide, settingsOpen: open, ...(settingsShortcut?.keys.length ? { settingsShortcut: { keys: settingsShortcut.keys, aria: settingsShortcut.aria } } : {}), openSettings: () => { openSection('general') }, openOnboarding: id => { openSection(id) } })}</div>
       : <button ref={trigger} type="button" className="dcu-settings-trigger" data-dcu-settings-trigger data-wide={wide} aria-expanded={open} aria-label={t('settings.title')} onClick={() => { openSection('general') }}>
         {renderSlot('settings.trigger', { wide })}
       </button>}

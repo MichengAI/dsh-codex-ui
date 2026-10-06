@@ -6,6 +6,8 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 
 ## Unreleased
 
+- Account-launcher settings navigation reports missing sections immediately, supports late launcher registration, and includes configured Settings shortcut hints.
+
 - Desktop settings shortcuts open the requested section directly while keeping the official account launcher. Closing Settings restores keyboard focus.
 
 - Installing from GitHub now includes the compiled runtime, so no manual build is required.

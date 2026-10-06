@@ -5,7 +5,9 @@ import { SlotCore, type PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slot
 import { expect, test, vi } from 'vitest'
 import { registerSettingsPage } from '../src/client/settings-page-registration.ts'
 import { loadClientBundle } from './client-module-loader.ts'
-import { CodexSettingsPage, CodexGeneralSettings } from '../src/client/CodexSettingsPage.tsx'
+import { CodexSettingsPage, CodexGeneralSettings, type CodexSettingsPageProps, type SettingsPageInjected } from '../src/client/CodexSettingsPage.tsx'
+import { act, createElement, type ReactNode } from 'react'
+import { openSettingsSection } from '../src/client/settings-navigation.ts'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({ ConnectionIndicator: () => null }))
 const require = createRequire(import.meta.url)
@@ -39,6 +41,50 @@ function setup() {
 async function flushSlotWave(): Promise<void> {
   for (let i = 0; i < 4; i += 1) await new Promise(resolve => queueMicrotask(() => resolve(undefined)))
 }
+
+test('账号入口晚注册和撤销时设置壳订阅翻转，保留分区导航', async () => {
+  const { slots, ctx, declare, dispose } = setup()
+  const removeRoot = declare()
+  registerSettingsPage(ctx)
+  await flushSlotWave()
+  const entry = slots.entriesOfSlot('sidebar.settings')[0]!
+  const injected = (entry.inject as unknown as () => SettingsPageInjected)()
+  expect(entry.children).toHaveProperty('settings.launcher')
+  const changed = vi.fn()
+  const unsubscribe = injected.accountLauncher!.subscribe(changed)
+  const container = document.createElement('div')
+  document.body.append(container)
+  const { createRoot } = require('react-dom/client') as { createRoot: (element: HTMLElement) => { render: (node: ReactNode) => void; unmount: () => void } }
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
+  const root = createRoot(container)
+  let removeLauncher: (() => void) | undefined
+  try {
+    await act(async () => { root.render(createElement(CodexSettingsPage, {
+      ...injected, wide: true,
+      useSessions: (selector: (value: object) => unknown) => selector({ phase: 'ready', byId: {} }),
+      t: (key: string) => key,
+      renderSlot: (name: string, owner: { openSettings?: () => void }) => name === 'settings.launcher'
+        ? createElement('button', { 'data-account-launcher': true, onClick: owner.openSettings }, 'Account')
+        : name === 'settings.trigger' ? 'Settings' : null,
+    } as CodexSettingsPageProps)) })
+    expect(injected.accountLauncher!.getSnapshot()).toBe(false)
+    expect(container.querySelector('[data-dcu-settings-trigger]')).not.toBeNull()
+    await act(async () => { removeLauncher = slots.register({ name: 'settings.launcher' }, (() => null) as never); await flushSlotWave() })
+    expect(changed).toHaveBeenCalled()
+    expect(injected.accountLauncher!.getSnapshot()).toBe(true)
+    expect(container.querySelector('[data-dcu-settings-trigger]')).toBeNull()
+    expect(container.querySelector('[data-account-launcher]')).not.toBeNull()
+    await act(async () => { openSettingsSection(container, 'settings.general') })
+    expect(document.querySelector('[data-settings-section]')?.getAttribute('data-settings-section')).toBe('general')
+    await act(async () => { document.querySelector<HTMLButtonElement>('.dcu-settings-back')!.click(); removeLauncher!(); await flushSlotWave() })
+    expect(injected.accountLauncher!.getSnapshot()).toBe(false)
+    expect(container.querySelector('[data-dcu-settings-trigger]')).not.toBeNull()
+    expect(container.querySelector('[data-account-launcher]')).toBeNull()
+  } finally {
+    await act(async () => { root.unmount() })
+    unsubscribe(); removeLauncher?.(); dispose(); removeRoot(); container.remove()
+  }
+})
 
 test('复现旧宿主：原设置外壳存在时，新壳重复声明子插槽而失败', () => {
   const { slots, ctx, declare, dispose, disposers } = setup()
@@ -87,6 +133,7 @@ test('未加载官方设置壳时，新壳唯一声明设置树并在重新挂�
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({ name: 'settings.general.item', id: 'theme' }, row))
   expect(slots.entriesOfSlot('sidebar.settings')[0]?.component).toBe(CodexSettingsPage)
   expect(slots.entriesOfSlot('settings.section')[0]?.component).toBe(CodexGeneralSettings)
+  expect(slots.entriesOfSlot('sidebar.settings')[0]?.children).toHaveProperty('settings.launcher')
   expect(slots.entriesOfSlot('settings.general.item')[0]?.component).toBe(row)
   removeRoot()
   expect(slots.entriesOfSlot('settings.general.item')).toEqual([])

@@ -40,6 +40,7 @@ export function registerSettingsPage(ctx: Context): void {
   // Host 和 Client 共享服务名；当前入口读取的是浏览器连接外观。
   const service: unknown = ctx.get('connection')
   const connection = service as ConnectionHandle
+  const shortcutService = ctx.get('shortcuts') as { catalog?: SettingsSource<{ id: string; keys: readonly string[]; aria?: string }> } | undefined
   const source = (name: 'settings.section' | 'settings.onboarding' | 'settings.general.item'): SettingsSource<SettingsRow> => {
     let revision = ''
     let cached: readonly SettingsRow[] = []
@@ -106,7 +107,7 @@ export function registerSettingsPage(ctx: Context): void {
     }
     return ctx.slots.register({
       name: 'sidebar.settings', priority: -1, locale: NS, children,
-      inject: () => ({ sections, onboarding, connectionState: connection.state, reconnect: () => { connection.reconnect() }, accountLauncher: accountLauncherPresence(ctx.slots) }),
+      inject: () => ({ sections, onboarding, connectionState: connection.state, reconnect: () => { connection.reconnect() }, accountLauncher: accountLauncherPresence(ctx.slots), shortcuts: shortcutService?.catalog }),
     }, CodexSettingsPage)
   }))
   ctx.slots.inject('settings.section', () => registerAfterOfficialWave(ctx.slots, 'settings.section', () => declared('settings.general.item'), () => {

@@ -97,6 +97,9 @@ try {
     }
     observer.disconnect()
     dispose()
+    const restored = { initialized: frame.hasAttribute('data-dcu-codex-sidebar-initialized'), grid: frame.style.gridTemplateColumns, width: frame.style.getPropertyValue('--dcu-sidebar-expanded-width') }
+    // 重新初始化静态动画夹具，不挂宽度观察器，避免它把手动采样列宽改回展开宽度。
+    applySlimSidebar(frame)
     // 不依赖宿主主题 token，验证真实过渡包含连续中间帧，而不只检查终态。
     frame.style.transition = ''
     frame.style.gridTemplateColumns = '240px minmax(0px, 1fr) 0px'
@@ -115,9 +118,12 @@ try {
     }
     frame.setAttribute('data-dragging', '')
     const draggingDuration = getComputedStyle(frame).transitionDuration
-    return { idleMutations, samples, motion, draggingDuration }
+    return { idleMutations, samples, motion, draggingDuration, restored }
   })
   assert.equal(result.idleMutations, 0, '静止后不应继续写入 DOM 或调度宽度修正')
+  assert.equal(result.restored.initialized, false, '卸载必须移除初始化标记')
+  assert.equal(result.restored.grid, '320px minmax(0px, 1fr) 0px', '卸载必须恢复宿主原始列宽')
+  assert.equal(result.restored.width, '', '卸载必须清理插件列宽变量')
   for (const sample of result.samples) {
     assert.equal(sample.shell, sample.expected, `动画中菜单被压窄：${JSON.stringify(sample)}`)
     assert.equal(sample.foot, sample.expected, `动画中页脚被压窄：${JSON.stringify(sample)}`)
