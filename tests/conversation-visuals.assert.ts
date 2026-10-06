@@ -69,7 +69,8 @@ assert.match(sidebar, /footer-actions 必须保持竖排/, '逐条 data-slot 锚
 assert.doesNotMatch(sidebar, /lc-ov-entry/, '不得再靠 dsh-context 的按钮 class 藏入口')
 assert.doesNotMatch(sidebar, /\[data-slot\]:has\(/, '不得按 slot 祖先隐藏洞察入口，否则会把同槽的用量统计一起藏掉')
 assert.match(sidebar, /dcu-compact-nav[\s\S]*sidebar.newTask[\s\S]*sidebar.search[\s\S]*sidebar.experts[\s\S]*sidebar.skills[\s\S]*sidebar.plugins[\s\S]*sidebar.connectors[\s\S]*sidebar.schedule[\s\S]*sidebar.assistant/, '窄轨必须保留主导航图标')
-assert.match(sidebar, /dcu-compact .dcu-settings-seat>button\{display:grid;place-items:center;width:36px;min-height:36px;padding:0!important;font-size:0!important/, '窄轨设置入口只能保留图标')
+assert.match(sidebar, /dcu-compact .dcu-settings-seat>\[data-dcu-settings-trigger\]\{display:grid;place-items:center;width:36px;min-height:36px;padding:0!important;font-size:0!important/, '窄轨设置入口只能保留图标')
+assert.doesNotMatch(sidebar, /dcu-settings-seat>button\{[^}]*font-size:0/, '桌面账号头像按钮不能套用设置入口的文字隐藏规则')
 assert.match(sidebar, /<div className="dcu-compact-shell"><button type="button" className="dcu-icon" aria-label=\{t\('sidebar\.expand'\)\} onClick=\{toggleSidebar\}><IconPanelLeftOutlineMedium size=\{16\} \/>/, '折叠态展开按钮必须位于窄轨顶部')
 assert.match(sidebar, /const SidebarSearch = forwardRef/, '搜索状态必须隔离到独立子树，不能让工作区树随输入重渲染')
 assert.match(sidebar, /useDeferredValue\(query\)/, '搜索过滤必须让输入更新优先，避免大量会话时阻塞键入')
@@ -115,7 +116,7 @@ assert.match(sidebar, /dcu-workspaces-tabs/, '有页签时不得再保留动作�
 assert.match(sidebar, /\.dcu-root\{[^}]*font:14px\/20px var\(--dsw-font-family\)/, '侧栏必须跟随宿主 --dsw-font-family')
 assert.doesNotMatch(sidebar, /--dcu-font/, '侧栏不得再定义 --dcu-font')
 assert.doesNotMatch(sidebar, /Inter,ui-sans-serif/, '侧栏不得再写死 Inter 栈')
-assert.match(sidebar, /\.dcu-settings-seat>button[^}]*color:var\(--dcu-sidebar-navigation\);font:14px\/20px var\(--dsw-font-family\);font-weight:400/, '底部设置入口必须与主导航保持同一文字层级')
+assert.match(sidebar, /\.dcu-settings-seat>\[data-dcu-settings-trigger\][^}]*color:var\(--dcu-sidebar-navigation\);font:14px\/20px var\(--dsw-font-family\);font-weight:400/, '底部设置入口必须与主导航保持同一文字层级')
 
 assert.match(client, /observeConversationHeader/, '会话顶栏必须把对话/轨迹页签挪到子代理右侧')
 assert.match(navigator, /TURN_SUMMARY_LIMIT = 72/, '轮次摘要必须截断到 72 字符，防止长文本拖垮刻度')

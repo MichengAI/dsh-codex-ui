@@ -35,6 +35,35 @@ async function mount(extra: Partial<CodexSettingsPageProps> = {}, parent: HTMLEl
   return { container, trigger }
 }
 
+test('桌面账号入口占用底部时不渲染自己的设置按钮', async () => {
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+  const openSettings = vi.fn()
+  await act(async () => {
+    root.render(createElement(CodexSettingsPage, {
+      wide: true,
+      sections: source(rows),
+      onboarding: source([]),
+      connectionState: { getSnapshot: () => 'connected', subscribe: () => () => {} },
+      reconnect: () => {},
+      accountLauncher: { getSnapshot: () => true, subscribe: () => () => {} },
+      useSessions: (selector: (value: object) => unknown) => selector({ phase: 'ready', byId: {} }),
+      t: (key: keyof typeof zh) => zh[key],
+      renderSlot: (name: string, owner: { openSettings?: () => void }) => name === 'settings.launcher'
+        ? createElement('button', { type: 'button', 'data-account-launcher': true, onClick: () => { owner.openSettings?.(); openSettings() } }, '登录')
+        : null,
+    } as CodexSettingsPageProps))
+  })
+  cleanups.push(() => root.unmount())
+  expect(container.querySelector('[data-dcu-settings-trigger]')).toBeNull()
+  const launcher = container.querySelector<HTMLButtonElement>('[data-account-launcher]')
+  expect(launcher?.textContent).toBe('登录')
+  await act(async () => { launcher?.click() })
+  expect(openSettings).toHaveBeenCalled()
+  expect(settingsPage()).not.toBeNull()
+})
+
 test('设置 portal 使用主侧栏宽度，重新打开与折叠时保持展开宽度', async () => {
   const frame = document.createElement('div')
   frame.style.gridTemplateColumns = '316px minmax(0px, 1fr) 0px'

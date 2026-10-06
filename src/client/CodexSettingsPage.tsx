@@ -20,9 +20,11 @@ export type SettingsPageInjected = {
   onboarding: SettingsSource<{ id: string }>
   connectionState: { getSnapshot: () => ConnectionState | undefined; subscribe: (listener: () => void) => () => void }
   reconnect: () => void
+  /** Desktop 账号插件占用 settings.launcher 时，底部必须留给头像和登录，不能换成设置按钮。 */
+  accountLauncher?: { getSnapshot: () => boolean; subscribe: (listener: () => void) => () => void }
 }
 export type CodexSettingsPageProps = PropsRuntime<'sidebar.settings'>
-  & PropsRenderSlots<'settings.trigger' | 'settings.header' | 'settings.action' | 'settings.close' | 'settings.section' | 'settings.onboarding'>
+  & PropsRenderSlots<'settings.launcher' | 'settings.trigger' | 'settings.header' | 'settings.action' | 'settings.close' | 'settings.section' | 'settings.onboarding'>
   & PropsLocale<typeof NS> & SettingsPageInjected
 
 function sectionIcon(id: string) {
@@ -42,10 +44,11 @@ function sectionIcon(id: string) {
 }
 
 /** 独立设置视图复用原始 section/close 合约，退出时保留底层会话与输入状态。 */
-export function CodexSettingsPage({ wide, sections, onboarding, connectionState, reconnect, useSessions, renderSlot, t }: CodexSettingsPageProps) {
+export function CodexSettingsPage({ wide, sections, onboarding, connectionState, reconnect, accountLauncher, useSessions, renderSlot, t }: CodexSettingsPageProps) {
   const rows = useSyncExternalStore(sections.subscribe, sections.getSnapshot)
   const steps = useSyncExternalStore(onboarding.subscribe, onboarding.getSnapshot)
   const connection = useSyncExternalStore(connectionState.subscribe, connectionState.getSnapshot)
+  const hostAccountLauncher = useSyncExternalStore(accountLauncher?.subscribe ?? (() => () => {}), accountLauncher?.getSnapshot ?? (() => false))
   const onboardingActive = useSessions(state => isBlankOnboardingSession(state))
   const [completed, setCompleted] = useState<ReadonlySet<string>>(() => new Set())
   const [open, setOpen] = useState(false)
@@ -182,9 +185,11 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
   const connectionIndicator = connection === 'disconnected' ? 'disconnected' : connection === 'connecting' ? 'connecting' : recovered ? 'recovered' : undefined
   return <>
     <style>{settingsPageStyles}</style>
-    <button ref={trigger} type="button" className="dcu-settings-trigger" data-dcu-settings-trigger data-wide={wide} aria-expanded={open} aria-label={t('settings.title')} onClick={() => { openSection('general') }}>
-      {renderSlot('settings.trigger', { wide })}
-    </button>
+    {hostAccountLauncher
+      ? renderSlot('settings.launcher', { wide, settingsOpen: open, openSettings: () => { openSection('general') }, openOnboarding: id => { openSection(id) } })
+      : <button ref={trigger} type="button" className="dcu-settings-trigger" data-dcu-settings-trigger data-wide={wide} aria-expanded={open} aria-label={t('settings.title')} onClick={() => { openSection('general') }}>
+        {renderSlot('settings.trigger', { wide })}
+      </button>}
     <ConnectionIndicator state={wide ? connectionIndicator : undefined} disconnectedLabel={t('settings.disconnected')} connectingLabel={t('settings.connecting')} recoveredLabel={t('settings.recovered')} reconnectActionLabel={t('settings.reconnect')} restartActionLabel={t('settings.reconnect')} onReconnect={reconnect}/>
     {createPortal(<>
     {open && <div ref={page} className="dcu-settings-page" data-dcu-settings-page role="region" aria-label={t('settings.title')}>

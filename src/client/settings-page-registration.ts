@@ -16,6 +16,20 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 /** 用更低优先级覆盖设置壳。官方壳仍登记，停用或卸载时撤销本插件登记后恢复。 */
+function accountLauncherPresence(slots: Context['slots']): { getSnapshot: () => boolean; subscribe: (listener: () => void) => () => void } {
+  const read = (): boolean => {
+    try { return slots.entriesOfSlot('settings.launcher').length > 0 }
+    catch { return false }
+  }
+  return {
+    getSnapshot: read,
+    subscribe: listener => {
+      try { return slots.subscribe('settings.launcher', listener) }
+      catch { return () => {} }
+    },
+  }
+}
+
 export function registerSettingsPage(ctx: Context): void {
   const t = ctx.locale.bind(NS)
   const declared = (name: string): boolean => {
@@ -75,6 +89,7 @@ export function registerSettingsPage(ctx: Context): void {
     return bindSettingsDocument(settingsCtx, (settingsCtx as Context & { settingsScope: { describe: () => SettingsDescribeFace } }).settingsScope)
   })
   const shellChildren = {
+    'settings.launcher': { kind: 'single' as const, scope: 'root' as const },
     'settings.trigger': { kind: 'single' as const, scope: 'root' as const },
     'settings.header': { kind: 'single' as const, scope: 'root' as const },
     'settings.action': { kind: 'list' as const, scope: 'root' as const },
@@ -91,7 +106,7 @@ export function registerSettingsPage(ctx: Context): void {
     }
     return ctx.slots.register({
       name: 'sidebar.settings', priority: -1, locale: NS, children,
-      inject: () => ({ sections, onboarding, connectionState: connection.state, reconnect: () => { connection.reconnect() } }),
+      inject: () => ({ sections, onboarding, connectionState: connection.state, reconnect: () => { connection.reconnect() }, accountLauncher: accountLauncherPresence(ctx.slots) }),
     }, CodexSettingsPage)
   }))
   ctx.slots.inject('settings.section', () => registerAfterOfficialWave(ctx.slots, 'settings.section', () => declared('settings.general.item'), () => {

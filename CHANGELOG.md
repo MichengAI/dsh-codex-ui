@@ -8,6 +8,7 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 
 - Installing from GitHub now includes the compiled runtime, so no manual build is required.
 - The installed-plugin list shows “Codex UI” and a localized description instead of only the package name. The session-title component shows “Codex session titles”. Titles and descriptions come from `meta.title` and `meta.description` in `locale/zh.json`, `locale/en.json`, and `locale/session-title/`.
+- Desktop keeps the official avatar and sign-in control at the bottom of the sidebar. Web still uses the plugin settings button when that account launcher is absent.
 - Disabling or uninstalling restores the official sidebar and settings shell. The patch no longer disables `ui-sidebar` or `ui-settings-general`; this plugin shadows them at a lower slot priority and drops only its own registration. Official `session-title-llm` stays disabled while this plugin is composed, because the host accepts only one title provider. Remove any leftover `disabled: true` rows for those ids from the profile `cordis.patch.yml`, then reload.
 - Disabling or uninstalling restores the host sidebar column width. The official sidebar is no longer left at 240px, and the plugin removes its width variables and conversation-header style.
 
