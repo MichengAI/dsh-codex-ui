@@ -6,6 +6,11 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 
 ## Unreleased
 
+## 1.1.30 - 2026-10-07
+
+- On macOS, the settings Back button and search stay below the traffic lights in a normal window (#37). Fullscreen, Windows, and the browser are unchanged.
+- The Model Pro settings page uses the available column width instead of the 864px reading width. Other settings pages stay the same. Model Pro's own cards still have a width limit until that plugin is updated.
+
 ## 1.1.29 - 2026-10-06
 
 - Account-launcher settings navigation reports missing sections immediately, supports late launcher registration, and reads Settings shortcut hints when the shortcuts service becomes ready.
