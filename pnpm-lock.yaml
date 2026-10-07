@@ -150,11 +150,11 @@ importers:
         specifier: 1.0.9
         version: 1.0.9(8357f27dc16471084b6981d9241f88b6)
       '@michengai/dsh-archive-manager':
-        specifier: 1.0.12
-        version: 1.0.12(3c594d62e9e2c2a1fa8afc061e0c5b10)
+        specifier: 1.0.13
+        version: 1.0.13(3c594d62e9e2c2a1fa8afc061e0c5b10)
       '@michengai/dsh-automation':
-        specifier: 0.1.54
-        version: 0.1.54(7f6a778e223d519cce12c2ef0f8fdf0e)
+        specifier: 0.1.55
+        version: 0.1.55(7f6a778e223d519cce12c2ef0f8fdf0e)
       '@michengai/dsh-codex-ui':
         specifier: workspace:*
         version: link:../..
@@ -796,8 +796,8 @@ packages:
       '@deepseek-ai/dsh':
         optional: true
 
-  '@michengai/dsh-archive-manager@1.0.12':
-    resolution: {integrity: sha512-PQd2OzoTaUXOzCyQTOJoXKWzeLmLLNfXqbj3dcYnlpM2BwT1g9yeXaGwZss7WT+Hk7sEsUu+y+MHZQwI1AVI7w==}
+  '@michengai/dsh-archive-manager@1.0.13':
+    resolution: {integrity: sha512-QffTOr6Y6xJuKE9bWywMyO/4/9iIO3XuXDz7EZYlvnSOHBpXt1Eg0Ipn4thhjObT/+M3dKPDuuKF9E8mFIRvPw==}
     engines: {node: ^22.19.0 || >=24.0.0}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
@@ -826,8 +826,8 @@ packages:
       '@deepseek-ai/dsh-session-format-catalog':
         optional: true
 
-  '@michengai/dsh-automation@0.1.54':
-    resolution: {integrity: sha512-l9aL3NH6ToOfxVvWI9bw4C15U3ot2FKf5mSplFF1aaSYYNgg9bE7tQXZFTbTo2Zqj0q/ULKOJcxmXyPNltA7DA==}
+  '@michengai/dsh-automation@0.1.55':
+    resolution: {integrity: sha512-Ng5+ecslhcFg9VGhPsip2X5eXZPsf5efQqSqR4K+odb9Hidap8YumUXHUY/eCtrrrYaOUJngvAP7dBNm+4YorA==}
     engines: {node: ^22.19.0 || >=24.0.0}
     peerDependencies:
       '@deepseek-ai/cordis': '>=4.0.1 <5.0.0'
@@ -3332,7 +3332,7 @@ snapshots:
       react: 18.3.1
       zod: 4.4.3
 
-  '@michengai/dsh-archive-manager@1.0.12(3c594d62e9e2c2a1fa8afc061e0c5b10)':
+  '@michengai/dsh-archive-manager@1.0.13(3c594d62e9e2c2a1fa8afc061e0c5b10)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.4
       '@deepseek-ai/dsh-client-connection': 0.2.0-rc.2(@deepseek-ai/cordis@4.0.4)(@deepseek-ai/dsh-scope@0.2.0-rc.2(@deepseek-ai/cordis@4.0.4))
@@ -3347,7 +3347,7 @@ snapshots:
     optionalDependencies:
       '@deepseek-ai/dsh-client-store': 0.2.0-rc.2(@deepseek-ai/cordis@4.0.4)(@types/react@18.3.31)(react@18.3.1)
 
-  '@michengai/dsh-automation@0.1.54(7f6a778e223d519cce12c2ef0f8fdf0e)':
+  '@michengai/dsh-automation@0.1.55(7f6a778e223d519cce12c2ef0f8fdf0e)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.4
       '@deepseek-ai/dsh-client-connection': 0.2.0-rc.2(@deepseek-ai/cordis@4.0.4)(@deepseek-ai/dsh-scope@0.2.0-rc.2(@deepseek-ai/cordis@4.0.4))
