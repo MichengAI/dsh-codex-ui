@@ -6,6 +6,10 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 
 ## Unreleased
 
+## 1.1.31 - 2026-10-08
+
+- On macOS, the main sidebar stays below the traffic lights in a normal window, including the brand, search, collapse controls, and the compact rail (#38). Fullscreen, Windows, and the browser are unchanged.
+
 ## 1.1.30 - 2026-10-07
 
 - On macOS, the settings Back button and search stay below the traffic lights in a normal window (#37). Fullscreen, Windows, and the browser are unchanged.
