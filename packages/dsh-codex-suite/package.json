@@ -22,9 +22,9 @@
   "dependencies": {
     "@michengai/dsh-agency-agents": "1.0.11",
     "@michengai/dsh-archive-manager": "1.0.15",
-    "@michengai/dsh-automation": "0.1.58",
+    "@michengai/dsh-automation": "0.1.59",
     "@michengai/dsh-codex-ui": "workspace:*",
-    "@michengai/dsh-im-connect": "0.1.66",
+    "@michengai/dsh-im-connect": "0.1.67",
     "@michengai/dsh-skills-manager": "1.1.13"
   }
 }
