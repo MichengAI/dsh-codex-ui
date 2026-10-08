@@ -279,7 +279,7 @@ export function CodexSidebar({ workspaceShortcuts, navigationHistory, globalPane
   const [extensionsOpen, setExtensionsOpen] = useState(readExtensionsOpen)
   const [imTab, setImTab] = useState<'tasks' | 'channels' | 'schedule'>('tasks')
   const beginSession = useCallback((workspaceId?: WorkspaceId): void => {
-    beginSidebarSession(setImTab, startSession as (workspaceId?: string) => void, workspaceId)
+    beginSidebarSession(setImTab, startSession, workspaceId)
   }, [startSession])
   const companionTabs = useSyncExternalStore(
     companionSlots?.subscribe ?? subscribeEmptyCompanionTabs,
