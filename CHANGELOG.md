@@ -6,6 +6,10 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 
 ## Unreleased
 
+## 1.1.33 - 2026-10-08
+
+- Discord and Slack groups in the sidebar now show their brand marks instead of a gray placeholder.
+
 ## 1.1.32 - 2026-10-08
 
 - Creating a session from the sidebar returns to the Tasks tab first. This covers a new task, search, and adding a workspace, so Channels and Schedule no longer stay selected.
