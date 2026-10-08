@@ -6,6 +6,10 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 
 ## Unreleased
 
+## 1.1.32 - 2026-10-08
+
+- Creating a session from the sidebar returns to the Tasks tab first. This covers a new task, search, and adding a workspace, so Channels and Schedule no longer stay selected.
+
 ## 1.1.31 - 2026-10-08
 
 - On macOS, the main sidebar stays below the traffic lights in a normal window, including the brand, search, collapse controls, and the compact rail (#38). Fullscreen, Windows, and the browser are unchanged.
