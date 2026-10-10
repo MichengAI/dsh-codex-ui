@@ -35,18 +35,18 @@ test('面板注册、重命名、移除和语言更新实时同步并释放订�
   expect(listeners.size).toBe(0)
 })
 
-test.each([true, false])('面板入口可切换、返回会话和显示选中状态；展开=%s', async wide => {
+test.each([true, false])('全局面板不再额外插入返回会话的任务入口；展开=%s', async wide => {
   const mount = document.createElement('div'); document.body.append(mount)
   const root = createRoot(mount), select = vi.fn()
   try {
     await act(async () => root.render(createElement(GlobalPanelButtons, {
-      panels: [{ id: 'files', label: '文件', order: 1 }], activeId: 'files', wide,
-      conversationLabel: '会话', selectPanel: select, renderIcon: (_id, active) => active ? '●' : '○',
+      panels: [{ id: 'schedules', label: '自动化任务', order: 1 }], activeId: 'schedules', wide,
+      selectPanel: select, renderIcon: (_id, active) => active ? '●' : '○',
     })))
-    const panel = mount.querySelector<HTMLButtonElement>('[aria-label="文件"]')!
+    expect(mount.querySelector('[aria-label="任务"]')).toBeNull()
+    const panel = mount.querySelector<HTMLButtonElement>('[aria-label="自动化任务"]')!
     expect(panel.getAttribute('aria-current')).toBe('page')
     panel.click()
-    mount.querySelector<HTMLButtonElement>('[aria-label="会话"]')!.click()
-    expect(select.mock.calls).toEqual([['files'], [null]])
+    expect(select.mock.calls).toEqual([['schedules']])
   } finally { await act(async () => root.unmount()); mount.remove() }
 })

@@ -6,6 +6,11 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 
 ## Unreleased
 
+## 1.1.34 - 2026-10-10
+
+- Enabling official Automation tasks no longer adds an extra Tasks item above New task (#39).
+- Automation tasks, Scheduled tasks, and the IM assistant now sit inside Extensions. Extensions start collapsed, and each item keeps its icon.
+
 ## 1.1.33 - 2026-10-08
 
 - Discord and Slack groups in the sidebar now show their brand marks instead of a gray placeholder.

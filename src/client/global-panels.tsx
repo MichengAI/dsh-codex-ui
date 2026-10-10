@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { MessageSquare } from 'lucide-react'
 import { OFFICIAL_PLUGINS_PANEL_ID } from './settings-navigation.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -41,17 +40,15 @@ export function createGlobalPanelSource(slots: PanelSlots, locale: Pick<GlobalPa
   }
 }
 
-/** 展开和紧凑侧栏共享同一导航行为，null 回到已有会话而非新建会话。 */
-export function GlobalPanelButtons({ panels, activeId, wide, conversationLabel, selectPanel, renderIcon }: {
-  panels: readonly GlobalPanel[]; activeId: string | null; wide: boolean; conversationLabel: string
+/** 展开和紧凑侧栏只列出宿主注册的全局面板，不额外插入返回会话的任务入口。 */
+export function GlobalPanelButtons({ panels, activeId, wide, selectPanel, renderIcon }: {
+  panels: readonly GlobalPanel[]; activeId: string | null; wide: boolean
   selectPanel: (id: string | null) => void; renderIcon: (id: string, active: boolean) => ReactNode
 }) {
   if (panels.length === 0) return null
-  const button = (id: string | null, label: string, icon: ReactNode) => <button key={id ?? 'conversation'} type="button"
-    className={wide ? 'dcu-global-panel' : 'dcu-icon dcu-global-panel'} aria-label={label} title={wide ? undefined : label}
-    aria-current={activeId === id ? 'page' : undefined} onClick={() => selectPanel(id)}>
-    <span className="dcu-menu-icon" aria-hidden="true">{icon}</span>{wide && label}
-  </button>
-  return <>{button(null, conversationLabel, <MessageSquare size={16} strokeWidth={1.6} />)}{panels.map(panel =>
-    button(panel.id, panel.label, renderIcon(panel.id, activeId === panel.id)))}</>
+  return <>{panels.map(panel => <button key={panel.id} type="button"
+    className={wide ? 'dcu-global-panel' : 'dcu-icon dcu-global-panel'} aria-label={panel.label} title={wide ? undefined : panel.label}
+    aria-current={activeId === panel.id ? 'page' : undefined} onClick={() => selectPanel(panel.id)}>
+    <span className="dcu-menu-icon" aria-hidden="true">{renderIcon(panel.id, activeId === panel.id)}</span>{wide && panel.label}
+  </button>)}</>
 }
