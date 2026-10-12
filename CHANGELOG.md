@@ -6,6 +6,10 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 
 ## Unreleased
 
+## 1.1.35 - 2026-10-12
+
+- Support DSH `0.2.1-alpha.2` while retaining all existing supported versions.
+
 ## 1.1.34 - 2026-10-10
 
 - Enabling official Automation tasks no longer adds an extra Tasks item above New task (#39).

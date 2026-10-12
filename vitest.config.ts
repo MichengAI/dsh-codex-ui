@@ -22,6 +22,7 @@ export default defineConfig({
   plugins: [stripMissingSourcemap],
   test: {
     environment: 'jsdom',
+    setupFiles: ['./tests/vitest-setup.ts'],
     include: ['tests/**/*.spec.ts'],
     server: {
       deps: {
