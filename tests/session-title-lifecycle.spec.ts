@@ -97,6 +97,23 @@ test('takes optional-session-title-all-prompts and restores it safely', async ()
   expect(f.loader.update).not.toHaveBeenCalled()
 })
 
+test('正常拦截晚到的官方标题注册时不输出警告', async () => {
+  const f = fixture(false)
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const lifecycle = startSessionTitleLifecycle(f.ctx)
+  try {
+    await lifecycle.ready
+    const release = f.service.register({ id: 'session-title-all-prompts-llm' })
+    expect(typeof release).toBe('function')
+    expect(f.slot()).toBe(SESSION_TITLE_PROVIDER_ID)
+    expect(warn).not.toHaveBeenCalled()
+  } finally {
+    await lifecycle.dispose()
+    warn.mockRestore()
+  }
+  expect(f.slot()).toBe('official')
+})
+
 test('a failed entry update rolls its memory state back', async () => {
   const f = fixture(false)
   const update = f.entry.update.getMockImplementation()!

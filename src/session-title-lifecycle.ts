@@ -35,7 +35,6 @@ function silenceOfficialProvider(host: SessionTitleHost, shouldSilence: () => bo
       if (candidate && candidate.id !== SESSION_TITLE_PROVIDER_ID) {
         const active = [...state!.activeGuards].some(g => g.shouldSilence())
         if (active) {
-          console.warn(`[michengai-codex-ui] Silenced official title register while Codex UI is active: ${candidate.id}`)
           return () => {}
         }
       }
