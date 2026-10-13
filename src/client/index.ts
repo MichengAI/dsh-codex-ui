@@ -375,7 +375,7 @@ export function apply(ctx: ClientContext): void {
   }, 'michengai-codex-ui: session deep link')
 
   ctx.slots.inject('settings.section', () => ctx.slots.register({
-    name: 'settings.section', id: 'connectors', order: 17, label: () => t('sidebar.connectors'),
+    name: 'settings.section', id: 'connectors', order: 30, label: () => t('sidebar.connectors'),
     ...({ icon: 'connector' } as Record<string, unknown>),
     inject: () => ({ sessionStore: ctx.sessions.list, startPromptSession: startConnectorPromptSession, t }),
   }, ConnectorsSection))
