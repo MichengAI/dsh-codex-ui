@@ -5,6 +5,7 @@ export const NS = 'michengai.codexUi'
 
 export const zh = {
   'workspace.addFailed': '无法添加工作区',
+  'workspace.add': '添加工作区',
   'workspace.retry': '重试',
   'workspace.chooseAgain': '重新选择',
   'navigation.back': '后退',
@@ -299,6 +300,7 @@ export const zh = {
 
 export const en: Record<keyof typeof zh, string> = {
   'workspace.addFailed': 'Could not add workspace',
+  'workspace.add': 'Add workspace',
   'workspace.retry': 'Retry',
   'workspace.chooseAgain': 'Choose again',
   'navigation.back': 'Back',

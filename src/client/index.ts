@@ -34,7 +34,8 @@ import { CodexWorkspaceBrowser } from './CodexWorkspaceBrowser.tsx'
 import { ConnectorsSection } from './ConnectorsSection.tsx'
 import { en, NS, zh } from './locales.ts'
 import { createCompanionTabSource } from './companion-slots.ts'
-import { createFooterActionSource } from './footer-actions.ts'
+import { createFooterActionSource, type FooterAction, type FooterActionSource } from './footer-actions.ts'
+import { mirrorSlot, withSlotAliases } from './slot-mirror.tsx'
 import { openPathInHost, type HostOpenPathConnection } from './host-open-path.ts'
 import { observeSettingsNavIcons } from './settings-nav-icons.ts'
 import { registerPluginConfigSection } from './plugin-config.ts'
@@ -53,6 +54,11 @@ import { hasArchiveSessionDelete } from './archive-session-delete.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
+    'sidebar.codex.panellist': SlotMap['sidebar.panellist']
+    'sidebar.codex.workspaces': SlotMap['sidebar.workspaces']
+    'sidebar.codex.schedule': SlotMap['sidebar.schedule']
+    'sidebar.codex.settings': SlotMap['sidebar.settings']
+    'sidebar.codex.footer.action': SlotMap['sidebar.footer.action']
     'sidebar.schedule': {
       kind: 'single'
       scope: 'root'
@@ -174,6 +180,21 @@ export function apply(ctx: ClientContext): void {
     'sidebar.settings': { kind: 'single' as const, scope: 'root' as const },
     'sidebar.footer.action': { kind: 'list' as const, scope: 'root' as const },
   }
+  const sidebarSlotAliases = {
+    'sidebar.panellist': 'sidebar.codex.panellist',
+    'sidebar.workspaces': 'sidebar.codex.workspaces',
+    'sidebar.schedule': 'sidebar.codex.schedule',
+    'sidebar.settings': 'sidebar.codex.settings',
+    'sidebar.footer.action': 'sidebar.codex.footer.action',
+  }
+  const sidebarAliasChildren = {
+    'sidebar.codex.panellist': { kind: 'list' as const, scope: 'root' as const },
+    'sidebar.codex.workspaces': { kind: 'single' as const, scope: 'root' as const },
+    'sidebar.codex.schedule': { kind: 'single' as const, scope: 'root' as const },
+    'sidebar.codex.settings': { kind: 'single' as const, scope: 'root' as const },
+    'sidebar.codex.footer.action': { kind: 'list' as const, scope: 'root' as const },
+  }
+  const aliasedSidebar = withSlotAliases(CodexSidebar, sidebarSlotAliases)
   const officialSidebarReady = (): boolean => ctx.slots.entries('sidebar').some(entry => entry.component !== CodexSidebar)
   ctx.slots.inject('sidebar', () => registerAfterOfficialWave(ctx.slots, 'sidebar', officialSidebarReady, () => {
     const declared = (name: string): boolean => {
@@ -181,15 +202,16 @@ export function apply(ctx: ClientContext): void {
       return typeof spec === 'function' && spec.call(ctx.slots, name) !== undefined
     }
     // 0.2 官方侧栏已经声明 panellist。重复声明会让本插件激活失败。
-    const children: Record<string, { kind: 'single' | 'list'; scope: 'root' }> = {}
-    for (const [name, spec] of Object.entries({ ...sharedSidebarChildren, ...ownSidebarChildren })) {
-      if (!declared(name)) children[name] = spec
+    const allSidebarChildren = { ...sharedSidebarChildren, ...ownSidebarChildren, ...sidebarAliasChildren }
+    const children: Partial<typeof allSidebarChildren> = {}
+    for (const [name, spec] of Object.entries(allSidebarChildren)) {
+      if (!declared(name)) Object.assign(children, { [name]: spec })
     }
-    const register = (next: typeof children): () => void => {
+    const register = (next: Partial<typeof allSidebarChildren>): () => void => {
       try {
-        return ctx.slots.register({
+        const unregister = ctx.slots.register({
           name: 'sidebar', priority: -1, registrant: 'michengai-codex-ui', locale: NS,
-          children: next as typeof ownSidebarChildren & typeof sharedSidebarChildren,
+          children: next,
           inject: () => ({
             newConversationDraft,
             navigationHistory,
@@ -214,18 +236,30 @@ export function apply(ctx: ClientContext): void {
             footerActions,
             selectPanel: (id: string | null) => { selectGlobalPanel(ctx.layout, id) },
           }),
-        }, CodexSidebar)
+        }, aliasedSidebar as typeof CodexSidebar)
+        const mirrors: (() => void)[] = []
+        try {
+          for (const [source, target] of Object.entries(sidebarSlotAliases)) {
+            if (declared(source)) mirrors.push(mirrorSlot({ slots: ctx.slots }, source, target))
+          }
+        } catch (error) {
+          for (const dispose of mirrors.reverse()) dispose()
+          unregister()
+          throw error
+        }
+        return () => { for (const dispose of mirrors.reverse()) dispose(); unregister() }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         const conflict = /slot "([^"]+)" is already declared/.exec(message)
-        if (conflict === null || next[conflict[1]] === undefined) throw error
+        const conflictKey = conflict === null ? undefined : Object.keys(next).find(key => key === conflict[1]) as keyof typeof allSidebarChildren | undefined
+        if (conflictKey === undefined || next[conflictKey] === undefined) throw error
         const rest = { ...next }
-        delete rest[conflict[1]]
+        delete rest[conflictKey]
         return register(rest)
       }
     }
     return register(children)
-  }))
+  }, true))
 
   ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({
     name: 'conversation.session.header.utilities', id: 'turn-navigator', order: 100, locale: NS,
@@ -322,6 +356,7 @@ export function apply(ctx: ClientContext): void {
       insertWorkspaceBefore: (workspaceId: WorkspaceId, beforeWorkspaceId?: WorkspaceId) => ctx.workspaces.insertBefore(workspaceId, beforeWorkspaceId),
       insertSessionBefore: (workspaceId: WorkspaceId, sessionId: SessionId, beforeSessionId?: SessionId) => ctx.workspaces.insertSessionBefore(workspaceId, sessionId, beforeSessionId),
       startSession: (workspaceId?: WorkspaceId) => { startWorkspaceSession(ctx, workspaceId) },
+      requestAddWorkspace: () => { workspaceShortcuts.getSnapshot().bindings?.requestAddWorkspace?.() },
     }),
   }, CodexWorkspaceBrowser))
 

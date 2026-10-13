@@ -475,6 +475,23 @@ test('custom group menu renames without changing identity, membership, order or 
     const projects = view.container.querySelector('[aria-label="workspace.projects"]')!
     expect(projects.querySelector('.dcu-wb-section-head [aria-label="workspace.manageGroups"]')).toBeNull()
     expect(projects.querySelector('.dcu-wb-section-head [aria-label="workspace.createGroup"]')).not.toBeNull()
+    expect(projects.querySelector('.dcu-wb-section-head [aria-label="workspace.add"]')).not.toBeNull()
+    const addWorkspaceFn = vi.fn()
+    const viewWithAdd = await render(createElement(CodexWorkspaceBrowser, {
+      ...sessionActions, wide: true, useSessions: createSessionStore(createSession('unused', 'unused', undefined)),
+      useSessionPendingInteraction: useEmptyPendingInteractions,
+      useWorkspaces: (selector: (snapshot: typeof workspaces) => unknown) => selector(workspaces), t,
+      deleteWorkspace: vi.fn(), insertSessionBefore: vi.fn(), insertWorkspaceBefore: vi.fn(), openPath: vi.fn(), renameWorkspace: vi.fn(), startSession: vi.fn(),
+      requestAddWorkspace: addWorkspaceFn,
+    } as never))
+    try {
+      const addBtn = viewWithAdd.container.querySelector<HTMLButtonElement>('.dcu-wb-section[aria-label="workspace.projects"] .dcu-wb-section-head [aria-label="workspace.add"]')!
+      expect(addBtn).not.toBeNull()
+      await act(async () => { addBtn.click() })
+      expect(addWorkspaceFn).toHaveBeenCalledTimes(1)
+    } finally {
+      await viewWithAdd.dispose()
+    }
     expect(projects.querySelector('.dcu-wb-ungrouped [aria-haspopup]')).toBeNull()
     const first = projects.querySelector('.dcu-wb-collection')!
     const label = first.querySelector<HTMLButtonElement>('.dcu-wb-collection-label')!

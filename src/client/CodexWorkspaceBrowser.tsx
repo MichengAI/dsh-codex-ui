@@ -40,7 +40,7 @@ import { businessRequestErrorKey } from './business-request-error.ts'
 import { moveSessionActionId, parseMoveSessionActionId, sessionMoveTargets } from './session-move.ts'
 import { sessionTitleLine } from './session-title-scroll.ts'
 import { archiveWorkspaceSessions } from './workspace-archive.ts'
-import { SquarePen } from 'lucide-react'
+import { Plus, SquarePen } from 'lucide-react'
 import { mountWorkspaceDropIndicator } from './workspace-drop-indicator.ts'
 
 type BrowserInjected = {
@@ -60,6 +60,7 @@ type BrowserInjected = {
   useSessionStatus?: UseSessionStatus
   canDeleteSession?: () => boolean
   panelActive?: boolean
+  requestAddWorkspace?: () => void
 }
 
 type CodexWorkspaceBrowserProps = PropsRuntime<'sidebar.workspaces'> & PropsLocale<typeof NS> & BrowserInjected
@@ -80,6 +81,10 @@ function NewSessionIcon() {
 
 function CreateGroupIcon() {
   return <IconProjectAddOutlineMedium size={16} />
+}
+
+function AddWorkspaceIcon() {
+  return <Plus aria-hidden="true" size={16} strokeWidth={1.5} />
 }
 
 /** 使用独立节点生成稳定的拖拽预览，避免浏览器把目标高亮和操作按钮截入默认快照。 */
@@ -280,7 +285,7 @@ export function CodexWorkspaceBrowser(props: CodexWorkspaceBrowserProps) {
   return <HoverShell><CodexWorkspaceTree {...props} /></HoverShell>
 }
 
-function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, useSessionStatus, useWorkspaces, t, archiveSession, deleteSession, deleteWorkspace, forkSession, insertSessionBefore, insertWorkspaceBefore, moveSession, openPath, openSession, renameSession, renameWorkspace, startSession, canDeleteSession, panelActive = false }: CodexWorkspaceBrowserProps) {
+function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, useSessionStatus, useWorkspaces, t, archiveSession, deleteSession, deleteWorkspace, forkSession, insertSessionBefore, insertWorkspaceBefore, moveSession, openPath, openSession, renameSession, renameWorkspace, startSession, canDeleteSession, panelActive = false, requestAddWorkspace }: CodexWorkspaceBrowserProps) {
   const sessions = useSessions(state => state)
   const now = useSharedNow()
   const pendingInteractions = useHostPendingInteractions(useSessionPendingInteraction, useSessionStatus)
@@ -630,6 +635,9 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
       setRenameGroupError(userErrorText(reason, t))
     }
   }
+  const triggerAddWorkspace = (): void => {
+    requestAddWorkspace?.()
+  }
   const sectionOpen = (id: 'pinned' | 'projects' | 'recent'): boolean => expanded[`section:${id}`] ?? true
   const toggleSection = (id: 'pinned' | 'projects' | 'recent'): void => {
     setExpanded(current => ({ ...current, [`section:${id}`]: !(current[`section:${id}`] ?? true) }))
@@ -925,7 +933,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
         <div className="dcu-wb-section-body" data-open={sectionOpen('pinned')}><div className="dcu-wb-pinned-list">{pinDragActive && pinnedGroups.length === 0 && <div className={`dcu-wb-pin-start${pinnedHeaderDrop?.kind === 'empty' ? ' dcu-wb-drop' : ''}`} onDragOver={(event) => { event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = 'move'; setWorkspaceDropTarget({ zone: 'pinned', beforeId: undefined }) }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const draggedWorkspace = readWorkspaceDrag(event.dataTransfer, workspaceDragId); setWorkspaceDragId(undefined); setWorkspaceDropTarget(undefined); if (draggedWorkspace !== undefined) pinWorkspaceAt(draggedWorkspace) }} />}{pinnedGroups.length === 0 && <div className="dcu-wb-empty" onDragOver={(event) => { if (!pinDragActive) return; event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = 'move'; setWorkspaceDropTarget({ zone: 'pinned', beforeId: undefined }) }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const draggedWorkspace = readWorkspaceDrag(event.dataTransfer, workspaceDragId); setWorkspaceDragId(undefined); setWorkspaceDropTarget(undefined); if (draggedWorkspace !== undefined) pinWorkspaceAt(draggedWorkspace) }}>{t('workspace.pinnedEmpty')}</div>}{pinnedGroups.map(workspace => renderGroup(workspace, 'pinned'))}{pinDragActive && pinnedGroups.length > 0 && <div className={`dcu-wb-pin-end${workspaceDropTarget?.zone === 'pinned' && workspaceDropTarget.beforeId === undefined ? ' dcu-wb-drop' : ''}`} onDragOver={(event) => { if (!pinDragActive) return; event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = 'move'; const lastId = pinnedGroupIds[pinnedGroupIds.length - 1]; if (lastId === undefined || workspaceDragId === undefined) return; const beforeId = reorderDropBeforeId(pinnedGroupIds, workspaceDragId, lastId, true); setWorkspaceDropTarget(beforeId === null ? undefined : { zone: 'pinned', beforeId }) }} />}</div></div>
       </section>
       <section className="dcu-wb-section" aria-label={t('workspace.projects')} onDropCapture={(event) => { const dragged = readWorkspaceDrag(event.dataTransfer, workspaceDragId); if (dragged !== undefined && projectPinned(dragged)) setPinnedWorkspaceIds(ids => ids.filter(id => id !== dragged)) }}>
-        <div className="dcu-wb-section-head"><button type="button" className="dcu-wb-section-label" ref={projectsSectionButtonRef} aria-expanded={sectionOpen('projects')} onClick={() => { toggleSection('projects') }}>{t('workspace.projects')}<span className="dcu-wb-section-caret" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="M6.25 4.25 10.25 8 6.25 11.75" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span></button><span className="dcu-wb-actions"><button type="button" className="dcu-wb-more" aria-label={t('workspace.createGroup')} title={t('workspace.createGroup')} onClick={(event) => { event.stopPropagation(); setGroupTitleDraft(''); setError(undefined); setCreateGroupOpen(true) }}><CreateGroupIcon /></button></span></div>
+        <div className="dcu-wb-section-head"><button type="button" className="dcu-wb-section-label" ref={projectsSectionButtonRef} aria-expanded={sectionOpen('projects')} onClick={() => { toggleSection('projects') }}>{t('workspace.projects')}<span className="dcu-wb-section-caret" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="M6.25 4.25 10.25 8 6.25 11.75" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span></button><span className="dcu-wb-actions"><button type="button" className="dcu-wb-more" aria-label={t('workspace.createGroup')} title={t('workspace.createGroup')} onClick={(event) => { event.stopPropagation(); setGroupTitleDraft(''); setError(undefined); setCreateGroupOpen(true) }}><CreateGroupIcon /></button><button type="button" className="dcu-wb-more" aria-label={t('workspace.add')} title={t('workspace.add')} onClick={(event) => { event.stopPropagation(); triggerAddWorkspace() }}><AddWorkspaceIcon /></button></span></div>
         <div className="dcu-wb-section-body" data-open={sectionOpen('projects')}><div className="dcu-wb-collections">{workspaceGroups.map(renderWorkspaceCollection)}{workspaceGroups.length > 0 && renderUngroupedCollection()}{workspaceGroups.length === 0 && ungroupedGroups.map(workspace => renderGroup(workspace, 'projects'))}{workspaceGroups.length === 0 && ungroupedGroups.length === 0 && <div className="dcu-wb-empty">{t('workspace.empty')}</div>}</div></div>
       </section>
       <section className="dcu-wb-section" aria-label={t('workspace.recent')}>
