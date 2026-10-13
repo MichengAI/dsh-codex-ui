@@ -145,7 +145,6 @@ function ScheduleBrowserTree({ openSession, archiveSession, deleteSession, forkS
               }}
               portal
               dense
-              compact
               anchor={<button type="button" className="dcu-wb-more" aria-label={t('schedule.groupActions', { name: group.label })} onClick={(event) => { event.stopPropagation(); setMenu(undefined); setGroupMenu(current => current === group.id ? undefined : group.id) }}><IconEllipsisOutlineMedium size={16} /></button>}
             />}
           />
