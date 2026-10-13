@@ -7,6 +7,7 @@ import type { SettingsDescribeFace } from '@deepseek-ai/dsh-client-ui-settings/c
 import { createElement } from 'react'
 import { Settings } from 'lucide-react'
 import { SettingsDocumentAction } from './SettingsDocumentAction.tsx'
+import { DeveloperToolsRow, type DeveloperToolsHandle } from './DeveloperToolsRow.tsx'
 import { registerAfterOfficialWave } from './official-slot-shadow.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -109,6 +110,16 @@ export function registerSettingsPage(ctx: Context): void {
   })
   ctx.inject(['settingsScope', 'remote.settings'], settingsCtx => {
     return bindSettingsDocument(settingsCtx, (settingsCtx as Context & { settingsScope: { describe: () => SettingsDescribeFace } }).settingsScope)
+  })
+  // 官方 ui-settings-general 被停用后，补齐代码工作视图开关（developer-tools）。
+  ctx.inject(['configForms'], configFormsCtx => {
+    const configForms = (configFormsCtx as Context & { configForms: { developerTools?: DeveloperToolsHandle } }).configForms
+    if (!configForms?.developerTools) return
+    const developerTools = configForms.developerTools
+    return configFormsCtx.slots.inject('settings.general.item', () => configFormsCtx.slots.register({
+      name: 'settings.general.item', id: 'developer-tools', order: 15, locale: NS,
+      inject: () => ({ developerTools }),
+    }, DeveloperToolsRow))
   })
   const shellChildren = {
     'settings.launcher': { kind: 'single' as const, scope: 'root' as const },

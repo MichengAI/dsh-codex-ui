@@ -6,6 +6,11 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 
 ## Unreleased
 
+## 1.1.36 - 2026-10-13
+
+- Restored the "Show Code Workspace" (`developerTools`) setting toggle in General Settings and aligned its Switch control with native specifications (#41).
+- Maintained a compact single-line layout for the conversation header when "Show Code Workspace" is disabled (single view without inline tabs).
+
 ## 1.1.35 - 2026-10-12
 
 - Support DSH `0.2.1-alpha.2` while retaining all existing supported versions.

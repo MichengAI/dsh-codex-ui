@@ -214,3 +214,45 @@ test('配套插件先注入时等待设置树声明，不会误判为旧壳', as
   dispose()
   removeRoot()
 })
+
+test('configForms 注入时自动为常规设置补充 developer-tools（代码工作视图开关）', async () => {
+  const { SlotRegistry } = loadClientBundle('@deepseek-ai/dsh-client-ui-renderer/client') as { SlotRegistry: new (ctx: Context) => Context['slots'] }
+  const ctx = new Context()
+  new SlotRegistry(ctx)
+  const removeLocale = ctx.provide('locale', { bind: () => (key: string) => key, getSnapshot: () => ({ revision: 0 }), subscribe: () => () => {} } as never)
+  const removeConnection = ctx.provide('connection', { state: { getSnapshot: () => 'connected', subscribe: () => () => {} }, reconnect: () => {} } as never)
+  const removeRoot = ctx.slots.register({ name: 'root', children: { 'sidebar.settings': { kind: 'single', scope: 'root' }, 'settings.general.item': { kind: 'list', scope: 'root' } } }, (() => null) as never)
+  registerSettingsPage(ctx)
+
+  const devToolsStore = { value: false, listeners: new Set<() => void>() }
+  const developerTools = {
+    enabled: {
+      getSnapshot: () => devToolsStore.value,
+      subscribe: (listener: () => void) => { devToolsStore.listeners.add(listener); return () => devToolsStore.listeners.delete(listener) },
+    },
+    setEnabled: vi.fn(async (enabled: boolean) => {
+      devToolsStore.value = enabled
+      devToolsStore.listeners.forEach(l => l())
+    }),
+  }
+
+  const removeForms = ctx.provide('configForms', { developerTools } as never)
+  try {
+    await vi.waitFor(() => {
+      const entry = ctx.slots.entriesOfSlot('settings.general.item').find(e => e.options.id === 'developer-tools')
+      expect(entry).toBeDefined()
+    })
+    const entry = ctx.slots.entriesOfSlot('settings.general.item').find(e => e.options.id === 'developer-tools')!
+    expect(entry.options.order).toBe(15)
+    const injected = (entry.inject as unknown as () => { developerTools: typeof developerTools })()
+    expect(injected.developerTools.enabled.getSnapshot()).toBe(false)
+    await injected.developerTools.setEnabled(true)
+    expect(developerTools.setEnabled).toHaveBeenCalledWith(true)
+    expect(injected.developerTools.enabled.getSnapshot()).toBe(true)
+  } finally {
+    await removeForms()
+    removeRoot()
+    await removeConnection()
+    await removeLocale()
+  }
+})
