@@ -8,7 +8,7 @@ type SlotLike = {
  * 立刻声明官方也要声明的子插槽，官方注册会抛出且不会重试，停用后官方就回不来。
  * 测试夹具没有 spec，保持同步登记。
  */
-export function registerAfterOfficialWave(slots: object, slot: string, officialReady: () => boolean, register: () => () => void): () => void {
+export function registerAfterOfficialWave(slots: object, slot: string, officialReady: () => boolean, register: () => () => void, waitForOfficial = false): () => void {
   const face = slots as SlotLike
   if (typeof face.spec !== 'function') return register()
   let remove = () => {}
@@ -22,6 +22,7 @@ export function registerAfterOfficialWave(slots: object, slot: string, officialR
   }
   if (officialReady()) return register()
   off = face.subscribe?.(slot, () => { if (officialReady()) finish() }) ?? (() => {})
-  queueMicrotask(finish)
+  // 共享声明由官方拥有，不能因异步晚到而抢先注册。
+  if (!waitForOfficial) queueMicrotask(finish)
   return () => { done = true; off(); remove() }
 }

@@ -28,6 +28,22 @@ function host(options?: {
   }
 }
 
+function provideOfficialLoader(ctx: Context): void {
+  const entry: { options: { id: string; name: string; disabled?: boolean | null }; disabled: boolean; fiber?: { dispose: () => Promise<void> }; update: (patch: { disabled: boolean | null }) => Promise<void> } = {
+    options: { id: 'session-title-llm', name: '@deepseek-ai/dsh-session-title-first-prompt-llm' },
+    disabled: false,
+    fiber: { dispose: async () => {} },
+    update: async (patch) => {
+      if (patch.disabled === null) delete entry.options.disabled
+      else entry.options.disabled = patch.disabled
+      entry.disabled = !!entry.options.disabled
+      if (entry.disabled) entry.fiber = undefined
+      else entry.fiber = { dispose: async () => {} }
+    },
+  }
+  ctx.provide('loader', { entries: () => [entry] } as never)
+}
+
 function request(session: { id: string; origin?: string; header?: { createdAt?: number; parentSession?: string; origin?: string } }, text = '优化批次文字显示') {
   return {
     session,
@@ -87,11 +103,12 @@ test('独立插件在 sessionTitle 与 llm 就绪后注册 first-prompt', async 
     }
   }
   const ctx = new Context()
-  ctx.plugin(SessionTitle)
-  ctx.plugin(Llm)
+  provideOfficialLoader(ctx)
+  await ctx.plugin(SessionTitle)
+  await ctx.plugin(Llm)
   await ctx.plugin({ name, inject, apply })
   expect(name).toBe('michengai-codex-ui-session-title')
-  expect(inject).toEqual(['sessionTitle', 'llm'])
+  expect(inject).toEqual(['sessionTitle', 'llm', 'loader'])
   expect(providers).toHaveLength(1)
   expect(providers[0]?.automatic).toBe('first-prompt')
   const result = await providers[0]!.generate(request({ id: 'session-1' }, '评估一下项目'))
@@ -116,6 +133,7 @@ test('独立插件先挂上时等到 sessionTitle 与 llm 都就绪才注册', a
     async *stream() {}
   }
   const ctx = new Context()
+  provideOfficialLoader(ctx)
   const fiber = ctx.plugin({ name, inject, apply })
   expect(providers).toHaveLength(0)
   await ctx.plugin(SessionTitle)
@@ -133,9 +151,10 @@ test('卸载插件时回收 first-prompt 提供方，重挂可再注册', async 
       super(ctx, 'sessionTitle')
     }
     register(provider: Provider) {
-      if (providers.has(provider.id)) throw new Error(`session-title provider "${provider.id}" is already registered`)
+      // Published title service has one slot even when provider ids differ.
+      if (providers.size) throw new Error('session-title provider is already registered')
       providers.set(provider.id, provider)
-      return () => { providers.delete(provider.id) }
+      return async () => { await Promise.resolve(); providers.delete(provider.id) }
     }
   }
   class Llm extends Service {
@@ -145,6 +164,7 @@ test('卸载插件时回收 first-prompt 提供方，重挂可再注册', async 
     async *stream() {}
   }
   const ctx = new Context()
+  provideOfficialLoader(ctx)
   await ctx.plugin(SessionTitle)
   await ctx.plugin(Llm)
   const plugin = { name, inject, apply }

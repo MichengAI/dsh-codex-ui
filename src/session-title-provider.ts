@@ -7,6 +7,7 @@ const TIMEOUT_MS = 60_000
 
 export type SessionTitleHost = {
   get: (name: string) => unknown
+  loader?: unknown
   logger?: { warn: (message: string, ...args: unknown[]) => void }
 }
 
@@ -21,6 +22,11 @@ type TitleRequest = {
 
 type TitleLlm = {
   stream: (options: Record<string, unknown>) => AsyncIterable<unknown>
+  prepareCall?: (
+    route: { provider: string; model: string; maxTokens?: number },
+    signal?: AbortSignal,
+    selector?: (controls: Record<string, unknown>, model: { reasoning?: { efforts?: { id: string }[] } }) => Record<string, unknown>
+  ) => Promise<{ config: Record<string, unknown>; stream: (options: Record<string, unknown>) => AsyncIterable<unknown> }>
 }
 
 type TitleService = {
@@ -28,7 +34,7 @@ type TitleService = {
     id: string
     automatic: 'first-prompt'
     generate: (request: TitleRequest) => Promise<{ title: string; messageSeqs: number[]; model?: TitleRoute }>
-  }) => unknown
+  }) => SessionTitleDisposer
 }
 
 function isServiceValue(value: unknown): value is object {
@@ -124,21 +130,43 @@ export async function generateCodexSessionTitle(llm: TitleLlm, request: TitleReq
   const framed = `${prompt.userFrame}\n${JSON.stringify([{ seq: first.seq, text }])}`
   if (Buffer.byteLength(framed, 'utf8') > MAX_INPUT_BYTES) throw new Error('codex-ui session title input too large')
   const signal = abortableSignal(request.signal)
-  const raw = await collectText(llm.stream({
-    provider: route.provider,
-    model: route.model,
-    messages: [{
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: [{ type: 'text', text: framed }],
-      source: { kind: 'plugin', plugin: 'michengai-codex-ui' },
-    }],
-    system: prompt.system,
-    maxTokens: MAX_OUTPUT_TOKENS,
-    sessionId: session.id,
-    purpose: 'session-title',
-    signal,
-  }))
+  const messages = [{
+    id: crypto.randomUUID(),
+    role: 'user',
+    content: [{ type: 'text', text: framed }],
+    source: { kind: 'plugin', plugin: 'michengai-codex-ui' },
+  }]
+  let chunks: AsyncIterable<unknown>
+  if (typeof llm.prepareCall === 'function') {
+    const call = await llm.prepareCall({
+      provider: route.provider,
+      model: route.model,
+      maxTokens: MAX_OUTPUT_TOKENS,
+    }, signal, (controls, model) => ({
+      ...controls,
+      ...(model.reasoning?.efforts?.[0]?.id !== undefined ? { reasoningEffort: model.reasoning.efforts[0].id } : {}),
+    }))
+    chunks = call.stream({
+      ...call.config,
+      messages,
+      system: prompt.system,
+      sessionId: session.id,
+      purpose: 'session-title',
+      signal,
+    })
+  } else {
+    chunks = llm.stream({
+      provider: route.provider,
+      model: route.model,
+      messages,
+      system: prompt.system,
+      maxTokens: MAX_OUTPUT_TOKENS,
+      sessionId: session.id,
+      purpose: 'session-title',
+      signal,
+    })
+  }
+  const raw = await collectText(chunks)
   signal.throwIfAborted()
   const parsed = parseTypeAndTheme(raw)
   if (parsed === undefined) throw new Error('codex-ui session title invalid model output')
@@ -151,7 +179,9 @@ export async function generateCodexSessionTitle(llm: TitleLlm, request: TitleReq
   }
 }
 
-export function registerSessionTitleProvider(ctx: SessionTitleHost): (() => void) | undefined {
+export type SessionTitleDisposer = () => void | Promise<void>
+
+export function registerSessionTitleProvider(ctx: SessionTitleHost): SessionTitleDisposer | undefined {
   const sessionTitle = asTitleService(ctx.get('sessionTitle'))
   const llm = asLlm(ctx.get('llm'))
   if (sessionTitle === undefined || llm === undefined) {
@@ -164,7 +194,7 @@ export function registerSessionTitleProvider(ctx: SessionTitleHost): (() => void
       automatic: 'first-prompt',
       generate: request => generateCodexSessionTitle(llm, request, hostLocale(ctx, request.messages?.[0]?.text)),
     })
-    return typeof dispose === 'function' ? dispose as () => void : undefined
+    return typeof dispose === 'function' ? dispose as SessionTitleDisposer : undefined
   } catch (error) {
     const reason = error instanceof Error ? error.message : typeof error
     ctx.logger?.warn(`Codex UI 未能注册会话标题提供方：${reason}`)

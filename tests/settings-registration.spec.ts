@@ -12,6 +12,15 @@ import { openSettingsSection } from '../src/client/settings-navigation.ts'
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({ ConnectionIndicator: () => null }))
 const require = createRequire(import.meta.url)
 
+function officialSettings(): { apply: (ctx: Context) => void } {
+  let official: { apply: (ctx: Context) => void } | undefined
+  const code = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-settings-general/client'), 'utf8')
+  new Function('window', code)({ __ModuleLoader__: { load: ({ factory }: { factory: (require: (id: string) => unknown) => typeof official }) => {
+    official = factory(id => id === '@deepseek-ai/dsh-client-ui-primitives' ? {} : require(id))
+  } } })
+  return official!
+}
+
 /** 用真实 SlotCore 执行声明约束；仅服务和声明生命周期适配为测试环境。 */
 function setup() {
   const slots = new SlotCore()
@@ -34,7 +43,15 @@ function setup() {
     inject: () => () => {},
     effect: (callback: () => () => void) => { const off = callback(); disposers.push(off); return off },
   } as unknown as Context
-  const declare = () => slots.register({ name: 'root', children: { 'sidebar.settings': { kind: 'single', scope: 'root' } } }, (_props: PropsRenderSlots<'sidebar.settings'>) => null)
+  let officialInstalled = false
+  const declare = (withOfficial = true) => {
+    const removeRoot = slots.register({ name: 'root', children: { 'sidebar.settings': { kind: 'single', scope: 'root' } } }, (_props: PropsRenderSlots<'sidebar.settings'>) => null)
+    if (withOfficial && !officialInstalled) {
+      officialInstalled = true
+      officialSettings().apply(ctx)
+    }
+    return removeRoot
+  }
   return { slots, ctx, declare, disposers, dispose: () => disposers.reverse().forEach(off => off()) }
 }
 
@@ -69,7 +86,7 @@ test('账号入口晚注册和撤销时设置壳订阅翻转，保留分区导�
   await flushSlotWave()
   const entry = slots.entriesOfSlot('sidebar.settings')[0]!
   const injected = (entry.inject as unknown as () => SettingsPageInjected)()
-  expect(entry.children).toHaveProperty('settings.launcher')
+  expect(slots.spec('settings.launcher')).toBeDefined()
   const changed = vi.fn()
   const unsubscribe = injected.accountLauncher!.subscribe(changed)
   const container = document.createElement('div')
@@ -106,54 +123,59 @@ test('账号入口晚注册和撤销时设置壳订阅翻转，保留分区导�
   }
 })
 
-test('复现旧宿主：原设置外壳存在时，新壳重复声明子插槽而失败', () => {
+test.each([false, true])('官方设置壳晚到=%s 时保留官方并回退', async (late) => {
   const { slots, ctx, declare, dispose, disposers } = setup()
-  const removeRoot = declare()
-  let official: { apply: (ctx: Context) => void } | undefined
-  const code = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-settings-general/client'), 'utf8')
-  new Function('window', code)({ __ModuleLoader__: { load: ({ factory }: { factory: (require: (id: string) => unknown) => typeof official }) => {
-    official = factory(id => id === '@deepseek-ai/dsh-client-ui-primitives' ? {} : require(id))
-  } } })
-  official!.apply(ctx)
-  const original = slots.entriesOfSlot('sidebar.settings')[0]!
+  const removeRoot = declare(false)
   const before = disposers.length
-  expect(() => slots.register({ name: 'sidebar.settings', priority: -1, children: original.children }, (() => null) as never)).toThrow(/settings\.launcher.*already declared/)
-  expect(() => registerSettingsPage(ctx)).not.toThrow()
-  expect(slots.entriesOfSlot('sidebar.settings')[0]?.component).toBe(CodexSettingsPage)
+  if (late) {
+    registerSettingsPage(ctx)
+    await flushSlotWave()
+    expect(slots.spec('settings.launcher')).toBeUndefined()
+  }
+  const officialStart = disposers.length
+  expect(() => officialSettings().apply(ctx)).not.toThrow()
+  const officialDisposers = disposers.splice(officialStart)
+  const original = slots.entries('sidebar.settings').find(entry => entry.component !== CodexSettingsPage)!
+  if (!late) registerSettingsPage(ctx)
+  await flushSlotWave()
+  expect(slots.entriesOfSlot('sidebar.settings')[0]?.component).not.toBe(original.component)
+  expect(slots.spec('settings.codex.launcher')).toBeDefined()
   expect(slots.entries('sidebar.settings').some(entry => entry.component === original.component)).toBe(true)
   while (disposers.length > before) disposers.pop()?.()
   expect(slots.entriesOfSlot('sidebar.settings')[0]?.component).toBe(original.component)
+  for (const off of officialDisposers.reverse()) off()
   dispose()
   removeRoot()
 })
 
-test('发布配置停用官方首消息标题 LLM，但不关闭标题服务', () => {
+test('发布补丁不静态停用官方首消息标题 LLM', () => {
   const patch = readFileSync('cordis.patch.yml', 'utf8')
-  expect(patch).toMatch(/id: session-title-llm\s+disabled: true/)
+  expect(patch).not.toMatch(/id: session-title-llm\s+disabled: true/)
   expect(patch).not.toMatch(/id: session-title\s*\n\s+disabled: true/)
   const plugin = readFileSync('src/session-title-plugin.ts', 'utf8')
   expect(plugin).toMatch(/export const name = 'michengai-codex-ui-session-title'/)
-  expect(plugin).toMatch(/export const inject = \['sessionTitle', 'llm'\]/)
-  expect(plugin).toMatch(/registerSessionTitleProvider/)
+  expect(plugin).toMatch(/export const inject = \['sessionTitle', 'llm', 'loader'\]/)
+  expect(plugin).toMatch(/startSessionTitleLifecycle/)
   expect(patch).toMatch(/id: michengai-codex-ui-session-title\s+name: '@michengai\/dsh-codex-ui\/session-title'/)
   expect(readFileSync('src/index.ts', 'utf8')).not.toMatch(/registerSessionTitleProvider/)
   expect(readFileSync('src/session-title-provider.ts', 'utf8')).not.toMatch(/titleDiag|DCU_TITLE_LOG|session-title-diag|Reflect\.get/)
-  expect(readFileSync('src/session-title-plugin.ts', 'utf8')).toMatch(/ctx\.effect\(\(\) => registerSessionTitleProvider\(ctx\)/)
+  expect(readFileSync('src/session-title-plugin.ts', 'utf8')).toMatch(/ctx\.effect\(\(\) => lifecycle\.dispose/)
 })
 
-test('未加载官方设置壳时，新壳唯一声明设置树并在重新挂载后恢复功能贡献', async () => {
+test('官方设置树重新挂载后恢复功能贡献', async () => {
   const patch = readFileSync('cordis.patch.yml', 'utf8')
-  expect(patch).toMatch(/id: ui-settings-general\s+disabled: true/)
-  expect(patch).toMatch(/id: ui-sidebar\s+disabled: true/)
+  expect(patch).not.toMatch(/id: ui-settings-general\s+disabled: true/)
+  expect(patch).not.toMatch(/id: ui-sidebar\s+disabled: true/)
   const { slots, ctx, declare, dispose } = setup()
   registerSettingsPage(ctx)
   const removeRoot = declare()
   await flushSlotWave()
   const row = () => null
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({ name: 'settings.general.item', id: 'theme' }, row))
-  expect(slots.entriesOfSlot('sidebar.settings')[0]?.component).toBe(CodexSettingsPage)
-  expect(slots.entriesOfSlot('settings.section')[0]?.component).toBe(CodexGeneralSettings)
-  expect(slots.entriesOfSlot('sidebar.settings')[0]?.children).toHaveProperty('settings.launcher')
+  expect(slots.entriesOfSlot('sidebar.settings')[0]?.component).not.toBe(CodexSettingsPage)
+  expect(slots.entriesOfSlot('settings.section')[0]?.component).not.toBe(CodexGeneralSettings)
+  expect(slots.spec('settings.codex.general.item')).toBeDefined()
+  expect(slots.spec('settings.launcher')).toBeDefined()
   expect(slots.entriesOfSlot('settings.general.item')[0]?.component).toBe(row)
   removeRoot()
   expect(slots.entriesOfSlot('settings.general.item')).toEqual([])
@@ -174,7 +196,7 @@ test.each([
   new SlotRegistry(ctx)
   const removeLocale=ctx.provide('locale', {bind:()=> (key:string)=>key,getSnapshot:()=>({revision:0}),subscribe:()=>()=>{}} as never)
   const removeConnection=ctx.provide('connection',{state:{getSnapshot:()=> 'connected',subscribe:()=>()=>{}},reconnect:()=>{}} as never)
-  const removeRoot=ctx.slots.register({name:'root',children:{'sidebar.settings':{kind:'single',scope:'root'}}},(_props: PropsRenderSlots<'sidebar.settings'>)=>null)
+  const removeRoot=ctx.slots.register({name:'root',children:{'sidebar.settings':{kind:'single',scope:'root'},'settings.general.footer':{kind:'list',scope:'root'}}},(_props: PropsRenderSlots<'sidebar.settings'>)=>null)
   registerSettingsPage(ctx)
   expect(ctx.slots.entriesOfSlot('settings.general.footer')).toHaveLength(0)
   const describe={getSnapshot:()=>({view:{hasDocument:true}}),subscribe:()=>()=>{},ensure:async()=>{}}
@@ -208,7 +230,8 @@ test('配套插件先注入时等待设置树声明，不会误判为旧壳', as
   const removeRoot = declare()
   registerSettingsPage(ctx)
   await flushSlotWave()
-  expect(slots.entriesOfSlot('sidebar.settings')[0]?.component).toBe(CodexSettingsPage)
+  expect(slots.entriesOfSlot('sidebar.settings')[0]?.component).not.toBe(CodexSettingsPage)
+  expect(slots.spec('settings.codex.launcher')).toBeDefined()
   expect(slots.entriesOfSlot('settings.section').some(entry => entry.options.id === 'early-plugin')).toBe(true)
   expect(slots.entriesOfSlot('settings.general.item')[0]?.component).toBe(row)
   dispose()
@@ -222,6 +245,8 @@ test('configForms 注入时自动为常规设置补充 developer-tools（代码�
   const removeLocale = ctx.provide('locale', { bind: () => (key: string) => key, getSnapshot: () => ({ revision: 0 }), subscribe: () => () => {} } as never)
   const removeConnection = ctx.provide('connection', { state: { getSnapshot: () => 'connected', subscribe: () => () => {} }, reconnect: () => {} } as never)
   const removeRoot = ctx.slots.register({ name: 'root', children: { 'sidebar.settings': { kind: 'single', scope: 'root' }, 'settings.general.item': { kind: 'list', scope: 'root' } } }, (() => null) as never)
+  const officialDeveloperTools = () => null
+  ctx.slots.register({ name: 'settings.general.item', id: 'developer-tools', order: 15 }, officialDeveloperTools as never)
   registerSettingsPage(ctx)
 
   const devToolsStore = { value: false, listeners: new Set<() => void>() }
@@ -240,7 +265,7 @@ test('configForms 注入时自动为常规设置补充 developer-tools（代码�
   try {
     await vi.waitFor(() => {
       const entry = ctx.slots.entriesOfSlot('settings.general.item').find(e => e.options.id === 'developer-tools')
-      expect(entry).toBeDefined()
+      expect(entry?.options.priority).toBe(-1)
     })
     const entry = ctx.slots.entriesOfSlot('settings.general.item').find(e => e.options.id === 'developer-tools')!
     expect(entry.options.order).toBe(15)

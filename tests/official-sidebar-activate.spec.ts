@@ -1,9 +1,10 @@
+import { readFileSync } from 'node:fs'
 import { SlotCore } from '@deepseek-ai/dsh-client-ui-slots'
 import { expect, test } from 'vitest'
 import { apply } from '../src/client/index.ts'
 import { CodexSidebar } from '../src/client/CodexSidebar.tsx'
 
-test('官方侧栏已声明 panellist 时，本插件仍能激活并在卸载后留下官方侧栏', async () => {
+test.each([false, true])('官方晚到=%s 时反复启停保留官方侧栏', async (late) => {
   const slots = new SlotCore()
   const disposers: Array<() => void> = []
   const inject = (key: string, callback: () => () => void) => {
@@ -29,7 +30,7 @@ test('官方侧栏已声明 panellist 时，本插件仍能激活并在卸载后
   const register = slots.register.bind(slots) as (options: { name: string; children?: Record<string, { kind: string; scope: string }> }, component: () => null) => () => void
   register({ name: 'root', children: { sidebar: { kind: 'single', scope: 'root' } } }, () => null)
   const official = () => null
-  register({
+  const registerOfficial = () => register({
     name: 'sidebar',
     children: {
       'sidebar.panellist': { kind: 'list', scope: 'root' },
@@ -38,10 +39,24 @@ test('官方侧栏已声明 panellist 时，本插件仍能激活并在卸载后
       'sidebar.footer.action': { kind: 'list', scope: 'root' },
     },
   }, official)
-  expect(() => apply(ctx as never)).not.toThrow()
-  await new Promise(resolve => queueMicrotask(() => resolve(undefined)))
-  expect(slots.entriesOfSlot('sidebar')[0]?.component).toBe(CodexSidebar)
-  expect(slots.entries('sidebar').some(entry => entry.component === official)).toBe(true)
-  for (const dispose of disposers.reverse()) dispose()
-  expect(slots.entriesOfSlot('sidebar')[0]?.component).toBe(official)
+  if (!late) registerOfficial()
+  for (let cycle = 0; cycle < 3; cycle += 1) {
+    expect(() => apply(ctx as never)).not.toThrow()
+    if (late && cycle === 0) {
+      for (let i = 0; i < 5; i += 1) await Promise.resolve()
+      expect(slots.spec('sidebar.workspaces')).toBeUndefined()
+      expect(() => registerOfficial()).not.toThrow()
+    }
+    await Promise.resolve()
+    expect(slots.entriesOfSlot('sidebar')[0]?.component).not.toBe(official)
+    expect(slots.spec('sidebar.codex.workspaces')).toBeDefined()
+    expect(slots.entries('sidebar').some(entry => entry.component === official)).toBe(true)
+    while (disposers.length > 0) disposers.pop()?.()
+    expect(slots.entriesOfSlot('sidebar')[0]?.component).toBe(official)
+    expect(slots.spec('sidebar.workspaces')).toBeDefined()
+  }
+})
+
+test.each(['cordis.patch.yml', 'packages/dsh-codex-suite/cordis.patch.yml'])('发布补丁 %s 不禁用官方侧栏和设置壳', file => {
+  expect(readFileSync(file, 'utf8')).not.toMatch(/id: ui-(?:sidebar|settings-general)\s+disabled: true/)
 })

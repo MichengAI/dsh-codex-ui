@@ -9,11 +9,66 @@ import { Settings } from 'lucide-react'
 import { SettingsDocumentAction } from './SettingsDocumentAction.tsx'
 import { DeveloperToolsRow, type DeveloperToolsHandle } from './DeveloperToolsRow.tsx'
 import { registerAfterOfficialWave } from './official-slot-shadow.ts'
+import { mirrorSlot, withSlotAliases } from './slot-mirror.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
     'settings.general.footer': { kind: 'list'; scope: 'root'; owner: {} }
+    'settings.codex.launcher': SlotMap['settings.launcher']
+    'settings.codex.trigger': SlotMap['settings.trigger']
+    'settings.codex.header': SlotMap['settings.header']
+    'settings.codex.action': SlotMap['settings.action']
+    'settings.codex.close': SlotMap['settings.close']
+    'settings.codex.section': SlotMap['settings.section']
+    'settings.codex.onboarding': SlotMap['settings.onboarding']
+    'settings.codex.general.item': SlotMap['settings.general.item']
+    'settings.codex.general.footer': SlotMap['settings.general.footer']
   }
+}
+
+const shellAliases = {
+  'settings.launcher': 'settings.codex.launcher',
+  'settings.trigger': 'settings.codex.trigger',
+  'settings.header': 'settings.codex.header',
+  'settings.action': 'settings.codex.action',
+  'settings.close': 'settings.codex.close',
+  'settings.section': 'settings.codex.section',
+  'settings.onboarding': 'settings.codex.onboarding',
+}
+const shellAliasChildren = {
+  'settings.codex.launcher': { kind: 'single' as const, scope: 'root' as const },
+  'settings.codex.trigger': { kind: 'single' as const, scope: 'root' as const },
+  'settings.codex.header': { kind: 'single' as const, scope: 'root' as const },
+  'settings.codex.action': { kind: 'list' as const, scope: 'root' as const },
+  'settings.codex.close': { kind: 'single' as const, scope: 'root' as const },
+  'settings.codex.section': { kind: 'list' as const, scope: 'root' as const },
+  'settings.codex.onboarding': { kind: 'list' as const, scope: 'root' as const },
+}
+const generalAliases = {
+  'settings.general.item': 'settings.codex.general.item',
+  'settings.general.footer': 'settings.codex.general.footer',
+}
+const generalAliasChildren = {
+  'settings.codex.general.item': { kind: 'list' as const, scope: 'root' as const },
+  'settings.codex.general.footer': { kind: 'list' as const, scope: 'root' as const },
+}
+const AliasedCodexSettingsPage = withSlotAliases(CodexSettingsPage, shellAliases) as typeof CodexSettingsPage
+const AliasedCodexGeneralSettings = withSlotAliases(CodexGeneralSettings, generalAliases) as typeof CodexGeneralSettings
+
+function registerMirrors(ctx: Context, aliases: Readonly<Record<string, string>>, register: () => () => void): () => void {
+  const unregister = register()
+  const mirrors: (() => void)[] = []
+  const getSpec = (ctx.slots as unknown as { spec?: (slot: string) => unknown }).spec
+  try {
+    for (const [source, target] of Object.entries(aliases)) {
+      if (getSpec?.call(ctx.slots, source) !== undefined) mirrors.push(mirrorSlot({ slots: ctx.slots }, source, target))
+    }
+  } catch (error) {
+    for (const dispose of mirrors.reverse()) dispose()
+    unregister()
+    throw error
+  }
+  return () => { for (const dispose of mirrors.reverse()) dispose(); unregister() }
 }
 
 /** 用更低优先级覆盖设置壳。官方壳仍登记，停用或卸载时撤销本插件登记后恢复。 */
@@ -111,44 +166,26 @@ export function registerSettingsPage(ctx: Context): void {
   ctx.inject(['settingsScope', 'remote.settings'], settingsCtx => {
     return bindSettingsDocument(settingsCtx, (settingsCtx as Context & { settingsScope: { describe: () => SettingsDescribeFace } }).settingsScope)
   })
-  // 官方 ui-settings-general 被停用后，补齐代码工作视图开关（developer-tools）。
+  // 与官方设置行共存，停用本插件后仍保留官方开关。
   ctx.inject(['configForms'], configFormsCtx => {
     const configForms = (configFormsCtx as Context & { configForms: { developerTools?: DeveloperToolsHandle } }).configForms
     if (!configForms?.developerTools) return
     const developerTools = configForms.developerTools
     return configFormsCtx.slots.inject('settings.general.item', () => configFormsCtx.slots.register({
-      name: 'settings.general.item', id: 'developer-tools', order: 15, locale: NS,
+      name: 'settings.general.item', id: 'developer-tools', priority: -1, order: 15, locale: NS,
       inject: () => ({ developerTools }),
     }, DeveloperToolsRow))
   })
-  const shellChildren = {
-    'settings.launcher': { kind: 'single' as const, scope: 'root' as const },
-    'settings.trigger': { kind: 'single' as const, scope: 'root' as const },
-    'settings.header': { kind: 'single' as const, scope: 'root' as const },
-    'settings.action': { kind: 'list' as const, scope: 'root' as const },
-    'settings.close': { kind: 'single' as const, scope: 'root' as const },
-    'settings.section': { kind: 'list' as const, scope: 'root' as const },
-    'settings.onboarding': { kind: 'list' as const, scope: 'root' as const },
-  }
   ctx.slots.inject('sidebar.settings', () => registerAfterOfficialWave(ctx.slots, 'sidebar.settings', officialSettingsReady, () => {
-    const children: Partial<typeof shellChildren> = {}
-    if (!officialSettingsReady()) {
-      for (const [name, spec] of Object.entries(shellChildren)) {
-        if (!declared(name)) Object.assign(children, { [name]: spec })
-      }
-    }
-    return ctx.slots.register({
-      name: 'sidebar.settings', priority: -1, locale: NS, children,
+    return registerMirrors(ctx, shellAliases, () => ctx.slots.register({
+      name: 'sidebar.settings', priority: -1, locale: NS, children: shellAliasChildren,
       inject: () => ({ sections, onboarding, connectionState: connection.state, reconnect: () => { connection.reconnect() }, accountLauncher: accountLauncherPresence(ctx.slots), shortcuts }),
-    }, CodexSettingsPage)
-  }))
+    }, AliasedCodexSettingsPage as never))
+  }, true))
   ctx.slots.inject('settings.section', () => registerAfterOfficialWave(ctx.slots, 'settings.section', () => declared('settings.general.item'), () => {
-    const children: Record<string, { kind: 'list'; scope: 'root' }> = {}
-    if (!declared('settings.general.item')) children['settings.general.item'] = { kind: 'list', scope: 'root' }
-    if (!declared('settings.general.footer')) children['settings.general.footer'] = { kind: 'list', scope: 'root' }
-    return ctx.slots.register({
+    return registerMirrors(ctx, generalAliases, () => ctx.slots.register({
       name: 'settings.section', id: 'general', priority: -1, order: 0, locale: NS, label: () => t('settings.general'),
-      children, inject: () => ({ items }),
-    }, CodexGeneralSettings)
-  }))
+      children: generalAliasChildren, inject: () => ({ items }),
+    }, AliasedCodexGeneralSettings as never))
+  }, true))
 }
