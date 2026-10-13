@@ -4,12 +4,13 @@
 
 This changelog records recent releases of DSH Codex UI. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
-## Unreleased
+## 1.1.37 - 2026-10-13
 
-- 修复标题接管期间官方条目身份变化后的禁用残留，以及停用后的回退。
-- 侧栏和设置加载超时不抢占官方共享槽；官方晚到仍能提供内容。
-- 添加工作区按钮跟随官方入口能力与快捷键目录，避免不可用时静默空操作。
-- 恢复菜单标准字号、修正全局搜索背景和连接器设置排序。
+- Add an Add workspace button to the Projects header, reusing the official directory picker and shortcuts (#42).
+- Restore the official sidebar, settings, and automatic titles when Codex UI is disabled; handle repeated toggles and delayed official UI loading without conflicting shared slots (#42).
+- Improve automatic session-title generation and recovery, and remove the routine provider-takeover warning.
+- Restore standard context-menu text size, use an opaque global-search background, and correct the Connectors settings order.
+- Document that Codex UI and `ds-bot` are mutually exclusive full-interface skins (#43).
 
 ## 1.1.36 - 2026-10-13
 
