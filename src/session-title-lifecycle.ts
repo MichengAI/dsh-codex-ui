@@ -10,24 +10,54 @@ function isOfficialTarget(options: { id?: string; name?: string } | undefined): 
   return OFFICIAL_TARGETS.some(t => t.id === options.id && t.name === options.name)
 }
 
-function silenceOfficialProvider(host: SessionTitleHost): (() => void) | undefined {
+type GuardState = {
+  original: (provider: unknown) => unknown
+  activeGuards: Set<{ shouldSilence: () => boolean }>
+}
+const guardRegistry = new WeakMap<object, GuardState>()
+
+function silenceOfficialProvider(host: SessionTitleHost, shouldSilence: () => boolean): (() => void) | undefined {
   const sessionTitle = host.get?.('sessionTitle') as { register?: (provider: unknown) => unknown } | undefined
   if (!sessionTitle || typeof sessionTitle.register !== 'function') return undefined
   const target = Object.getPrototypeOf(sessionTitle) as { register?: (provider: unknown) => unknown }
   if (typeof target?.register !== 'function') return undefined
-  const original = target.register
-  target.register = function(this: unknown, provider: unknown) {
-    const candidate = provider as { id?: string } | undefined
-    if (candidate && candidate.id !== SESSION_TITLE_PROVIDER_ID) {
-      // 官方标题提供方尝试注册时，若 Codex UI 正在生效，静默接管并返回空卸载函数，不让官方抛出单槽冲突异常
-      return () => {}
+
+  let state = guardRegistry.get(target)
+  if (!state) {
+    const original = target.register
+    const activeGuards = new Set<{ shouldSilence: () => boolean }>()
+    state = {
+      original,
+      activeGuards,
     }
-    return original.apply(this, arguments as unknown as [unknown])
+    target.register = function(this: unknown, provider: unknown) {
+      const candidate = provider as { id?: string } | undefined
+      if (candidate && candidate.id !== SESSION_TITLE_PROVIDER_ID) {
+        const active = [...state!.activeGuards].some(g => g.shouldSilence())
+        if (active) {
+          console.warn(`[michengai-codex-ui] Silenced official title register while Codex UI is active: ${candidate.id}`)
+          return () => {}
+        }
+      }
+      return state!.original.apply(this, arguments as unknown as [unknown])
+    }
+    guardRegistry.set(target, state)
   }
+
+  const guardHandle = { shouldSilence }
+  state.activeGuards.add(guardHandle)
+  let released = false
   return () => {
-    target.register = original
+    if (released) return
+    released = true
+    state!.activeGuards.delete(guardHandle)
+    if (state!.activeGuards.size === 0) {
+      target.register = state!.original
+      guardRegistry.delete(target)
+    }
   }
 }
+
 type Entry = {
   options: { id: string; name: string; disabled?: boolean | null }
   disabled: boolean
@@ -49,7 +79,8 @@ export function startSessionTitleLifecycle(host: SessionTitleHost) {
   let cancelled = false
   let provider: SessionTitleDisposer | undefined
   let restore: (() => Promise<void>) | undefined
-  const restoreGuard = silenceOfficialProvider(host)
+  let silencing = false
+  const restoreGuard = silenceOfficialProvider(host, () => silencing)
   const loader = host.loader as Loader | undefined
   const candidates = typeof loader?.entries === 'function' ? [...loader.entries()].filter(entry => isOfficialTarget(entry.options)) : []
   const key = candidates.length === 1 ? candidates[0]! : host
@@ -67,6 +98,7 @@ export function startSessionTitleLifecycle(host: SessionTitleHost) {
         const ownsEntry = () => [...loader.entries()].includes(entry) && entry.options === options && isOfficialTarget(options) && options.disabled === true
         restore = async () => {
           if (!ownsEntry()) return
+          silencing = false
           await entry.update({ disabled: original ?? null })
         }
         try {
@@ -81,17 +113,24 @@ export function startSessionTitleLifecycle(host: SessionTitleHost) {
         }
         // entry.update 会启动卸载但不等待，因此显式等待对应 fiber。
         await fiber.dispose()
-        if (!ownsEntry()) { restore = undefined; return }
+        if (!ownsEntry()) {
+          // 排空期间身份发生变化，安全恢复官方条目以防两边都不工作
+          await restore()
+          restore = undefined
+          return
+        }
       } else if (matches.length > 0 && enabledMatches.length === 0) {
-        // 目标条目全都原本已禁用（例如环境内只有一个官方条目且已被用户显式禁用）
-        // 维持原设计：若官方条目显式禁用，则不接管也不注册
+        console.warn('[michengai-codex-ui] all official session title targets are already disabled; skipping takeover.')
         return
       } else if (matches.length > 1) {
-        // 当存在多个官方目标且无法唯一确定时，不越权接管
+        console.warn('[michengai-codex-ui] multiple official session title targets found; skipping takeover.')
         return
       }
     }
-    if (!cancelled) provider = registerSessionTitleProvider(host)
+    if (!cancelled) {
+      provider = registerSessionTitleProvider(host)
+      if (provider) silencing = true
+    }
     if (!provider) { await restore?.(); restore = undefined }
   })
   let disposal: Promise<void> | undefined
@@ -99,22 +138,30 @@ export function startSessionTitleLifecycle(host: SessionTitleHost) {
     ready,
     dispose: () => {
       cancelled = true
-      // 关键：在任何异步等待之前，若本实例已经持有 provider，立即同步将 sessionTitle.registration 标记为 closing，
-      // 避免宿主并发重载官方插件 entry 时撞上未释放的单槽！
-      const sessionTitle = host.get?.('sessionTitle') as { registration?: { closing?: boolean } } | undefined
-      if (sessionTitle?.registration) {
+      silencing = false
+      const sessionTitle = host.get?.('sessionTitle') as { registration?: { provider?: { id?: string }; closing?: boolean } } | undefined
+      // 只有当前 registration 确实是由本实例注册的（id === SESSION_TITLE_PROVIDER_ID），才标记 closing，
+      // 绝不误标记或删除第三方或官方的注册！
+      if (sessionTitle?.registration?.provider?.id === SESSION_TITLE_PROVIDER_ID) {
         sessionTitle.registration.closing = true
       }
       return disposal ??= serialize(key, async () => {
-        await ready.catch(() => {})
-        await provider?.()
-        provider = undefined
-        if (sessionTitle && sessionTitle.registration?.closing) {
-          delete sessionTitle.registration
+        try {
+          await ready.catch(() => {})
+          await provider?.()
+          provider = undefined
+          if (sessionTitle?.registration?.provider?.id === SESSION_TITLE_PROVIDER_ID && sessionTitle.registration?.closing) {
+            delete sessionTitle.registration
+          }
+        } finally {
+          const guard = restoreGuard
+          guard?.()
+          try {
+            await restore?.()
+          } finally {
+            restore = undefined
+          }
         }
-        await restore?.()
-        restore = undefined
-        restoreGuard?.()
       })
     },
   }

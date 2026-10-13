@@ -3,11 +3,36 @@ import { apply } from '../src/session-title-plugin.ts'
 import { startSessionTitleLifecycle } from '../src/session-title-lifecycle.ts'
 import { SESSION_TITLE_PROVIDER_ID } from '../src/session-title-provider.ts'
 
-// 忠实模拟已发布服务契约：所有提供方共用单槽，不按 id 分槽。
+// 忠实模拟官方 SessionTitleService 类及其原型方法与 registration 状态
+class MockSessionTitleService {
+  registration?: { provider: { id: string }; closing: boolean }
+  events: string[] = []
+  register(provider: { id: string }) {
+    if (this.registration !== undefined && !this.registration.closing) {
+      throw new Error(`session-title provider "${this.registration.provider.id}" is already registered`)
+    }
+    this.events.push(`register:${provider.id}`)
+    const reg = { provider, closing: false }
+    this.registration = reg
+    return async () => {
+      reg.closing = true
+      this.events.push(`dispose:${provider.id}`)
+      if (this.registration === reg) this.registration = undefined
+    }
+  }
+}
+
 function fixture(disabled?: boolean | null, targetName: string = '@deepseek-ai/dsh-session-title-first-prompt-llm', targetId: string = 'session-title-llm') {
-  let slot: string | undefined = disabled ? undefined : 'official'
-  const events: string[] = []
-  const release = vi.fn(async () => { events.push('official:dispose'); slot = undefined })
+  const service = new MockSessionTitleService()
+  if (!disabled) {
+    service.registration = { provider: { id: 'official' }, closing: false }
+  }
+  const release = vi.fn(async () => {
+    service.events.push('official:dispose')
+    if (service.registration?.provider.id === 'official') {
+      service.registration = undefined
+    }
+  })
   const options = { id: targetId, name: targetName, ...(disabled === undefined ? {} : { disabled }) }
   const entry = {
     options,
@@ -16,20 +41,37 @@ function fixture(disabled?: boolean | null, targetName: string = '@deepseek-ai/d
     update: vi.fn(async (patch: { disabled: boolean | null }) => {
       if (patch.disabled === null) delete options.disabled
       else options.disabled = patch.disabled
-      if (options.disabled) { void entry.fiber?.dispose(); entry.fiber = undefined }
-      else { events.push('official:restore'); if (slot) throw Error('occupied'); slot = 'official'; entry.fiber = { dispose: release } }
+      if (options.disabled) {
+        void entry.fiber?.dispose()
+        entry.fiber = undefined
+      } else {
+        service.events.push('official:restore')
+        // 官方插件重新挂载时会调用 register
+        entry.fiber = { dispose: release }
+        service.register({ id: 'official' })
+      }
     }),
   }
-  const service = { register: vi.fn((provider: { id: string }) => {
-    if (slot) throw Error(`provider ${slot} already registered`)
-    events.push('codex:register'); slot = provider.id
-    return async () => { events.push('codex:dispose'); slot = undefined }
-  }) }
   const entries = [entry]
   const loader = { entries: () => entries.values(), update: vi.fn(() => { throw Error('disk write forbidden') }) }
   const disposers: (() => unknown)[] = []
-  const ctx = { loader, get: (name: string) => ({ sessionTitle: service, llm: { async *stream() {} } }[name]), logger: { warn: vi.fn() }, effect: (fn: () => () => unknown) => { disposers.push(fn()) } }
-  return { ctx, entry, options, entries, events, service, loader, disposers, slot: () => slot }
+  const ctx = {
+    loader,
+    get: (name: string) => ({ sessionTitle: service, llm: { async *stream() {} } }[name]),
+    logger: { warn: vi.fn() },
+    effect: (fn: () => () => unknown) => { disposers.push(fn()) }
+  }
+  return {
+    ctx,
+    entry,
+    options,
+    entries,
+    events: service.events,
+    service,
+    loader,
+    disposers,
+    slot: () => service.registration?.provider.id
+  }
 }
 
 test('takes the official single slot in memory and restores only after Codex disposal', async () => {
@@ -40,7 +82,7 @@ test('takes the official single slot in memory and restores only after Codex dis
   await f.disposers[0]!()
   expect(f.slot()).toBe('official')
   expect(f.options.disabled).toBe(false)
-  expect(f.events).toEqual(['official:dispose', 'official:dispose', 'codex:register', 'codex:dispose', 'official:restore'])
+  expect(f.events).toEqual(['official:dispose', 'official:dispose', `register:${SESSION_TITLE_PROVIDER_ID}`, `dispose:${SESSION_TITLE_PROVIDER_ID}`, 'official:restore', 'register:official'])
   expect(f.loader.update).not.toHaveBeenCalled()
 })
 
@@ -70,8 +112,8 @@ test('restart waits for previous async Codex cleanup before taking the slot', as
   const f = fixture(false)
   let unblock!: () => void
   const gate = new Promise<void>(resolve => { unblock = resolve })
-  const register = f.service.register.getMockImplementation()!
-  f.service.register.mockImplementationOnce(provider => {
+  const register = f.service.register.bind(f.service); vi.spyOn(f.service, 'register')
+  vi.spyOn(f.service, 'register').mockImplementationOnce(provider => {
     const release = register(provider)
     return async () => { await gate; await release() }
   })
@@ -97,7 +139,7 @@ test('identity change while the official fiber drains cancels takeover', async (
   f.options.name = 'replacement'
   unblock()
   await lifecycle.ready
-  expect(f.service.register).not.toHaveBeenCalled()
+  expect(f.service.events.filter(e => e === `register:${SESSION_TITLE_PROVIDER_ID}`)).toEqual([])
   await lifecycle.dispose()
   expect(f.options.disabled).toBe(true)
 })
@@ -107,7 +149,7 @@ test('a loader without entry enumeration cannot safely take even a vacant slot',
   const host = { ...f.ctx, loader: {} }
   const lifecycle = startSessionTitleLifecycle(host)
   await lifecycle.ready
-  expect(f.service.register).not.toHaveBeenCalled()
+  expect(f.service.events.filter(e => e === `register:${SESSION_TITLE_PROVIDER_ID}`)).toEqual([])
   await lifecycle.dispose()
 })
 
@@ -131,7 +173,7 @@ for (const disabled of [undefined, false, null] as const) {
     expect(f.options.disabled).toBe(disabled ?? undefined)
     expect(f.slot()).toBe('official')
     await lifecycle.dispose()
-    expect(f.events.filter(event => event === 'codex:dispose')).toHaveLength(1)
+    expect(f.events.filter(event => event === `dispose:${SESSION_TITLE_PROVIDER_ID}`)).toHaveLength(1)
   })
 }
 
@@ -142,7 +184,7 @@ test('an originally disabled official entry remains disabled', async () => {
   await lifecycle.dispose()
   expect(f.options.disabled).toBe(true)
   expect(f.entry.update).not.toHaveBeenCalled()
-  expect(f.service.register).not.toHaveBeenCalled()
+  expect(f.service.events.filter(e => e === `register:${SESSION_TITLE_PROVIDER_ID}`)).toEqual([])
 })
 
 test('ambiguous official entries are untouched', async () => {
@@ -152,12 +194,12 @@ test('ambiguous official entries are untouched', async () => {
   await lifecycle.ready
   await lifecycle.dispose()
   expect(f.entry.update).not.toHaveBeenCalled()
-  expect(f.service.register).not.toHaveBeenCalled()
+  expect(f.service.events.filter(e => e === `register:${SESSION_TITLE_PROVIDER_ID}`)).toEqual([])
 })
 
 test('registration failure restores the official provider', async () => {
   const f = fixture(false)
-  f.service.register.mockImplementationOnce(() => { throw Error('registration failed') })
+  vi.spyOn(f.service, 'register').mockImplementationOnce(() => { throw Error('registration failed') })
   const lifecycle = startSessionTitleLifecycle(f.ctx)
   await lifecycle.ready
   expect(f.slot()).toBe('official')
@@ -176,7 +218,7 @@ test('dispose during official draining cancels registration and joins cleanup', 
   const stopped = lifecycle.dispose()
   unblock()
   await stopped
-  expect(f.service.register).not.toHaveBeenCalled()
+  expect(f.service.events.filter(e => e === `register:${SESSION_TITLE_PROVIDER_ID}`)).toEqual([])
   expect(f.slot()).toBe('official')
   expect(f.options.disabled).toBe(false)
 })
@@ -195,3 +237,24 @@ for (const change of ['disabled', 'identity', 'removed', 'options'] as const) {
   })
 }
 
+
+test('dispose does not mark foreign registration closing or delete it', async () => {
+  const f = fixture(false)
+  const foreignReg = { provider: { id: 'foreign-plugin' }, closing: false }
+  f.service.registration = foreignReg
+  const lifecycle = startSessionTitleLifecycle(f.ctx)
+  await lifecycle.dispose()
+  expect(f.service.registration).toBe(foreignReg)
+  expect(foreignReg.closing).toBe(false)
+})
+
+test('restore failure still restores prototype guard in finally block', async () => {
+  const f = fixture(false)
+  const proto = Object.getPrototypeOf(f.service)
+  const originalRegister = proto.register
+  const lifecycle = startSessionTitleLifecycle(f.ctx)
+  await lifecycle.ready
+  f.entry.update.mockRejectedValueOnce(new Error('restore network error'))
+  await expect(lifecycle.dispose()).rejects.toThrow('restore network error')
+  expect(proto.register).toBe(originalRegister)
+})

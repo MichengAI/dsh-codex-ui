@@ -89,8 +89,16 @@ export function mirrorSlot(ctx: MirrorContext, source: string, target: string): 
         } catch (error) { for (const remove of removes.reverse()) remove(); throw error }
       }
     }
-    const unsubSource = slots.subscribe(from, sync)
-    const unsubTarget = slots.subscribe(to, sync)
+    const safeSync = () => {
+      try {
+        sync()
+      } catch (error) {
+        console.warn(`[michengai-codex-ui] slot-mirror sync error on '${from}' -> '${to}':`, error)
+        stop()
+      }
+    }
+    const unsubSource = slots.subscribe(from, safeSync)
+    const unsubTarget = slots.subscribe(to, safeSync)
     try { sync() } catch (error) { stop(); throw error }
     return stop
   }

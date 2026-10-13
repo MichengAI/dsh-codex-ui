@@ -195,7 +195,9 @@ export function apply(ctx: ClientContext): void {
     'sidebar.codex.footer.action': { kind: 'list' as const, scope: 'root' as const },
   }
   const aliasedSidebar = withSlotAliases(CodexSidebar, sidebarSlotAliases)
-  const officialSidebarReady = (): boolean => ctx.slots.entries('sidebar').some(entry => entry.component !== CodexSidebar)
+  const isOurSidebar = (entry: { registrant?: string; component?: unknown }): boolean =>
+    entry.registrant === 'michengai-codex-ui' || entry.component === CodexSidebar || entry.component === aliasedSidebar
+  const officialSidebarReady = (): boolean => ctx.slots.entries('sidebar').some(entry => !isOurSidebar(entry))
   ctx.slots.inject('sidebar', () => registerAfterOfficialWave(ctx.slots, 'sidebar', officialSidebarReady, () => {
     const declared = (name: string): boolean => {
       const spec = ctx.slots.spec as ((this: unknown, key: string) => unknown) | undefined

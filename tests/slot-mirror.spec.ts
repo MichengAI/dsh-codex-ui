@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { Context } from '@deepseek-ai/cordis'
 import { expect, test, vi } from 'vitest'
 import { loadClientBundle } from './client-module-loader.ts'
@@ -13,14 +13,35 @@ async function api() {
   expect(module.mirrorSlot, 'mirrorSlot must exist').toBeTypeOf('function')
   return module as typeof import('../src/client/slot-mirror.tsx')
 }
+function resolveGlobalAlphaRenderer(): { pkgPath: string; clientPath: string } | null {
+  const customBin = process.env.DCU_DSH_BIN
+  if (customBin) {
+    try {
+      const cliReq = createRequire(customBin)
+      const pkgPath = cliReq.resolve('@deepseek-ai/dsh-client-ui-renderer/package.json')
+      const clientPath = cliReq.resolve('@deepseek-ai/dsh-client-ui-renderer/lib/client.js')
+      if (existsSync(pkgPath) && existsSync(clientPath)) return { pkgPath, clientPath }
+    } catch {}
+  }
+  const defaultGlobalPkg = 'D:/Tools/nodejs/node_global/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-client-ui-renderer/package.json'
+  const defaultGlobalClient = 'D:/Tools/nodejs/node_global/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js'
+  if (existsSync(defaultGlobalPkg) && existsSync(defaultGlobalClient)) {
+    return { pkgPath: defaultGlobalPkg, clientPath: defaultGlobalClient }
+  }
+  return null
+}
+
+const globalAlphaPaths = resolveGlobalAlphaRenderer()
+
 function runtime(global = false) {
   let bundle: Record<string, any>
   if (global) {
-    const globalRequire = createRequire('D:/Tools/nodejs/node_global/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-client-ui-renderer/package.json')
+    if (!globalAlphaPaths) throw new Error('Global alpha renderer is not available in this environment')
+    const globalRequire = createRequire(globalAlphaPaths.pkgPath)
     // 使用该发行版的 SlotCore，同时让测试树共用 React/Cordis runtime。
     const alphaRequire = ((id: string) => id === '@deepseek-ai/dsh-client-ui-slots' ? globalRequire(id) : require(id)) as NodeRequire
     window.__ModuleLoader__ = { load: ({ factory }) => { bundle = factory(alphaRequire) } }
-    new Function('window', readFileSync('D:/Tools/nodejs/node_global/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js', 'utf8'))(window)
+    new Function('window', readFileSync(globalAlphaPaths.clientPath, 'utf8'))(window)
   } else bundle = loadClientBundle('@deepseek-ai/dsh-client-ui-renderer/client')
   const ctx = new Context()
   const dispose = ctx.effect(() => {
@@ -52,6 +73,7 @@ test('real renderer denies undeclared shared children even though the registry c
 })
 
 test.each([false, true])('legal nested aliases render through the real renderer (global alpha=%s)', async global => {
+  if (global && !globalAlphaPaths) return
   const { mirrorSlot, withSlotAliases } = await api()
   const r = runtime(global)
   const errors: unknown[] = []
@@ -166,7 +188,7 @@ test('rejects unsupported kinds/scopes, mismatches and child alias collisions tr
   expect(r.ctx.slots.entriesOfSlot('b' as never)).toEqual([])
   expect(r.ctx.slots.spec('child' as never)).toEqual(single)
   remove()
-  stop(); await r.clean()
+  await r.clean()
 })
 
 test('real renderer follows late nested contributions and their unregister without remounting the parent', async () => {

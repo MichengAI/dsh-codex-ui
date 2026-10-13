@@ -113,7 +113,9 @@ export function registerSettingsPage(ctx: Context): void {
     const spec = ctx.slots.spec as ((this: unknown, key: string) => unknown) | undefined
     return typeof spec === 'function' && spec.call(ctx.slots, name) !== undefined
   }
-  const officialSettingsReady = (): boolean => declared('settings.launcher') || ctx.slots.entries('sidebar.settings').some(entry => entry.component !== CodexSettingsPage)
+  const isOurSettingsPage = (entry: { registrant?: string; component?: unknown }): boolean =>
+    entry.registrant === 'michengai-codex-ui' || entry.component === CodexSettingsPage || entry.component === AliasedCodexSettingsPage
+  const officialSettingsReady = (): boolean => declared('settings.launcher') || ctx.slots.entries('sidebar.settings').some(entry => !isOurSettingsPage(entry))
   // Host 和 Client 共享服务名；当前入口读取的是浏览器连接外观。
   const service: unknown = ctx.get('connection')
   const connection = service as ConnectionHandle

@@ -14,15 +14,29 @@ export function registerAfterOfficialWave(slots: object, slot: string, officialR
   let remove = () => {}
   let done = false
   let off = () => {}
-  const finish = (): void => {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const finish = (timedOut = false): void => {
     if (done) return
     done = true
+    if (timer !== undefined) clearTimeout(timer)
     off()
+    if (timedOut) {
+      console.warn(`[michengai-codex-ui] timed out waiting for official '${slot}' registration; proceeding with fallback registration.`)
+    }
     remove = register()
   }
   if (officialReady()) return register()
-  off = face.subscribe?.(slot, () => { if (officialReady()) finish() }) ?? (() => {})
-  // 共享声明由官方拥有，不能因异步晚到而抢先注册。
-  if (!waitForOfficial) queueMicrotask(finish)
-  return () => { done = true; off(); remove() }
+  off = face.subscribe?.(slot, () => { if (officialReady()) finish(false) }) ?? (() => {})
+  if (!waitForOfficial) {
+    queueMicrotask(() => finish(false))
+  } else {
+    // 即使 waitForOfficial=true，也加有界超时兜底（3000ms），防止精简 bundle 或未装官方插件时界面永久白板
+    timer = setTimeout(() => finish(true), 3000)
+  }
+  return () => {
+    done = true
+    if (timer !== undefined) clearTimeout(timer)
+    off()
+    remove()
+  }
 }
