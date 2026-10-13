@@ -8,7 +8,7 @@ type SlotLike = {
  * 立刻声明官方也要声明的子插槽，官方注册会抛出且不会重试，停用后官方就回不来。
  * 测试夹具没有 spec，保持同步登记。
  */
-export function registerAfterOfficialWave(slots: object, slot: string, officialReady: () => boolean, register: () => () => void, waitForOfficial = false): () => void {
+export function registerAfterOfficialWave(slots: object, slot: string, officialReady: () => boolean, register: (timedOut?: boolean) => () => void, waitForOfficial = false): () => void {
   const face = slots as SlotLike
   if (typeof face.spec !== 'function') return register()
   let remove = () => {}
@@ -21,9 +21,9 @@ export function registerAfterOfficialWave(slots: object, slot: string, officialR
     if (timer !== undefined) clearTimeout(timer)
     off()
     if (timedOut) {
-      console.warn(`[michengai-codex-ui] timed out waiting for official '${slot}' registration; proceeding with fallback registration.`)
+      console.warn(`[michengai-codex-ui] 等待官方 '${slot}' 注册超时；仅注册自有槽，保留官方共享声明。`)
     }
-    remove = register()
+    remove = register(timedOut)
   }
   if (officialReady()) return register()
   off = face.subscribe?.(slot, () => { if (officialReady()) finish(false) }) ?? (() => {})

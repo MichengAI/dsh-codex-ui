@@ -74,7 +74,7 @@ function serialize<T>(key: object, work: () => Promise<T>): Promise<T> {
   return next
 }
 
-/** 仅接管公开的内存条目状态，不使用会持久化的 loader.update。 */
+/** 不主动调用 loader.update 写盘；共享 options 仍可能被其他配置写入持久化。 */
 export function startSessionTitleLifecycle(host: SessionTitleHost) {
   let cancelled = false
   let provider: SessionTitleDisposer | undefined
@@ -95,16 +95,19 @@ export function startSessionTitleLifecycle(host: SessionTitleHost) {
         const options = entry.options
         const original = options.disabled
         const fiber = entry.fiber
-        const ownsEntry = () => [...loader.entries()].includes(entry) && entry.options === options && isOfficialTarget(options) && options.disabled === true
+        // 身份变化会取消接管，但不应阻止撤回本实例写入的 disabled。
+        // 条目移除、options 替换或禁用状态被并发修改时仍不覆盖。
+        const ownsDisabledState = () => [...loader.entries()].includes(entry) && entry.options === options && options.disabled === true
+        const ownsEntry = () => ownsDisabledState() && isOfficialTarget(options)
         restore = async () => {
-          if (!ownsEntry()) return
+          if (!ownsDisabledState()) return
           silencing = false
           await entry.update({ disabled: original ?? null })
         }
         try {
           await entry.update({ disabled: true })
         } catch (error) {
-          if (ownsEntry()) {
+          if (ownsDisabledState()) {
             await fiber.dispose()
             await restore()
           }

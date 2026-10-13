@@ -170,12 +170,12 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => () => { workspaceShortcuts.dispose() }, 'michengai-codex-ui: workspace shortcuts')
   registerWorkspaceDirectoryFlow(ctx)
   const ownSidebarChildren = {
-    'sidebar.panellist': { kind: 'list' as const, scope: 'root' as const },
     [WORKSPACE_DIRECTORY_FLOW]: { kind: 'single' as const, scope: 'root' as const },
     'sidebar.channels': { kind: 'single' as const, scope: 'root' as const },
     'sidebar.schedule': { kind: 'single' as const, scope: 'root' as const },
   }
   const sharedSidebarChildren = {
+    'sidebar.panellist': { kind: 'list' as const, scope: 'root' as const },
     'sidebar.workspaces': { kind: 'single' as const, scope: 'root' as const },
     'sidebar.settings': { kind: 'single' as const, scope: 'root' as const },
     'sidebar.footer.action': { kind: 'list' as const, scope: 'root' as const },
@@ -195,10 +195,8 @@ export function apply(ctx: ClientContext): void {
     'sidebar.codex.footer.action': { kind: 'list' as const, scope: 'root' as const },
   }
   const aliasedSidebar = withSlotAliases(CodexSidebar, sidebarSlotAliases)
-  const isOurSidebar = (entry: { registrant?: string; component?: unknown }): boolean =>
-    entry.registrant === 'michengai-codex-ui' || entry.component === CodexSidebar || entry.component === aliasedSidebar
-  const officialSidebarReady = (): boolean => ctx.slots.entries('sidebar').some(entry => !isOurSidebar(entry))
-  ctx.slots.inject('sidebar', () => registerAfterOfficialWave(ctx.slots, 'sidebar', officialSidebarReady, () => {
+  const officialSidebarReady = (): boolean => ctx.slots.spec?.('sidebar.workspaces') !== undefined
+  ctx.slots.inject('sidebar', () => registerAfterOfficialWave(ctx.slots, 'sidebar', officialSidebarReady, (timedOut = false) => {
     const declared = (name: string): boolean => {
       const spec = ctx.slots.spec as ((this: unknown, key: string) => unknown) | undefined
       return typeof spec === 'function' && spec.call(ctx.slots, name) !== undefined
@@ -206,7 +204,8 @@ export function apply(ctx: ClientContext): void {
     // 0.2 官方侧栏已经声明 panellist。重复声明会让本插件激活失败。
     const allSidebarChildren = { ...sharedSidebarChildren, ...ownSidebarChildren, ...sidebarAliasChildren }
     const children: Partial<typeof allSidebarChildren> = {}
-    for (const [name, spec] of Object.entries(allSidebarChildren)) {
+    const candidates = timedOut ? { ...ownSidebarChildren, ...sidebarAliasChildren } : allSidebarChildren
+    for (const [name, spec] of Object.entries(candidates)) {
       if (!declared(name)) Object.assign(children, { [name]: spec })
     }
     const register = (next: Partial<typeof allSidebarChildren>): () => void => {
@@ -242,7 +241,8 @@ export function apply(ctx: ClientContext): void {
         const mirrors: (() => void)[] = []
         try {
           for (const [source, target] of Object.entries(sidebarSlotAliases)) {
-            if (declared(source)) mirrors.push(mirrorSlot({ slots: ctx.slots }, source, target))
+            // 官方声明可晚于超时兜底；随声明挂载镜像，避免晚到的贡献永久缺席。
+            if (typeof ctx.slots.spec === 'function') mirrors.push(ctx.slots.inject(source as keyof typeof sidebarSlotAliases, () => mirrorSlot({ slots: ctx.slots }, source, target)))
           }
         } catch (error) {
           for (const dispose of mirrors.reverse()) dispose()
@@ -358,7 +358,7 @@ export function apply(ctx: ClientContext): void {
       insertWorkspaceBefore: (workspaceId: WorkspaceId, beforeWorkspaceId?: WorkspaceId) => ctx.workspaces.insertBefore(workspaceId, beforeWorkspaceId),
       insertSessionBefore: (workspaceId: WorkspaceId, sessionId: SessionId, beforeSessionId?: SessionId) => ctx.workspaces.insertSessionBefore(workspaceId, sessionId, beforeSessionId),
       startSession: (workspaceId?: WorkspaceId) => { startWorkspaceSession(ctx, workspaceId) },
-      requestAddWorkspace: () => { workspaceShortcuts.getSnapshot().bindings?.requestAddWorkspace?.() },
+      workspaceShortcuts,
     }),
   }, CodexWorkspaceBrowser))
 

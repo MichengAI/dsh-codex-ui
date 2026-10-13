@@ -2,7 +2,7 @@ type Observable<T> = { getSnapshot: () => T; subscribe: (listener: () => void) =
 type ShortcutState = { searchRequest: number; addRequested: boolean }
 type Bindings = {
   requestAddWorkspace?: () => void
-  hooks: { workspaceShortcuts: Observable<ShortcutState> }
+  hooks: { workspaceShortcuts: Observable<ShortcutState>; shortcuts?: Observable<readonly { id: string; aria?: string }[]> }
   closeAddWorkspace: () => void
   setDirectoryBusy: (busy: boolean) => void
   createWorkspace: (input: { path: string }) => Promise<{ workspaceId: string }>

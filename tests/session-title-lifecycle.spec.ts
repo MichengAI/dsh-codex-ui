@@ -140,8 +140,11 @@ test('identity change while the official fiber drains cancels takeover', async (
   unblock()
   await lifecycle.ready
   expect(f.service.events.filter(e => e === `register:${SESSION_TITLE_PROVIDER_ID}`)).toEqual([])
+  expect(f.options.disabled).toBe(false)
+  expect(f.slot()).toBe('official')
+  expect(f.entry.update).toHaveBeenLastCalledWith({ disabled: false })
   await lifecycle.dispose()
-  expect(f.options.disabled).toBe(true)
+  expect(f.options.disabled).toBe(false)
 })
 
 test('a loader without entry enumeration cannot safely take even a vacant slot', async () => {
@@ -223,13 +226,12 @@ test('dispose during official draining cancels registration and joins cleanup', 
   expect(f.options.disabled).toBe(false)
 })
 
-for (const change of ['disabled', 'identity', 'removed', 'options'] as const) {
+for (const change of ['disabled', 'removed', 'options'] as const) {
   test(`does not overwrite concurrent ${change} changes at restoration`, async () => {
     const f = fixture(false)
     const lifecycle = startSessionTitleLifecycle(f.ctx)
     await lifecycle.ready
     if (change === 'disabled') f.options.disabled = false
-    if (change === 'identity') f.options.name = 'replacement'
     if (change === 'removed') f.entries.length = 0
     if (change === 'options') f.entry.options = { ...f.options }
     await lifecycle.dispose()
@@ -237,6 +239,18 @@ for (const change of ['disabled', 'identity', 'removed', 'options'] as const) {
   })
 }
 
+
+test('同一条目的身份变化只回滚本插件写入的禁用状态', async () => {
+  const f = fixture(false)
+  const lifecycle = startSessionTitleLifecycle(f.ctx)
+  await lifecycle.ready
+  f.options.name = 'replacement'
+  await lifecycle.dispose()
+  expect(f.options.name).toBe('replacement')
+  expect(f.options.disabled).toBe(false)
+  expect(f.slot()).toBe('official')
+  expect(f.loader.update).not.toHaveBeenCalled()
+})
 
 test('dispose does not mark foreign registration closing or delete it', async () => {
   const f = fixture(false)

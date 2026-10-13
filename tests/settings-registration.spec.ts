@@ -148,6 +148,34 @@ test.each([false, true])('官方设置壳晚到=%s 时保留官方并回退', as
   removeRoot()
 })
 
+test('设置超时兜底不抢共享声明，官方晚到后仍镜像通用设置行', async () => {
+  vi.useFakeTimers()
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const { slots, ctx, declare, dispose } = setup()
+  const removeRoot = declare(false)
+  try {
+    registerSettingsPage(ctx)
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(slots.entries('sidebar.settings')).toHaveLength(1)
+    expect(slots.spec('settings.launcher')).toBeUndefined()
+    expect(slots.spec('settings.codex.launcher')).toBeDefined()
+    expect(warn).toHaveBeenCalled()
+    expect(() => officialSettings().apply(ctx)).not.toThrow()
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(slots.entries('sidebar.settings')).toHaveLength(2)
+    const row = () => null
+    slots.register({ name: 'settings.general.item', id: 'late-row' }, row as never)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(slots.entriesOfSlot('settings.codex.general.item').some(entry => entry.options.id === 'late-row')).toBe(true)
+    expect(slots.entries('settings.section').filter(entry => entry.options.id === 'general')).toHaveLength(2)
+  } finally {
+    dispose()
+    removeRoot()
+    warn.mockRestore()
+    vi.useRealTimers()
+  }
+})
+
 test('发布补丁不静态停用官方首消息标题 LLM', () => {
   const patch = readFileSync('cordis.patch.yml', 'utf8')
   expect(patch).not.toMatch(/id: session-title-llm\s+disabled: true/)

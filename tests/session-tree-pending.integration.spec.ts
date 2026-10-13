@@ -7,6 +7,7 @@ import { ChannelBrowser } from '../src/client/ChannelBrowser.tsx'
 import { CodexWorkspaceBrowser } from '../src/client/CodexWorkspaceBrowser.tsx'
 import { ScheduleBrowser } from '../src/client/ScheduleBrowser.tsx'
 import { WORKSPACE_GROUPS_STORAGE_KEY } from '../src/client/pinned-workspaces.ts'
+import { createWorkspaceShortcutSource } from '../src/client/workspace-shortcuts.ts'
 import type { PendingInteractionSnapshot, UseSessionPendingInteraction, UseSessionStatus } from '../src/client/session-pending.ts'
 import type { SessionStatusSnapshot } from '../src/client/session-host.ts'
 import type { PendingInteractionKind } from '../src/client/session-pending.ts'
@@ -103,6 +104,49 @@ async function render(node: ReactNode) {
     },
   }
 }
+
+test('添加工作区按钮随官方入口启停和快捷键目录实时更新', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const listeners = new Set<() => void>()
+  const shortcutListeners = new Set<() => void>()
+  let rows = [{ id: 'workspace.add', aria: 'Control+O' }]
+  const request = vi.fn()
+  const official = { locale: 'workspace', inject: () => ({
+    requestAddWorkspace: request,
+    closeAddWorkspace: () => {}, setDirectoryBusy: () => {}, createWorkspace: async () => ({ workspaceId: 'new' }),
+    hooks: {
+      workspaceShortcuts: { getSnapshot: () => ({ searchRequest: 0, addRequested: false }), subscribe: () => () => {} },
+      shortcuts: { getSnapshot: () => rows, subscribe: (listener: () => void) => { shortcutListeners.add(listener); return () => { shortcutListeners.delete(listener) } } },
+    },
+  }) }
+  let present = false
+  const source = createWorkspaceShortcutSource({ entries: () => present ? [official] : [], subscribe: (_key, listener) => { listeners.add(listener); return () => { listeners.delete(listener) } } })
+  const workspaces = { baselinesReady: true, archivedSessionIds: [], items: [] }
+  const view = await render(createElement(CodexWorkspaceBrowser, {
+    ...sessionActions, wide: true, useSessions: createSessionStore(createSession('unused', 'unused', undefined)),
+    useSessionPendingInteraction: useEmptyPendingInteractions,
+    useWorkspaces: (select: (snapshot: typeof workspaces) => unknown) => select(workspaces), t,
+    workspaceShortcuts: source, deleteWorkspace: vi.fn(), insertSessionBefore: vi.fn(), insertWorkspaceBefore: vi.fn(), openPath: vi.fn(), renameWorkspace: vi.fn(), startSession: vi.fn(),
+  } as never))
+  const button = () => view.container.querySelector<HTMLButtonElement>('[aria-label="workspace.add"]')!
+  try {
+    expect(button().disabled).toBe(true)
+    await act(async () => { present = true; for (const notify of listeners) notify() })
+    expect(button().disabled).toBe(false)
+    expect(button().getAttribute('aria-keyshortcuts')).toBe('Control+O')
+    await act(async () => { rows = [{ id: 'workspace.add', aria: 'Alt+O' }]; for (const notify of shortcutListeners) notify() })
+    expect(button().getAttribute('aria-keyshortcuts')).toBe('Alt+O')
+    await act(async () => { button().click() })
+    expect(request).toHaveBeenCalledTimes(1)
+    await act(async () => { present = false; for (const notify of listeners) notify() })
+    expect(button().disabled).toBe(true)
+    expect(button().getAttribute('aria-keyshortcuts')).toBeNull()
+  } finally {
+    await view.dispose()
+    source.dispose()
+    expect(shortcutListeners.size).toBe(0)
+  }
+})
 
 test('跨置顶、分组与未分组悬停不依赖 dragleave，结束清空所有落点', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
@@ -476,6 +520,7 @@ test('custom group menu renames without changing identity, membership, order or 
     expect(projects.querySelector('.dcu-wb-section-head [aria-label="workspace.manageGroups"]')).toBeNull()
     expect(projects.querySelector('.dcu-wb-section-head [aria-label="workspace.createGroup"]')).not.toBeNull()
     expect(projects.querySelector('.dcu-wb-section-head [aria-label="workspace.add"]')).not.toBeNull()
+    expect(projects.querySelector<HTMLButtonElement>('.dcu-wb-section-head [aria-label="workspace.add"]')!.disabled).toBe(true)
     const addWorkspaceFn = vi.fn()
     const viewWithAdd = await render(createElement(CodexWorkspaceBrowser, {
       ...sessionActions, wide: true, useSessions: createSessionStore(createSession('unused', 'unused', undefined)),
@@ -483,10 +528,13 @@ test('custom group menu renames without changing identity, membership, order or 
       useWorkspaces: (selector: (snapshot: typeof workspaces) => unknown) => selector(workspaces), t,
       deleteWorkspace: vi.fn(), insertSessionBefore: vi.fn(), insertWorkspaceBefore: vi.fn(), openPath: vi.fn(), renameWorkspace: vi.fn(), startSession: vi.fn(),
       requestAddWorkspace: addWorkspaceFn,
+      addWorkspaceShortcutAria: 'Control+O',
     } as never))
     try {
       const addBtn = viewWithAdd.container.querySelector<HTMLButtonElement>('.dcu-wb-section[aria-label="workspace.projects"] .dcu-wb-section-head [aria-label="workspace.add"]')!
       expect(addBtn).not.toBeNull()
+      expect(addBtn.disabled).toBe(false)
+      expect(addBtn.getAttribute('aria-keyshortcuts')).toBe('Control+O')
       await act(async () => { addBtn.click() })
       expect(addWorkspaceFn).toHaveBeenCalledTimes(1)
     } finally {

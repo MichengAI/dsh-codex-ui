@@ -6,6 +6,11 @@ This changelog records recent releases of DSH Codex UI. Earlier changes remain a
 
 ## Unreleased
 
+- 修复标题接管期间官方条目身份变化后的禁用残留，以及停用后的回退。
+- 侧栏和设置加载超时不抢占官方共享槽；官方晚到仍能提供内容。
+- 添加工作区按钮跟随官方入口能力与快捷键目录，避免不可用时静默空操作。
+- 恢复菜单标准字号、修正全局搜索背景和连接器设置排序。
+
 ## 1.1.36 - 2026-10-13
 
 - Restored the "Show Code Workspace" (`developerTools`) setting toggle in General Settings and aligned its Switch control with native specifications (#41).

@@ -61,7 +61,7 @@ function registerMirrors(ctx: Context, aliases: Readonly<Record<string, string>>
   const getSpec = (ctx.slots as unknown as { spec?: (slot: string) => unknown }).spec
   try {
     for (const [source, target] of Object.entries(aliases)) {
-      if (getSpec?.call(ctx.slots, source) !== undefined) mirrors.push(mirrorSlot({ slots: ctx.slots }, source, target))
+      if (typeof getSpec === 'function') mirrors.push(ctx.slots.inject(source as keyof typeof shellAliases | keyof typeof generalAliases, () => mirrorSlot({ slots: ctx.slots }, source, target)))
     }
   } catch (error) {
     for (const dispose of mirrors.reverse()) dispose()
@@ -113,9 +113,7 @@ export function registerSettingsPage(ctx: Context): void {
     const spec = ctx.slots.spec as ((this: unknown, key: string) => unknown) | undefined
     return typeof spec === 'function' && spec.call(ctx.slots, name) !== undefined
   }
-  const isOurSettingsPage = (entry: { registrant?: string; component?: unknown }): boolean =>
-    entry.registrant === 'michengai-codex-ui' || entry.component === CodexSettingsPage || entry.component === AliasedCodexSettingsPage
-  const officialSettingsReady = (): boolean => declared('settings.launcher') || ctx.slots.entries('sidebar.settings').some(entry => !isOurSettingsPage(entry))
+  const officialSettingsReady = (): boolean => declared('settings.launcher')
   // Host 和 Client 共享服务名；当前入口读取的是浏览器连接外观。
   const service: unknown = ctx.get('connection')
   const connection = service as ConnectionHandle

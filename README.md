@@ -140,6 +140,10 @@ Check that the installation profile matches the one running DSH Web, then restar
 
 ## Development and contributing
 
+本地交接入口：[阅读导航](docs/00-交接入口/00-阅读导航.md)。本地文档沿用既有忽略策略，不随 npm 包发布。
+
+真实宿主启停验收使用 `pnpm run test:fallback-host`，需设置 `DCU_DSH_BIN` 指向完整宿主 CLI；该命令在隔离 profile 验证侧栏回退，不调用模型，不属于默认 `pnpm test` 的验收范围。
+
 GitHub and npm both include a ready-to-run `lib`. After changing source, run `pnpm build` before committing.
 
 ### Install from source

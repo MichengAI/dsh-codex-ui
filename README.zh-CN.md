@@ -140,6 +140,10 @@ dsh --profile web --dump-config
 
 ## 开发与贡献
 
+本地交接与当前架构见 [阅读导航](docs/00-交接入口/00-阅读导航.md)（`docs` 为本仓库既有本地文档，不随 npm 包发布）。
+
+`pnpm run test:fallback-host` 使用 `DCU_DSH_BIN` 指向完整宿主 CLI，在隔离 profile 验证三轮启停和重启后的官方侧栏回退，不调用模型。`pnpm test` 不包含这项真实宿主验收；全局 renderer 用例未指定宿主时显式跳过。
+
 GitHub 与 npm 都包含可直接运行的 `lib`。修改源码后，提交前运行 `pnpm build`。
 
 ### 从源码安装

@@ -15,20 +15,13 @@ async function api() {
 }
 function resolveGlobalAlphaRenderer(): { pkgPath: string; clientPath: string } | null {
   const customBin = process.env.DCU_DSH_BIN
-  if (customBin) {
-    try {
-      const cliReq = createRequire(customBin)
-      const pkgPath = cliReq.resolve('@deepseek-ai/dsh-client-ui-renderer/package.json')
-      const clientPath = cliReq.resolve('@deepseek-ai/dsh-client-ui-renderer/lib/client.js')
-      if (existsSync(pkgPath) && existsSync(clientPath)) return { pkgPath, clientPath }
-    } catch {}
-  }
-  const defaultGlobalPkg = 'D:/Tools/nodejs/node_global/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-client-ui-renderer/package.json'
-  const defaultGlobalClient = 'D:/Tools/nodejs/node_global/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js'
-  if (existsSync(defaultGlobalPkg) && existsSync(defaultGlobalClient)) {
-    return { pkgPath: defaultGlobalPkg, clientPath: defaultGlobalClient }
-  }
-  return null
+  if (!customBin) return null
+  // 显式指定了宿主却无法解析时应失败，不能悄悄把错误配置标为跳过。
+  const cliReq = createRequire(customBin)
+  const pkgPath = cliReq.resolve('@deepseek-ai/dsh-client-ui-renderer/package.json')
+  const clientPath = cliReq.resolve('@deepseek-ai/dsh-client-ui-renderer/client')
+  if (!existsSync(pkgPath) || !existsSync(clientPath)) throw new Error('指定宿主的 renderer 文件不存在')
+  return { pkgPath, clientPath }
 }
 
 const globalAlphaPaths = resolveGlobalAlphaRenderer()
@@ -72,8 +65,8 @@ test('real renderer denies undeclared shared children even though the registry c
   unmount(); consoleError.mockRestore(); window.removeEventListener('error', suppressExpected); await r.clean()
 })
 
-test.each([false, true])('legal nested aliases render through the real renderer (global alpha=%s)', async global => {
-  if (global && !globalAlphaPaths) return
+test.for([false, true])('legal nested aliases render through the real renderer (global alpha=%s)', async (global, ctx) => {
+  if (global && !globalAlphaPaths) ctx.skip()
   const { mirrorSlot, withSlotAliases } = await api()
   const r = runtime(global)
   const errors: unknown[] = []
