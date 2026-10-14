@@ -4,6 +4,10 @@
 
 本日志记录 DSH Codex UI 的最近发布；更早的变更可查看 [Git 提交历史](https://github.com/MichengAI/dsh-codex-ui/commits/main)。
 
+## 1.1.38 - 2026-10-15
+
+- 支持 DSH `0.2.1-alpha.3`，继续兼容既有已支持版本；开发依赖中的 `@deepseek-ai/dsh*` 钉到宿主 `0.2.1-alpha.3`，Cordis 钉到 `4.0.5-alpha.2`。
+
 ## 1.1.37 - 2026-10-13
 
 - 在项目区标题栏新增「添加工作区」按钮，复用官方目录选择器和快捷键（#42）。

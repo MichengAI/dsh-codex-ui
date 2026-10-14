@@ -4,6 +4,10 @@
 
 This changelog records recent releases of DSH Codex UI. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.38 - 2026-10-15
+
+- Support DSH `0.2.1-alpha.3` while retaining all existing supported versions; pin development `@deepseek-ai/dsh*` dependencies to host `0.2.1-alpha.3` and Cordis to `4.0.5-alpha.2`.
+
 ## 1.1.37 - 2026-10-13
 
 - Add an Add workspace button to the Projects header, reusing the official directory picker and shortcuts (#42).
