@@ -24,7 +24,7 @@
     "@michengai/dsh-archive-manager": "1.0.19",
     "@michengai/dsh-automation": "0.1.66",
     "@michengai/dsh-codex-ui": "workspace:*",
-    "@michengai/dsh-im-connect": "0.1.76",
-    "@michengai/dsh-skills-manager": "1.1.19"
+    "@michengai/dsh-im-connect": "0.1.77",
+    "@michengai/dsh-skills-manager": "1.1.21"
   }
 }
