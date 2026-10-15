@@ -4,6 +4,11 @@
 
 This changelog records recent releases of DSH Codex UI. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.40 - 2026-10-15
+
+- The Tasks tab shows workspace projects again. Channel conversations stay on the Channels tab.
+- Settings keeps a stable section order: Account, General; Models, Agent presets, Built-in plugins, Plugin configuration, Experts, Skills, Pet, Connectors, Scheduled tasks, IM assistant; Archive, About. Unknown sections follow the known items in the same group.
+
 ## 1.1.39 - 2026-10-15
 
 - Plugin sidebar panels now appear inside Extensions, after Experts, Skills, Plugins, Connectors, Scheduled tasks, and the IM assistant. They keep each plugin's own order, including on the compact rail. Unknown panels are no longer dropped, and they no longer sit above New task (#44).

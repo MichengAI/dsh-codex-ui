@@ -22,6 +22,7 @@ export function withSlotAliases<P extends object>(Component: ComponentType<P>, a
     const renderSlotChain = useMemo(() => face.renderSlotChain && ((key: string, ...args: unknown[]) => face.renderSlotChain!(map.get(key) ?? key, ...args)), [face.renderSlotChain])
     return createElement(Component, { ...props, ...(renderSlot && { renderSlot }), ...(renderSlotChain && { renderSlotChain }) })
   }
+  SlotAliases.displayName = Component.displayName
   cached.set(signature, SlotAliases)
   return SlotAliases
 }
