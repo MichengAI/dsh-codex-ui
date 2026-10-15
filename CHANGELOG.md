@@ -4,6 +4,11 @@
 
 This changelog records recent releases of DSH Codex UI. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.39 - 2026-10-15
+
+- Plugin sidebar panels now appear inside Extensions, after Experts, Skills, Plugins, Connectors, Scheduled tasks, and the IM assistant. They keep each plugin's own order, including on the compact rail. Unknown panels are no longer dropped, and they no longer sit above New task (#44).
+- The footer still skips dsh-context's old `context-overview` button. The per-session Context tab is unchanged. The official Plugins panel stays hidden because Extensions already has Plugins. Context Insights from dsh-context 0.64.0 or newer shows up in Extensions.
+
 ## 1.1.38 - 2026-10-15
 
 - Support DSH `0.2.1-alpha.3` while retaining all existing supported versions; pin development `@deepseek-ai/dsh*` dependencies to host `0.2.1-alpha.3` and Cordis to `4.0.5-alpha.2`.
