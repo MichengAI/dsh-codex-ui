@@ -2,7 +2,7 @@ import { createRequire } from 'node:module'
 import { act, createElement, useLayoutEffect, type ReactNode } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { CodexSettingsPage, type CodexSettingsPageProps } from '../src/client/CodexSettingsPage.tsx'
-import { filterSettingsRows, generalItemGroup, settingsGroup } from '../src/client/settings-page-model.ts'
+import { filterSettingsRows, generalItemGroup, orderSettingsRows, settingsGroup } from '../src/client/settings-page-model.ts'
 import { openSettingsRoot, openSettingsSection } from '../src/client/settings-navigation.ts'
 import { zh } from '../src/client/locales.ts'
 
@@ -215,6 +215,36 @@ test('搜索保留未知插件，空结果不会误选页面，条目分组覆�
   expect(generalItemGroup('new-preference')).toBe('general')
   expect(settingsGroup('plugins')).toBe('integrations')
   expect(settingsGroup('plugin-config')).toBe('integrations')
+})
+
+test('设置导航由 UI 插件统一排序，各插件自带 order 不能插进已知项中间', () => {
+  const scrambled = [
+    { id: 'codex-pet', label: '宠物', order: 12 },
+    { id: 'agency-agents', label: '专家', order: 16 },
+    { id: 'plugin-config', label: '插件配置', order: 16 },
+    { id: 'agent-presets', label: 'Agent 预设', order: 18 },
+    { id: 'market', label: '插件市场', order: 40 },
+    { id: 'im-assistant', label: 'IM助理', order: 40 },
+    { id: 'archived-sessions', label: '归档会话', order: 45 },
+    { id: 'skills-manager', label: '技能', order: 17 },
+    { id: 'connectors', label: '连接器', order: 17 },
+    { id: 'scheduled-tasks', label: '定时任务', order: 28 },
+    { id: 'better-sidebar', label: '侧边卡片', order: 100 },
+    { id: 'plugins', label: '内置插件', order: 15 },
+    { id: 'about', label: 'Codex UI', order: 1 },
+    { id: 'general', label: '常规', order: 99 },
+    { id: 'account', label: '账号与余额', order: 8 },
+    { id: 'models', label: '模型', order: 90 },
+  ]
+  expect(orderSettingsRows(scrambled).map(row => row.id)).toEqual([
+    'account', 'general',
+    'models', 'agent-presets', 'plugins', 'plugin-config', 'agency-agents', 'skills-manager', 'codex-pet', 'connectors', 'scheduled-tasks', 'im-assistant',
+    'market', 'better-sidebar',
+    'archived-sessions', 'about',
+  ])
+  expect(settingsGroup('codex-pet')).toBe('integrations')
+  expect(settingsGroup('archived-sessions')).toBe('records')
+  expect(settingsGroup('agent-presets')).toBe('integrations')
 })
 
 

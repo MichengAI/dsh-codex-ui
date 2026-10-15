@@ -5,7 +5,7 @@ import type { PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/d
 import { ConnectionIndicator } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ConnectionState } from '@deepseek-ai/dsh-client-connection/client'
 import { NS } from './locales.ts'
-import { filterSettingsRows, generalItemGroup, settingsGroup, type SettingsRow } from './settings-page-model.ts'
+import { filterSettingsRows, generalItemGroup, orderSettingsRows, settingsGroup, type SettingsRow } from './settings-page-model.ts'
 import { settingsPageStyles } from './settings-page-styles.ts'
 import { settingsElementAvailable, settingsOverlays } from './settings-focus.ts'
 import { SETTINGS_OPEN_ROOT_EVENT, SETTINGS_OPEN_SECTION_EVENT, type SettingsNavigationRequest } from './settings-navigation.ts'
@@ -210,7 +210,7 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
   }, [open, close, step?.id, hostAccountLauncher])
   useEffect(() => { if (main.current !== null) main.current.scrollTop = 0 }, [active?.id])
 
-  const visible = filterSettingsRows(rows, query)
+  const visible = orderSettingsRows(filterSettingsRows(rows, query))
   const ownTitle = active?.id === 'general' ? t('settings.general') : active?.id === 'plugin-config' ? t('settings.pluginConfig') : undefined
   const connectionIndicator = connection === 'disconnected' ? 'disconnected' : connection === 'connecting' ? 'connecting' : recovered ? 'recovered' : undefined
   return <>
