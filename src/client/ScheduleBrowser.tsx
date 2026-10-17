@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { Button, Menu, Modal, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, Menu, Modal, SegmentedTabs, type MenuEntry, type SegmentedTab } from '@deepseek-ai/dsh-client-ui-primitives'
 import { IconArchiveOutlineMedium, IconEllipsisOutlineMedium, IconSettingsOutlineMedium } from './host-icons.ts'
 import { NS } from './locales.ts'
 import { WORKSPACE_TREE_STYLE } from './CodexWorkspaceBrowser.tsx'
@@ -68,14 +68,26 @@ function ScheduleClock() {
 }
 
 /** 定时树：数据来自会话快照，行/菜单/悬停与任务树共用。 */
+type ScheduleView = 'runs' | 'overview'
+
 export function ScheduleBrowser(props: ScheduleBrowserProps) {
   const [menu, setMenu] = useState<OpenMenu>()
-  const [view, setView] = useState<'runs' | 'overview'>('runs')
+  const [view, setView] = useState<ScheduleView>('runs')
+  const viewTabs = useMemo<readonly [SegmentedTab<ScheduleView>, SegmentedTab<ScheduleView>]>(() => [
+    { value: 'runs', id: 'dcu-schedule-tab-runs', panelId: 'dcu-schedule-panel-runs', label: props.t('sidebar.runsTab') },
+    { value: 'overview', id: 'dcu-schedule-tab-overview', panelId: 'dcu-schedule-panel-overview', label: props.t('sidebar.overviewTab') },
+  ], [props.t])
+
   if (props.overviewContent === undefined) return <HoverShell blocked={menu !== undefined}><ScheduleBrowserTree {...props} menu={menu} setMenu={setMenu} /></HoverShell>
   return <div className="dcu-schedule-browser">
-    <div className="dcu-schedule-views" role="tablist" aria-label={props.t('sidebar.scheduleTab')}>
-      <button type="button" role="tab" aria-selected={view === 'runs'} onClick={() => { setMenu(undefined); setView('runs') }}>{props.t('sidebar.runsTab')}</button>
-      <button type="button" role="tab" aria-selected={view === 'overview'} onClick={() => { setMenu(undefined); setView('overview') }}>{props.t('sidebar.overviewTab')}</button>
+    <div className="dcu-schedule-views">
+      <SegmentedTabs
+        className="dcu-schedule-segmented-tabs"
+        label={props.t('sidebar.scheduleTab')}
+        value={view}
+        onChange={next => { setMenu(undefined); setView(next) }}
+        items={viewTabs}
+      />
     </div>
     <div className="dcu-schedule-pane">
       {view === 'runs'
