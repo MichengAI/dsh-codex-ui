@@ -38,6 +38,7 @@ export const IconNewChatOutlineMedium = hostIcon('IconNewChatOutlineMedium', 'Ic
 export const IconPanelLeftOutlineMedium = hostIcon('IconPanelLeftOutlineMedium', 'IconPanelLeftOutline16')
 export const IconPersonalizationOutlineMedium = hostIcon('IconPersonalizationOutlineMedium', 'IconPersonalizationOutline16')
 export const IconProjectAddOutlineMedium = hostIcon('IconProjectAddOutlineMedium', 'IconProjectAddOutline16')
+export const IconRefreshOutlineMedium = hostIcon('IconRefreshOutlineMedium', 'IconRefreshOutline16')
 export const IconSearchOutlineMedium = hostIcon('IconSearchOutlineMedium', 'IconSearchOutline16')
 export const IconSettingsOutlineMedium = hostIcon('IconSettingsOutlineMedium', 'IconSettingsOutline16')
 export const IconSkillOutlineMedium = hostIcon('IconSkillOutlineMedium', 'IconSkillOutline16')
