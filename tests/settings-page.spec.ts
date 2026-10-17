@@ -291,20 +291,20 @@ test('设置打开时内联引导仍可完成，迟挂载背景不能抢走焦�
   expect(inSettings('[data-onboarding-test]')).toBeNull()
 })
 
-test('插件配置使用常规页同款自有标题', async () => {
+test('插件管理使用常规页同款自有标题', async () => {
   const { container } = await mount({ sections: source([
-    ...rows, {id:'plugin-config',label:'插件配置',order:16},
+    ...rows, {id:'plugin-config',label:'插件管理',order:16},
   ]) })
-  await act(async () => { openSettingsSection(container, '插件配置'); await new Promise(resolve => setTimeout(resolve, 50)) })
+  await act(async () => { openSettingsSection(container, '插件管理'); await new Promise(resolve => setTimeout(resolve, 50)) })
   expect(inSettings('.dcu-settings-inner')?.getAttribute('data-settings-section')).toBe('plugin-config')
   expect(inSettings('.dcu-settings-heading')?.getAttribute('data-own-title')).toBe('true')
-  expect(inSettings('.dcu-settings-heading h1')?.textContent).toBe('插件配置')
+  expect(inSettings('.dcu-settings-heading h1')?.textContent).toBe('插件管理')
 })
 
 test('新设置页直接提供互不重复的社区插件图标', async () => {
   await mount({ sections: source([
     ...rows, {id:'market',label:'插件市场',order:3}, {id:'better-sidebar',label:'侧边卡片',order:4},
-    {id:'plugins',label:'内置插件',order:15}, {id:'plugin-config',label:'插件配置',order:16},
+    {id:'plugins',label:'内置插件',order:15}, {id:'plugin-config',label:'插件管理',order:16},
   ]) })
   expect(inSettings('.dcu-settings-nav .lucide-store')).not.toBeNull()
   expect(inSettings('.dcu-settings-nav .lucide-panel-right')).not.toBeNull()

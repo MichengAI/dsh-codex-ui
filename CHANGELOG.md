@@ -4,6 +4,12 @@
 
 This changelog records recent releases of DSH Codex UI. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).
 
+## 1.1.41 - 2026-10-17
+
+- Support DSH `0.2.1-rc.1` and `0.2.1-rc.2` while retaining all existing supported versions. Development dependencies are pinned to host `0.2.1-rc.2`.
+- The sidebar Extensions plugin entry is now Plugin manager and opens the official plugin manager instead of the plugin market.
+- The settings entry formerly called Plugin configuration is now Plugin manager. Built-in plugins remains the read-only list.
+
 ## 1.1.40 - 2026-10-15
 
 - The Tasks tab shows workspace projects again. Channel conversations stay on the Channels tab.
