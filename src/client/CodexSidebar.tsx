@@ -12,7 +12,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type { PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { NS } from './locales.ts'
-import { OFFICIAL_PLUGINS_PANEL_ID, openSettingsRoot, openSettingsSection, routeOptionalSettingsSection } from './settings-navigation.ts'
+import { openSettingsRoot, openSettingsSection, routeOptionalSettingsSection } from './settings-navigation.ts'
 import { filterSidebarSearchItems, type SidebarSearchItem } from './sidebar-search.ts'
 import { EMPTY_COMPANION_TABS, type CompanionTabAvailability } from './companion-slots.ts'
 import { ChannelBrowser } from './ChannelBrowser.tsx'
@@ -290,7 +290,7 @@ export function CodexSidebar({ workspaceShortcuts, navigationHistory, globalPane
   const showCompanionTabs = showChannels || showSchedule
   const selectSection = (label: string): void => { openSettingsSection(settingsSeat.current, label) }
   const openPlugins = (): void => {
-    selectPanel?.(OFFICIAL_PLUGINS_PANEL_ID)
+    selectExternalSection([t('settings.pluginConfig'), t('sidebar.marketplace'), t('sidebar.builtinPlugins')])
   }
   const selectExternalSection = (label: string | readonly string[]): void => {
     openSettingsSection(settingsSeat.current, label, () => { selectSection(t('about.nav')) })
