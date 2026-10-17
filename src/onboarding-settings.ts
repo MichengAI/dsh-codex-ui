@@ -29,13 +29,7 @@ export function registerOnboardingSettings(ctx: Context): void {
           return typeof dispose === 'function' ? dispose : () => {}
         })
       }
-      if (typeof settings?.register === 'function') {
-        settings.register(ONBOARDING_SETTINGS_NAMESPACE, {
-          welcomeNoticeVersion: { type: 'string' },
-        })
-        return
-      }
-      ctx.logger.warn('[michengai-codex-ui] 当前宿主没有设置 schema 接口，跳过引导设置注册。')
+      ctx.logger.warn('[michengai-codex-ui] 当前宿主缺少 settings.configure 接口，跳过引导设置注册。')
     } catch (error) {
       ctx.logger.warn('[michengai-codex-ui] 引导设置注册已跳过：%s', error)
     }

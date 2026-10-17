@@ -217,7 +217,6 @@ test('官方设置树重新挂载后恢复功能贡献', async () => {
 test.each([
   ['configForms', false],
   ['configForms', true],
-  ['settingsScope', true],
 ] as const)('真实 Cordis 注入生命周期：%s loopback=%s 的配置文件入口', async (service, loopback) => {
   const { SlotRegistry } = loadClientBundle('@deepseek-ai/dsh-client-ui-renderer/client') as { SlotRegistry: new (ctx: Context) => Context['slots'] }
   const ctx=new Context()

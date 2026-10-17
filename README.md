@@ -24,7 +24,7 @@ Working across several projects and conversations in DSH Web? DSH Codex UI helps
 
 ## Host compatibility
 
-Version `1.1.41` explicitly declares support for DSH `0.1.2-rc.1`, `0.1.5-rc.1`, `0.1.5-rc.2`, `0.1.5-rc.3`, `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-alpha.2`, `0.2.1-alpha.3`, `0.2.1-rc.1`, and `0.2.1-rc.2`. Development dependencies are pinned to `0.2.1-rc.2`. Compatibility declarations do not imply that every supported host received a fresh live test in this release.
+Version `1.1.42` explicitly declares support for DSH `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-rc.1`, and `0.2.1-rc.2` (dropping obsolete pre-0.2.0 hosts to align with in-house plugin standards). Development dependencies are pinned to `0.2.1-rc.2`. Compatibility declarations do not imply that every supported host received a fresh live test in this release.
 
 **Do not enable Codex UI and `ds-bot` together.** Both redesign the sidebar and conversation interface, so their slot ownership and layout styles overlap. Disable or uninstall one before using the other.
 

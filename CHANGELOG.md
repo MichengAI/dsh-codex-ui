@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.42 (2026-10-18)
+
+- **Drop obsolete pre-0.2.0 hosts**: Align with in-house plugin standards, dropping 0.1.x host ranges and focusing on DSH `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-rc.1`, and `0.2.1-rc.2`.
+- **Clean legacy compat shims**: Remove 0.1.5 onboarding settings schema fallbacks and `settingsScope` branches.
+- **Sidebar refinement**: Unify workspace and schedule view tabs to official `SegmentedTabs` with transparent pill indicators.
+
 [简体中文](CHANGELOG.zh-CN.md)
 
 This changelog records recent releases of DSH Codex UI. Earlier changes remain available in the [Git history](https://github.com/MichengAI/dsh-codex-ui/commits/main).

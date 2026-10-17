@@ -27,16 +27,8 @@ test('新宿主走 settings.configure，不调用已删除的 register', () => {
   expect(register).not.toHaveBeenCalled()
 })
 
-test('旧宿主只在 register 存在时登记引导命名空间', () => {
-  const register = vi.fn()
-  const harness = host({ register })
-  registerOnboardingSettings(harness.ctx)
-  harness.run()
-  expect(register).toHaveBeenCalledWith('ui-onboarding', { welcomeNoticeVersion: { type: 'string' } })
-})
-
-test('register 抛错时只记录警告，不让渲染进程启动失败', () => {
-  const harness = host({ register: () => { throw new TypeError('settings.register is not a function') } })
+test('缺少 settings.configure 时记录警告并跳过，不让渲染进程启动失败', () => {
+  const harness = host({})
   registerOnboardingSettings(harness.ctx)
   expect(() => harness.run()).not.toThrow()
   expect(harness.warn).toHaveBeenCalled()

@@ -163,9 +163,6 @@ export function registerSettingsPage(ctx: Context): void {
   ctx.inject(['configForms', 'remote.settings'], settingsCtx => {
     return bindSettingsDocument(settingsCtx, (settingsCtx as Context & { configForms: { describe: () => SettingsDescribeFace } }).configForms)
   })
-  ctx.inject(['settingsScope', 'remote.settings'], settingsCtx => {
-    return bindSettingsDocument(settingsCtx, (settingsCtx as Context & { settingsScope: { describe: () => SettingsDescribeFace } }).settingsScope)
-  })
   // 与官方设置行共存，停用本插件后仍保留官方开关。
   ctx.inject(['configForms'], configFormsCtx => {
     const configForms = (configFormsCtx as Context & { configForms: { developerTools?: DeveloperToolsHandle } }).configForms
