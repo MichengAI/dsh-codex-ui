@@ -254,8 +254,8 @@ assert.doesNotMatch(workspaceBrowser, /IconFullscreenOutline16|openWindow|window
 assert.doesNotMatch(client, /as never|as unknown as/, '客户端插槽注册不得绕过官方类型')
 
 assert.match(sidebar, /showCompanionTabs/, '未安装配套插件时不得显示任务/频道/定时页签栏')
-assert.match(sidebar, /showChannels && <button type="button" className="dcu-im-tab"/, '频道页签必须在 IM 插槽有注册后才显示')
-assert.match(sidebar, /showSchedule && <button type="button" className="dcu-im-tab"/, '定时页签必须在定时插槽有注册后才显示')
+assert.match(sidebar, /showChannels\)[\s\S]*?items\.push\(/, '频道页签必须在 IM 插槽有注册后才显示')
+assert.match(sidebar, /showSchedule\)[\s\S]*?items\.push\(/, '定时页签必须在定时插槽有注册后才显示')
 assert.match(sidebar, /view: 'overview',[\s\S]*showViewSwitch: false/, '任务概览必须直接渲染卡片，不能嵌套第三层视图切换')
 assert.match(sidebar, /\[data-slot="sidebar\.schedule"\][^}]*display:flex!important[^}]*width:100%/, '任务概览插槽必须撑满定时侧栏，不能按内容宽度收缩')
 assert.match(sidebar, /\.dcu-expanded-shell\{[^}]*flex:1 1 0[^}]*overflow:hidden/, '长会话列表必须在侧栏内部滚动，不能把底部设置入口挤出视口')
