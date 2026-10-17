@@ -2,9 +2,12 @@
 
 ## 1.1.42 (2026-10-18)
 
-- **Drop obsolete pre-0.2.0 hosts**: Align with in-house plugin standards, dropping 0.1.x host ranges and focusing on DSH `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-rc.1`, and `0.2.1-rc.2`.
+- **Support DSH 0.2.1-rc.2**: Adapt to the latest official DeepSeek Harness host, pinning dev dependencies to `0.2.1-rc.2` and Cordis to `4.0.5`.
+- **Drop obsolete pre-0.2.0 & alpha hosts**: Align with in-house plugin standards, dropping 0.1.x and alpha versions, focusing on DSH `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-rc.1`, and `0.2.1-rc.2`.
 - **Clean legacy compat shims**: Remove 0.1.5 onboarding settings schema fallbacks and `settingsScope` branches.
-- **Sidebar refinement**: Unify workspace and schedule view tabs to official `SegmentedTabs` with transparent pill indicators.
+- **Plugin Manager navigation in sidebar**: Clicking the plugin entry in the sidebar now opens the official Plugin Management section in Settings directly instead of taking over the main workspace.
+- **Sidebar SegmentedTabs unification**: Unify both primary (Tasks/Channels/Schedule) and secondary (Runs/Overview) tabs to official `SegmentedTabs` with transparent containers and subtle pill indicators; resolve tablist suppression bugs.
+- **About page alignment**: Adopt standard trio actions (GitHub, Feedback, Check Updates) and aligned typography.
 
 [简体中文](CHANGELOG.zh-CN.md)
 
