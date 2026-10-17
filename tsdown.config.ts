@@ -9,7 +9,7 @@ export default [
     platform: 'node',
     target: 'es2022',
     dts: true,
-    clean: true,
+    clean: false,
   },
   {
     entry: { client: 'src/client/index.ts' },
