@@ -1,4 +1,4 @@
-import { openConversation, openConversationWithDraft, selectGlobalPanel } from './session-navigation.ts'
+import { deepLinkAction, openConversation, openConversationWithDraft, selectGlobalPanel } from './session-navigation.ts'
 import { createNavigationHistory } from './navigation-history.ts'
 import { createWorkspaceShortcutSource } from './workspace-shortcuts.ts'
 import { registerWorkspaceDirectoryFlow, WORKSPACE_DIRECTORY_FLOW } from './workspace-directory-flow.ts'
@@ -7,6 +7,7 @@ import {
   archiveHostSession,
   currentSessionId,
   forkHostSession,
+  isSessionArchived,
   probeService,
   renameHostSession,
   UnknownSessionError,
@@ -65,7 +66,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
       owner: {
         wide: boolean
         expandSidebar: () => void
-        openSession: (sessionId: SessionId) => void
+        openSession: (sessionId: SessionId) => boolean | void
         renameSession: (sessionId: SessionId, title: string) => Promise<void>
         archiveSession: (sessionId: SessionId) => Promise<void>
         deleteSession: (sessionId: SessionId) => Promise<void>
@@ -85,7 +86,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
       owner: {
         wide: boolean
         expandSidebar: () => void
-        openSession: (sessionId: SessionId) => void
+        openSession: (sessionId: SessionId) => boolean | void
         renameSession: (sessionId: SessionId, title: string) => Promise<void>
         archiveSession: (sessionId: SessionId) => Promise<void>
         deleteSession: (sessionId: SessionId) => Promise<void>
@@ -222,7 +223,7 @@ export function apply(ctx: ClientContext): void {
               const binding = id === undefined ? undefined : ctx.sessions.binding(id as SessionId)
               return prefillNewConversation(binding === undefined ? undefined : ctx.conversation.input.for(binding.ctx), text)
             },
-            openSession: (sessionId: SessionId) => { openConversation(ctx, ctx.layout, sessionId) },
+            openSession: (sessionId: SessionId) => openConversation(ctx, ctx.layout, sessionId),
             startSession: (workspaceId?: WorkspaceId) => { startWorkspaceSession(ctx, workspaceId) },
             toggleSidebar: () => { ctx.layout.toggleSidebar() },
             archiveSession,
@@ -352,7 +353,7 @@ export function apply(ctx: ClientContext): void {
       forkSession,
       moveSession,
       openPath,
-      openSession: (sessionId: SessionId) => { openConversation(ctx, ctx.layout, sessionId) },
+      openSession: (sessionId: SessionId) => openConversation(ctx, ctx.layout, sessionId),
       renameSession,
       renameWorkspace: (workspaceId: WorkspaceId, title: string) => ctx.workspaces.rename(workspaceId, title),
       insertWorkspaceBefore: (workspaceId: WorkspaceId, beforeWorkspaceId?: WorkspaceId) => ctx.workspaces.insertBefore(workspaceId, beforeWorkspaceId),
@@ -376,14 +377,16 @@ export function apply(ctx: ClientContext): void {
     let opened = false
     const openDeepLink = (): void => {
       if (opened) return
-      if (ctx.sessions.list.getSnapshot().byId[sessionId] === undefined) return
-      if (ctx.workspaces.list.getSnapshot().archivedSessionIds.includes(sessionId)) {
+      const decision = deepLinkAction(ctx.sessions.list.getSnapshot().byId, isSessionArchived(ctx, sessionId), sessionId)
+      if (decision === 'wait') return
+      opened = true
+      // 归档判断必须早于 byId：已释放的归档会话不在 byId 里，
+      // 提前 return 会让深链永远清不掉，桌面壳会反复重载同一地址。
+      if (decision === 'clean') {
         cleanSessionDeepLink()
         return
       }
-      opened = true
-      cleanSessionDeepLink()
-      openConversation(ctx, ctx.layout, sessionId)
+      if (!openConversation(ctx, ctx.layout, sessionId)) cleanSessionDeepLink()
     }
     openDeepLink()
     return ctx.sessions.list.subscribe(openDeepLink)

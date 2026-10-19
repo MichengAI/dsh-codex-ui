@@ -62,7 +62,7 @@ type CodexSidebarInjected = {
   workspaceShortcuts?: WorkspaceShortcutSource
   newConversationDraft?: DraftPresenceSource
   prefillNewConversation?: (text: string) => PrefillResult
-  openSession: (sessionId: SessionId) => void
+  openSession: (sessionId: SessionId) => boolean | void
   startSession: (workspaceId?: WorkspaceId) => void
   toggleSidebar: () => void
   archiveSession: (sessionId: SessionId) => Promise<void>
@@ -295,7 +295,7 @@ export function CodexSidebar({ workspaceShortcuts, navigationHistory, globalPane
         id: 'dcu-tab-tasks',
         panelId: 'dcu-panel-tasks',
         label: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, whiteSpace: 'nowrap' }}>
             <IconFolderCloseMedium size={14} />
             <span>{t('sidebar.tasksTab')}</span>
           </span>
@@ -308,7 +308,7 @@ export function CodexSidebar({ workspaceShortcuts, navigationHistory, globalPane
         id: 'dcu-tab-channels',
         panelId: 'dcu-panel-channels',
         label: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, whiteSpace: 'nowrap' }}>
             <svg viewBox="0 0 16 16" width={14} height={14} fill="none" aria-hidden="true">
               <path fill="currentColor" d="M2.15 2.9h11.7v8.2H6.42L2.15 13.85V2.9Zm1.4 1.4v6.62l1.78-1.12h7.12V4.3H3.55Z" />
             </svg>
@@ -323,7 +323,7 @@ export function CodexSidebar({ workspaceShortcuts, navigationHistory, globalPane
         id: 'dcu-tab-schedule',
         panelId: 'dcu-panel-schedule',
         label: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, whiteSpace: 'nowrap' }}>
             <ScheduleIcon />
             <span>{t('sidebar.scheduleTab')}</span>
           </span>

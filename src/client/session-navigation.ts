@@ -9,6 +9,14 @@ export function openConversation(host: object, layout: object, id: string): bool
   return opened
 }
 
+export type DeepLinkAction = 'clean' | 'wait' | 'open'
+
+/** 归档判断必须先于 byId：已释放的归档会话不在 byId，直接 wait 会让深链永远清不掉。 */
+export function deepLinkAction(byId: Record<string, unknown>, archived: boolean, sessionId: string): DeepLinkAction {
+  if (archived) return 'clean'
+  return byId[sessionId] === undefined ? 'wait' : 'open'
+}
+
 /** 先打开再写草稿，避免 using 释放后 composer 换新 binding。 */
 export async function openConversationWithDraft(
   host: object,

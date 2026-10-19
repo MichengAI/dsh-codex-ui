@@ -139,9 +139,14 @@ export function probeService(ctx: object | undefined, name: string): unknown {
 export function isSessionArchived(ctx: object, id: string): boolean {
   if (id === '') return false
   const access = hostAccess(ctx)
-  const workspaces = (access.workspaces as { list?: { getSnapshot?: () => { archivedSessionIds?: readonly string[] } } } | undefined)?.list?.getSnapshot?.()
-  if (workspaces?.archivedSessionIds?.includes(id)) return true
-  const store = probeService(access, 'workspaces') as { list?: { getSnapshot?: () => { archivedSessionIds?: readonly string[] } } } | undefined
+  type WorkspaceStore = { list?: { getSnapshot?: () => { archivedSessionIds?: readonly string[] } } }
+  let store: WorkspaceStore | undefined
+  try {
+    // 有 reflect 时先 probe，避免硬读未注入服务挡住 Cordis 激活。
+    store = (probeService(access, 'workspaces') ?? access.workspaces) as WorkspaceStore | undefined
+  } catch {
+    return false
+  }
   return store?.list?.getSnapshot?.()?.archivedSessionIds?.includes(id) ?? false
 }
 

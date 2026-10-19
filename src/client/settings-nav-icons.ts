@@ -152,5 +152,9 @@ export function observeSettingsNavIcons(): () => void {
       button.removeAttribute('data-dcu-nav-icon')
       button.querySelector(`.${NAV_ICON_CLASS}`)?.remove()
     }
+    // 没有 marker 后样式不再生效，卸载时一并移除，避免全局残留。
+    if (document.querySelector('[data-dcu-nav-icon]') === null) {
+      document.getElementById(NAV_ICON_STYLE_ID)?.remove()
+    }
   }
 }

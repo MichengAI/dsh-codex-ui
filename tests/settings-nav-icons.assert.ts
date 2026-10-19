@@ -4,6 +4,7 @@ import { JSDOM } from 'jsdom'
 import {
   ABOUT_SETTINGS_NAV_ORDER,
   applySettingsNavIcons,
+  observeSettingsNavIcons,
   settingsNavIconId,
   SETTINGS_NAV_ICON_HTML,
 } from '../src/client/settings-nav-icons.ts'
@@ -69,3 +70,29 @@ assert.equal(applySettingsNavIcons(fixture.window.document), 0, '重复观察设
 const observer = readFileSync(new URL('../src/client/settings-nav-icons.ts', import.meta.url), 'utf8')
 assert.match(observer, /requestAnimationFrame/, '设置导航观察必须按帧合并，与其他观察器一致')
 assert.match(observer, /cancelAnimationFrame/, '卸载时必须取消挂起的设置导航帧')
+
+const cleanupDom = new JSDOM(
+  '<div role="dialog"><nav><button><svg></svg><span>Codex UI</span></button></nav></div>',
+  { pretendToBeVisual: true },
+)
+const savedGlobals: Record<string, PropertyDescriptor | undefined> = {}
+for (const key of ['document', 'window', 'MutationObserver']) savedGlobals[key] = Object.getOwnPropertyDescriptor(globalThis, key)
+Object.defineProperties(globalThis, {
+  document: { configurable: true, writable: true, value: cleanupDom.window.document },
+  window: { configurable: true, writable: true, value: cleanupDom.window },
+  MutationObserver: { configurable: true, writable: true, value: cleanupDom.window.MutationObserver },
+})
+try {
+  const dispose = observeSettingsNavIcons()
+  const button = cleanupDom.window.document.querySelector<HTMLButtonElement>('[role="dialog"] nav button')
+  assert.equal(button?.getAttribute('data-dcu-nav-icon'), 'about', '观察器必须装饰设置导航按钮')
+  assert.notEqual(cleanupDom.window.document.getElementById('dcu-settings-nav-icon-style'), null, '观察器必须注入图标样式')
+  dispose()
+  assert.equal(button?.hasAttribute('data-dcu-nav-icon'), false, '卸载时必须移除导航图标 marker')
+  assert.equal(cleanupDom.window.document.getElementById('dcu-settings-nav-icon-style'), null, '卸载时必须移除注入样式')
+} finally {
+  for (const [key, descriptor] of Object.entries(savedGlobals)) {
+    if (descriptor === undefined) delete (globalThis as Record<string, unknown>)[key]
+    else Object.defineProperty(globalThis, key, descriptor)
+  }
+}

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Guard archived and released session references before opening, so clicking an archived conversation no longer blanks the renderer or triggers a reload loop. Archived deep links are cleaned up before they can be retried.
+- Forward the official `plugins.tab` and `plugins.add.actions` slots so the plugin market's Discover page and add-plugin actions render in the copied Plugin manager section.
+- Render settings navigation icons with standalone mask elements instead of rewriting the host svg, and only decorate buttons with a direct host icon.
+- Add icons and shorter labels to the schedule view tabs.
+- Remove the injected navigation icon stylesheet when the observer is disposed.
+
 ## 1.1.42 (2026-10-18)
 
 - **Support DSH 0.2.1-rc.2**: Adapt to the latest official DeepSeek Harness host, pinning dev dependencies to `0.2.1-rc.2` and Cordis to `4.0.5`.
