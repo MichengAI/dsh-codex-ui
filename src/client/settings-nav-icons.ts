@@ -84,7 +84,7 @@ export function applySettingsNavIcon(button: HTMLButtonElement): boolean {
       changed = true
     }
   }
-  const svg = button.querySelector('svg')
+  const svg = button.querySelector(':scope > svg')
   if (svg === null) return changed
   if (button.getAttribute('data-dcu-nav-icon') === id
     && button.querySelector(`.${NAV_ICON_CLASS}`) !== null) return changed

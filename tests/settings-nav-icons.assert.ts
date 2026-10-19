@@ -47,15 +47,18 @@ const fixture = new JSDOM(`
     <nav><div>
       <button><svg></svg><span>Codex UI</span></button>
       <button><svg></svg><span>侧边卡片</span></button>
+      <button><span><svg></svg></span><span>定时任务</span></button>
     </div></nav>
   </div>
 `)
-const [aboutButton, sideCardButton] = fixture.window.document.querySelectorAll<HTMLButtonElement>('button')
+const [aboutButton, sideCardButton, wrappedIconButton] = fixture.window.document.querySelectorAll<HTMLButtonElement>('button')
 assert.equal(applySettingsNavIcons(fixture.window.document), 1, 'Codex UI 导航必须同时应用图标与置底规则')
 assert.equal(aboutButton?.hasAttribute('data-dcu-settings-about-last'), true, 'Codex UI 导航必须带稳定置底标记')
 assert.equal(aboutButton?.style.getPropertyValue('order'), ABOUT_SETTINGS_NAV_ORDER, 'Codex UI 导航必须使用 CSS 最大层级排在末尾')
 assert.equal(aboutButton?.style.getPropertyPriority('order'), 'important', '置底规则必须覆盖外部插件样式')
 assert.equal(sideCardButton?.style.getPropertyValue('order'), '', '不得改变其他插件设置入口的顺序')
+assert.equal(wrappedIconButton?.hasAttribute('data-dcu-nav-icon'), false, '包裹型图标不能被当成宿主直出图标')
+assert.equal(wrappedIconButton?.querySelector('.dcu-settings-nav-icon'), null, '包裹型图标不应注入额外 mask')
 assert.equal(aboutButton?.getAttribute('data-dcu-nav-icon'), 'about', '导航按钮必须带插件图标 marker')
 assert.equal(aboutButton?.querySelector('svg')?.innerHTML, '', '不得改写宿主 svg 内容')
 assert.equal(aboutButton?.querySelector('.dcu-settings-nav-icon')?.getAttribute('aria-hidden'), 'true', 'mask 图标必须对辅助技术隐藏')
