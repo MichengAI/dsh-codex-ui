@@ -24,6 +24,28 @@ export const SETTINGS_NAV_ICON_HTML: Record<SettingsNavIconId, string> = {
   about: ABOUT_PATHS,
 }
 
+const NAV_ICON_CLASS = 'dcu-settings-nav-icon'
+const NAV_ICON_STYLE_ID = 'dcu-settings-nav-icon-style'
+const NAV_ICON_CSS = `[data-dcu-nav-icon]>svg{display:none!important}.${NAV_ICON_CLASS}{display:inline-block;flex:none;width:16px;height:16px;background:currentColor;-webkit-mask:var(--dcu-settings-nav-icon-mask) center/contain no-repeat;mask:var(--dcu-settings-nav-icon-mask) center/contain no-repeat}`
+
+/** mask 只取 alpha 通道，因此把 currentColor 固定为黑色即可 */
+function iconMask(id: SettingsNavIconId): string {
+  const viewBox = id === 'archive' ? '0 0 20 20' : id === 'about' ? '0 0 14 14' : '0 0 16 16'
+  const paths = SETTINGS_NAV_ICON_HTML[id].replace(/fill="currentColor"/g, 'fill="black"')
+  return `url("data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">${paths}</svg>`,
+  )}")`
+}
+
+/** 注入导航图标样式；重复安装时复用同一个 style 元素 */
+function ensureNavIconStyle(doc: Document): void {
+  if (doc.getElementById(NAV_ICON_STYLE_ID) !== null) return
+  const style = doc.createElement('style')
+  style.id = NAV_ICON_STYLE_ID
+  style.textContent = NAV_ICON_CSS
+  ;(doc.head ?? doc.documentElement).appendChild(style)
+}
+
 const LABEL_ALIASES: ReadonlyArray<readonly [readonly string[], SettingsNavIconId]> = [
   [['插件市场', 'Plugin Market'], 'plugins'],
   [['内置插件', 'Built-in plugins'], 'plugins'],
@@ -64,11 +86,21 @@ export function applySettingsNavIcon(button: HTMLButtonElement): boolean {
   }
   const svg = button.querySelector('svg')
   if (svg === null) return changed
-  if (svg.getAttribute('data-dcu-nav-icon') === id) return changed
-  svg.setAttribute('data-dcu-nav-icon', id)
-  svg.setAttribute('viewBox', id === 'archive' ? '0 0 20 20' : id === 'about' ? '0 0 14 14' : '0 0 16 16')
-  svg.setAttribute('fill', 'none')
-  svg.innerHTML = SETTINGS_NAV_ICON_HTML[id]
+  if (button.getAttribute('data-dcu-nav-icon') === id
+    && button.querySelector(`.${NAV_ICON_CLASS}`) !== null) return changed
+
+  const doc = button.ownerDocument
+  if (doc === null) return changed
+  ensureNavIconStyle(doc)
+  button.setAttribute('data-dcu-nav-icon', id)
+  let icon = button.querySelector<HTMLElement>(`.${NAV_ICON_CLASS}`)
+  if (icon === null) {
+    icon = doc.createElement('span')
+    icon.className = NAV_ICON_CLASS
+    icon.setAttribute('aria-hidden', 'true')
+    button.prepend(icon)
+  }
+  icon.style.setProperty('--dcu-settings-nav-icon-mask', iconMask(id))
   return true
 }
 
@@ -116,5 +148,9 @@ export function observeSettingsNavIcons(): () => void {
   return () => {
     observer.disconnect()
     if (frame !== undefined) window.cancelAnimationFrame(frame)
+    for (const button of document.querySelectorAll<HTMLButtonElement>('[data-dcu-nav-icon]')) {
+      button.removeAttribute('data-dcu-nav-icon')
+      button.querySelector(`.${NAV_ICON_CLASS}`)?.remove()
+    }
   }
 }
