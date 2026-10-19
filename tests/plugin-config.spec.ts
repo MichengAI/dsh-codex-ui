@@ -297,6 +297,39 @@ test('官方详情插槽必须转交，不能落到会抛错的设置页出口',
   expect(container.querySelector('[data-detail-section]')?.textContent).toBe('详情')
 })
 
+test('官方 plugins.tab 插槽必须转交，不能导致插件市场发现等扩展页空白', async () => {
+  const slots = new SlotCore()
+  const removeRoot = slots.register({
+    name: 'root',
+    children: { main: { kind: 'keyed', scope: 'root' } },
+  } as never, (() => null) as never)
+  const removeOfficial = slots.register({
+    name: 'main',
+    key: 'plugins',
+    children: { 'plugins.tab': { kind: 'list', scope: 'root' } },
+  } as never, (() => null) as never)
+  slots.register({
+    name: 'plugins.tab',
+    id: 'discover',
+  } as never, (() => createElement('section', { 'data-discover-tab': true }, '发现市场')) as never)
+  function officialMarketTab(props: Record<string, unknown>): ReactNode {
+    const renderSlot = props.renderSlot as ((name: string, owner: object, opts?: { only?: string }) => ReactNode) | undefined
+    return createElement('div', { 'data-official-plugins': true }, renderSlot?.('plugins.tab', {}, { only: 'discover' }))
+  }
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+  await act(async () => {
+    root.render(createElement(PluginConfigSection, {
+      Official: officialMarketTab,
+      officialLabel: '插件配置',
+      slots,
+    }))
+  })
+  cleanups.push(() => { root.unmount(); removeOfficial(); removeRoot() })
+  expect(container.querySelector('[data-discover-tab]')?.textContent).toBe('发现市场')
+})
+
 test('官方页自身抛错时不得拆掉插件配置分区', async () => {
   const container = document.createElement('div')
   document.body.append(container)

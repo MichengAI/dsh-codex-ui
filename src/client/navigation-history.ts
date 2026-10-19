@@ -20,7 +20,8 @@ export function createNavigationHistory(store: {
   const listeners = new Set<() => void>()
   const target = (direction: number): number | undefined => {
     for (let next = index + direction; next >= 0 && next < entries.length; next += direction) {
-      if (store.getSnapshot().byId?.[entries[next]!] !== undefined) return next
+      const id = entries[next]!
+      if (store.getSnapshot().byId?.[id] !== undefined) return next
     }
     return undefined
   }

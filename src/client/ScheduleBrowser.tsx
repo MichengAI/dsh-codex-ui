@@ -3,7 +3,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { Button, Menu, Modal, SegmentedTabs, type MenuEntry, type SegmentedTab } from '@deepseek-ai/dsh-client-ui-primitives'
-import { IconArchiveOutlineMedium, IconEllipsisOutlineMedium, IconSettingsOutlineMedium } from './host-icons.ts'
+import { IconArchiveOutlineMedium, IconEllipsisOutlineMedium, IconFlatListOutlineMedium, IconSettingsOutlineMedium, IconWorkspaceTreeOutlineMedium } from './host-icons.ts'
 import { NS } from './locales.ts'
 import { WORKSPACE_TREE_STYLE } from './CodexWorkspaceBrowser.tsx'
 import { formatCompactTime, formatHoverTime, hoverCardAnchor } from './hover-tip.ts'
@@ -74,8 +74,28 @@ export function ScheduleBrowser(props: ScheduleBrowserProps) {
   const [menu, setMenu] = useState<OpenMenu>()
   const [view, setView] = useState<ScheduleView>('runs')
   const viewTabs = useMemo<readonly [SegmentedTab<ScheduleView>, SegmentedTab<ScheduleView>]>(() => [
-    { value: 'runs', id: 'dcu-schedule-tab-runs', panelId: 'dcu-schedule-panel-runs', label: props.t('sidebar.runsTab') },
-    { value: 'overview', id: 'dcu-schedule-tab-overview', panelId: 'dcu-schedule-panel-overview', label: props.t('sidebar.overviewTab') },
+    {
+      value: 'runs',
+      id: 'dcu-schedule-tab-runs',
+      panelId: 'dcu-schedule-panel-runs',
+      label: (
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          <IconFlatListOutlineMedium size={14} />
+          <span>{props.t('sidebar.runsTab')}</span>
+        </span>
+      ),
+    },
+    {
+      value: 'overview',
+      id: 'dcu-schedule-tab-overview',
+      panelId: 'dcu-schedule-panel-overview',
+      label: (
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          <IconWorkspaceTreeOutlineMedium size={14} />
+          <span>{props.t('sidebar.overviewTab')}</span>
+        </span>
+      ),
+    },
   ], [props.t])
 
   if (props.overviewContent === undefined) return <HoverShell blocked={menu !== undefined}><ScheduleBrowserTree {...props} menu={menu} setMenu={setMenu} /></HoverShell>

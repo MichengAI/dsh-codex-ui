@@ -136,19 +136,37 @@ export function probeService(ctx: object | undefined, name: string): unknown {
   try { return (access as Record<string, unknown>)[name] } catch { return undefined }
 }
 
+export function isSessionArchived(ctx: object, id: string): boolean {
+  if (id === '') return false
+  const access = hostAccess(ctx)
+  const workspaces = (access.workspaces as { list?: { getSnapshot?: () => { archivedSessionIds?: readonly string[] } } } | undefined)?.list?.getSnapshot?.()
+  if (workspaces?.archivedSessionIds?.includes(id)) return true
+  const store = probeService(access, 'workspaces') as { list?: { getSnapshot?: () => { archivedSessionIds?: readonly string[] } } } | undefined
+  return store?.list?.getSnapshot?.()?.archivedSessionIds?.includes(id) ?? false
+}
+
 export function openHostSession(ctx: object, id: string): boolean {
   if (id === '') return false
+  if (isSessionArchived(ctx, id)) return false
   const access = hostAccess(ctx)
   const uiWorkspace = probeService(access, 'uiWorkspace') as { openSession?(target: string): void } | undefined
   if (typeof uiWorkspace?.openSession === 'function') {
-    uiWorkspace.openSession(id)
-    return true
+    try {
+      uiWorkspace.openSession(id)
+      return true
+    } catch {
+      return false
+    }
   }
   // alpha.2 有 retain：旧的 sessions.open 即使还在也不会写入 mainView，点了等于没打开。
   if (typeof access.sessions?.retain === 'function') return false
   if (typeof access.sessions?.open === 'function') {
-    access.sessions.open(id)
-    return true
+    try {
+      access.sessions.open(id)
+      return true
+    } catch {
+      return false
+    }
   }
   return false
 }

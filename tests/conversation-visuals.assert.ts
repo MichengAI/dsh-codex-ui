@@ -109,7 +109,7 @@ assert.match(sidebar, /browserStorage\(\)/, '扩展分组偏好必须复用统�
 assert.match(sidebar, /\.dcu-extension-panel,.dcu-extension-leading svg\{animation:none;transition:none\}/, '扩展动画必须遵循减少动态效果设置')
 assert.match(sidebar, /SegmentedTabs/, '任务频道定时页签必须使用宿主分段切换器')
 assert.match(sidebar, /\.dcu-im-tabs\{display:flex;margin:2px 8px 8px/, '任务频道定时页签必须具有容器边距')
-assert.match(sidebar, /background:transparent!important/, '任务频道分段页签必须透明以融入侧栏')
+assert.match(sidebar, /\.dcu-im-tabs \.dcu-im-segmented-tabs\{width:100%;background:color-mix/, '任务频道分段页签必须具有紧凑外框底色')
 assert.match(sidebar, /\.dcu-extension-items::before\{content:"";position:absolute;left:-16px/, '扩展树线必须与父级图标中心对齐')
 assert.doesNotMatch(sidebar, /\.dcu-extension-items \.dcu-menu-icon\{display:none\}/, '扩展子项必须显示各自的图标')
 assert.match(sidebar, /\.dcu-extension-items button\{[^}]*grid-template-columns:20px minmax\(0,1fr\)/, '扩展子项必须保留图标列')

@@ -1,6 +1,42 @@
 import { expect, test } from 'vitest'
 import { openConversation, selectGlobalPanel } from '../src/client/session-navigation.ts'
 
+test('打开已归档会话时直接拦截并返回 false，防止已释放引用击穿 React 渲染树', () => {
+  const actions: unknown[] = []
+  const host = {
+    workspaces: {
+      list: {
+        getSnapshot() {
+          return { archivedSessionIds: ['archived-session-1'] }
+        },
+      },
+    },
+    reflect: {
+      get(name: string) {
+        return name === 'uiWorkspace' ? { openSession: (id: string) => { actions.push(id) } } : undefined
+      },
+    },
+    sessions: { open(id: string) { actions.push(`legacy:${id}`) } },
+  }
+  expect(openConversation(host, { selectPanel(id: null) { actions.push(id) } }, 'archived-session-1')).toBe(false)
+  expect(actions).toEqual([])
+})
+
+test('uiWorkspace.openSession 抛错时不击穿并返回 false', () => {
+  const host = {
+    reflect: {
+      get(name: string) {
+        return name === 'uiWorkspace' ? {
+          openSession() {
+            throw new Error('Session reference "s1" is released')
+          },
+        } : undefined
+      },
+    },
+  }
+  expect(openConversation(host, {}, 's1')).toBe(false)
+})
+
 test('打开已有会话时退出全局面板，兼容没有面板 API 的旧宿主', () => {
   const actions: unknown[] = []
   const host = { sessions: { open(id: string) { actions.push(id) } } }

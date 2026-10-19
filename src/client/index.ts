@@ -366,10 +366,23 @@ export function apply(ctx: ClientContext): void {
     if (typeof window === 'undefined') return () => {}
     const sessionId = new URL(window.location.href).searchParams.get('session') as SessionId | null
     if (sessionId === null || sessionId === '') return () => {}
+    const cleanSessionDeepLink = (): void => {
+      try {
+        const currentUrl = new URL(window.location.href)
+        currentUrl.searchParams.delete('session')
+        window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search + currentUrl.hash)
+      } catch {}
+    }
     let opened = false
     const openDeepLink = (): void => {
-      if (opened || ctx.sessions.list.getSnapshot().byId[sessionId] === undefined) return
+      if (opened) return
+      if (ctx.sessions.list.getSnapshot().byId[sessionId] === undefined) return
+      if (ctx.workspaces.list.getSnapshot().archivedSessionIds.includes(sessionId)) {
+        cleanSessionDeepLink()
+        return
+      }
       opened = true
+      cleanSessionDeepLink()
       openConversation(ctx, ctx.layout, sessionId)
     }
     openDeepLink()

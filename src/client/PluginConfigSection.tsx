@@ -16,6 +16,8 @@ export function bindPluginConfigLocale(bind: (ns: string) => PluginConfigTransla
 }
 
 const FORWARDED_CONFIG_SLOTS = new Set([
+  'plugins.tab',
+  'plugins.add.actions',
   'plugins.item',
   'plugins.bundle.activation',
   'plugins.bundle.config',
