@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.43 (2026-10-19)
 
 - Guard archived and released session references before opening, so clicking an archived conversation no longer blanks the renderer or triggers a reload loop. Archived deep links are cleaned up before they can be retried.
 - Forward the official `plugins.tab` and `plugins.add.actions` slots so the plugin market's Discover page and add-plugin actions render in the copied Plugin manager section.
