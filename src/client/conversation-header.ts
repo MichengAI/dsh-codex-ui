@@ -17,6 +17,11 @@ export const HEADER_SESSION_MENU_EVENT = 'dcu-header-session-menu'
 export const CONVERSATION_HEADER_STYLE = `
 header:has([data-dcu-inline-tabs]){box-sizing:border-box;display:flex;flex-wrap:nowrap;align-items:center;gap:10px;min-height:var(--dcu-header-height,34px);padding-top:calc((var(--dcu-header-height,34px) - 28px)/2);padding-bottom:calc((var(--dcu-header-height,34px) - 28px)/2);border-bottom:0}
 header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]){box-sizing:border-box;display:flex;flex-wrap:nowrap;align-items:center;gap:10px;min-height:var(--dcu-header-height,34px);padding-top:calc((var(--dcu-header-height,34px) - 28px)/2);padding-bottom:calc((var(--dcu-header-height,34px) - 28px)/2);border-bottom:0}
+/* titleRow 被摊平后不再生成盒子，宿主写在上面的窗口安全区内边距会整体丢失：
+   macOS 折叠时顶栏内容会滑到红绿灯和 shell.leading 的打开/新建按钮下面。
+   这里把等价留白补到 header 上，并用运行时窄轨宽度换算回同一绝对位置。 */
+header:has([data-dcu-inline-tabs]),
+header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]){padding-left:max(20px,calc(var(--dsh-frame-leading-clearance,0px) - var(--dcu-sidebar-rail-width,0px)))}
 header:has([data-dcu-inline-tabs]):after{display:none;content:none}
 header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]):after{display:none;content:none}
 header:has([data-dcu-inline-tabs]) [class*="titleRow"],header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="titleRow"],header:has([data-dcu-inline-tabs]) [class*="titleCluster"],header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="titleCluster"]{display:contents}

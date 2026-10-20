@@ -6,6 +6,7 @@ import ts from 'typescript'
 
 const skin = readFileSync('src/client/CodexSidebar.tsx', 'utf8').match(/const stylesheet = `([\s\S]*?)`/)[1]
 const header = readFileSync('src/client/conversation-header.ts', 'utf8').match(/export const CONVERSATION_HEADER_STYLE = `([\s\S]*?)`/)[1]
+const railPx = Number(readFileSync('src/client/sidebar-width.ts', 'utf8').match(/export const CODEX_SIDEBAR_RAIL_PX = (\d+)/)[1])
 const bubbleScript = ts.transpileModule(readFileSync('src/client/conversation-bubbles.ts', 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText
@@ -92,5 +93,53 @@ try {
     assert.ok(bar.actionsLeft - bar.crumbsRight <= 11, `${width}px：操作区必须紧贴标题，不得被顶到中间`)
     assert.ok(bar.cornerRight > bar.utilitiesRight && bar.utilitiesRight > bar.tabsLeft && bar.tabsLeft >= bar.actionsRight, `${width}px：页签、扩展区与右栏必须按序留在右侧`)
   }
-  console.log('新版样式回归：附件间距、右栏按钮排序、负外边距及紧凑顶栏单行通过三个视口检查。')
+  // macOS 折叠：窗口插槽的两颗 28px 按钮固定在 left:88/124。titleRow 被摊平后，
+  // 宿主的 leading clearance 内边距会丢失，必须由 header 补回同一绝对位置。
+  await page.setViewportSize({ width: 332, height: 521 })
+  await page.setContent(`<style>
+    .wSkVaW_header{box-sizing:border-box;display:grid;grid-template-columns:auto minmax(0,1fr);padding:10px 28px 0 20px}
+    .wSkVaW_titleRow,.wSkVaW_titleCluster,.wSkVaW_crumbs,.wSkVaW_crumbSeg,.wSkVaW_headerActions,.wSkVaW_headerUtilities,.wSkVaW_headerCorner{display:flex}
+    .wSkVaW_titleRow{min-height:30px;grid-column:2;align-items:center;padding-inline-start:max(0px,calc(var(--dsh-frame-leading-clearance,0px) - 20px))}
+    .wSkVaW_titleCluster{flex:1;align-items:center;gap:10px;min-width:0}
+    .wSkVaW_crumbs{white-space:nowrap;align-items:center;gap:4px;min-width:0;overflow:hidden}
+    .wSkVaW_crumbSeg{align-items:center;gap:4px;min-width:0;display:inline-flex}
+    .wSkVaW_crumb{border:none;background:0 0;font-size:14px;line-height:20px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:4px 8px;display:inline-block}
+    .wSkVaW_headerActions{flex:none;align-items:center;gap:8px}
+    .wSkVaW_headerUtilities{flex:none;margin-left:20px}
+    .wSkVaW_headerCorner{flex:none;margin-left:8px;margin-right:-16px}
+    ${skin}${header}
+    </style><div class="frame" style="position:relative;display:grid;grid-template-columns:${railPx}px minmax(0,1fr);--dsh-frame-leading-clearance:160px;--dcu-sidebar-rail-width:${railPx}px">
+      <div style="grid-column:2;min-width:0"><header class="wSkVaW_header"><div class="wSkVaW_headerLeading"></div><div class="wSkVaW_titleRow"><div class="wSkVaW_titleCluster">
+        <nav class="wSkVaW_crumbs"><span class="wSkVaW_crumbSeg"><button type="button" data-dcu-title-folder></button><button type="button" class="wSkVaW_crumb wSkVaW_crumbCurrent" disabled>我在 codex 里面使用了 composable 指令</button><button type="button" data-dcu-title-more></button></span></nav>
+        <div class="wSkVaW_headerActions"><button type="button">标准模式</button></div></div>
+        <div class="wSkVaW_headerUtilities"></div><div class="wSkVaW_headerCorner" data-conversation-header-corner></div></div></header></div>
+      <div style="position:absolute;left:88px;top:11px;display:flex;gap:8px"><button type="button" data-leading="toggle" style="width:28px;height:28px">侧</button><button type="button" data-leading="new" style="width:28px;height:28px">新</button></div>
+    </div>`)
+  const chrome = await page.evaluate(() => {
+    const box = selector => document.querySelector(selector).getBoundingClientRect()
+    return {
+      folderLeft: box('[data-dcu-title-folder]').left,
+      titleLeft: box('.wSkVaW_crumbCurrent').left,
+      leadingRight: box('[data-leading=new]').right,
+      height: box('header').height,
+    }
+  })
+  assert.ok(chrome.folderLeft >= chrome.leadingRight, `macOS 折叠：文件夹按钮压住窗口插槽（${chrome.folderLeft} < ${chrome.leadingRight}）`)
+  assert.ok(chrome.titleLeft >= chrome.leadingRight, `macOS 折叠：标题压住窗口插槽（${chrome.titleLeft} < ${chrome.leadingRight}）`)
+  assert.equal(chrome.height, 34, 'macOS 折叠：补回安全区后顶栏仍必须保持 34px 单行')
+  // 三档状态共用同一公式：折叠全量让位、全屏扣减后仍避开插槽、展开/无变量退回宿主原生 20px。
+  const paddingFor = (clearance, rail) => page.evaluate(({ clearance, rail }) => {
+    const frame = document.querySelector('.frame')
+    if (clearance === null) frame.style.removeProperty('--dsh-frame-leading-clearance')
+    else frame.style.setProperty('--dsh-frame-leading-clearance', `${clearance}px`)
+    if (rail === null) frame.style.removeProperty('--dcu-sidebar-rail-width')
+    else frame.style.setProperty('--dcu-sidebar-rail-width', `${rail}px`)
+    return getComputedStyle(document.querySelector('header')).paddingLeft
+  }, { clearance, rail })
+  assert.equal(await paddingFor(160, railPx), `${160 - railPx}px`, `折叠需扣掉 ${railPx}px 窄轨`)
+  assert.equal(await paddingFor(84, railPx), `${84 - railPx}px`, '全屏安全区 84px 同样要扣掉窄轨')
+  assert.equal(await paddingFor(160, null), '160px', '没有窄轨时顶栏必须让满 160px，不能按 56px 扣')
+  assert.equal(await paddingFor(null, 0), '20px', '展开态必须保持宿主原生的 20px 左内边距')
+  assert.equal(await paddingFor(null, null), '20px', 'Windows/Web 没有安全区时必须保持 20px')
+  console.log('新版样式回归：附件间距、右栏按钮排序、负外边距、紧凑顶栏单行与 macOS 折叠窗口安全区通过检查。')
 } finally { await browser.close() }

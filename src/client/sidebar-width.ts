@@ -22,6 +22,17 @@ type HostSidebarSnapshot = {
 
 const hostSidebarSnapshots = new WeakMap<HTMLElement, HostSidebarSnapshot>()
 
+/** 会话顶栏用它把宿主发布的窗口 chrome 安全区换算回窄轨之外的左内边距。 */
+const SIDEBAR_RAIL_WIDTH_VAR = '--dcu-sidebar-rail-width'
+
+/** 值不变时不再重写 style，避免与宿主重绘叠加时反复触发 style 监听。 */
+function writeSidebarRailWidth(frame: HTMLElement, width: number): void {
+  const value = `${width}px`
+  if (frame.style.getPropertyValue(SIDEBAR_RAIL_WIDTH_VAR) !== value) {
+    frame.style.setProperty(SIDEBAR_RAIL_WIDTH_VAR, value)
+  }
+}
+
 /** 记下插件改写前的宿主列宽。已经带初始化标记的列宽是本插件留下的，不能当成宿主原值。 */
 export function rememberHostSidebar(frame: HTMLElement): void {
   if (hostSidebarSnapshots.has(frame) || frame.hasAttribute('data-dcu-codex-sidebar-initialized')) return
@@ -37,6 +48,7 @@ export function rememberHostSidebar(frame: HTMLElement): void {
 export function restoreHostSidebar(frame: HTMLElement): void {
   frame.removeAttribute('data-dcu-codex-sidebar-initialized')
   frame.style.removeProperty('--dcu-sidebar-expanded-width')
+  frame.style.removeProperty(SIDEBAR_RAIL_WIDTH_VAR)
   const html = frame.ownerDocument.documentElement
   const tracks = parseSidebarGrid(frame.style.gridTemplateColumns)
   if (frame.hasAttribute('data-sidebar-collapsed')) {
@@ -96,6 +108,8 @@ export function applySidebarWidth(frame: HTMLElement, width: number): boolean {
   const tracks = parseSidebarGrid(frame.style.gridTemplateColumns)
   if (tracks === undefined || frame.hasAttribute('data-sidebar-collapsed')) return false
   visibleSidebarWidths.set(frame, width)
+  // 展开态没有窄轨，顶栏只保留宿主原生的 20px 左内边距。
+  writeSidebarRailWidth(frame, 0)
   const next = `${width}px ${tracks.middle} ${tracks.details}`
   const changed = frame.style.gridTemplateColumns !== next
   if (changed) frame.style.gridTemplateColumns = next
@@ -122,6 +136,8 @@ export function applySlimSidebar(frame: HTMLElement): boolean {
     const next = `${CODEX_SIDEBAR_RAIL_PX}px ${tracks.middle} ${tracks.details}`
     const changed = frame.style.gridTemplateColumns !== next
     if (changed) frame.style.gridTemplateColumns = next
+    // 顶栏据此把宿主按“侧栏列隐藏”发布的窗口安全区扣掉窄轨宽度。
+    writeSidebarRailWidth(frame, CODEX_SIDEBAR_RAIL_PX)
     // Windows caption material follows the visible column; keep the saved expanded width intact.
     if (frame.ownerDocument.documentElement.hasAttribute('data-windows-titlebar')
       && frame.style.getPropertyValue('--dsh-windows-sidebar-width') !== `${CODEX_SIDEBAR_RAIL_PX}px`) {
@@ -173,7 +189,12 @@ export function observeSlimSidebar(): () => void {
       if (frame !== undefined) {
         rememberHostSidebar(frame)
         // 尚不能应用宽度时不要写入过渡样式，否则初始化标记缺失会让监听反复触发自身。
-        if (!canApplySlimSidebar(frame)) return
+        // 但必须撤回上一次的窄轨宽度：解析不到宿主网格时由宿主自己决定列宽（折叠通常是 0），
+        // 残留 56px 会让顶栏只让出 104px，重新压到窗口插槽按钮下面。
+        if (!canApplySlimSidebar(frame)) {
+          writeSidebarRailWidth(frame, 0)
+          return
+        }
         if (frame.hasAttribute('data-sidebar-collapsed')) {
           applySlimSidebar(frame)
           return

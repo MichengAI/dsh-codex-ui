@@ -59,12 +59,26 @@ const sidebarHandle = sidebarFrame.querySelector<HTMLElement>('[data-side="sideb
 assert.equal(applySlimSidebar(sidebarFrame), true)
 assert.equal(sidebarFrame.style.gridTemplateColumns, '240px minmax(0px, 1fr) 0px')
 assert.equal(sidebarFrame.hasAttribute('data-dcu-codex-sidebar-initialized'), true)
+assert.equal(sidebarFrame.style.getPropertyValue('--dcu-sidebar-rail-width'), '0px', '展开态不得让顶栏额外让出窗口安全区')
 assert.equal(sidebarHandle?.style.left, '240px')
 assert.equal(applySidebarWidth(sidebarFrame, 241), true)
 assert.equal(sidebarFrame.style.gridTemplateColumns, '241px minmax(0px, 1fr) 0px')
 sidebarFrame.style.gridTemplateColumns = '320px minmax(0px, 1fr) 0px'
 assert.equal(applySlimSidebar(sidebarFrame), true)
 assert.equal(sidebarFrame.style.gridTemplateColumns, '241px minmax(0px, 1fr) 0px', '宿主重绘后必须恢复当前可见宽度')
+
+const collapsedDom = new JSDOM('<div id="frame" data-sidebar-collapsed style="grid-template-columns: 0px minmax(0px, 1fr) 0px"><div data-side="sidebar"></div></div>')
+const collapsedFrame = collapsedDom.window.document.getElementById('frame') as HTMLElement
+assert.equal(applySlimSidebar(collapsedFrame), true)
+assert.equal(collapsedFrame.style.gridTemplateColumns, '56px minmax(0px, 1fr) 0px')
+assert.equal(collapsedFrame.style.getPropertyValue('--dcu-sidebar-rail-width'), '56px', '折叠窄轨必须告诉顶栏扣掉 56px')
+const styleMutations: (string | null)[] = []
+const styleObserver = new collapsedDom.window.MutationObserver(records => { for (const record of records) styleMutations.push(record.attributeName) })
+styleObserver.observe(collapsedFrame, { attributes: true, attributeFilter: ['style'] })
+applySlimSidebar(collapsedFrame)
+await Promise.resolve()
+assert.equal(styleMutations.length, 0, '重复应用折叠宽度不得再写 style，避免 MutationObserver 自激')
+styleObserver.disconnect()
 
 const hostFrame = new JSDOM('<div id="host" style="grid-template-columns: 280px minmax(0px, 1fr) minmax(0px, 480px)"><div data-side="sidebar"></div></div>').window.document.getElementById('host') as HTMLElement
 assert.equal(applySlimSidebar(hostFrame), true, '0.1.7 默认 280px 列必须能被收成内容宽度')
@@ -74,6 +88,7 @@ restoreHostSidebar(hostFrame)
 assert.equal(hostFrame.style.gridTemplateColumns, '280px minmax(0px, 1fr) minmax(0px, 480px)', '没有快照时卸载必须退回官方默认 280px')
 assert.equal(hostFrame.hasAttribute('data-dcu-codex-sidebar-initialized'), false)
 assert.equal(hostFrame.style.getPropertyValue('--dcu-sidebar-expanded-width'), '')
+assert.equal(hostFrame.style.getPropertyValue('--dcu-sidebar-rail-width'), '', '卸载必须撤回窄轨宽度，交给宿主自己的折叠布局')
 
 const restoreDom = new JSDOM('<body><div id="frame" style="grid-template-columns: 320px minmax(0px, 1fr) 0px"><div data-side="sidebar" style="left:320px"></div></div></body>', { pretendToBeVisual: true })
 const previousWindow = globalThis.window
@@ -87,6 +102,20 @@ assert.equal(restoreFrame.style.gridTemplateColumns, '240px minmax(0px, 1fr) 0px
 disposeSlim()
 assert.equal(restoreFrame.style.gridTemplateColumns, '320px minmax(0px, 1fr) 0px', '卸载必须恢复插件改写前的宿主列宽')
 assert.equal(restoreFrame.querySelector<HTMLElement>('[data-side="sidebar"]')?.style.left, '320px')
+Object.assign(globalThis, { window: previousWindow, document: previousDocument })
+
+// 宿主把网格改写成插件解析不了的格式时必须撤回窄轨宽度，否则顶栏会少让位而重新压住窗口插槽按钮。
+const bailDom = new JSDOM('<body><div id="frame" data-sidebar-collapsed style="grid-template-columns: 56px minmax(0px, 1fr) 0px"><div data-side="sidebar"></div></div></body>', { pretendToBeVisual: true })
+Object.assign(globalThis, { window: bailDom.window, document: bailDom.window.document, MutationObserver: bailDom.window.MutationObserver })
+bailDom.window.requestAnimationFrame = (callback: FrameRequestCallback) => { callback(0); return 1 }
+bailDom.window.cancelAnimationFrame = () => {}
+const disposeBail = observeSlimSidebar()
+const bailFrame = bailDom.window.document.getElementById('frame') as HTMLElement
+assert.equal(bailFrame.style.getPropertyValue('--dcu-sidebar-rail-width'), '56px')
+bailFrame.style.gridTemplateColumns = '0 clamp(240px, 30vw, 320px) minmax(0px, 480px)'
+await Promise.resolve()
+assert.equal(bailFrame.style.getPropertyValue('--dcu-sidebar-rail-width'), '0px', '宿主网格不可解析时必须撤回窄轨宽度，退回完整窗口安全区')
+disposeBail()
 Object.assign(globalThis, { window: previousWindow, document: previousDocument })
 
 const sidebarWidth = readFileSync(new URL('../src/client/sidebar-width.ts', import.meta.url), 'utf8')
