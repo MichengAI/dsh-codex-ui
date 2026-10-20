@@ -10,6 +10,9 @@ body[data-ds-dark-theme] .dcu-settings-page{--sp-bg:#181818;--sp-nav:var(--dcu-s
 /* 返回、插槽头与搜索框常驻，只有分区列表滚动。 */
 .dcu-settings-nav>*{flex:none}
 .dcu-settings-nav>.dcu-settings-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--sp-border) transparent}
+/* body 直属浮层被宿主整层标为 no-drag；撤销整层扣除，仅开放顶部安全区。 */
+html[data-platform=darwin] body>.dcu-settings-page:not(#root){-webkit-app-region:initial}
+html[data-platform=darwin]:not([data-fullscreen]) .dcu-settings-page::after{content:"";position:absolute;inset:0 0 auto;height:var(--dsh-frame-top-clearance,48px);pointer-events:none;-webkit-app-region:drag}
 /* macOS 普通窗口的原生按钮覆盖 Web 内容；沿用宿主标题栏安全区，仅抬高设置导航。 */
 html[data-platform=darwin]:not([data-fullscreen]) .dcu-settings-nav{padding-top:calc(var(--dsh-frame-top-clearance,48px) + 8px)}
 body[data-ds-dark-theme] .dcu-settings-nav{--sp-text:var(--dcu-sidebar-navigation,#b9bab9);--sp-muted:var(--dcu-sidebar-secondary,#909191);--sp-hover:var(--dcu-sidebar-hover,#303432);--sp-active:var(--dcu-sidebar-hover,#303432);--sp-border:var(--dcu-sidebar-border,rgba(255,255,255,.08))}

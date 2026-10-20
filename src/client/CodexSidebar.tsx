@@ -117,7 +117,9 @@ body[data-we-sidebar-glass] .dcu-expanded-shell,body[data-we-sidebar-glass] .dcu
 .dcu-root.dcu-compact .dcu-compact-shell{animation:none}
 /* 原生交通灯覆盖网页顶部；宽态、窄轨和动画层共用宿主安全区，保持页脚在窗口内。 */
 .dcu-root{--dcu-sidebar-top-clearance:0px}
-html[data-platform=darwin]:not([data-fullscreen]) .dcu-root{--dcu-sidebar-top-clearance:var(--dsh-frame-top-clearance,48px);padding-top:var(--dcu-sidebar-top-clearance)}
+html[data-platform=darwin]:not([data-fullscreen]) .dcu-root{position:relative;--dcu-sidebar-top-clearance:var(--dsh-frame-top-clearance,48px);padding-top:var(--dcu-sidebar-top-clearance)}
+/* 只开放顶部空白安全区，不让项目列表、窄轨按钮成为窗口拖动区域。 */
+html[data-platform=darwin]:not([data-fullscreen]) .dcu-root::after{content:"";position:absolute;inset:0 0 auto;height:var(--dcu-sidebar-top-clearance);pointer-events:none;-webkit-app-region:drag}
 html[data-platform=darwin]:not([data-fullscreen]) .dcu-root.dcu-compact{padding-top:calc(var(--dcu-sidebar-top-clearance) + (var(--dcu-header-height,34px) - 28px)/2)}
 [data-dcu-codex-sidebar-initialized]{transition:grid-template-columns 500ms cubic-bezier(.16,1,.3,1)}
 /* dsh-better-sidebar 的 #root 布局规则会覆盖 transition 简写；合并两侧过渡而非只争抢左栏。 */
@@ -473,7 +475,7 @@ export function CodexSidebar({ workspaceShortcuts, navigationHistory, globalPane
     <style>{COMPOSER_TOOL_MENU_STYLE}</style>
     <NewConversationSuggestions t={t} prefill={prefillNewConversation} draftSource={newConversationDraft} />
     <div className="dcu-expanded-shell">
-    <header className="dcu-head"><button type="button" className="dcu-brand" aria-label={t('sidebar.newTask')} onClick={() => { beginSession() }}><BrandWordmark size={24} /></button><div className="dcu-head-actions"><button type="button" className="dcu-icon" aria-label={t('sidebar.collapse')} onClick={toggleSidebar}><IconPanelLeftOutlineMedium size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.search')} onClick={openSearch}><IconSearchOutlineMedium size={16} /></button></div></header>
+    <header className="dcu-head" data-window-drag><button type="button" className="dcu-brand" aria-label={t('sidebar.newTask')} onClick={() => { beginSession() }}><BrandWordmark size={24} /></button><div className="dcu-head-actions"><button type="button" className="dcu-icon" aria-label={t('sidebar.collapse')} onClick={toggleSidebar}><IconPanelLeftOutlineMedium size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.search')} onClick={openSearch}><IconSearchOutlineMedium size={16} /></button></div></header>
     <nav className="dcu-menu" aria-label={t('sidebar.mainMenu')}>
       <button type="button" onClick={() => { beginSession() }}><MenuIcon><IconNewChatOutlineMedium size={16} /></MenuIcon>{t('sidebar.newTask')}</button>
       <div className="dcu-extensions-group">

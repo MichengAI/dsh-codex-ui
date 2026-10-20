@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.45 (2026-10-20)
+
+- Restore macOS window-drag regions in the sidebar header and the top safe area of Settings, while keeping buttons and inputs interactive (#46).
+- Remove the full-window no-drag region applied to the Settings overlay by the host. Add browser regression coverage for the drag-region styles, fullscreen transitions, and other platforms. Native macOS window movement has not been tested on hardware.
+
 ## 1.1.44 (2026-10-20)
 
 - Keep the settings navigation's Back and Search controls visible while the section list scrolls (#53).
