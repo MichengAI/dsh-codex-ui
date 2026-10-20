@@ -142,19 +142,34 @@ try {
   assert.equal(await paddingFor(null, 0), '20px', '展开态必须保持宿主原生的 20px 左内边距')
   assert.equal(await paddingFor(null, null), '20px', 'Windows/Web 没有安全区时必须保持 20px')
 
-  // 380–490px 的折叠窗口同时有页签和模式按钮时，保住文件夹入口并让页签停在视口内。
-  for (const width of [332, 380, 420, 490, 560, 640, 720]) {
-    await page.setViewportSize({ width, height: 521 })
+  // 宽度按顶栏容器而不是窗口推断：右栏和宿主 actions 都会压缩中心列的实际空间。
+  const headerCases = [
+    ...[332, 380, 420, 490, 560, 640, 720].map(viewportWidth => ({
+      viewportWidth,
+      centerWidth: viewportWidth - railPx,
+      actionCount: 1,
+      expectFullTabs: viewportWidth >= 560,
+    })),
+    { viewportWidth: 560, centerWidth: 404, actionCount: 1, expectFullTabs: false },
+    { viewportWidth: 560, centerWidth: 400, actionCount: 2, expectFullTabs: false },
+    { viewportWidth: 560, centerWidth: 504, actionCount: 2, expectFullTabs: false },
+    { viewportWidth: 640, centerWidth: 640 - railPx, actionCount: 2, expectFullTabs: false },
+    { viewportWidth: 720, centerWidth: 720 - railPx, actionCount: 2, expectFullTabs: true },
+  ]
+  for (const { viewportWidth, centerWidth, actionCount, expectFullTabs } of headerCases) {
+    await page.setViewportSize({ width: viewportWidth, height: 521 })
     await page.setContent(`<style>
-      .host{display:grid;grid-template-columns:${railPx}px minmax(0,1fr);--dsh-frame-leading-clearance:160px;--dcu-sidebar-rail-width:${railPx}px}
+      body{margin:0}
+      .host{display:grid;grid-template-columns:${railPx}px minmax(0,1fr);width:${railPx + centerWidth}px;--dsh-frame-leading-clearance:160px;--dcu-sidebar-rail-width:${railPx}px}
+      .centerCol{grid-column:2;min-width:0;overflow:hidden}
       .wSkVaW_header{box-sizing:border-box;display:grid;grid-template-columns:auto minmax(0,1fr);padding:10px 28px 0 20px}
       .wSkVaW_titleRow,.wSkVaW_titleCluster,.wSkVaW_crumbs,.wSkVaW_crumbSeg,.wSkVaW_headerActions,.wSkVaW_headerUtilities,.wSkVaW_headerCorner{display:flex}
       .wSkVaW_titleRow{grid-column:2;min-height:30px;align-items:center;padding-inline-start:max(0px,calc(var(--dsh-frame-leading-clearance) - 20px))}
       .wSkVaW_titleCluster{flex:1;gap:10px;min-width:0}.wSkVaW_crumbs{align-items:center;gap:4px;min-width:0;overflow:hidden;white-space:nowrap}
       .wSkVaW_crumbSeg{display:inline-flex;align-items:center;gap:4px;min-width:0}.wSkVaW_crumb{max-width:220px;padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-      .wSkVaW_headerActions{flex:none;gap:8px}.wSkVaW_headerUtilities{flex:none;margin-left:20px}.wSkVaW_headerCorner{flex:none;margin-left:8px}
+      .wSkVaW_headerActions{flex:none;gap:8px}.wSkVaW_headerActions button{white-space:nowrap}.wSkVaW_headerUtilities{flex:none;margin-left:20px}.wSkVaW_headerCorner{flex:none;margin-left:8px}
       ${header}
-    </style><div class="host"><div></div><header class="wSkVaW_header"><div class="wSkVaW_headerLeading"></div><div class="wSkVaW_titleRow"><div class="wSkVaW_titleCluster"><nav class="wSkVaW_crumbs"><span class="wSkVaW_crumbSeg"><button data-dcu-title-folder></button><button class="wSkVaW_crumb wSkVaW_crumbCurrent">A long conversation title</button><button data-dcu-title-more></button></span></nav><div class="wSkVaW_headerActions"><button>标准模式</button></div></div><div class="wSkVaW_headerUtilities"></div><div class="wSkVaW_headerCorner"></div></div><nav data-dcu-inline-tabs>${['对话','轨迹','上下文','文件'].map(label => `<button role="tab">${label}</button>`).join('')}</nav></header></div>`)
+    </style><div class="host"><div></div><div class="centerCol"><header class="wSkVaW_header"><div class="wSkVaW_headerLeading"></div><div class="wSkVaW_titleRow"><div class="wSkVaW_titleCluster"><nav class="wSkVaW_crumbs"><span class="wSkVaW_crumbSeg"><button data-dcu-title-folder></button><button class="wSkVaW_crumb wSkVaW_crumbCurrent">A long conversation title</button><button data-dcu-title-more></button></span></nav><div class="wSkVaW_headerActions">${['标准模式', 'Agent Team'].slice(0, actionCount).map(label => `<button>${label}</button>`).join('')}</div></div><div class="wSkVaW_headerUtilities"></div><div class="wSkVaW_headerCorner"></div></div><nav data-dcu-inline-tabs>${['对话','轨迹','上下文','文件'].map(label => `<button role="tab">${label}</button>`).join('')}</nav></header></div></div>`)
     const narrow = await page.evaluate(() => {
       const folder = document.querySelector('[data-dcu-title-folder]')
       const folderRect = folder.getBoundingClientRect()
@@ -171,16 +186,20 @@ try {
         crumbs: document.querySelector('.wSkVaW_crumbs').getBoundingClientRect(),
         tabs: tabsRect,
         header: document.querySelector('header').getBoundingClientRect(),
+        headerScrollWidth: document.querySelector('header').scrollWidth,
+        headerClientWidth: document.querySelector('header').clientWidth,
         labels,
         documentWidth: document.documentElement.scrollWidth,
         viewportWidth: innerWidth,
       }
     })
-    assert.equal(narrow.folderHit, true, `${width}px：文件夹图标中心必须可见且可点击`)
-    assert.ok(narrow.tabs.right <= narrow.header.right + 0.5, `${width}px：页签不得溢出顶栏`)
-    assert.ok(narrow.documentWidth <= narrow.viewportWidth, `${width}px：顶栏不得撑宽窗口`)
-    if (width >= 560) {
-      assert.ok(narrow.labels.every(label => label.width > 0 && label.left >= narrow.tabs.left && label.right <= narrow.tabs.right + 0.5), `${width}px：四个页签文字必须完整可见`)
+    const scenario = `${viewportWidth}px 视口 / ${centerWidth}px 顶栏 / ${actionCount} 个 actions`
+    assert.equal(narrow.folderHit, true, `${scenario}：文件夹图标中心必须可见且可点击`)
+    assert.ok(narrow.tabs.right <= narrow.header.right + 0.5, `${scenario}：页签不得溢出顶栏`)
+    assert.ok(narrow.headerScrollWidth <= narrow.headerClientWidth, `${scenario}：顶栏滚动宽度不得超过自身宽度`)
+    assert.ok(narrow.documentWidth <= narrow.viewportWidth, `${scenario}：顶栏不得撑宽窗口`)
+    if (expectFullTabs) {
+      assert.ok(narrow.labels.every(label => label.width > 0 && label.left >= narrow.tabs.left && label.right <= narrow.tabs.right + 0.5), `${scenario}：空间充足时四个页签文字必须完整可见`)
     }
   }
   console.log('新版样式回归：附件间距、右栏按钮排序、负外边距、紧凑顶栏单行与 macOS 折叠窗口安全区通过检查。')
