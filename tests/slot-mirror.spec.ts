@@ -214,3 +214,21 @@ test('real renderer follows late nested contributions and their unregister witho
   stop(); unmount(); await r.clean()
 })
 
+test('withSlotAliases safely handles undefined or non-object component without throwing', async () => {
+  const { withSlotAliases } = await api()
+  expect(withSlotAliases(undefined as any, { a: 'b' })).toBeUndefined()
+  expect(withSlotAliases(null as any, { a: 'b' })).toBeNull()
+})
+
+test('mirrorSlot handles entries with undefined component without throwing WeakMap error', async () => {
+  const { mirrorSlot } = await api()
+  const r = runtime()
+  r.ctx.slots.register({ name: 'root', children: { a: single, b: single } } as never, (() => null) as never)
+  // Register an entry with undefined component (e.g. list/scope registration or declaration only)
+  r.ctx.slots.register({ name: 'a' } as never, undefined as never)
+  expect(() => mirrorSlot(r.ctx, 'a', 'b')).not.toThrow()
+  expect(r.ctx.slots.entriesOfSlot('b' as never)).toHaveLength(1)
+  expect(r.ctx.slots.entriesOfSlot('b' as never)[0]?.component).toBeUndefined()
+  await r.clean()
+})
+

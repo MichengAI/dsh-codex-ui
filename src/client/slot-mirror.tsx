@@ -8,16 +8,22 @@ const bridges = new WeakMap<object, Map<string, string>>()
 const wrappers = new WeakMap<object, Map<string, ComponentType<any>>>()
 
 /** Keep a real React component boundary and its hooks; translate only renderer-owned bindings. */
-export function withSlotAliases<P extends object>(Component: ComponentType<P>, aliases: Readonly<Record<string, string>>): ComponentType<P> {
+export function withSlotAliases<P extends object>(Component: ComponentType<P>, aliases: Readonly<Record<string, string>>): ComponentType<P>
+export function withSlotAliases<T>(Component: T, aliases: Readonly<Record<string, string>>): T
+export function withSlotAliases(Component: any, aliases: Readonly<Record<string, string>>): any {
+  if (typeof Component !== 'function' && (typeof Component !== 'object' || Component === null)) {
+    return Component
+  }
   const pairs = Object.entries(aliases).sort(([a], [b]) => a.localeCompare(b))
+  if (pairs.length === 0) return Component
   const signature = JSON.stringify(pairs)
   let cached = wrappers.get(Component)
   if (!cached) wrappers.set(Component, cached = new Map())
   const previous = cached.get(signature)
   if (previous) return previous
   const map = new Map(pairs)
-  function SlotAliases(props: P) {
-    const face = props as P & { renderSlot?: Render; renderSlotChain?: Render }
+  function SlotAliases(props: any) {
+    const face = props as any & { renderSlot?: Render; renderSlotChain?: Render }
     const renderSlot = useMemo(() => face.renderSlot && ((key: string, ...args: unknown[]) => face.renderSlot!(map.get(key) ?? key, ...args)), [face.renderSlot])
     const renderSlotChain = useMemo(() => face.renderSlotChain && ((key: string, ...args: unknown[]) => face.renderSlotChain!(map.get(key) ?? key, ...args)), [face.renderSlotChain])
     return createElement(Component, { ...props, ...(renderSlot && { renderSlot }), ...(renderSlotChain && { renderSlotChain }) })
