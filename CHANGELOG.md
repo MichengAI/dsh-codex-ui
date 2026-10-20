@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.44 (2026-10-20)
+
+- Keep the settings navigation's Back and Search controls visible while the section list scrolls (#53).
+- Prevent client initialization from failing when mirrored slot registrations have no component (#54).
+- Keep the collapsed-sidebar conversation header clear of macOS window controls and prevent title controls and tabs from overflowing in narrow columns (#55).
+
 ## 1.1.43 (2026-10-19)
 
 - Guard archived and released session references before opening, so clicking an archived conversation no longer blanks the renderer or triggers a reload loop. Archived deep links are cleaned up before they can be retried.
