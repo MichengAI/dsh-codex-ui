@@ -188,11 +188,11 @@ export function observeSlimSidebar(): () => void {
       if (frame === undefined || !frame.isConnected) watchFrame(findSidebarFrame(document))
       if (frame !== undefined) {
         rememberHostSidebar(frame)
-        // 尚不能应用宽度时不要写入过渡样式，否则初始化标记缺失会让监听反复触发自身。
-        // 但必须撤回上一次的窄轨宽度：解析不到宿主网格时由宿主自己决定列宽（折叠通常是 0），
-        // 残留 56px 会让顶栏只让出 104px，重新压到窗口插槽按钮下面。
+        // 暂停自动调宽时仍按实际列宽同步避让：右栏按下后窄轨仍可能是 56px，移动后宿主才改为 0。
+        // 网格不可解析时归零，避免残留窄轨宽度使顶栏压到窗口按钮下面。
         if (!canApplySlimSidebar(frame)) {
-          writeSidebarRailWidth(frame, 0)
+          const rail = frame.hasAttribute('data-sidebar-collapsed') ? parseSidebarGrid(frame.style.gridTemplateColumns)?.sidebar ?? 0 : 0
+          writeSidebarRailWidth(frame, rail)
           return
         }
         if (frame.hasAttribute('data-sidebar-collapsed')) {

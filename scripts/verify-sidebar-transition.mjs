@@ -60,6 +60,41 @@ try {
     assert.equal(startupResult.width, 240)
     assert.equal(startupResult.idleCallbacks, 0, `${initial} 稳定后不应继续触发监听`)
   }
+  // 右栏按下时宿主先标记 dragging，移动后才改网格；两步之间标题也必须保持原位。
+  for (const clearance of [160, 84]) {
+    const dragPage = await browser.newPage()
+    const headerStyle = readFileSync('src/client/conversation-header.ts', 'utf8').match(/export const CONVERSATION_HEADER_STYLE = `([\s\S]*?)`/)[1]
+    await dragPage.setContent(`<style>body{margin:0}#frame{display:grid;--dsh-frame-leading-clearance:${clearance}px}${headerStyle}</style><div id="frame" data-sidebar-collapsed style="grid-template-columns:0px minmax(400px, 1fr) minmax(0px, 480px)"><aside></aside><main><header><span class="crumbCurrent">标题</span></header></main><aside></aside></div>`)
+    await dragPage.addScriptTag({ content: implementation })
+    const samples = await dragPage.evaluate(async () => {
+      const frame = document.getElementById('frame')
+      const dispose = observeSlimSidebar()
+      const sample = async () => {
+        await new Promise(requestAnimationFrame)
+        return {
+          left: frame.querySelector('.crumbCurrent').getBoundingClientRect().left,
+          rail: frame.style.getPropertyValue('--dcu-sidebar-rail-width'),
+          grid: frame.style.gridTemplateColumns,
+        }
+      }
+      const before = await sample()
+      frame.setAttribute('data-dragging', '')
+      const pressed = await sample()
+      frame.style.gridTemplateColumns = '0px minmax(400px, 1fr) minmax(0px, 490px)'
+      const moved = await sample()
+      frame.removeAttribute('data-dragging')
+      const released = await sample()
+      dispose()
+      return { before, pressed, moved, released }
+    })
+    await dragPage.close()
+    for (const [state, sample] of Object.entries(samples)) {
+      assert.equal(sample.left, clearance, `${clearance}px 安全区：右栏 ${state} 时标题不得跳动`)
+      assert.equal(sample.rail, state === 'moved' ? '0px' : '56px', `${state} 必须按实际网格同步窄轨宽度`)
+    }
+    assert.equal(samples.pressed.grid, samples.before.grid, '按下右栏分隔条不得改写网格')
+    assert.equal(samples.moved.grid, '0px minmax(400px, 1fr) minmax(0px, 490px)', '拖拽中不得覆盖宿主网格')
+  }
   const page = await browser.newPage()
   await page.setContent('<style>*{box-sizing:border-box}</style><div id="frame" style="display:grid;height:700px;grid-template-columns:320px minmax(0px, 1fr) 0px"><div style="min-width:0;overflow:hidden"><aside class="dcu-root"><div class="dcu-expanded-shell"><nav class="dcu-menu"><button>扩展管理专家技能插件连接器</button></nav></div><div class="dcu-foot">设置与账户余额</div></aside></div><main></main><div></div><div data-side="sidebar"></div></div>')
   await page.addStyleTag({ content: stylesheet })
