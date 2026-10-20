@@ -88,3 +88,6 @@ jobs:
 
       - name: 运行单元、集成与浏览器布局测试
         run: pnpm test
+
+      - name: 确认提交构建产物与源码一致
+        run: git diff --exit-code HEAD -- lib/

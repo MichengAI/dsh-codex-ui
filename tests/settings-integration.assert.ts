@@ -83,7 +83,7 @@ assert.match(settingsStyles, /\.dcu-settings-page\{[^}]*font:14px\/1\.5 var\(--d
 assert.doesNotMatch(settingsStyles, /--dcu-font/, '设置页不得再定义 --dcu-font')
 assert.doesNotMatch(settingsStyles, /\.dcu-settings-inner:has\(\.dcu-plugin-config\)\{width:100%/, '插件配置不得撑满主栏，必须沿用常规页宽度')
 assert.match(settingsStyles, /\.dcu-settings-nav\{[^}]*overflow:hidden\}/, '设置左栏不得整列滚动，返回与搜索必须常驻顶部')
-assert.match(settingsStyles, /\.dcu-settings-scroll\{[^}]*flex:1 1 auto;[^}]*overflow-y:auto/, '只有设置分区列表自己滚动')
+assert.match(settingsStyles, /\.dcu-settings-nav>\.dcu-settings-scroll\{[^}]*flex:1 1 auto;[^}]*overflow-y:auto/, '只有设置分区列表自己滚动，且其伸缩规则具有稳定优先级')
 assert.match(settingsPageSource, /<div className="dcu-settings-scroll">\s*<div className="dcu-settings-groups">/, '分区列表与空态必须放进独立滚动容器')
 assert.doesNotMatch(settingsStyles, /\.dcu-settings-(?:back|search)\{[^}]*position:sticky/, '固定头不得改用 sticky，原生半透明背板会让列表文字从下方透出')
 assert.match(sidebar, /selectSection\(t\('sidebar\.connectors'\)\)/, '连接器菜单必须直达设置内的连接器页')

@@ -10,9 +10,8 @@ export const HEADER_SESSION_MENU_EVENT = 'dcu-header-session-menu'
 // 否则宿主重渲染时会因节点父级脱钩抛 NotFoundError 导致整个界面白屏。
 // crumbs 不能 flex:1：标题会吃掉中间空间，把官方 header.actions（标准模式 / Agent Team）
 // 一起顶到最右侧。操作区必须紧贴标题；页签用 margin-left:auto 靠右，扩展区跟在页签后面。
-// 顶栏也不能 wrap：换行按 flex-basis 的内容宽度判定，收缩发生在换行之后，crumbs 改成
-// flex:0 1 auto 后长标题会让 order 最大的右栏入口掉到第二行左侧。nowrap 让宽度不足时
-// 只收缩 crumbs（min-width:0）。标题截断依赖宿主 .crumbs{overflow:hidden} 和
+// 顶栏也不能 wrap：换行按 flex-basis 的内容宽度判定，收缩发生在换行之后，右栏入口会掉到第二行。
+// 窄窗时标题和页签都允许收缩；标题截断依赖宿主 .crumbs{overflow:hidden} 和
 // .crumb{text-overflow:ellipsis}，插件不重复写 overflow。控件带恒为 34px 单行。
 export const CONVERSATION_HEADER_STYLE = `
 header:has([data-dcu-inline-tabs]){box-sizing:border-box;display:flex;flex-wrap:nowrap;align-items:center;gap:10px;min-height:var(--dcu-header-height,34px);padding-top:calc((var(--dcu-header-height,34px) - 28px)/2);padding-bottom:calc((var(--dcu-header-height,34px) - 28px)/2);border-bottom:0}
@@ -26,9 +25,10 @@ header:has([data-dcu-inline-tabs]):after{display:none;content:none}
 header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]):after{display:none;content:none}
 header:has([data-dcu-inline-tabs]) [class*="titleRow"],header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="titleRow"],header:has([data-dcu-inline-tabs]) [class*="titleCluster"],header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="titleCluster"]{display:contents}
 header:has([data-dcu-inline-tabs]) [class*="crumbs"],header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="crumbs"]{order:1;flex:0 1 auto;min-width:0}
+header:has([data-dcu-inline-tabs]) [class*="crumbSeg"],header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="crumbSeg"]{flex:none}
 header:has([data-dcu-inline-tabs]) [class*="headerActions"],header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="headerActions"]{order:2;flex:none}
 header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="headerActions"]{margin-right:auto}
-header [data-dcu-inline-tabs]{box-sizing:border-box;order:3;flex:none;display:flex;align-items:center;gap:0;margin:0 0 0 auto;padding:0;height:28px;position:relative;z-index:1;overflow:hidden;border:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.12));border-radius:8px;background:var(--dsw-alias-background-secondary,rgba(255,255,255,.025))}
+header [data-dcu-inline-tabs]{box-sizing:border-box;order:3;flex:0 1 auto;min-width:0;display:flex;align-items:center;gap:0;margin:0 0 0 auto;padding:0;height:28px;position:relative;z-index:1;overflow:hidden;border:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.12));border-radius:8px;background:var(--dsw-alias-background-secondary,rgba(255,255,255,.025))}
 header:has([data-dcu-inline-tabs]) [class*="headerUtilities"]{order:4;flex:none}
 header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="headerUtilities"]{order:4;flex:none}
 /* 新版角落插槽被 display:contents 摊平后，需要独立排序并撤销嵌套布局的边距补偿。 */

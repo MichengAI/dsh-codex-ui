@@ -9,7 +9,7 @@ body[data-ds-dark-theme] .dcu-settings-page{--sp-bg:#181818;--sp-nav:var(--dcu-s
 .dcu-settings-nav{--sp-text:var(--dcu-sidebar-navigation,#4e5253);--sp-muted:var(--dcu-sidebar-secondary,#676b6c);--sp-hover:var(--dcu-sidebar-hover,#dfe8e5);--sp-active:var(--dcu-sidebar-hover,#dfe8e5);--sp-border:var(--dcu-sidebar-border,rgba(37,46,41,.10));display:flex;flex-direction:column;min-height:0;padding:18px 8px;background:var(--sp-nav);box-shadow:inset -1px 0 var(--sp-border);overflow:hidden}
 /* 返回、插槽头与搜索框常驻，只有分区列表滚动。 */
 .dcu-settings-nav>*{flex:none}
-.dcu-settings-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--sp-border) transparent}
+.dcu-settings-nav>.dcu-settings-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--sp-border) transparent}
 /* macOS 普通窗口的原生按钮覆盖 Web 内容；沿用宿主标题栏安全区，仅抬高设置导航。 */
 html[data-platform=darwin]:not([data-fullscreen]) .dcu-settings-nav{padding-top:calc(var(--dsh-frame-top-clearance,48px) + 8px)}
 body[data-ds-dark-theme] .dcu-settings-nav{--sp-text:var(--dcu-sidebar-navigation,#b9bab9);--sp-muted:var(--dcu-sidebar-secondary,#909191);--sp-hover:var(--dcu-sidebar-hover,#303432);--sp-active:var(--dcu-sidebar-hover,#303432);--sp-border:var(--dcu-sidebar-border,rgba(255,255,255,.08))}
@@ -111,4 +111,5 @@ html[data-dsh-native-backdrop=mica] .dcu-settings-page,html[data-dsh-native-back
 
 @media(max-width:900px){.dcu-settings-inner{padding:32px 28px}.dcu-settings-heading{align-items:flex-start;flex-direction:column;gap:12px}}
 @media(max-width:600px){.dcu-settings-page{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.dcu-settings-nav{padding:8px 12px;max-height:220px;border-right:0;border-bottom:1px solid var(--sp-border)}.dcu-settings-search{margin:6px 0}.dcu-settings-groups{display:flex;gap:8px;overflow-x:auto;flex:none}.dcu-settings-group{display:flex;gap:4px;margin:0;flex:none}.dcu-settings-group-label{display:none}.dcu-settings-link{width:auto;min-height:40px;flex:none}.dcu-settings-link+.dcu-settings-link{margin-top:0}.dcu-settings-inner{padding:32px 16px}.dcu-settings-heading{margin-bottom:28px}.dcu-settings-heading h1,.dcu-settings-inner:is([data-settings-section=models],[data-settings-section=plugins],[data-settings-section=agent-presets]) [class$="_section"]>h2:is([class$="_title"],[class$="_heading"]){font-size:22px}.dcu-settings-card{padding:0 12px}.dcu-settings-row>[data-slot]>*{flex-wrap:wrap;gap:12px!important}.dcu-settings-general-group{margin-bottom:32px}}
+@media(max-height:180px){.dcu-settings-nav{overflow-y:auto}.dcu-settings-nav>.dcu-settings-scroll{flex:0 0 auto;overflow:visible}}
 `

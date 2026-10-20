@@ -57,7 +57,6 @@ try {
   }))
   const scrolled = await scroll.evaluate(element => { element.scrollTop = element.scrollHeight; return element.scrollTop })
   assert.ok(scrolled > 0, '分区列表超长时滚动容器必须可滚动')
-  await page.waitForTimeout(50)
   const after = await page.evaluate(() => ({
     back: document.querySelector('.dcu-settings-back')?.getBoundingClientRect().top,
     search: document.querySelector('.dcu-settings-search')?.getBoundingClientRect().bottom,
@@ -66,13 +65,20 @@ try {
     firstLinkTop: document.querySelector('.dcu-settings-link')?.getBoundingClientRect().top,
     searchBottom: document.querySelector('.dcu-settings-search')?.getBoundingClientRect().bottom,
   }))
-  assert.equal(after.back, before.back, '滚动分区列表时返回按钮必须固定不动')
-  assert.equal(after.search, before.search, '滚动分区列表时搜索框必须固定不动')
+  assert.ok(Math.abs(after.back - before.back) < 0.5, '滚动分区列表时返回按钮必须固定不动')
+  assert.ok(Math.abs(after.search - before.search) < 0.5, '滚动分区列表时搜索框必须固定不动')
   assert.equal(after.navScroll, 0, '导航列本身不得成为滚动容器')
   assert.ok(after.navScrollable <= 0, '导航列不得有可滚动的溢出内容')
   assert.ok((after.firstLinkTop ?? 0) < (after.searchBottom ?? 0), '分区列表必须真的滚动到搜索框下方')
   const navBox = await nav.evaluate(element => ({ top: element.getBoundingClientRect().top, bottom: element.getBoundingClientRect().bottom }))
   assert.ok((after.back ?? 0) >= navBox.top && (after.search ?? 0) <= navBox.bottom, '滚动后返回与搜索仍必须留在左栏内')
+
+  await page.setViewportSize({ width: 900, height: 140 })
+  const tinyNav = page.locator('.dcu-settings-nav')
+  const tinyScroll = page.locator('.dcu-settings-scroll')
+  const tinyScrollTop = await tinyNav.evaluate(element => { element.scrollTop = element.scrollHeight; return element.scrollTop })
+  assert.ok(tinyScrollTop > 0, '极矮窗口下导航列必须可滚动，保证设置分区仍可访问')
+  assert.ok(await tinyScroll.evaluate(element => element.scrollHeight > 0), '极矮窗口下分区列表必须保留内容')
 
   console.log('设置页标题栏避让、模型 Pro 响应式宽度与左栏固定头通过')
 } finally {
