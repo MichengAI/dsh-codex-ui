@@ -227,17 +227,19 @@ export function CodexSettingsPage({ wide, sections, onboarding, connectionState,
         <button ref={back} type="button" className="dcu-settings-back" onClick={close}><ArrowLeft size={16}/>{renderSlot('settings.close', {}) ?? t('settings.back')}</button>
         {renderSlot('settings.header', {})}
         <label className="dcu-settings-search"><Search size={15} aria-hidden="true"/><input type="search" value={query} aria-label={t('settings.search')} placeholder={t('settings.search')} onChange={event => { setQuery(event.target.value) }}/></label>
-        <div className="dcu-settings-groups">
-          {(['personal', 'integrations', 'records'] as const).map(group => {
-            const entries = visible.filter(row => settingsGroup(row.id) === group)
-            return entries.length > 0 && <section className="dcu-settings-group" key={group}>
-              <h2 className="dcu-settings-group-label">{t(groupLabels[group])}</h2>
-              {entries.map(row => { const Icon = sectionIcon(row.id); return <button key={row.id} type="button" className="dcu-settings-link" aria-current={row.id === active?.id ? 'page' : undefined} onClick={() => { setActiveId(row.id) }}><Icon size={16} strokeWidth={1.6} aria-hidden="true"/><span>{row.id === 'general' ? t('settings.general') : row.label}</span></button> })}
-            </section>
-          })}
+        <div className="dcu-settings-scroll">
+          <div className="dcu-settings-groups">
+            {(['personal', 'integrations', 'records'] as const).map(group => {
+              const entries = visible.filter(row => settingsGroup(row.id) === group)
+              return entries.length > 0 && <section className="dcu-settings-group" key={group}>
+                <h2 className="dcu-settings-group-label">{t(groupLabels[group])}</h2>
+                {entries.map(row => { const Icon = sectionIcon(row.id); return <button key={row.id} type="button" className="dcu-settings-link" aria-current={row.id === active?.id ? 'page' : undefined} onClick={() => { setActiveId(row.id) }}><Icon size={16} strokeWidth={1.6} aria-hidden="true"/><span>{row.id === 'general' ? t('settings.general') : row.label}</span></button> })}
+              </section>
+            })}
+          </div>
+          {visible.length > 0 && !visible.some(row => row.id === active?.id) && <p className="dcu-settings-empty" role="status">{t('settings.filterHint')}</p>}
+          {visible.length === 0 && <p className="dcu-settings-empty" role="status">{t('settings.noResults')}</p>}
         </div>
-        {visible.length > 0 && !visible.some(row => row.id === active?.id) && <p className="dcu-settings-empty" role="status">{t('settings.filterHint')}</p>}
-        {visible.length === 0 && <p className="dcu-settings-empty" role="status">{t('settings.noResults')}</p>}
       </nav>
       <div ref={main} className="dcu-settings-main">
         <div className="dcu-settings-inner" data-settings-section={active?.id}>

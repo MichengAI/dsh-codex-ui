@@ -9,9 +9,11 @@ const browser = await chromium.launch({ headless: true })
 
 try {
   const page = await browser.newPage({ viewport: { width: 1600, height: 900 }, reducedMotion: 'reduce' })
+  const navItems = Array.from({ length: 22 }, (_, index) => `<button class="dcu-settings-link"><span>设置项 ${index + 1}</span></button>`).join('')
   await page.setContent(`<html data-platform="darwin" style="--dsh-frame-top-clearance:48px"><head><style>${styles}</style></head><body>
     <div class="dcu-settings-page"><nav class="dcu-settings-nav"><button class="dcu-settings-back">返回应用</button>
-    <label class="dcu-settings-search"><input type="search" placeholder="搜索设置"></label></nav>
+    <label class="dcu-settings-search"><input type="search" placeholder="搜索设置"></label>
+    <div class="dcu-settings-scroll"><div class="dcu-settings-groups">${navItems}</div></div></nav>
     <main class="dcu-settings-main"><div class="dcu-settings-inner" data-settings-section="general"></div></main></div>
   </body></html>`)
 
@@ -44,7 +46,35 @@ try {
   await page.locator('.dcu-settings-search input').click()
   assert.equal(await page.evaluate(() => document.activeElement?.tagName), 'INPUT', '宿主最小宽度下搜索框必须可点击')
 
-  console.log('设置页标题栏避让和模型 Pro 响应式宽度通过')
+  // 左栏分区列表较长时必须只滚列表：返回与搜索常驻在导航顶部。
+  await page.setViewportSize({ width: 900, height: 420 })
+  const nav = page.locator('.dcu-settings-nav')
+  const scroll = page.locator('.dcu-settings-scroll')
+  const before = await page.evaluate(() => ({
+    back: document.querySelector('.dcu-settings-back')?.getBoundingClientRect().top,
+    search: document.querySelector('.dcu-settings-search')?.getBoundingClientRect().bottom,
+    navScroll: document.querySelector('.dcu-settings-nav')?.scrollTop,
+  }))
+  const scrolled = await scroll.evaluate(element => { element.scrollTop = element.scrollHeight; return element.scrollTop })
+  assert.ok(scrolled > 0, '分区列表超长时滚动容器必须可滚动')
+  await page.waitForTimeout(50)
+  const after = await page.evaluate(() => ({
+    back: document.querySelector('.dcu-settings-back')?.getBoundingClientRect().top,
+    search: document.querySelector('.dcu-settings-search')?.getBoundingClientRect().bottom,
+    navScroll: document.querySelector('.dcu-settings-nav')?.scrollTop,
+    navScrollable: (document.querySelector('.dcu-settings-nav')?.scrollHeight ?? 0) - (document.querySelector('.dcu-settings-nav')?.clientHeight ?? 0),
+    firstLinkTop: document.querySelector('.dcu-settings-link')?.getBoundingClientRect().top,
+    searchBottom: document.querySelector('.dcu-settings-search')?.getBoundingClientRect().bottom,
+  }))
+  assert.equal(after.back, before.back, '滚动分区列表时返回按钮必须固定不动')
+  assert.equal(after.search, before.search, '滚动分区列表时搜索框必须固定不动')
+  assert.equal(after.navScroll, 0, '导航列本身不得成为滚动容器')
+  assert.ok(after.navScrollable <= 0, '导航列不得有可滚动的溢出内容')
+  assert.ok((after.firstLinkTop ?? 0) < (after.searchBottom ?? 0), '分区列表必须真的滚动到搜索框下方')
+  const navBox = await nav.evaluate(element => ({ top: element.getBoundingClientRect().top, bottom: element.getBoundingClientRect().bottom }))
+  assert.ok((after.back ?? 0) >= navBox.top && (after.search ?? 0) <= navBox.bottom, '滚动后返回与搜索仍必须留在左栏内')
+
+  console.log('设置页标题栏避让、模型 Pro 响应式宽度与左栏固定头通过')
 } finally {
   await browser.close()
 }
