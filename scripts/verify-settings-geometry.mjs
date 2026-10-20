@@ -78,7 +78,9 @@ try {
   const tinyScroll = page.locator('.dcu-settings-scroll')
   const tinyScrollTop = await tinyNav.evaluate(element => { element.scrollTop = element.scrollHeight; return element.scrollTop })
   assert.ok(tinyScrollTop > 0, '极矮窗口下导航列必须可滚动，保证设置分区仍可访问')
-  assert.ok(await tinyScroll.evaluate(element => element.scrollHeight > 0), '极矮窗口下分区列表必须保留内容')
+  const tinyLastLinkBottom = await tinyScroll.locator('.dcu-settings-link').last().evaluate(element => element.getBoundingClientRect().bottom)
+  const tinyNavBottom = await tinyNav.evaluate(element => element.getBoundingClientRect().bottom)
+  assert.ok(tinyLastLinkBottom <= tinyNavBottom + 0.5, '极矮窗口滚动到底后最后一个设置项必须完整进入导航视口')
 
   console.log('设置页标题栏避让、模型 Pro 响应式宽度与左栏固定头通过')
 } finally {

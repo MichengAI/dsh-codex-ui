@@ -16,7 +16,7 @@ const client = readFileSync(new URL('../src/client/index.ts', import.meta.url), 
 assert.doesNotMatch(header, /actions\.after\(tabs\)/, '不得物理搬移宿主页签节点')
 assert.doesNotMatch(header, /\.append\(title\)/, '不得把宿主标题节点搬进插件容器')
 assert.match(header, /display:contents/, '必须用 CSS 展开标题行，而不是搬移 DOM')
-assert.match(header, /\[class\*="crumbs"\]\{order:1;flex:0 1 auto;min-width:0\}/, '面包屑不得用 flex:1 把标准模式和 Agent Team 顶到最右侧')
+assert.match(header, /\[class\*="crumbs"\]\{[^}]*flex:0 999 auto;min-width:24px/, '面包屑优先收缩并保留文件夹入口宽度，不得用 flex:1 把标准模式和 Agent Team 顶到最右侧')
 assert.doesNotMatch(header, /\[class\*="crumbs"\]\{[^}]*overflow:hidden/, '标题截断必须依赖宿主 overflow，插件 crumbs 规则不得自己写 overflow:hidden')
 assert.match(header, /宿主 \.crumbs\{overflow:hidden\}/, '注释必须写明截断依赖宿主，不能写成插件自己的 overflow')
 assert.doesNotMatch(header, /\[class\*="crumbs"\]\{[^}]*flex:1[;}]/, '面包屑不得再抢占中间剩余空间')

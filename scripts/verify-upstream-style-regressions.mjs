@@ -143,7 +143,7 @@ try {
   assert.equal(await paddingFor(null, null), '20px', 'Windows/Web 没有安全区时必须保持 20px')
 
   // 380–490px 的折叠窗口同时有页签和模式按钮时，保住文件夹入口并让页签停在视口内。
-  for (const width of [380, 420, 490]) {
+  for (const width of [332, 380, 420, 490, 560, 640, 720]) {
     await page.setViewportSize({ width, height: 521 })
     await page.setContent(`<style>
       .host{display:grid;grid-template-columns:${railPx}px minmax(0,1fr);--dsh-frame-leading-clearance:160px;--dcu-sidebar-rail-width:${railPx}px}
@@ -155,16 +155,33 @@ try {
       .wSkVaW_headerActions{flex:none;gap:8px}.wSkVaW_headerUtilities{flex:none;margin-left:20px}.wSkVaW_headerCorner{flex:none;margin-left:8px}
       ${header}
     </style><div class="host"><div></div><header class="wSkVaW_header"><div class="wSkVaW_headerLeading"></div><div class="wSkVaW_titleRow"><div class="wSkVaW_titleCluster"><nav class="wSkVaW_crumbs"><span class="wSkVaW_crumbSeg"><button data-dcu-title-folder></button><button class="wSkVaW_crumb wSkVaW_crumbCurrent">A long conversation title</button><button data-dcu-title-more></button></span></nav><div class="wSkVaW_headerActions"><button>标准模式</button></div></div><div class="wSkVaW_headerUtilities"></div><div class="wSkVaW_headerCorner"></div></div><nav data-dcu-inline-tabs>${['对话','轨迹','上下文','文件'].map(label => `<button role="tab">${label}</button>`).join('')}</nav></header></div>`)
-    const narrow = await page.evaluate(() => ({
-      folder: document.querySelector('[data-dcu-title-folder]').getBoundingClientRect(),
-      tabs: document.querySelector('[data-dcu-inline-tabs]').getBoundingClientRect(),
-      header: document.querySelector('header').getBoundingClientRect(),
-      documentWidth: document.documentElement.scrollWidth,
-      viewportWidth: innerWidth,
-    }))
-    assert.ok(narrow.folder.width >= 16, `${width}px：四个页签与模式按钮并存时文件夹入口仍可见`)
+    const narrow = await page.evaluate(() => {
+      const folder = document.querySelector('[data-dcu-title-folder]')
+      const folderRect = folder.getBoundingClientRect()
+      const tablist = document.querySelector('[data-dcu-inline-tabs]')
+      const tabsRect = tablist.getBoundingClientRect()
+      const labels = [...tablist.querySelectorAll('[role=tab]')].map(tab => {
+        const range = document.createRange()
+        range.selectNodeContents(tab)
+        const rect = range.getBoundingClientRect()
+        return { left: rect.left, right: rect.right, width: rect.width }
+      })
+      return {
+        folderHit: document.elementFromPoint(folderRect.left + folderRect.width / 2, folderRect.top + folderRect.height / 2)?.closest('[data-dcu-title-folder]') === folder,
+        crumbs: document.querySelector('.wSkVaW_crumbs').getBoundingClientRect(),
+        tabs: tabsRect,
+        header: document.querySelector('header').getBoundingClientRect(),
+        labels,
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: innerWidth,
+      }
+    })
+    assert.equal(narrow.folderHit, true, `${width}px：文件夹图标中心必须可见且可点击`)
     assert.ok(narrow.tabs.right <= narrow.header.right + 0.5, `${width}px：页签不得溢出顶栏`)
     assert.ok(narrow.documentWidth <= narrow.viewportWidth, `${width}px：顶栏不得撑宽窗口`)
+    if (width >= 560) {
+      assert.ok(narrow.labels.every(label => label.width > 0 && label.left >= narrow.tabs.left && label.right <= narrow.tabs.right + 0.5), `${width}px：四个页签文字必须完整可见`)
+    }
   }
   console.log('新版样式回归：附件间距、右栏按钮排序、负外边距、紧凑顶栏单行与 macOS 折叠窗口安全区通过检查。')
 } finally { await browser.close() }

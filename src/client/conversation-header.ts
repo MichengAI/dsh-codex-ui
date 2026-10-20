@@ -24,11 +24,12 @@ header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]){padding-le
 header:has([data-dcu-inline-tabs]):after{display:none;content:none}
 header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]):after{display:none;content:none}
 header:has([data-dcu-inline-tabs]) [class*="titleRow"],header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="titleRow"],header:has([data-dcu-inline-tabs]) [class*="titleCluster"],header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="titleCluster"]{display:contents}
-header:has([data-dcu-inline-tabs]) [class*="crumbs"],header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="crumbs"]{order:1;flex:0 1 auto;min-width:0}
+header:has([data-dcu-inline-tabs]) [class*="crumbs"],header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="crumbs"]{order:1;flex:0 999 auto;min-width:24px}
 header:has([data-dcu-inline-tabs]) [class*="crumbSeg"],header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="crumbSeg"]{flex:none}
 header:has([data-dcu-inline-tabs]) [class*="headerActions"],header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="headerActions"]{order:2;flex:none}
 header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="headerActions"]{margin-right:auto}
 header [data-dcu-inline-tabs]{box-sizing:border-box;order:3;flex:0 1 auto;min-width:0;display:flex;align-items:center;gap:0;margin:0 0 0 auto;padding:0;height:28px;position:relative;z-index:1;overflow:hidden;border:1px solid var(--dsw-alias-border-subtle,rgba(255,255,255,.12));border-radius:8px;background:var(--dsw-alias-background-secondary,rgba(255,255,255,.025))}
+@media(min-width:560px){header [data-dcu-inline-tabs]{flex:0 0 auto}}
 header:has([data-dcu-inline-tabs]) [class*="headerUtilities"]{order:4;flex:none}
 header:not(:has([data-dcu-inline-tabs])):has([class*="crumbCurrent"]) [class*="headerUtilities"]{order:4;flex:none}
 /* 新版角落插槽被 display:contents 摊平后，需要独立排序并撤销嵌套布局的边距补偿。 */
