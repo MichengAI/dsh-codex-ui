@@ -351,6 +351,44 @@ test('设置已打开时晚挂到 body 的 toast 仍可见，焦点不被抢回�
   expect(document.activeElement).toBe(retry)
 })
 
+test('Windows 标题栏的 Desktop 菜单不被设置隔离藏掉', async () => {
+  const menu = document.createElement('div')
+  menu.setAttribute('data-windows-menu', '')
+  const button = document.createElement('button')
+  menu.append(button)
+  const background = document.createElement('div')
+  document.body.append(menu, background)
+  await mount()
+  expect(menu.inert).not.toBe(true)
+  expect(menu.hasAttribute('data-dcu-settings-isolated')).toBe(false)
+  expect(background.inert).toBe(true)
+  expect(background.hasAttribute('data-dcu-settings-isolated')).toBe(true)
+  button.focus()
+  expect(document.activeElement).toBe(button)
+})
+
+test('Tab 键循环覆盖 Windows 标题栏 Desktop 菜单', async () => {
+  const menu = document.createElement('div')
+  menu.setAttribute('data-windows-menu', '')
+  const shadow = menu.attachShadow({ mode: 'open' })
+  const menuBtn = document.createElement('button')
+  menuBtn.textContent = '应用'
+  menuBtn.tabIndex = 0
+  shadow.append(menuBtn)
+  document.body.append(menu)
+  await mount()
+  const last = inSettings<HTMLButtonElement>('[data-section]')!
+  last.focus()
+  await act(async () => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }))
+  })
+  expect(menu.shadowRoot?.activeElement).toBe(menuBtn)
+  await act(async () => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }))
+  })
+  expect(document.activeElement).toBe(last)
+})
+
 test('嵌套的 role=alert 不会因为官方 toast 守卫而漏出设置页后面', async () => {
   const host = document.createElement('div')
   const modal = document.createElement('div')

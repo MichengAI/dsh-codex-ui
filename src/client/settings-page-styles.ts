@@ -10,11 +10,20 @@ body[data-ds-dark-theme] .dcu-settings-page{--sp-bg:#181818;--sp-nav:var(--dcu-s
 /* 返回、插槽头与搜索框常驻，只有分区列表滚动。 */
 .dcu-settings-nav>*{flex:none}
 .dcu-settings-nav>.dcu-settings-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--sp-border) transparent}
-/* body 直属浮层被宿主整层标为 no-drag；撤销整层扣除，仅开放顶部安全区。 */
+/* body 直属浮层被宿主整层标为 no-drag；撤销整层扣除，仅开放顶部安全区。
+   宿主把窗口拖动条画在 frame 顶部（macOS 是 data-window-drag 行，Windows 是标题栏伪元素），
+   全屏设置页会整层盖住它，所以两个桌面平台都要预留安全区并重新声明拖动区。 */
 html[data-platform=darwin] body>.dcu-settings-page:not(#root){-webkit-app-region:initial}
-html[data-platform=darwin]:not([data-fullscreen]) .dcu-settings-page::after{content:"";position:absolute;inset:0 0 auto;height:var(--dsh-frame-top-clearance,48px);pointer-events:none;-webkit-app-region:drag}
-/* macOS 普通窗口的原生按钮覆盖 Web 内容；沿用宿主标题栏安全区，仅抬高设置导航。 */
-html[data-platform=darwin]:not([data-fullscreen]) .dcu-settings-nav{padding-top:calc(var(--dsh-frame-top-clearance,48px) + 8px)}
+html:is([data-platform=darwin],[data-windows-titlebar]):not([data-fullscreen]) .dcu-settings-page::after{content:"";position:absolute;inset:0 0 auto;height:var(--dsh-frame-top-clearance,48px);pointer-events:none;-webkit-app-region:drag}
+/* Windows 原生标题栏整条按 --dsw-specific-sidebar-fill 着色（主进程就是用这个 token 设置标题栏），
+   设置浮层必须用同一颜色贯通顶部，否则标题栏带会在左右两栏交界处断成两块色。 */
+html[data-windows-titlebar]:not([data-fullscreen]) .dcu-settings-page::after{background:var(--dsw-specific-sidebar-fill,var(--sp-nav))}
+/* 原生窗口按钮覆盖 Web 内容；沿用宿主标题栏安全区，仅抬高设置导航。 */
+html:is([data-platform=darwin],[data-windows-titlebar]):not([data-fullscreen]) .dcu-settings-nav{padding-top:calc(var(--dsh-frame-top-clearance,48px) + 8px)}
+/* 设置页不展示会话历史前进/后退箭头，Desktop 菜单左移到 12px 对齐。 */
+html[data-windows-titlebar]:has(.dcu-settings-page){--dsh-windows-menu-start:12px}
+/* Windows 全屏时隐藏 Desktop 菜单，避免悬空遮挡设置页内容。 */
+html[data-windows-titlebar][data-fullscreen] [data-windows-menu]{display:none!important}
 body[data-ds-dark-theme] .dcu-settings-nav{--sp-text:var(--dcu-sidebar-navigation,#b9bab9);--sp-muted:var(--dcu-sidebar-secondary,#909191);--sp-hover:var(--dcu-sidebar-hover,#303432);--sp-active:var(--dcu-sidebar-hover,#303432);--sp-border:var(--dcu-sidebar-border,rgba(255,255,255,.08))}
 .dcu-settings-back{display:flex;align-items:center;flex-shrink:0;gap:8px;width:100%;height:30px;padding:5px 8px;border:0;border-radius:10px;background:transparent;color:var(--sp-text);text-align:left}
 .dcu-settings-back:hover,.dcu-settings-link:hover{background:var(--sp-hover)}

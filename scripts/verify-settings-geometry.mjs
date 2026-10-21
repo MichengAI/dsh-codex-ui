@@ -10,7 +10,9 @@ const browser = await chromium.launch({ headless: true })
 try {
   const page = await browser.newPage({ viewport: { width: 1600, height: 900 }, reducedMotion: 'reduce' })
   const navItems = Array.from({ length: 22 }, (_, index) => `<button class="dcu-settings-link"><span>设置项 ${index + 1}</span></button>`).join('')
-  await page.setContent(`<html data-platform="darwin" style="--dsh-frame-top-clearance:48px"><head><style>${styles}</style></head><body>
+  await page.setContent(`<html data-platform="darwin"><head><style>html[data-platform=darwin]{--dsh-frame-top-clearance:48px}
+    html[data-windows-titlebar]{--dsh-windows-titlebar-height:40px;--dsh-frame-top-clearance:var(--dsh-windows-titlebar-height)}
+    ${styles}</style></head><body>
     <div class="dcu-settings-page"><nav class="dcu-settings-nav"><button class="dcu-settings-back">返回应用</button>
     <label class="dcu-settings-search"><input type="search" placeholder="搜索设置"></label>
     <div class="dcu-settings-scroll"><div class="dcu-settings-groups">${navItems}</div></div></nav>
@@ -21,10 +23,12 @@ try {
   assert.equal(await top(), 56, 'macOS 普通窗口的返回按钮必须低于原生标题栏')
   await page.locator('html').evaluate(element => { element.setAttribute('data-fullscreen', '') })
   assert.equal(await top(), 18, 'macOS 全屏时不得额外留标题栏空白')
-  await page.locator('html').evaluate(element => { element.removeAttribute('data-fullscreen'); element.setAttribute('data-platform', 'win32') })
-  assert.equal(await top(), 18, '其他桌面平台不得受 macOS 安全区影响')
+  await page.locator('html').evaluate(element => { element.removeAttribute('data-fullscreen'); element.setAttribute('data-platform', 'win32'); element.setAttribute('data-windows-titlebar', '') })
+  assert.equal(await top(), 48, 'Windows 标题栏下返回按钮必须让出原生窗口按钮')
+  await page.locator('html').evaluate(element => { element.removeAttribute('data-windows-titlebar') })
+  assert.equal(await top(), 18, '没有标题栏的桌面宿主不得受安全区影响')
   await page.locator('html').evaluate(element => { element.removeAttribute('data-platform') })
-  assert.equal(await top(), 18, '普通浏览器不得受 macOS 安全区影响')
+  assert.equal(await top(), 18, '普通浏览器不得受安全区影响')
 
   const inner = page.locator('.dcu-settings-inner')
   const main = page.locator('.dcu-settings-main')

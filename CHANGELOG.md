@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.46 (2026-10-21)
+
+- Restore window dragging on the Settings page in the Windows desktop app: the full-screen Settings overlay now reserves the native caption band and declares it as a drag region again (#56).
+- Paint that band with the host's own `--dsw-specific-sidebar-fill` (the token the desktop app uses for the native title bar), so the caption stays one continuous colour across both columns instead of breaking into sidebar/content/native strips.
+- Move the Settings navigation below the native window buttons on Windows, so Back and Search no longer sit in the same band as the minimize/maximize/close controls.
+- Keep the Windows desktop menu (Application/Edit) visible on the Settings page and align it to the left edge while the session navigation arrows remain exclusive to the main workspace. Hide the desktop menu in fullscreen mode to prevent overlap, and include its items in keyboard Tab navigation.
+- Extend the drag-region browser regression to cover the Windows caption, fullscreen, and hosts without a titlebar.
+
 ## 1.1.45 (2026-10-20)
 
 - Restore macOS window-drag regions in the sidebar header and the top safe area of Settings, while keeping buttons and inputs interactive (#46).
