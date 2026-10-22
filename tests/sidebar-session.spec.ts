@@ -11,3 +11,13 @@ test('新建会话先回到任务页签，再交给宿主创建', () => {
   expect(startSession.mock.calls).toEqual([[], ['ws-1']])
   expect(order).toEqual(['tab', 'start', 'tab', 'start'])
 })
+
+test('新建会话支持异步 startSession 并透传返回值与捕获异常', async () => {
+  const setTab = vi.fn()
+  const startSession = vi.fn(async (wsId?: string) => {
+    if (wsId === 'fail') throw new Error('Host busy')
+    return 'session-new'
+  })
+  await expect(beginSidebarSession(setTab, startSession, 'ws-ok')).resolves.toBe('session-new')
+  await expect(beginSidebarSession(setTab, startSession, 'fail')).rejects.toThrow('Host busy')
+})

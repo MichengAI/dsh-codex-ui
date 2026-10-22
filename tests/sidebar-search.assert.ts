@@ -10,3 +10,4 @@ const items = [
 assert.deepEqual(filterSidebarSearchItems(items, '文档').map(item => item.id), ['session-a'])
 assert.deepEqual(filterSidebarSearchItems(items, '设置').map(item => item.id), ['settings-skills', 'settings-plugins'])
 assert.deepEqual(filterSidebarSearchItems(items, '   ').map(item => item.id), ['session-a', 'settings-skills', 'settings-plugins'])
+assert.deepEqual(filterSidebarSearchItems([] as typeof items, '任何搜索').map(item => item.id), [], '空项返回空列表')

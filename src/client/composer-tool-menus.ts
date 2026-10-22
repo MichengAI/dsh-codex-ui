@@ -118,7 +118,9 @@ export function observeComposerToolMenus(copy: { search: string; empty: string }
       for (const property of ['--dcu-tool-menu-x', '--dcu-tool-menu-y', '--dcu-tool-menu-height', '--dcu-tool-menu-shift']) menu.style.removeProperty(property)
     })
   }
-  function sync() {
+  let syncFrame: number | undefined
+  function syncNow() {
+    syncFrame = undefined
     for (const [menu, dispose] of mounted) if (!menu.isConnected) { dispose(); mounted.delete(menu) }
     if (anchor === undefined || now() > pendingUntil) return
     for (const menu of document.querySelectorAll<HTMLElement>(MENU)) {
@@ -131,12 +133,22 @@ export function observeComposerToolMenus(copy: { search: string; empty: string }
       break
     }
   }
-  const observer = new MutationObserver(sync)
+  function scheduleSync() {
+    if (anchor === undefined || now() > pendingUntil) {
+      // 快速清理失效菜单，无 pending anchor 时不排帧测量
+      for (const [menu, dispose] of mounted) if (!menu.isConnected) { dispose(); mounted.delete(menu) }
+      return
+    }
+    if (syncFrame !== undefined) return
+    syncFrame = window.requestAnimationFrame(syncNow)
+  }
+  const observer = new MutationObserver(scheduleSync)
   observer.observe(document.body, { childList: true, subtree: true })
   document.addEventListener('pointerdown', capture, true)
   document.addEventListener('keydown', captureKey, true)
   function captureKey(event: KeyboardEvent) { if (['Enter', ' ', 'ArrowDown'].includes(event.key)) capture(event) }
   return () => {
+    if (syncFrame !== undefined) window.cancelAnimationFrame(syncFrame)
     observer.disconnect()
     document.removeEventListener('pointerdown', capture, true)
     document.removeEventListener('keydown', captureKey, true)

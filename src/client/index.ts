@@ -124,17 +124,23 @@ async function runHostAction<T>(action: HostAction, execute: () => Promise<T>): 
 }
 
 /** Archive Manager replaces the official ui-workspace row with this optional service. */
-export function startWorkspaceSession(ctx: ClientContext, workspaceId?: WorkspaceId): void {
+export async function startWorkspaceSession(ctx: ClientContext, workspaceId?: WorkspaceId): Promise<boolean> {
   const uiWorkspace = probeService(ctx, 'uiWorkspace')
-  if (hasStartSession(uiWorkspace)) {
-    uiWorkspace.startSession(workspaceId)
-    return
+  try {
+    if (hasStartSession(uiWorkspace)) {
+      await Promise.resolve(uiWorkspace.startSession(workspaceId))
+      return true
+    }
+    if (hasStartSession(ctx.workspaces)) {
+      await Promise.resolve(ctx.workspaces.startSession(workspaceId))
+      return true
+    }
+    console.warn('DSH 工作空间服务尚未就绪，无法新建会话。')
+    return false
+  } catch (error) {
+    console.warn('新建会话失败：', error)
+    return false
   }
-  if (hasStartSession(ctx.workspaces)) {
-    ctx.workspaces.startSession(workspaceId)
-    return
-  }
-  console.warn('DSH 工作空间服务尚未就绪，无法新建会话。')
 }
 
 /** 替换 DSH 的官方 sidebar 插槽，不修改 DSH 源码或会话数据。 */

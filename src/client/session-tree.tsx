@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties, type DragEvent, type MouseEvent, type ReactNode } from 'react'
+import { memo, useLayoutEffect, useRef, useState, type CSSProperties, type DragEvent, type MouseEvent, type ReactNode } from 'react'
 import { Menu, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
   IconArchiveOutlineMedium,
@@ -162,7 +162,7 @@ export function SessionRowTitle({ title }: { title: string }) {
   return <span ref={wrapRef} className="dcu-wb-session-title" data-overflow={shift > 0 || undefined} style={style}><span ref={textRef} className="dcu-wb-session-title-text">{text}</span></span>
 }
 
-export function SessionRow({
+export const SessionRow = memo(function SessionRow({
   id, title, selected, menuOpen, unread, running, pendingInteraction, t, menuItems,
   onOpen, onMenuChange, onSelectAction, onArchive, onHover, onLeave, onContextMenu, menuPoint,
   subtitle, flat, draggable, dropActive, onDragStart, onDragEnd, onDragOver, onDrop, time,
@@ -178,12 +178,12 @@ export function SessionRow({
       <Menu open={menuOpen} onClose={() => { onMenuChange(false) }} items={menuItems} onSelect={onSelectAction} portal dense getAnchorRect={menuPoint === undefined ? undefined : () => pointerMenuRect(menuPoint.x, menuPoint.y)} anchor={<button type="button" className="dcu-wb-more dcu-wb-context-anchor" aria-label={t('sessions.actions', { name: title })} onClick={(event) => { event.stopPropagation(); onMenuChange(!menuOpen) }}><IconEllipsisOutlineMedium size={16} /></button>} />
     </span>
   </div>
-}
+})
 
-export function GroupHead({ expanded, title, icon, onToggle, actions, menuOpen }: { expanded: boolean; title: string; icon: ReactNode; onToggle: () => void; actions?: ReactNode; menuOpen?: boolean }) {
+export const GroupHead = memo(function GroupHead({ expanded, title, icon, onToggle, actions, menuOpen }: { expanded: boolean; title: string; icon: ReactNode; onToggle: () => void; actions?: ReactNode; menuOpen?: boolean }) {
   return <div className={`dcu-wb-project-head${menuOpen === true ? ' dcu-wb-menu-open' : ''}`} role="treeitem" aria-expanded={expanded} tabIndex={0} onClick={onToggle} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onToggle() } }}>
     <span className="dcu-wb-folder">{icon}</span>
     <span className="dcu-wb-project-title">{title}</span>
     {actions !== undefined && <span className="dcu-wb-actions">{actions}</span>}
   </div>
-}
+})
