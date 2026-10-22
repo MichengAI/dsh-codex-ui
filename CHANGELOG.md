@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.47 (2026-10-22)
+
+- Prevent interaction lockup during sidebar collapse by removing blocking `pointer-events: none` and settling state on `transitionend` with a timeout fallback (#57).
+- Support async `startSession` return handling and add a pending state guard to prevent silent no-ops when host RPC is busy during streaming (#57).
+- Optimize streaming performance: lazily mount and subscribe search store snapshots only when the search modal is open, wrap `SessionRow` and `GroupHead` in `React.memo` to isolate tree item re-renders, and throttle tool menu DOM geometry syncs into animation frames (#57).
+
 ## 1.1.46 (2026-10-21)
 
 - Restore window dragging on the Settings page in the Windows desktop app: the full-screen Settings overlay now reserves the native caption band and declares it as a drag region again (#56).
