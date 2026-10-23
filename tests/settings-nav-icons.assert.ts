@@ -62,9 +62,8 @@ assert.equal(wrappedIconButton?.hasAttribute('data-dcu-nav-icon'), false, '包�
 assert.equal(wrappedIconButton?.querySelector('.dcu-settings-nav-icon'), null, '包裹型图标不应注入额外 mask')
 assert.equal(aboutButton?.getAttribute('data-dcu-nav-icon'), 'about', '导航按钮必须带插件图标 marker')
 assert.equal(aboutButton?.querySelector('svg')?.innerHTML, '', '不得改写宿主 svg 内容')
-assert.equal(aboutButton?.querySelector('.dcu-settings-nav-icon')?.getAttribute('aria-hidden'), 'true', 'mask 图标必须对辅助技术隐藏')
-assert.match(aboutButton?.querySelector<HTMLElement>('.dcu-settings-nav-icon')?.style.getPropertyValue('--dcu-settings-nav-icon-mask') ?? '', /^url\("data:image\/svg\+xml,/, '导航图标必须使用独立 mask')
-assert.equal(aboutButton?.firstElementChild?.className, 'dcu-settings-nav-icon', 'mask 图标应排在 svg 与标签之前')
+assert.equal(aboutButton?.children.length, 2, '禁止向 button 插入任何真实 DOM 节点')
+assert.match(aboutButton?.style.getPropertyValue('--dcu-settings-nav-icon-mask') ?? '', /^url\("data:image\/svg\+xml,/, '导航图标必须使用独立 mask')
 assert.equal(applySettingsNavIcons(fixture.window.document), 0, '重复观察设置导航时不得产生额外修改')
 
 const observer = readFileSync(new URL('../src/client/settings-nav-icons.ts', import.meta.url), 'utf8')

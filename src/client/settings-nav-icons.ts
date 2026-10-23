@@ -24,9 +24,25 @@ export const SETTINGS_NAV_ICON_HTML: Record<SettingsNavIconId, string> = {
   about: ABOUT_PATHS,
 }
 
-const NAV_ICON_CLASS = 'dcu-settings-nav-icon'
 const NAV_ICON_STYLE_ID = 'dcu-settings-nav-icon-style'
-const NAV_ICON_CSS = `[data-dcu-nav-icon]>svg{display:none!important}.${NAV_ICON_CLASS}{display:inline-block;flex:none;width:16px;height:16px;background:currentColor;-webkit-mask:var(--dcu-settings-nav-icon-mask) center/contain no-repeat;mask:var(--dcu-settings-nav-icon-mask) center/contain no-repeat}`
+const NAV_ICON_CSS = [
+  '[data-dcu-nav-icon] > svg { display: none !important; }',
+  '[data-dcu-nav-icon]::before {',
+  "  content: '';",
+  '  flex: none;',
+  '  width: 16px;',
+  '  height: 16px;',
+  '  background-color: currentColor;',
+  '  -webkit-mask: var(--dcu-settings-nav-icon-mask) center / contain no-repeat;',
+  '  mask: var(--dcu-settings-nav-icon-mask) center / contain no-repeat;',
+  '  -webkit-mask-repeat: no-repeat;',
+  '  mask-repeat: no-repeat;',
+  '  -webkit-mask-position: center;',
+  '  mask-position: center;',
+  '  -webkit-mask-size: 16px 16px;',
+  '  mask-size: 16px 16px;',
+  '}',
+].join('\n')
 
 /** mask 只取 alpha 通道，因此把 currentColor 固定为黑色即可 */
 function iconMask(id: SettingsNavIconId): string {
@@ -71,7 +87,14 @@ export function settingsNavIconId(label: string): SettingsNavIconId | undefined 
 
 export function applySettingsNavIcon(button: HTMLButtonElement): boolean {
   const id = settingsNavIconId(button.textContent ?? '')
-  if (id === undefined) return false
+  if (id === undefined) {
+    if (button.hasAttribute('data-dcu-nav-icon')) {
+      button.removeAttribute('data-dcu-nav-icon')
+      button.style.removeProperty('--dcu-settings-nav-icon-mask')
+      return true
+    }
+    return false
+  }
   let changed = false
   if (id === 'about') {
     if (!button.hasAttribute('data-dcu-settings-about-last')) {
@@ -86,21 +109,13 @@ export function applySettingsNavIcon(button: HTMLButtonElement): boolean {
   }
   const svg = button.querySelector(':scope > svg')
   if (svg === null) return changed
-  if (button.getAttribute('data-dcu-nav-icon') === id
-    && button.querySelector(`.${NAV_ICON_CLASS}`) !== null) return changed
+  if (button.getAttribute('data-dcu-nav-icon') === id) return changed
 
   const doc = button.ownerDocument
   if (doc === null) return changed
   ensureNavIconStyle(doc)
   button.setAttribute('data-dcu-nav-icon', id)
-  let icon = button.querySelector<HTMLElement>(`.${NAV_ICON_CLASS}`)
-  if (icon === null) {
-    icon = doc.createElement('span')
-    icon.className = NAV_ICON_CLASS
-    icon.setAttribute('aria-hidden', 'true')
-    button.prepend(icon)
-  }
-  icon.style.setProperty('--dcu-settings-nav-icon-mask', iconMask(id))
+  button.style.setProperty('--dcu-settings-nav-icon-mask', iconMask(id))
   return true
 }
 
@@ -150,7 +165,7 @@ export function observeSettingsNavIcons(): () => void {
     if (frame !== undefined) window.cancelAnimationFrame(frame)
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-dcu-nav-icon]')) {
       button.removeAttribute('data-dcu-nav-icon')
-      button.querySelector(`.${NAV_ICON_CLASS}`)?.remove()
+      button.style.removeProperty('--dcu-settings-nav-icon-mask')
     }
     // 没有 marker 后样式不再生效，卸载时一并移除，避免全局残留。
     if (document.querySelector('[data-dcu-nav-icon]') === null) {
