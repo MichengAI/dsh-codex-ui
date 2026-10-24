@@ -50,8 +50,9 @@ assert.equal(manifest.files?.includes('dist'), false, '发布文件不得继续�
 assert.equal(manifest.dsh?.client?.inject?.includes('@deepseek-ai/dsh-client-ui-primitives'), false, '静态模块不应误写成信息性的 dsh.client.inject 边')
 assert.equal(manifest.dsh?.client?.inject?.includes('@deepseek-ai/dsh-client-ui-slots'), false, '仅类型导入不得产生运行时模块声明')
 
-const supportedDshRange = '0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.1 || 0.2.1-rc.2 || 0.2.1-rc.3'
-const hostDevDshVersion = '0.2.1-rc.2'
+const supportedDshRange = '>=0.2.0-rc.1 <0.3.0-0'
+const hostDevDshVersion = '0.2.1-rc.3'
+assert.equal((manifest.engines as any)?.dsh, supportedDshRange, 'engines.dsh 必须为 0.2.x 代际范围')
 const versionedClientPackages = [
   '@deepseek-ai/dsh-client-locale',
   '@deepseek-ai/dsh-client-ui-conversation',
@@ -78,7 +79,7 @@ for (const [packageName, version] of Object.entries(manifest.devDependencies ?? 
 }
 assert.equal(manifest.peerDependencies?.['@deepseek-ai/cordis'], '>=4.0.2 <5.0.0', 'Cordis 必须对齐自研插件规范，不包含 alpha 版本')
 assert.equal(manifest.peerDependencies?.['@deepseek-ai/dsh-client-connection'], supportedDshRange, '业务 REST 必须覆盖 0.2.0-rc.1 起的所有稳定 RC 宿主')
-assert.equal(manifest.devDependencies?.['@deepseek-ai/cordis'], '4.0.5', 'Cordis 编译版本必须对齐 0.2.1-rc.2 宿主')
+assert.equal(manifest.devDependencies?.['@deepseek-ai/cordis'], '4.0.5', 'Cordis 编译版本必须对齐 0.2.1-rc.3 宿主')
 assert.equal(manifest.peerDependencies?.['@michengai/dsh-agency-agents'], undefined, '不得把专家插件写成 Codex UI 的 peer')
 assert.equal(manifest.peerDependencies?.['@michengai/dsh-skills-manager'], undefined, '不得把技能插件写成 Codex UI 的 peer')
 assert.equal(manifest.peerDependenciesMeta, undefined, '自研配套插件不再需要 optional peer 元数据')
