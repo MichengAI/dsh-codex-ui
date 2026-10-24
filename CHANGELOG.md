@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.48 (2026-10-24)
+
+- Support DeepSeek Harness `0.2.1-rc.3` while retaining all existing supported versions.
+
 ## 1.1.47 (2026-10-22)
 
 - Prevent interaction lockup during sidebar collapse by removing blocking `pointer-events: none` and settling state on `transitionend` with a timeout fallback (#57).

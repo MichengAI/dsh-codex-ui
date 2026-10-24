@@ -50,7 +50,7 @@ assert.equal(manifest.files?.includes('dist'), false, '发布文件不得继续�
 assert.equal(manifest.dsh?.client?.inject?.includes('@deepseek-ai/dsh-client-ui-primitives'), false, '静态模块不应误写成信息性的 dsh.client.inject 边')
 assert.equal(manifest.dsh?.client?.inject?.includes('@deepseek-ai/dsh-client-ui-slots'), false, '仅类型导入不得产生运行时模块声明')
 
-const supportedDshRange = '0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.1 || 0.2.1-rc.2'
+const supportedDshRange = '0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.1 || 0.2.1-rc.2 || 0.2.1-rc.3'
 const hostDevDshVersion = '0.2.1-rc.2'
 const versionedClientPackages = [
   '@deepseek-ai/dsh-client-locale',
