@@ -1,0 +1,25 @@
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="dsh_svg_ui_frame" x1="5" y1="6" x2="31" y2="30" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+  <!-- Window Outline -->
+  <rect x="5.5" y="7.5" width="25" height="21" rx="3.5" stroke="url(#dsh_svg_ui_frame)" stroke-width="2.2" fill="#3B82F6" fill-opacity="0.08"/>
+  <!-- Window Header Line -->
+  <line x1="5.5" y1="12.5" x2="30.5" y2="12.5" stroke="url(#dsh_svg_ui_frame)" stroke-width="1.5"/>
+  <!-- Traffic Light Dots -->
+  <circle cx="9" cy="10" r="1.2" fill="#EF4444"/>
+  <circle cx="12.5" cy="10" r="1.2" fill="#F59E0B"/>
+  <circle cx="16" cy="10" r="1.2" fill="#10B981"/>
+  <!-- Left Sidebar Divider -->
+  <line x1="13.5" y1="12.5" x2="13.5" y2="28.5" stroke="url(#dsh_svg_ui_frame)" stroke-width="1.5"/>
+  <!-- Sidebar Tree Nodes -->
+  <rect x="8" y="15.5" width="3.5" height="2" rx="0.8" fill="#10B981"/>
+  <rect x="8" y="19.5" width="3.5" height="2" rx="0.8" fill="#94A3B8"/>
+  <rect x="8" y="23.5" width="3.5" height="2" rx="0.8" fill="#94A3B8"/>
+  <!-- Editor Main Split Panes -->
+  <rect x="16" y="15" width="12" height="5" rx="1.2" fill="#3B82F6" fill-opacity="0.25"/>
+  <rect x="16" y="22" width="12" height="4.5" rx="1.2" fill="url(#dsh_svg_ui_frame)"/>
+</svg>

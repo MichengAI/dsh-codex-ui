@@ -140,5 +140,5 @@
   "dependencies": {
     "lucide-react": "^1.39.0"
   },
-  "icon": "assets/icon.webp"
+  "icon": "assets/icon.svg"
 }
