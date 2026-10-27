@@ -29,24 +29,5 @@ export const NEW_CONVERSATION_STYLE = `
   [data-phase=hero] [class*="_composerHero"]>:first-child{padding:32px 24px;min-height:420px}
 }
 @media(prefers-reduced-motion:reduce){.dcu-home-card{transition:none}}
-[data-conversation-scroll]{--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:24px;--dcu-composer-bg:var(--dsw-specific-input-major,#fff);--dcu-composer-shadow:0 0 0 1px #0000000a,0 2px 8px #0000000a,0 4px 80px 8px #00000006}
-body[data-ds-dark-theme] [data-conversation-scroll]{--dcu-composer-bg:var(--dsw-alias-bg-layer-2,#242424);--dcu-composer-shadow:inset 0 0 1px #fff3}
-[data-conversation-scroll] [data-composer-card]{padding-top:8px;gap:4px;border:0;border-radius:20px;background:var(--dcu-composer-bg);box-shadow:var(--dcu-composer-shadow)}
-[data-conversation-scroll] [data-composer-card]>[data-slot="conversation.input.attachments"]>:is([class$="_rail"],[class*="_rail_"]){margin-bottom:2px}
-[data-conversation-scroll] [data-input-mirror]{min-height:44px}
-[data-conversation-scroll] [data-composer-card] [data-input-scroll]{margin-right:0}
-[data-conversation-scroll] [data-input-scroll] [data-lexical-editor=true]{min-height:44px;padding:0 12px}
-[data-conversation-scroll] [data-composer-placeholder]{inset:0 12px auto}
-[data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div{padding:0 8px 8px;gap:5px}
-[data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div>div{gap:4px}
-[data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div>div>div{gap:4px}
-[data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div :is(button,select):not([role]){min-height:28px;height:28px}
-[data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div button[class$=_primary]{width:28px;transform:none;background:#0f1115;color:#fff}
-[data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div button[class$=_primary]:hover:not(:disabled){background:#40434a}
-body[data-ds-dark-theme] [data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div button[class$=_primary]{background:#fff;color:#0f1115}
-body[data-ds-dark-theme] [data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div button[class$=_primary]:hover:not(:disabled){background:#d5d7dc}
-[data-conversation-scroll] [data-composer-card]>[data-input-scroll]+div :is(button,select):focus-visible{outline:2px solid var(--dsw-alias-label-secondary);outline-offset:2px}
-@supports(corner-shape:superellipse(1.5)){[data-conversation-scroll] [data-composer-card]{border-radius:25px;corner-shape:superellipse(1.5)}}
-@media(max-width:639px){[data-conversation-scroll]{--dcu-composer-shadow:0 0 0 1px #0000000a,0 2px 8px #0000000a,0 4px 40px 8px #00000006}}
-@media(forced-colors:active){[data-conversation-scroll] [data-composer-card]{outline:1px solid CanvasText}}
+[data-conversation-scroll]{--dsh-composer-card-max-width:calc(var(--dsh-chat-content-width) + 32px);--dsh-composer-side-clearance:24px}
 `

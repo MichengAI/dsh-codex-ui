@@ -80,7 +80,7 @@
     "typecheck": "tsc --noEmit",
     "test": "pnpm run typecheck && vitest run && tsdown && node tests/run-assertions.mjs && pnpm run test:layout",
     "test:host": "node scripts/verify-native-settings.mjs",
-    "test:layout": "node scripts/verify-composer-style.mjs && node scripts/verify-new-conversation.mjs && node scripts/verify-composer-tools.mjs && node scripts/verify-hero-width.mjs",
+    "test:layout": "node scripts/verify-new-conversation.mjs && node scripts/verify-hero-width.mjs",
     "test:compat": "node scripts/run-compat-host.mjs",
     "test:fallback-host": "node scripts/verify-plugin-fallback-host.mjs"
   },

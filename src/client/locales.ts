@@ -5,8 +5,6 @@ export const NS = 'michengai.codexUi'
 
 export const zh = {
   'home.resizeInput': '拖动调整输入区宽度',
-  'home.projectSearch': '搜索项目',
-  'home.projectEmpty': '没有匹配的项目',
   'home.suggestions': '开始一项任务',
   'home.workspace': '请先选择工作区，再选择任务。',
   'home.draft': '已保留当前草稿和附件；清空输入后可填入任务建议。',
@@ -119,8 +117,6 @@ export const zh = {
 
 export const en: Record<keyof typeof zh, string> = {
   'home.resizeInput': 'Drag to resize the input area',
-  'home.projectSearch': 'Search projects',
-  'home.projectEmpty': 'No matching projects',
   'home.suggestions': 'Start a task',
   'home.workspace': 'Choose a workspace first, then select a task.',
   'home.draft': 'Your draft and attachments are preserved. Clear the input to use a suggestion.',

@@ -16,7 +16,6 @@ function currentSessionId(state?: { current?: string; byId?: Record<string, { id
   return undefined
 }
 import { initializeComposerWidth, observeHeroWidthHandles } from './composer-width.ts'
-import { observeComposerToolMenus, COMPOSER_TOOL_MENU_STYLE } from './composer-tool-menus.ts'
 import { NewConversationSuggestions } from './NewConversationSuggestions.tsx'
 import { NEW_CONVERSATION_STYLE } from './new-conversation-style.ts'
 import { prefillNewConversation } from './new-conversation-draft.ts'
@@ -43,23 +42,22 @@ export async function checkComposerEnabled(): Promise<boolean> {
   }
 }
 
-/** 注入 Composer 相关增强样式（新会话卡片与工具菜单） */
+/** 注入 Composer 相关增强样式（新会话建议卡片） */
 function installComposerStyles(doc: Document = document): () => void {
   const existing = doc.getElementById(COMPOSER_ENHANCEMENT_STYLE_ID)
   if (existing !== null) return () => { existing.remove() }
   const style = doc.createElement('style')
   style.id = COMPOSER_ENHANCEMENT_STYLE_ID
-  style.textContent = `\n${NEW_CONVERSATION_STYLE}\n${COMPOSER_TOOL_MENU_STYLE}\n`
+  style.textContent = `\n${NEW_CONVERSATION_STYLE}\n`
   ;(doc.head ?? doc.documentElement).appendChild(style)
   return () => { if (style.parentNode !== null) style.remove() }
 }
 
 /**
- * 启动并管理 Composer 输入框四大增强能力：
+ * 启动并管理 Composer 输入框核心增强能力：
  * 1. 终端风格输入历史记录与召回 (↑/↓)
  * 2. 输入框宽度初始化与拖拽手柄
- * 3. 工具菜单优化与即时搜索
- * 4. 新建会话建议卡片
+ * 3. 新建会话建议卡片
  *
  * 当子插件关闭时，所有增强功能彻底注销并恢复 DSH 官方原生输入区。
  */
@@ -81,17 +79,11 @@ export function observeComposerEnhancements(ctx: Context): () => void {
     // 3. 首页宽度拖拽手柄
     cleaners.push(observeHeroWidthHandles(t('home.resizeInput')))
 
-    // 4. 输入框工具菜单优化与即时搜索
-    cleaners.push(observeComposerToolMenus({
-      search: t('home.projectSearch'),
-      empty: t('home.projectEmpty'),
-    }))
-
-    // 5. 终端风格输入历史 (↑/↓)
+    // 4. 终端风格输入历史 (↑/↓)
     // registerInputHistory 内部管理 conversation.input.dock 插槽
     cleaners.push(registerInputHistory(ctx))
 
-    // 6. 新建会话建议卡片 (挂载于 conversation.input.dock 插槽)
+    // 5. 新建会话建议卡片 (挂载于 conversation.input.dock 插槽)
     function SuggestionsDock(props: PropsRuntime<'conversation.input.dock'>) {
       const rawSession = props?.session as { sessionId?: string; id?: string } | undefined
       const sessions = (ctx as unknown as { sessions?: { list?: { getSnapshot?: () => unknown }; binding?: (id: string) => { ctx?: unknown } } }).sessions
