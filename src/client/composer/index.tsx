@@ -35,11 +35,11 @@ export async function checkComposerEnabled(): Promise<boolean> {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     })
-    if (!response.ok) return false
+    if (!response.ok) return true
     const data = await response.json()
-    return data?.enabled === true
+    return data?.enabled !== false
   } catch {
-    return false
+    return true
   }
 }
 
@@ -93,22 +93,25 @@ export function observeComposerEnhancements(ctx: Context): () => void {
 
     // 6. 新建会话建议卡片 (挂载于 conversation.input.dock 插槽)
     function SuggestionsDock(props: PropsRuntime<'conversation.input.dock'>) {
-      const sessionId = props.session.sessionId ?? currentSessionId(ctx.sessions.list.getSnapshot())
-      const binding = sessionId ? ctx.sessions.binding(sessionId) : undefined
-      const input = binding ? ctx.conversation.input.for(binding.ctx) : undefined
+      const rawSession = props?.session as { sessionId?: string; id?: string } | undefined
+      const sessions = (ctx as unknown as { sessions?: { list?: { getSnapshot?: () => unknown }; binding?: (id: string) => { ctx?: unknown } } }).sessions
+      const conversation = (ctx as unknown as { conversation?: { input?: { for?: (c: unknown) => { state: { getSnapshot: () => { draft?: string; attachmentIds?: unknown[] }; subscribe: (fn: () => void) => () => void }; setDraft?: (s: string) => void } } } }).conversation
+      const sessionId = rawSession?.sessionId ?? rawSession?.id ?? currentSessionId(sessions?.list?.getSnapshot?.() as Parameters<typeof currentSessionId>[0])
+      const binding = sessionId && typeof sessions?.binding === 'function' ? sessions.binding(sessionId) : undefined
+      const input = binding?.ctx && typeof conversation?.input?.for === 'function' ? conversation.input.for(binding.ctx) : undefined
       const draftSource = useMemo(() => ({
         getSnapshot: () => {
           if (!input) return false
-          const s = input.state.getSnapshot()
+          const s = input.state?.getSnapshot?.()
           return (s?.draft?.trim()?.length ?? 0) > 0 || (s?.attachmentIds?.length ?? 0) > 0
         },
-        subscribe: (onChange: () => void) => input?.state.subscribe(onChange) ?? (() => {}),
+        subscribe: (onChange: () => void) => input?.state?.subscribe?.(onChange) ?? (() => {}),
       }), [input])
 
       return (
         <NewConversationSuggestions
           t={t}
-          prefill={(text: string) => prefillNewConversation(input, text)}
+          prefill={(text: string) => prefillNewConversation(input as unknown as Parameters<typeof prefillNewConversation>[0], text)}
           draftSource={draftSource}
         />
       )
@@ -146,6 +149,8 @@ export function observeComposerEnhancements(ctx: Context): () => void {
     }
   }
 
+  // 首帧立即同步激活，确保输入框美化样式与能力零延迟常驻，不出现未美化闪烁
+  cleanActive = activate()
   void sync()
 
   // 1. 窗口重新获得焦点时同步

@@ -85,10 +85,10 @@ describe('codex-ui-composer sub-plugin', () => {
       expect(enabled).toBe(true)
     })
 
-    it('当端点返回 404 或网络异常时，探测返回 false', async () => {
+    it('当端点返回 200 { enabled: false } 时，探测停用返回 false', async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 404,
+        ok: true,
+        json: async () => ({ enabled: false }),
       } as Response)
 
       const enabled = await checkComposerEnabled()

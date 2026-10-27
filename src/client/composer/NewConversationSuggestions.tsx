@@ -16,12 +16,38 @@ const hints = { workspace: 'home.workspace', draft: 'home.draft', busy: 'home.bu
 type Category = typeof categories[number]['id']
 const emptyDraft: DraftPresenceSource = { getSnapshot: () => false, subscribe: () => () => {} }
 
+/** 寻找宿主新会话标语容器，支持任意环境下的多层级 DOM 结构 */
+function findHeroStack(doc: Document = document): HTMLElement | null {
+  // 1. 如果有明确的 data-phase 且当前不是 hero 阶段（例如已进入对话流 active），绝不挂载建议卡片
+  const phaseOwner = doc.querySelector('[data-phase]')
+  if (phaseOwner && phaseOwner.getAttribute('data-phase') !== 'hero') {
+    return null
+  }
+
+  // 2. 经典选择器：匹配 [data-phase=hero] 或包含 _composerHero 的 stack
+  const classic = doc.querySelector<HTMLElement>('[data-phase=hero] [class*="_composerHero"]>:first-child>[class$="_stack"]')
+    ?? doc.querySelector<HTMLElement>('[data-phase=hero] [class*="host_composerHero"] [class*="host_stack"]')
+    ?? doc.querySelector<HTMLElement>('[data-phase=hero] [class*="_stack"]')
+  if (classic) return classic
+
+  // 3. 宿主真实 DOM 增强匹配：找 headline 或 fish 的父级 stack
+  const headline = doc.querySelector('[class*="_headline"]')
+  if (headline?.parentElement) return headline.parentElement as HTMLElement
+
+  const fish = doc.querySelector('[class*="_fishHitbox"]')
+  const stack = fish?.closest('[class*="_stack"]')
+  if (stack) return stack as HTMLElement
+
+  return doc.querySelector<HTMLElement>('[class*="_composerHero"] [class*="_stack"]')
+    ?? doc.querySelector<HTMLElement>('[class*="pXSMma_stack"]')
+}
+
 /** 只向宿主标题容器贡献自己的 React portal，不搬动标题、工具条或编辑器。 */
 export function NewConversationSuggestions({ t, prefill, draftSource = emptyDraft }: PropsLocale<typeof NS> & { prefill?: (text: string) => PrefillResult; draftSource?: DraftPresenceSource }) {
   const hasDraft = useSyncExternalStore(draftSource.subscribe, draftSource.getSnapshot, emptyDraft.getSnapshot)
   const [target, setTarget] = useState<HTMLElement | null>(null)
   useEffect(() => {
-    const sync = () => setTarget(document.querySelector('[data-phase=hero] [class*="_composerHero"]>:first-child>[class$="_stack"]'))
+    const sync = () => setTarget(findHeroStack(document))
     sync()
     const observer = new MutationObserver(sync)
     observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-phase'] })

@@ -3,8 +3,9 @@ const TOOL = '[class*="_heroWorkspaceRow"] button,[data-composer-card] button[ar
 const MENU = '[role="menu"],[role="listbox"]'
 
 export const COMPOSER_TOOL_MENU_STYLE = `
-[class*="_heroWorkspaceRow"] button{min-height:28px;border-radius:999px;font-size:13px;line-height:20px}
-[class*="_heroWorkspaceRow"] button:hover,[class*="_heroWorkspaceRow"] button[aria-expanded=true]{background:color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent)}
+[class*="_heroWorkspaceRow"] button{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-direction:row!important;flex-wrap:nowrap!important;white-space:nowrap!important;min-height:28px;background:transparent!important;border:none!important;border-radius:var(--dsw-radius-sm,6px)!important;padding:0 6px!important;font-size:13px;line-height:20px;color:var(--dsw-alias-label-primary);cursor:pointer;transition:background 0.12s ease}
+[class*="_heroWorkspaceRow"] button svg{flex-shrink:0!important;display:inline-block!important;vertical-align:middle!important}
+[class*="_heroWorkspaceRow"] button:hover,[class*="_heroWorkspaceRow"] button[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,0.06))!important}
 [class*="_heroWorkspaceRow"] [data-gitgraph-popover]{box-sizing:border-box;top:auto!important;bottom:calc(100% + 8px)!important;padding:5px!important;border-radius:18px!important;background:#fff!important;box-shadow:0 8px 32px #0002,0 0 0 1px #0000000a!important}
 body[data-ds-dark-theme] [class*="_heroWorkspaceRow"] [data-gitgraph-popover]{background:#292929!important;box-shadow:0 8px 32px #0003,0 0 0 1px #ffffff08!important}
 :is([data-dcu-tool-menu],[class*="_heroWorkspaceRow"] [data-gitgraph-popover]){box-sizing:border-box;max-height:var(--dcu-tool-menu-height,360px)!important;padding:5px!important;border-radius:18px!important;background:#fff!important;color:var(--dsw-alias-label-primary);box-shadow:0 8px 32px #0002,0 0 0 1px #0000000a!important;display:flex;flex-direction:column;gap:0;z-index:1100}

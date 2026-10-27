@@ -15,7 +15,7 @@ export function initializeComposerWidth(storage: Pick<Storage, 'getItem' | 'setI
 export function observeHeroWidthHandles(label: string): () => void {
   const mounted = new Map<HTMLElement, () => void>()
   const style = document.createElement('style')
-  style.textContent = `[data-phase=hero]:has([data-conversation-scroll]){position:relative}[data-dcu-width-handle]{position:absolute;top:0;bottom:0;width:32px;padding:0;border:0;background:transparent;cursor:col-resize;touch-action:none;z-index:8;outline-offset:-5px}[data-dcu-width-handle=left]{right:calc(50% + var(--dsh-chat-content-width) / 2 + 16px)}[data-dcu-width-handle=right]{left:calc(50% + var(--dsh-chat-content-width) / 2 + 16px)}[data-dcu-width-handle]::after{content:'';position:absolute;top:calc(var(--dcu-pointer-y,50%) - 50px);height:100px;width:3px;left:14px;border-radius:3px;background:linear-gradient(transparent,var(--dsw-alias-scrollbar-hover-l1,#888),transparent);opacity:0}[data-dcu-width-handle]:hover::after,[data-dcu-width-handle]:focus-visible::after,[data-dcu-width-handle][data-dragging]::after{opacity:1}[data-phase=hero]:has([data-conversation-composer-overlay]) [data-dcu-width-handle]{display:none}`
+  style.textContent = `[data-phase=hero]:has([data-conversation-scroll]){position:relative}[data-dcu-width-handle]{position:absolute;top:0;bottom:0;width:32px;padding:0;border:0;background:transparent;cursor:col-resize;touch-action:none;z-index:100;outline-offset:-5px}[data-dcu-width-handle=left]{right:calc(50% + var(--dsh-chat-content-width, var(--dsh-chat-user-width, 640px)) / 2 + 16px)}[data-dcu-width-handle=right]{left:calc(50% + var(--dsh-chat-content-width, var(--dsh-chat-user-width, 640px)) / 2 + 16px)}[data-dcu-width-handle]::after{content:'';position:absolute;top:calc(var(--dcu-pointer-y,50%) - 50px);height:100px;width:3px;left:14px;border-radius:3px;background:linear-gradient(transparent,var(--dsw-alias-scrollbar-hover-l1,#888),transparent);opacity:0}[data-dcu-width-handle]:hover::after,[data-dcu-width-handle]:focus-visible::after,[data-dcu-width-handle][data-dragging]::after{opacity:1}[data-phase=hero]:has([data-conversation-composer-overlay]) [data-dcu-width-handle]{display:none}`
   document.head.append(style)
   const sync = () => {
     for (const [root, dispose] of mounted) {
@@ -25,17 +25,21 @@ export function observeHeroWidthHandles(label: string): () => void {
       if (mounted.has(root) || !root.querySelector('[data-conversation-scroll]')) continue
       const clamp = (value: number) => Math.min(Math.max(COMPOSER_MIN_WIDTH, value), Math.max(COMPOSER_MIN_WIDTH, root.clientWidth - COMPOSER_EDGE_BUDGET))
       const current = () => {
-        const raw = getComputedStyle(root).getPropertyValue('--dsh-chat-user-width')
+        const raw = getComputedStyle(root).getPropertyValue('--dsh-chat-user-width') || getComputedStyle(root).getPropertyValue('--dsh-chat-content-width')
         return clamp(parseFloat(raw) || COMPOSER_MIN_WIDTH)
       }
       const publish = (width: number, save: boolean) => {
         const value = clamp(width)
         root.style.setProperty('--dsh-chat-user-width', `${value}px`)
+        root.style.setProperty('--dsh-chat-content-width', `${value}px`)
         if (save) {
           try { localStorage.setItem('dsh.conversation.contentWidth', String(value)) }
           catch (error) { console.warn('[codex-ui] 无法保存输入区宽度。', error) }
         }
       }
+      const initialWidth = current()
+      root.style.setProperty('--dsh-chat-user-width', `${initialWidth}px`)
+      root.style.setProperty('--dsh-chat-content-width', `${initialWidth}px`)
       const handles = ['left', 'right'].map(side => {
         const handle = document.createElement('button')
         handle.type = 'button'
