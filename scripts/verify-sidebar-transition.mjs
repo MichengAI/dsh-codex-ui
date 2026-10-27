@@ -63,8 +63,7 @@ try {
   // 右栏按下时宿主先标记 dragging，移动后才改网格；两步之间标题也必须保持原位。
   for (const clearance of [160, 84]) {
     const dragPage = await browser.newPage()
-    const headerStyle = readFileSync('src/client/conversation-header.ts', 'utf8').match(/export const CONVERSATION_HEADER_STYLE = `([\s\S]*?)`/)[1]
-    await dragPage.setContent(`<style>body{margin:0}#frame{display:grid;--dsh-frame-leading-clearance:${clearance}px}${headerStyle}</style><div id="frame" data-sidebar-collapsed style="grid-template-columns:0px minmax(400px, 1fr) minmax(0px, 480px)"><aside></aside><main><header><span class="crumbCurrent">标题</span></header></main><aside></aside></div>`)
+    await dragPage.setContent(`<style>body{margin:0}#frame{display:grid;--dsh-frame-leading-clearance:${clearance}px}header{padding-left:max(20px,calc(var(--dsh-frame-leading-clearance,0px) - var(--dcu-sidebar-rail-width,0px)))}</style><div id="frame" data-sidebar-collapsed style="grid-template-columns:0px minmax(400px, 1fr) minmax(0px, 480px)"><aside></aside><main><header><span class="crumbCurrent">标题</span></header></main><aside></aside></div>`)
     await dragPage.addScriptTag({ content: implementation })
     const samples = await dragPage.evaluate(async () => {
       const frame = document.getElementById('frame')

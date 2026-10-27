@@ -29,7 +29,6 @@ import {
 } from './session-manager.ts'
 import { formatCompactTime, formatHoverTime, hoverCardAnchor } from './hover-tip.ts'
 import { useSharedNow } from './shared-now.ts'
-import { HEADER_PROJECT_TIP_EVENT, HEADER_SESSION_MENU_EVENT, type HeaderAnchorDetail } from './conversation-header.ts'
 import { HoverShell, useHoverDispatch, type HoverCardTip } from './hover-shell.tsx'
 import { WorkspaceHoverCard } from './workspace-hover-card.tsx'
 import { collapseProjectSessionWindow, expandedForCurrentSession, moveBefore, nextProjectSessionWindow, orderByIds, pinnedHeaderDropIndicator, projectFolderPresentation, projectSessionWindow, readSessionDrag, readWorkspaceDrag, readWorkspaceGroupDrag, reorderDropBeforeId, resolvePinnedSectionDrop, sessionDropAction, sessionDropAfterRowId, ungroupedSessionIds, visibleSessionIds, workspaceGroupMoveTargets, writeSessionDrag, writeWorkspaceDrag, writeWorkspaceGroupDrag, type ProjectSessionWindowState } from './workspace-browser.ts'
@@ -498,48 +497,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
     return source === undefined ? undefined : String(source.workspaceId)
   }
 
-  // 记录“pointerdown 时顶栏菜单还开着”的时刻：菜单打开时点击三点按钮，宿主 Menu 会在
-  // pointerdown 阶段先关闭菜单，随后 click 再派发事件；若不区分，click 会把菜单立即重开。
-  useEffect(() => {
-    const onPointerDown = (): void => {
-      if (headerMenuRef.current !== undefined) headerMenuPointerAt.current = performance.now()
-    }
-    window.addEventListener('pointerdown', onPointerDown, true)
-    return () => { window.removeEventListener('pointerdown', onPointerDown, true) }
-  }, [])
 
-  useEffect(() => {
-    const onProject = (event: Event): void => {
-      const detail = (event as CustomEvent<HeaderAnchorDetail>).detail
-      const current = selectedId
-      const workspace = groups.items.find(item => current !== undefined && item.visibleIds.includes(String(current)))
-      if (workspace === undefined || detail === undefined) return
-      if (detail.toggle === true && isShowing('workspace', workspace.workspaceId)) {
-        dismissTip()
-        return
-      }
-      showTip({ kind: 'workspace', id: workspace.workspaceId, title: workspace.title, path: workspace.path, count: workspace.visibleIds.length, unreadCount: workspace.visibleIds.filter(id => rowUnread(String(id))).length, pinned: pinnedWorkspaceIds.includes(String(workspace.workspaceId)), left: detail.left, top: detail.top }, { immediate: true })
-    }
-    const onMenu = (event: Event): void => {
-      const detail = (event as CustomEvent<HeaderAnchorDetail>).detail
-      const current = selectedId
-      if (current === undefined || detail === undefined) return
-      dismissTip()
-      // 500ms 内有一次“菜单开着时”的 pointerdown：这次点击是再次点击关闭，不再重开
-      if (performance.now() - headerMenuPointerAt.current < 500) {
-        headerMenuPointerAt.current = 0
-        setHeaderMenu(undefined)
-        return
-      }
-      setHeaderMenu({ id: current, getRect: detail.getRect })
-    }
-    window.addEventListener(HEADER_PROJECT_TIP_EVENT, onProject)
-    window.addEventListener(HEADER_SESSION_MENU_EVENT, onMenu)
-    return () => {
-      window.removeEventListener(HEADER_PROJECT_TIP_EVENT, onProject)
-      window.removeEventListener(HEADER_SESSION_MENU_EVENT, onMenu)
-    }
-  }, [groups.items, menu, pinnedWorkspaceIds, selectedId, unreadSessionIds])
 
 
   const projectPinned = (id: WorkspaceId | string): boolean => pinnedWorkspaceIds.includes(String(id))
@@ -918,7 +876,7 @@ function CodexWorkspaceTree({ wide, useSessions, useSessionPendingInteraction, u
         </div></div>
       </section>
     </div>
-    {headerMenu !== undefined && sessions.byId[headerMenu.id as SessionId] !== undefined && <Menu open onClose={() => { setHeaderMenu(undefined) }} items={sessionMenu(headerMenu.id)} onSelect={(action) => { const id = headerMenu.id; const session = sessions.byId[id as SessionId]; if (session === undefined || busy !== undefined) return; const path = session.cwd ?? groups.items.find(item => item.visibleIds.includes(id))?.path; if (action === 'rename') beginRename('session', id, session.displayTitle); if (action === 'unread') { setUnreadSessionIds(ids => toggleSessionId(ids, id)) }; if (action === 'archive') void run('archive', () => archiveSession(id as SessionId)); if (action === 'delete') { setDeleteTarget({ id, kind: 'session', title: session.displayTitle }); setError(undefined) }; if (action === 'fork') void run('fork', () => forkSession(id as SessionId)); if (action === 'copyPath') copy(path); if (action === 'copyTitle') copy(session.displayTitle); if (action === 'copyId') copy(id); setHeaderMenu(undefined) }} portal dense side="bottom" align="start" getAnchorRect={() => headerMenu.getRect()} anchor={<span />} />}
+    
     <WorkspaceHoverCard t={t} onEditWorkspace={(id, title) => { beginRename('workspace', id, title) }} onToggleWorkspacePin={(id) => { setPinnedWorkspaceIds(ids => togglePinnedWorkspace(ids, id)) }} />
     <Modal open={renameGroupId !== undefined} onClose={closeRenameGroup} closeLabel={t('sessions.close')} title={t('workspace.renameGroup')} footer={<div className="dcu-wb-rename-actions"><Button variant="outline" onClick={closeRenameGroup}>{t('sessions.cancel')}</Button><Button variant="primary" disabled={renameGroupDraft.trim() === ''} onClick={submitRenameGroup}>{t('sessions.save')}</Button></div>}>
       <label htmlFor="dcu-workspace-group-name">{t('workspace.groupName')}</label>

@@ -104,4 +104,5 @@ assert.doesNotMatch(sidebar, /--dcu-font/, '侧栏不得再定义 --dcu-font')
 assert.doesNotMatch(sidebar, /Inter,ui-sans-serif/, '侧栏不得再写死 Inter 栈')
 
 
-assert.match(client, /observeConversationHeader/, '会话顶栏必须把对话/轨迹页签挪到子代理右侧')
+assert.doesNotMatch(client, /observeConversationHeader/, '会话顶栏保持官方原生，不再注入自定义紧凑排布')
+assert.match(client, /observeSettingsNavIcon/, '设置导航必须为 Codex UI 注入专属图标')

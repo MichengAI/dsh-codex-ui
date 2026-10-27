@@ -35,7 +35,7 @@ import { createFooterActionSource, type FooterAction, type FooterActionSource } 
 import { mirrorSlot, withSlotAliases } from './slot-mirror.tsx'
 import { observeSettingsSkin } from './settings-skin/index.ts'
 import { observeSlimSidebar } from './sidebar-width.ts'
-import { observeConversationHeader } from './conversation-header.ts'
+import { observeSettingsNavIcon } from './settings-nav-icon.ts'
 import { observeComposerEnhancements } from './composer/index.tsx'
 import { hasStartSession } from './workspace-compat.ts'
 import { HostActionError, type HostAction, UserFacingError } from './user-error.ts'
@@ -100,7 +100,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => observeComposerEnhancements(ctx), 'michengai-codex-ui: composer enhancements')
   ctx.effect(() => observeSettingsSkin(), 'michengai-codex-ui: official settings skin')
   ctx.effect(() => observeSlimSidebar(), 'michengai-codex-ui: slim sidebar')
-  ctx.effect(() => observeConversationHeader(), 'michengai-codex-ui: conversation header')
+  ctx.effect(() => observeSettingsNavIcon(() => t('about.nav')), 'michengai-codex-ui: settings nav icon')
   const globalPanels = createGlobalPanelSource(ctx.slots, ctx.locale)
   const footerActions = createFooterActionSource(ctx.slots)
   const workspaceShortcuts = createWorkspaceShortcutSource(ctx.slots)
