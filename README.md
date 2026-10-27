@@ -47,7 +47,7 @@ Dark theme: scheduled task overview and new conversation page.
 
 ![Dark theme new conversation](assets/screenshots/conversation.png)
 
-General settings: dedicated settings page with section navigation in the light theme.
+General settings: full-screen layout with section navigation.
 
 ![Light theme general settings](assets/screenshots/settings-general-light.png)
 
@@ -119,7 +119,6 @@ Open DSH Web. The left navigation is rendered by this plugin.
 | Manage a conversation | Open the conversation menu to rename, pin, mark unread, archive, fork, copy, or delete. |
 | Reuse input | Press Up/Down in an empty composer to recall text submitted in the current workspace. |
 | Jump between turns | Use the turn marks on the left of the current conversation. |
-| Inspect connectors | Open **Settings → Connectors**. Addresses, commands, and credentials are never shown. |
 | Check companion plugins | Open **Settings → About** to install or update individual companion plugins. |
 
 ## FAQ
@@ -166,7 +165,7 @@ dsh --profile web --dump-config
 
 Restart DSH Web and hard-refresh the browser. Do not copy `lib` manually; local installation reads both package metadata and `cordis.patch.yml`.
 
-- [src\index.ts](src/index.ts): host entry and the non-sensitive Connectors directory endpoint.
+- [src\index.ts](src/index.ts): host entry for business endpoints and companion services.
 - [src\client\index.ts](src/client/index.ts): client entry for sidebar, workspace tree, turn navigation, and Settings sections.
 - [src\client\CodexSidebar.tsx](src/client/CodexSidebar.tsx): sidebar shell, search panel, and visual styles.
 - [src\client\CodexWorkspaceBrowser.tsx](src/client/CodexWorkspaceBrowser.tsx): workspace and conversation interactions.
@@ -183,6 +182,10 @@ dsh plugin --profile web add .
 ```
 
 New features should reuse existing DSH slots and public services. Do not depend on private host DOM or write conversation records.
+
+## Project handoff
+
+See the [project handoff and current status (Chinese)](docs/00-交接入口/00-阅读导航.md).
 
 ## License
 
