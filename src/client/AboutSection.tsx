@@ -257,7 +257,12 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
       </div>
     </div>
     <h3>{t('about.features')}</h3>
-    <ul className="dcu-about-features"><li>{t('about.feature.sidebar')}</li><li>{t('about.feature.search')}</li><li>{t('about.feature.workspace')}</li><li>{t('about.feature.sessions')}</li><li>{t('about.feature.conversation')}</li><li>{t('about.feature.navigator')}</li></ul>
+    <ul className="dcu-about-features">
+      <li>{t('about.feature.composer')}</li>
+      <li>{t('about.feature.settingsSkin')}</li>
+      <li>{t('about.feature.sessionTitle')}</li>
+      <li>{t('about.feature.dependencies')}</li>
+    </ul>
     <div className="dcu-about-dependencies-heading"><h3>{t('about.dependencies')}</h3>{state === 'ready' && actionableCount > 0 && <button className="dcu-about-install dcu-about-update-all" type="button" aria-busy={installing === 'all'} disabled={installing !== undefined} onClick={() => { void updateAll() }}>{installing === 'all' ? <IconLoadingOutlineMedium size={14} /> : <IconDownloadOutlineMedium size={14} />}{installing === 'all' ? t('about.updatingAll') : t('about.updateAll')}</button>}</div>
     <p className="dcu-about-intro">{t('about.dependenciesDescription')}</p>
     {state === 'loading' ? <div className="dcu-about-message" role="status">{t('about.loading')}</div>

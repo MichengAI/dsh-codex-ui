@@ -161,14 +161,14 @@ try {
     assert.ok(metrics.modal.backgroundColor, '模态框必须正确渲染深黑主题底色')
 
     if (metrics.nav) {
-      assert.ok(Math.abs(metrics.nav.width - 240) <= 2, `左侧导航栏宽度应为 240px (当前: ${metrics.nav.width}px)`)
+      assert.ok(metrics.nav.width >= 260 && metrics.nav.width <= 420, `左侧导航栏宽度应同步主侧栏展开宽度 (当前: ${metrics.nav.width}px)`)
     }
 
     if (metrics.content) {
       assert.ok(metrics.content.width <= 800, `右侧设置内容区必须实施定宽居中约束 (当前: ${metrics.content.width}px <= 800px)`)
     }
 
-    console.log('✓ 1:1 Codex 全屏工作台几何规范（100vw × 100vh、240px左侧栏、右侧定宽800px）全部核验通过！')
+    console.log(`✓ 1:1 Codex 全屏工作台几何规范（100vw × 100vh、${metrics.nav?.width}px同宽侧栏、右侧定宽800px）全部核验通过！`)
 
     console.log('6. 检查左侧返回按钮与即时搜索框...')
     const backBtn = modal.locator('.dcu-settings-back-btn')

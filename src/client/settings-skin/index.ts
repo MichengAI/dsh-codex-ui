@@ -56,20 +56,24 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-shortcut-modal="settin
   height: calc(100vh - var(--dsh-frame-top-clearance, 38px)) !important;
 }
 
-/* 左侧整列侧栏：240px 宽度 */
+/* 左侧整列侧栏：与首页侧栏严格等宽，底色对齐 --dsw-specific-sidebar-fill */
 [data-shortcut-modal="settings"] > nav {
   box-sizing: border-box !important;
-  width: 240px !important;
-  min-width: 240px !important;
-  max-width: 240px !important;
+  width: var(--dcu-settings-nav-width, 280px) !important;
+  min-width: var(--dcu-settings-nav-width, 280px) !important;
+  max-width: var(--dcu-settings-nav-width, 280px) !important;
   flex-shrink: 0 !important;
   gap: 12px !important;
-  padding: 16px 10px 24px !important;
-  border-right: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.08)) !important;
-  background: var(--dsw-alias-bg-layer-1, #121214) !important;
+  padding: 16px 12px 24px !important;
+  border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #121214)) !important;
   overflow: hidden !important;
   display: flex !important;
   flex-direction: column !important;
+}
+
+html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
+  background: var(--dsw-specific-sidebar-fill, transparent) !important;
 }
 
 /* 顶部标题与搜索区插槽容器 */
@@ -409,10 +413,77 @@ export function uninstallSettingsSkin(doc: Document = document): void {
   }
 }
 
+/** 宿主官方侧栏标准默认展开宽度为 280px，可拖拽下限为 264px */
+export const DEFAULT_SIDEBAR_WIDTH = 280
+export const MIN_SIDEBAR_WIDTH = 264
+
+/**
+ * 探测宿主首页主侧栏的展开宽度（默认 280px，最小 264px）
+ * 1. 优先解析 AppFrame 上的 gridTemplateColumns（如 280px minmax(...) ...）；
+ * 2. 其次读取宿主 Windows 标题栏或侧栏 CSS 变量；
+ * 3. 再次直接测量宿主侧栏 DOM 容器元素的实际宽度；
+ * 4. 若侧栏处于折叠状态（56px / 0px）或未找到，则安全回退至宿主官方标准默认宽度 280px。
+ */
+export function getHostSidebarExpandedWidth(doc: Document = document): number {
+  if (!doc) return DEFAULT_SIDEBAR_WIDTH
+
+  // 1. 尝试从 AppFrame 元素行内 gridTemplateColumns 解析
+  try {
+    for (const node of doc.querySelectorAll<HTMLElement>('div')) {
+      const grid = node.style?.gridTemplateColumns
+      if (grid && grid.includes('minmax')) {
+        const match = /^(\d+(?:\.\d+)?)px\s+/.exec(grid.trim())
+        if (match) {
+          const parsed = Number(match[1])
+          if (Number.isFinite(parsed) && parsed >= MIN_SIDEBAR_WIDTH) {
+            return parsed
+          }
+        }
+      }
+    }
+  } catch {
+    // 忽略异常
+  }
+
+  // 2. 尝试从宿主 CSS 变量读取
+  try {
+    const rootStyle = doc.documentElement ? getComputedStyle(doc.documentElement) : null
+    if (rootStyle) {
+      const winWidth = Number.parseFloat(rootStyle.getPropertyValue('--dsh-windows-sidebar-width'))
+      if (Number.isFinite(winWidth) && winWidth >= MIN_SIDEBAR_WIDTH) return winWidth
+      const hostWidth = Number.parseFloat(rootStyle.getPropertyValue('--dsh-sidebar-width'))
+      if (Number.isFinite(hostWidth) && hostWidth >= MIN_SIDEBAR_WIDTH) return hostWidth
+    }
+  } catch {
+    // 忽略异常
+  }
+
+  // 3. 尝试直接测量 DOM 侧栏容器
+  try {
+    const sidebarEl = doc.querySelector<HTMLElement>('[data-slot="sidebar"]')
+      ?? doc.querySelector<HTMLElement>('div[class*="sidebarCol"]')
+      ?? doc.querySelector<HTMLElement>('div[class*="hHd-Xa_root"]')
+    if (sidebarEl) {
+      const measured = sidebarEl.getBoundingClientRect?.().width
+      if (typeof measured === 'number' && Number.isFinite(measured) && measured >= MIN_SIDEBAR_WIDTH) {
+        return measured
+      }
+    }
+  } catch {
+    // 忽略异常
+  }
+
+  return DEFAULT_SIDEBAR_WIDTH
+}
+
 /**
  * 对宿主动态生成的菜单按钮执行无侵入的已知项分组与搜索过滤
  */
 export function decorateSettingsNav(panelEl: HTMLElement): () => void {
+  // 同步主侧栏展开宽度至模态框，确保侧栏无位移晃动
+  const sidebarWidth = getHostSidebarExpandedWidth(panelEl.ownerDocument || document)
+  panelEl.style.setProperty('--dcu-settings-nav-width', `${sidebarWidth}px`)
+
   const navHeader = panelEl.querySelector<HTMLElement>('nav > :first-child')
   const navList = panelEl.querySelector<HTMLElement>('nav > :nth-child(2)')
   if (!navList) return () => {}

@@ -1,7 +1,7 @@
 {
   "name": "@michengai/dsh-codex-ui",
   "version": "1.1.49",
-  "description": "DSH Codex UI — 为 DeepSeek Harness Web 提供 Codex 风格侧栏、工作区会话树、全局搜索和轮次导航 · A Codex-style sidebar, workspace session tree, global search, and turn navigation for DSH Web",
+  "description": "DSH Codex UI — 为 DeepSeek Harness 提供输入框历史与自适应增强、全屏设置工作台美化与生态插件管理 · Input enhancement, settings workbench skin, and ecosystem plugin management for DSH",
   "license": "Apache-2.0",
   "publishConfig": {
     "access": "public",
@@ -66,13 +66,8 @@
     },
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-client-ui-layout",
         "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-conversation",
-        "@deepseek-ai/dsh-client-ui-input-trigger",
-        "@deepseek-ai/dsh-client-ui-workspace",
-        "@deepseek-ai/dsh-client-ui-settings",
-        "@deepseek-ai/dsh-client-connection"
+        "@deepseek-ai/dsh-client-ui-settings"
       ],
       "platform": "web"
     }

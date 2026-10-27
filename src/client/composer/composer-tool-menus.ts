@@ -5,6 +5,8 @@ const MENU = '[role="menu"],[role="listbox"]'
 export const COMPOSER_TOOL_MENU_STYLE = `
 [class*="_heroWorkspaceRow"] button{min-height:28px;border-radius:999px;font-size:13px;line-height:20px}
 [class*="_heroWorkspaceRow"] button:hover,[class*="_heroWorkspaceRow"] button[aria-expanded=true]{background:color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent)}
+[class*="_heroWorkspaceRow"] [data-gitgraph-popover]{box-sizing:border-box;top:auto!important;bottom:calc(100% + 8px)!important;padding:5px!important;border-radius:18px!important;background:#fff!important;box-shadow:0 8px 32px #0002,0 0 0 1px #0000000a!important}
+body[data-ds-dark-theme] [class*="_heroWorkspaceRow"] [data-gitgraph-popover]{background:#292929!important;box-shadow:0 8px 32px #0003,0 0 0 1px #ffffff08!important}
 :is([data-dcu-tool-menu],[class*="_heroWorkspaceRow"] [data-gitgraph-popover]){box-sizing:border-box;max-height:var(--dcu-tool-menu-height,360px)!important;padding:5px!important;border-radius:18px!important;background:#fff!important;color:var(--dsw-alias-label-primary);box-shadow:0 8px 32px #0002,0 0 0 1px #0000000a!important;display:flex;flex-direction:column;gap:0;z-index:1100}
 /* 原生菜单保留宿主宽度约束；Git 弹窗沿用独立尺寸，避免观察器标记前后跳变。 */
 :is([data-dcu-tool-menu],[class*="_heroWorkspaceRow"] [data-gitgraph-popover])[data-gitgraph-popover]{min-width:0!important;width:262px;max-width:calc(100vw - 24px)}
@@ -88,6 +90,10 @@ export function observeComposerToolMenus(copy: { search: string; empty: string }
       const topSide = above >= Math.min(260, below)
       menu.style.setProperty('--dcu-tool-menu-height', `${Math.max(60, Math.min(360, topSide ? above : below))}px`)
       if (!portal) {
+        if (topSide) {
+          menu.style.setProperty('bottom', 'calc(100% + 4px)', 'important')
+          menu.style.setProperty('top', 'auto', 'important')
+        }
         const previous = parseFloat(menu.style.getPropertyValue('--dcu-tool-menu-shift')) || 0
         const bounds = menu.getBoundingClientRect()
         const naturalLeft = bounds.left - previous
@@ -115,6 +121,8 @@ export function observeComposerToolMenus(copy: { search: string; empty: string }
       empty?.remove()
       menu.querySelectorAll('[data-dcu-tool-filtered]').forEach(row => row.removeAttribute('data-dcu-tool-filtered'))
       menu.removeAttribute('data-dcu-tool-menu')
+      menu.style.removeProperty('top')
+      menu.style.removeProperty('bottom')
       for (const property of ['--dcu-tool-menu-x', '--dcu-tool-menu-y', '--dcu-tool-menu-height', '--dcu-tool-menu-shift']) menu.style.removeProperty(property)
     })
   }

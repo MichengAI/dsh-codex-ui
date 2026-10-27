@@ -1,47 +1,12 @@
 import { describe, expect, test } from 'vitest'
 import { en, zh, type CodexUiKey } from '../src/client/locales.ts'
-import { HostActionError, installErrorText, userErrorText, UserFacingError } from '../src/client/user-error.ts'
+import { installErrorText, userErrorText, UserFacingError } from '../src/client/user-error.ts'
 
 function translator(dictionary: Record<CodexUiKey, string>) {
   return ((key: CodexUiKey) => dictionary[key]) as never
 }
 
 describe('用户错误本地化', () => {
-  test('按 Host 业务错误码和操作类型提供明确提示', () => {
-    const titleInvalid = {
-      code: 'session/title-invalid',
-      details: { sessionId: 'session-1' },
-      isDSHRemoteError: true,
-      message: '底层诊断 D:\\secret',
-    }
-    const forkUnavailable = {
-      code: 'session/fork-unavailable',
-      details: { sessionId: 'session-1' },
-      isDSHRemoteError: true,
-      message: 'open turn',
-    }
-    expect(userErrorText(new HostActionError('rename', titleInvalid), translator(zh))).toBe('会话名称无效，请修改后重试。')
-    expect(userErrorText(new HostActionError('fork', { rpcError: forkUnavailable }), translator(en))).toBe('This conversation cannot be continued in a new conversation right now. Try again after the current turn finishes.')
-    expect(userErrorText(new HostActionError('delete', {
-      code: 'gateway/internal',
-      details: {},
-      isDSHRemoteError: true,
-      message: 'unknown session "session-1" (UNKNOWN_SESSION)',
-    }), translator(zh))).toBe('找不到该会话。')
-  })
-
-  test('Host 未知错误只显示操作级提示且不泄露诊断信息', () => {
-    expect(userErrorText(new HostActionError('archive', new Error('包含本地路径 D:\\secret')), translator(zh))).toBe('暂时无法归档该会话，请稍后重试。')
-    expect(userErrorText(new HostActionError('delete', new Error('host exploded')), translator(en))).toBe('The conversation could not be deleted. Try again later.')
-  })
-
-  test('循环嵌套的远程错误安全回退为操作级提示', () => {
-    const first: { rpcError?: unknown } = {}
-    const second: { rpcError?: unknown } = { rpcError: first }
-    first.rpcError = second
-    expect(userErrorText(new HostActionError('archive', first), translator(zh))).toBe('暂时无法归档该会话，请稍后重试。')
-  })
-
   test('未知底层错误不直接进入界面', () => {
     expect(userErrorText(new Error('包含本地路径 D:\\secret 的底层错误'), translator(zh))).toBe('操作未完成，请重试。')
     expect(userErrorText(new Error('host exploded'), translator(en))).toBe('The action could not be completed. Try again.')

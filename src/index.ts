@@ -1,7 +1,7 @@
 /** 浏览器客户端插件的 Host 入口；客户端逻辑由 dsh.client 加载。 */
 import type { Context } from '@deepseek-ai/cordis'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
-import { canRequestParentReload, dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, resolveDependencyRuntime, runtimeSupportsOfficialTurnNavigator, scheduleParentPluginReload, updateAllDependencies } from './dependency-manager.ts'
+import { canRequestParentReload, dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, resolveDependencyRuntime, scheduleParentPluginReload, updateAllDependencies } from './dependency-manager.ts'
 import { hostServices } from './host-services.ts'
 
 const dependenciesEndpoint = CODEX_UI_API_ENDPOINTS.dependencies
@@ -103,14 +103,6 @@ export function apply(ctx: Context): void {
         const url = new URL(request.url ?? '/', 'http://localhost')
         try {
           if (request.method === 'GET') {
-            if (url.searchParams.get('action') === 'capabilities') {
-              const capabilities = {
-                officialTurnNavigator: await runtimeSupportsOfficialTurnNavigator(resolveDependencyRuntime(ctx)),
-              }
-              response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-              response.end(JSON.stringify({ capabilities }))
-              return
-            }
             if (url.searchParams.get('action') === 'progress') {
               response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
               response.end(JSON.stringify({ progress: installProgressSnapshot() }))

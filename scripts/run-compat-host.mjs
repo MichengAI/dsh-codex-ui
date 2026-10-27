@@ -60,7 +60,6 @@ try {
   const testEnv = { ...env, DCU_DSH_URL: url, DCU_E2E_REPORT: path.join(root, 'browser-report.json'), DCU_E2E_SCREENSHOT: path.join(root, 'browser.png') }
   console.log(await run(['scripts/verify-compat-host.mjs'], testEnv))
   console.log(await run(['scripts/verify-native-settings.mjs'], testEnv))
-  console.log(await run(['scripts/verify-session-features-host.mjs'], testEnv))
 } finally {
   server.kill()
   if (server.exitCode === null) await new Promise(resolve => server.once('exit', resolve))

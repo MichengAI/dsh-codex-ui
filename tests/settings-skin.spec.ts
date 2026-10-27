@@ -1,10 +1,12 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { openSettingsSection } from '../src/client/settings-navigation.ts'
 import {
   checkSettingsSkinEnabled,
   installSettingsSkin,
   uninstallSettingsSkin,
   decorateSettingsNav,
+  getHostSidebarExpandedWidth,
+  DEFAULT_SIDEBAR_WIDTH,
+  MIN_SIDEBAR_WIDTH,
   SETTINGS_SKIN_CSS,
   SETTINGS_SKIN_STYLE_ID,
 } from '../src/client/settings-skin/index.ts'
@@ -15,49 +17,46 @@ import { readFileSync, existsSync } from 'node:fs'
 const removeSkin: Array<() => void> = []
 afterEach(() => { removeSkin.splice(0).forEach(remove => remove()) })
 
-test('设置侧栏快捷跳转通过官方账号菜单打开原生分区', async () => {
-  const root = document.createElement('div')
-  const trigger = document.createElement('button')
-  trigger.setAttribute('aria-haspopup', 'menu')
-  trigger.setAttribute('aria-expanded', 'false')
-  trigger.addEventListener('click', () => {
-    trigger.setAttribute('aria-expanded', 'true')
-    queueMicrotask(() => {
-      const menu = document.createElement('div')
-      menu.setAttribute('role', 'menu')
-      const settings = document.createElement('button')
-      settings.setAttribute('role', 'menuitem')
-      settings.textContent = 'Settings'
-      settings.addEventListener('click', () => {
-        const overlay = document.createElement('div')
-        overlay.setAttribute('role', 'presentation')
-        const panel = document.createElement('div')
-        panel.setAttribute('data-shortcut-modal', 'settings')
-        panel.setAttribute('role', 'dialog')
-        const nav = document.createElement('nav')
-        const section = document.createElement('button')
-        section.textContent = 'General'
-        section.addEventListener('click', () => { section.setAttribute('aria-current', 'true') })
-        nav.append(section)
-        panel.append(nav)
-        overlay.append(panel)
-        document.body.append(overlay)
-        menu.remove()
-      })
-      menu.append(settings)
-      document.body.append(menu)
-    })
-  })
-  root.append(trigger)
-  document.body.append(root)
-  const selected = vi.fn()
+test('主侧栏宽度探测与安全回退机制', () => {
+  // 1. 无 AppFrame 时安全回退至官方标准 280px
+  expect(getHostSidebarExpandedWidth(document)).toBe(DEFAULT_SIDEBAR_WIDTH)
+
+  // 2. 存在 AppFrame gridTemplateColumns 时精确解析展开宽度
+  const frame = document.createElement('div')
+  frame.style.gridTemplateColumns = '320px minmax(400px, 1fr) 0px'
+  document.body.append(frame)
   try {
-    openSettingsSection(root, 'General', undefined, selected)
-    await vi.waitFor(() => expect(document.querySelector('[data-shortcut-modal="settings"] nav button')?.getAttribute('aria-current')).toBe('true'))
-    expect(selected).toHaveBeenCalledOnce()
+    expect(getHostSidebarExpandedWidth(document)).toBe(320)
+
+    // 3. 当侧栏折叠为 56px 窄轨时，不使用 56px，安全回退至 280px 展开基准
+    frame.style.gridTemplateColumns = '56px minmax(400px, 1fr) 0px'
+    expect(getHostSidebarExpandedWidth(document)).toBe(DEFAULT_SIDEBAR_WIDTH)
   } finally {
-    root.remove()
-    document.body.querySelectorAll('[role="menu"], [role="presentation"]').forEach(node => node.remove())
+    frame.remove()
+  }
+})
+
+test('设置侧栏装饰器动态将宿主侧栏宽度注入到 CSS 变量', () => {
+  const frame = document.createElement('div')
+  frame.style.gridTemplateColumns = '310px minmax(400px, 1fr) 0px'
+  document.body.append(frame)
+
+  const panel = document.createElement('div')
+  panel.setAttribute('data-shortcut-modal', 'settings')
+  const nav = document.createElement('nav')
+  const header = document.createElement('div')
+  const navList = document.createElement('div')
+  nav.append(header, navList)
+  panel.append(nav)
+  document.body.append(panel)
+
+  try {
+    const cleanup = decorateSettingsNav(panel)
+    expect(panel.style.getPropertyValue('--dcu-settings-nav-width')).toBe('310px')
+    cleanup()
+  } finally {
+    frame.remove()
+    panel.remove()
   }
 })
 
@@ -81,6 +80,8 @@ test('设置皮肤样式遵循 1:1 Codex 全屏工作台与定宽居中规范', 
   expect(SETTINGS_SKIN_CSS).toContain('max-width: 800px !important')
   expect(SETTINGS_SKIN_CSS).toContain('margin-inline: auto !important')
   expect(SETTINGS_SKIN_CSS).toContain('#18181b')
+  expect(SETTINGS_SKIN_CSS).toContain('var(--dcu-settings-nav-width, 280px)')
+  expect(SETTINGS_SKIN_CSS).toContain('var(--dsw-specific-sidebar-fill')
 })
 
 test('设置菜单无侵入已知项分组模型：仅置顶个人与记录，其余不指定全部自动归入集成组', () => {
