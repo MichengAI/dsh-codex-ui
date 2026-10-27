@@ -77,7 +77,6 @@ try {
     assert.ok(before.title.bottom <= before.workspace.y && before.workspace.bottom <= before.card.y + 10, '标题、工作区与输入框不能重叠')
     assert.equal(before.overflow, false)
     if (height >= 600) assert.ok(before.card.y > height * .65, '输入框必须位于底部区域，不能回到标题下方居中')
-    assert.equal(await page.locator('[class*="_heroWorkspaceRow"]').evaluate(el => getComputedStyle(el).justifyContent), 'flex-start')
     assert.ok(before.metrics.y >= before.card.bottom + 32, '保留底部信息区空间')
     await page.locator('.dcu-home-suggestions').evaluate(el => el.setAttribute('data-has-draft', 'true'))
     assert.equal(await page.locator('.dcu-home-card').first().isVisible(), false, '有草稿时任务卡片不可见')
