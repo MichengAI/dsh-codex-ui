@@ -1,5 +1,4 @@
 import type { Context } from '@deepseek-ai/cordis'
-import type { SessionMigrationServices } from './session-migration.ts'
 
 type HttpRequest = {
   method?: string
@@ -13,7 +12,7 @@ type HttpResponse = {
   end: (body?: string) => void
 }
 
-type HostServices = SessionMigrationServices & {
+type HostServices = {
   webServer: { register: (route: { kind: 'exact'; path: string; handler: (request: HttpRequest, response: HttpResponse) => Promise<void> }) => () => void }
 }
 
@@ -27,18 +26,7 @@ function requireService<T extends object>(ctx: Context, key: string, method: key
 
 /** 在唯一的宿主边界校验服务能力；宿主 API 变更时立即失败，不会静默返回 503。 */
 export function hostServices(ctx: Context): HostServices {
-  const emit = ctx.emit as unknown as (event: string, ...args: unknown[]) => void
   return {
     webServer: requireService<HostServices['webServer']>(ctx, 'webServer', 'register'),
-    agents: requireService<HostServices['agents']>(ctx, 'agents', 'get'),
-    sessions: requireService<HostServices['sessions']>(ctx, 'sessions', 'get'),
-    sessionPersistence: requireService<HostServices['sessionPersistence']>(ctx, 'sessionPersistence', 'list'),
-    workspaceRegistry: requireService<HostServices['workspaceRegistry']>(ctx, 'workspaceRegistry', 'list'),
-    sessionProjectionCache: ctx.get('sessionProjectionCache') as HostServices['sessionProjectionCache'],
-    emit: (event, ...args) => { emit.call(ctx, event, ...args) },
-    logger: {
-      warn: message => { ctx.logger.warn('%s', message) },
-      info: message => { ctx.logger.info('%s', message) },
-    },
   }
 }

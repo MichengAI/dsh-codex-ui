@@ -19,8 +19,6 @@ import { applySidebarWidth, findSidebarFrame, parseSidebarGrid, SLIM_SIDEBAR_PX 
 import { isTaskSession } from './workspace-browser.ts'
 import type { UseSessionPendingInteraction, UseSessionStatus } from './session-pending.ts'
 import { browserStorage, readTreeExpansionState, writeTreeExpansionState } from './tree-expansion.ts'
-import { DesktopNavigationControls } from './DesktopNavigationControls.tsx'
-import type { NavigationHistory } from './navigation-history.ts'
 import { WorkspaceShortcutBridge } from './WorkspaceShortcutBridge.tsx'
 import type { WorkspaceShortcutSource } from './workspace-shortcuts.ts'
 import type { FooterAction, FooterActionSource } from './footer-actions.ts'
@@ -42,7 +40,6 @@ function writeExtensionsOpen(open: boolean): void {
 }
 
 type CodexSidebarInjected = {
-  navigationHistory?: NavigationHistory
   workspaceShortcuts?: WorkspaceShortcutSource
   openSession: (sessionId: SessionId) => boolean | void
   startSession: (workspaceId?: WorkspaceId) => unknown
@@ -51,9 +48,7 @@ type CodexSidebarInjected = {
   canDeleteSession?: () => boolean
   deleteSession: (sessionId: SessionId) => Promise<void>
   forkSession: (sessionId: SessionId) => Promise<void>
-  moveSession: (sessionId: SessionId, targetWorkspaceId: WorkspaceId) => Promise<void>
   renameSession: (sessionId: SessionId, title: string) => Promise<void>
-  openPath: (path: string) => Promise<void> | void
   useSessionPendingInteraction?: UseSessionPendingInteraction
   useSessionStatus?: UseSessionStatus
   globalPanels?: GlobalPanelSource
@@ -220,7 +215,7 @@ const SidebarSearch = forwardRef<SidebarSearchHandle, SidebarSearchProps>(functi
 const subscribeEmpty = (): (() => void) => () => {}
 
 /** Codex 风格的 DSH 侧栏，只替换导航外观，项目浏览和设置仍由 DSH 官方组件提供。 */
-export function CodexSidebar({ workspaceShortcuts, navigationHistory, globalPanels, footerActions, selectPanel, usePanelInfo = useLegacyPanelInfo, collapsed, width, openSession, startSession, toggleSidebar, archiveSession, canDeleteSession, deleteSession, forkSession, moveSession, renameSession, openPath, renderSlot, t, useSessions, useSessionPendingInteraction, useSessionStatus, useWorkspaces }: CodexSidebarProps) {
+export function CodexSidebar({ workspaceShortcuts, globalPanels, footerActions, selectPanel, usePanelInfo = useLegacyPanelInfo, collapsed, width, openSession, startSession, toggleSidebar, archiveSession, canDeleteSession, deleteSession, forkSession, renameSession, renderSlot, t, useSessions, useSessionPendingInteraction, useSessionStatus, useWorkspaces }: CodexSidebarProps) {
   const panels = useSyncExternalStore(globalPanels?.subscribe ?? subscribeEmpty, globalPanels?.getSnapshot ?? getEmptyPanels, globalPanels?.getSnapshot ?? getEmptyPanels)
   const extensionPanels = [...panels].sort((left, right) => left.order - right.order)
   const visibleFooterActions = useSyncExternalStore(footerActions?.subscribe ?? subscribeEmpty, footerActions?.getSnapshot ?? getEmptyFooterActions, footerActions?.getSnapshot ?? getEmptyFooterActions)
@@ -365,7 +360,6 @@ export function CodexSidebar({ workspaceShortcuts, navigationHistory, globalPane
   }, [expandSidebar, panelActive, renderSlot])
   return <aside className={`dcu-root${visualCompact ? ' dcu-compact' : ''}${collapsing ? ' dcu-collapsing' : ''}`} aria-label={t('sidebar.label')}>
     <style>{stylesheet}</style>
-    {navigationHistory && <DesktopNavigationControls history={navigationHistory} t={t} />}
     <div className="dcu-expanded-shell" onTransitionEnd={event => { if (event.target === event.currentTarget && (event.propertyName === 'opacity' || event.propertyName === 'transform')) { setVisualCompact(true); setCollapsing(false) } }}>
     <header className="dcu-head" data-window-drag><button type="button" className="dcu-brand" aria-label={t('sidebar.newTask')} onClick={() => { beginSession() }}><BrandWordmark size={24} /></button><div className="dcu-head-actions"><button type="button" className="dcu-icon" aria-label={t('sidebar.collapse')} onClick={toggleSidebar}><IconPanelLeftOutlineMedium size={16} /></button><button type="button" className="dcu-icon" aria-label={t('sidebar.search')} onClick={openSearch}><IconSearchOutlineMedium size={16} /></button></div></header>
     <nav className="dcu-menu" aria-label={t('sidebar.mainMenu')}>

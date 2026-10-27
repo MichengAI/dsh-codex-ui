@@ -7,15 +7,11 @@ import { Context } from '@deepseek-ai/cordis'
 import { HostConnectionService } from '@deepseek-ai/dsh-client-connection'
 
 const dependenciesPath = '/api/dsh-codex-ui/dependencies'
-const openExplorerPath = '/api/dsh-codex-ui/open-in-explorer'
 const preferencesPath = '/api/dsh-codex-ui/preferences'
-const sessionMovePath = '/api/dsh-codex-ui/session-move'
 
 const expectedPaths = [
   dependenciesPath,
-  openExplorerPath,
   preferencesPath,
-  sessionMovePath,
 ]
 const oldPrefix = '/api/michengai/codex-ui/'
 
@@ -120,9 +116,7 @@ try {
 
   for (const [path, method] of [
     [dependenciesPath, 'GET'],
-    [openExplorerPath, 'POST'],
     [preferencesPath, 'GET'],
-    [sessionMovePath, 'POST'],
   ] as const) {
     const response = await invoke(path, method)
     assert.equal(response.status, 401, `${path} 必须拒绝未登录请求`)
@@ -132,18 +126,11 @@ try {
   assert.deepEqual((authenticatedRequests[0] as ReturnType<typeof createRequest>).headers, createRequest('GET').headers, 'Host、Origin 和其他请求头必须原样交给宿主认证')
   assert.equal((authenticatedRequests[0] as ReturnType<typeof createRequest>).url, expectedPaths[0])
 
-  const unauthorizedMove = await invoke(sessionMovePath, 'POST')
-  assert.deepEqual(JSON.parse(unauthorizedMove.body ?? '{}'), { ok: false, code: 'session-move/unauthorized', error: '请先登录 DSH。' })
-
   rejection = 403
   assert.equal((await invoke(dependenciesPath, 'GET')).status, 403)
-  const forbiddenMove = await invoke(sessionMovePath, 'POST')
-  assert.equal(JSON.parse(forbiddenMove.body ?? '{}').code, 'session-move/forbidden')
 
   connectionAvailable = false
   assert.equal((await invoke(dependenciesPath, 'GET')).status, 503)
-  const unavailableMove = await invoke(sessionMovePath, 'POST')
-  assert.equal(JSON.parse(unavailableMove.body ?? '{}').code, 'session-move/service-unavailable')
   assert.equal(authenticationWarnings.length > 0, true, '认证服务缺失必须记录服务端诊断日志')
 
   connectionAvailable = true
@@ -170,7 +157,7 @@ try {
       { origin: 'null' },
       { host: 'evil.example', origin: 'https://evil.example' },
     ]) {
-      for (const [path, method] of [[`${dependenciesPath}?action=update-all`, 'POST'], [preferencesPath, 'PUT'], [openExplorerPath, 'POST']] as const) {
+      for (const [path, method] of [[`${dependenciesPath}?action=update-all`, 'POST'], [preferencesPath, 'PUT']] as const) {
         let bodyRead = false
         const response: ResponseRecorder = {
           writeHead(status) { response.status = status },

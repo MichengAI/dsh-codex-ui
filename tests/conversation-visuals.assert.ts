@@ -4,7 +4,6 @@ import { readFileSync } from 'node:fs'
 const sidebar = readFileSync(new URL('../src/client/CodexSidebar.tsx', import.meta.url), 'utf8')
 const footerActions = readFileSync(new URL('../src/client/footer-actions.ts', import.meta.url), 'utf8')
 const client = readFileSync(new URL('../src/client/index.ts', import.meta.url), 'utf8')
-const navigationControls = readFileSync(new URL('../src/client/DesktopNavigationControls.tsx', import.meta.url), 'utf8')
 const settingsSkin = readFileSync(new URL('../src/client/settings-skin/index.ts', import.meta.url), 'utf8')
 
 const sidebarStylesheet = sidebar.match(/const stylesheet = `([\s\S]*?)`/)?.[1]
@@ -14,7 +13,6 @@ assert.doesNotMatch(sidebarStylesheet, /billing-(?:trigger|rail-button)/, '侧�
 assert.ok(sidebar.includes('.dcu-settings-seat [data-slot="settings.trigger"]>svg{color:var(--dcu-sidebar-icon)}'), '设置图标必须使用侧栏颜色，穿过宿主 slot 包装定位图标')
 assert.match(settingsSkin, /\[data-shortcut-modal="settings"\]/, '设置皮肤必须只作用于官方原生设置面板')
 assert.doesNotMatch(client, /registerSettingsContributions/, '主客户端不再注册额外的设置贡献')
-assert.match(navigationControls, /:not\(:has\(\[data-shortcut-modal="settings"\]\)\)/, '原生设置打开时必须同步避让 Windows 导航菜单')
 assert.doesNotMatch(sidebar, /NewConversationSuggestions/, '侧栏不得强行耦合新会话建议卡片')
 assert.doesNotMatch(sidebar, /NEW_CONVERSATION_STYLE/, '侧栏不得注入新会话卡片样式')
 assert.doesNotMatch(sidebar, /COMPOSER_TOOL_MENU_STYLE/, '侧栏不得注入输入框工具菜单样式')

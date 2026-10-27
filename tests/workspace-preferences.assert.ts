@@ -82,15 +82,11 @@ type ResponseRecorder = { status?: number; headers?: Record<string, string>; bod
 
 let preferencesRoute: Route | undefined
 let dependenciesRoute: Route | undefined
-let explorerRoute: Route | undefined
-let sessionMoveRoute: Route | undefined
 let disposeEffect: (() => void) | undefined
 const webServer = {
   register: (route: Route) => {
     if (route.path === '/api/dsh-codex-ui/preferences') preferencesRoute = route
     if (route.path === '/api/dsh-codex-ui/dependencies') dependenciesRoute = route
-    if (route.path === '/api/dsh-codex-ui/open-in-explorer') explorerRoute = route
-    if (route.path === '/api/dsh-codex-ui/session-move') sessionMoveRoute = route
     return () => {}
   },
 }
@@ -128,7 +124,6 @@ try {
   apply(context as never)
   assert.ok(preferencesRoute)
   assert.ok(dependenciesRoute)
-  assert.ok(sessionMoveRoute)
 
   const invoke = async (method: string, chunks: string[] = [], headers: Record<string, string> = {}) => {
     const response: ResponseRecorder = {
@@ -200,29 +195,6 @@ try {
   assert.doesNotMatch(dependencyFailure.body ?? '', /secret-profile|D:\\\\Users/, '依赖路由响应必须脱敏')
   delete services.desktopProfiles
 
-  const explorerResponse: ResponseRecorder = {
-    writeHead: (status, responseHeaders) => { explorerResponse.status = status; explorerResponse.headers = responseHeaders },
-    end: body => { explorerResponse.body = body },
-  }
-  await explorerRoute?.handler({ ...request([JSON.stringify({ path: 'D:\\Repository\\unregistered' })], { 'sec-fetch-site': 'same-origin' }), method: 'POST', url: explorerRoute.path }, explorerResponse)
-  assert.equal(explorerResponse.status, process.platform === 'win32' ? 403 : 501, 'Explorer Host 路由必须在 Windows 拒绝未注册路径，并在其他平台明确回退')
-
-  const invokeSessionMove = async (chunks: string[], headers: Record<string, string>) => {
-    const response: ResponseRecorder = {
-      writeHead: (status, responseHeaders) => { response.status = status; response.headers = responseHeaders },
-      end: body => { response.body = body },
-    }
-    await sessionMoveRoute?.handler({ ...request(chunks, headers), method: 'POST', url: sessionMoveRoute.path }, response)
-    return response
-  }
-  authenticationRejection = 403
-  const crossSiteMove = await invokeSessionMove([JSON.stringify({ sessionId: 'one', targetWorkspaceId: 'two' })], { 'sec-fetch-site': 'cross-site' })
-  assert.equal(crossSiteMove.status, 403)
-  assert.deepEqual(JSON.parse(crossSiteMove.body ?? '{}'), { ok: false, code: 'session-move/forbidden', error: '已拒绝不可信或跨站请求。' })
-  authenticationRejection = undefined
-  const invalidMove = await invokeSessionMove([JSON.stringify({ sessionId: '', targetWorkspaceId: '' })], { 'sec-fetch-site': 'same-origin' })
-  assert.equal(invalidMove.status, 400)
-  assert.equal(JSON.parse(invalidMove.body ?? '{}').code, 'session-move/invalid-request')
 } finally {
   disposeEffect?.()
   if (previousProfileDir === undefined) delete process.env.DSH_PROFILE_DIR

@@ -1,5 +1,4 @@
 import { deepLinkAction, openConversation, selectGlobalPanel } from './session-navigation.ts'
-import { createNavigationHistory } from './navigation-history.ts'
 import { createWorkspaceShortcutSource } from './workspace-shortcuts.ts'
 import { registerWorkspaceDirectoryFlow, WORKSPACE_DIRECTORY_FLOW } from './workspace-directory-flow.ts'
 import { registerAfterOfficialWave } from './official-slot-shadow.ts'
@@ -34,14 +33,12 @@ import { CodexWorkspaceBrowser } from './CodexWorkspaceBrowser.tsx'
 import { en, NS, zh } from './locales.ts'
 import { createFooterActionSource, type FooterAction, type FooterActionSource } from './footer-actions.ts'
 import { mirrorSlot, withSlotAliases } from './slot-mirror.tsx'
-import { openPathInHost, type HostOpenPathConnection } from './host-open-path.ts'
 import { observeSettingsSkin } from './settings-skin/index.ts'
 import { observeSlimSidebar } from './sidebar-width.ts'
 import { observeConversationHeader } from './conversation-header.ts'
 import { observeComposerEnhancements } from './composer/index.tsx'
 import { hasStartSession } from './workspace-compat.ts'
 import { HostActionError, type HostAction, UserFacingError } from './user-error.ts'
-import { finishSessionMove, requestSessionMove, sessionMoveErrorKey, SessionMoveRequestError } from './session-move.ts'
 import { hasArchiveSessionDelete } from './archive-session-delete.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -102,16 +99,10 @@ export function apply(ctx: ClientContext): void {
   const t = ctx.locale.bind(NS)
   ctx.effect(() => observeComposerEnhancements(ctx), 'michengai-codex-ui: composer enhancements')
   ctx.effect(() => observeSettingsSkin(), 'michengai-codex-ui: official settings skin')
-  // Host 与客户端共用 Cordis 的服务名；此处读取的是客户端 RPC 外观，而非 HostConnectionService。
-  const connectionService: unknown = ctx.get('connection')
-  const connection = connectionService as HostOpenPathConnection
-  const openPath = (path: string): Promise<void> => openPathInHost(connection, path)
   ctx.effect(() => observeSlimSidebar(), 'michengai-codex-ui: slim sidebar')
   ctx.effect(() => observeConversationHeader(), 'michengai-codex-ui: conversation header')
   const globalPanels = createGlobalPanelSource(ctx.slots, ctx.locale)
   const footerActions = createFooterActionSource(ctx.slots)
-  const navigationHistory = createNavigationHistory(ctx.sessions.list, id => openConversation(ctx, ctx.layout, id))
-  ctx.effect(() => () => { navigationHistory.dispose() }, 'michengai-codex-ui: navigation history')
   const workspaceShortcuts = createWorkspaceShortcutSource(ctx.slots)
   ctx.effect(() => () => { workspaceShortcuts.dispose() }, 'michengai-codex-ui: workspace shortcuts')
   registerWorkspaceDirectoryFlow(ctx)
@@ -156,7 +147,6 @@ export function apply(ctx: ClientContext): void {
           name: 'sidebar', priority: -1, registrant: 'michengai-codex-ui', locale: NS,
           children: next,
           inject: () => ({
-            navigationHistory,
             workspaceShortcuts,
             openSession: (sessionId: SessionId) => openConversation(ctx, ctx.layout, sessionId),
             startSession: (workspaceId?: WorkspaceId) => { startWorkspaceSession(ctx, workspaceId) },
@@ -165,9 +155,7 @@ export function apply(ctx: ClientContext): void {
             canDeleteSession: () => hasArchiveSessionDelete(ctx.get('remote.workspaceRegistry')),
             deleteSession,
             forkSession,
-            moveSession,
             renameSession,
-            openPath,
             globalPanels,
             footerActions,
             selectPanel: (id: string | null) => { selectGlobalPanel(ctx.layout, id) },
@@ -222,19 +210,6 @@ export function apply(ctx: ClientContext): void {
     })
   }
   const archiveSession = (sessionId: SessionId): Promise<void> => runHostAction('archive', () => archiveHostSession(ctx, sessionId))
-  const moveSession = async (sessionId: SessionId, targetWorkspaceId: WorkspaceId): Promise<void> => {
-    try {
-      await requestSessionMove(sessionId, targetWorkspaceId)
-    } catch (error) {
-      if (!(error instanceof SessionMoveRequestError)) throw error
-      throw new UserFacingError(t(sessionMoveErrorKey(error.code)))
-    }
-    finishSessionMove({
-      sessionId,
-      currentUrl: window.location.href,
-      navigate: url => { window.location.replace(url) },
-    })
-  }
   ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({
     name: 'sidebar.workspaces', priority: -1, locale: NS,
     inject: () => ({
@@ -243,8 +218,6 @@ export function apply(ctx: ClientContext): void {
       deleteSession,
       deleteWorkspace: (workspaceId: WorkspaceId) => ctx.workspaces.delete(workspaceId),
       forkSession,
-      moveSession,
-      openPath,
       openSession: (sessionId: SessionId) => openConversation(ctx, ctx.layout, sessionId),
       renameSession,
       renameWorkspace: (workspaceId: WorkspaceId, title: string) => ctx.workspaces.rename(workspaceId, title),

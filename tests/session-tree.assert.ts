@@ -20,7 +20,7 @@ assert.match(tree, /import \{[^}]*Eye[^}]*EyeOff[^}]*\} from 'lucide-react'/, '�
 assert.match(tree, /id: 'unread'[\s\S]*options\.unread \? <EyeOff[^>]*\/> : <Eye[^>]*\/>/, '标记为已读必须使用闭眼图标，标记为未读必须使用睁眼图标')
 assert.match(tree, /id: 'fork'[\s\S]*IconBranchOutlineMedium/, '共用菜单继续必须有图标')
 assert.match(tree, /main-separator/, '共用菜单分隔必须与任务树一致')
-assert.match(workspace, /sessionMenuItems\(t, \{[\s\S]*?includePath: true,[\s\S]*?moveTargets:[\s\S]*?canDelete:/, '任务树必须复用共用会话菜单并按归档删除能力决定是否显示删除')
+assert.match(workspace, /sessionMenuItems\(t, \{[\s\S]*?unread:[^}]*?canDelete:/, '任务树必须复用共用会话菜单并按归档删除能力决定是否显示删除')
 assert.doesNotMatch(workspace, /pinnedSessionIds|setPinnedSessionIds|SESSION_PINS_STORAGE_KEY|QuickPinIcon|dcu-wb-quick-pin|sessions\.(?:pin|unpin|pinned)/, '任务树不得维护或展示会话置顶')
 assert.match(tree, /data-state="warning"[^]*dcu-wb-pending-label/, '共用会话行必须显示待处理交互警告状态和文本')
 assert.match(workspace, /pendingInteractionForSession\(id, pendingInteractions, legacyPendingInteraction\(session\)\)/, '任务树必须兼容旧版 SessionSummary 和新版待处理交互 Store')

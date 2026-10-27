@@ -42,7 +42,7 @@ export function SessionHoverCard({ tip, onEnter, onLeave }: { tip: SessionHoverT
   </div>
 }
 
-export function sessionMenuItems(t: TranslateNS<typeof NS>, options: { unread: boolean; path?: string; includePath?: boolean; moveTargets?: readonly { id: string; label: string }[]; canDelete?: boolean }): MenuEntry[] {
+export function sessionMenuItems(t: TranslateNS<typeof NS>, options: { unread: boolean; path?: string; includePath?: boolean; canDelete?: boolean }): MenuEntry[] {
   const items: MenuEntry[] = [
     { id: 'rename', label: t('sessions.rename'), icon: <IconEditOutlineMedium size={16} /> },
     { id: 'unread', label: t(options.unread ? 'sessions.markRead' : 'sessions.markUnread'), icon: options.unread ? <EyeOff aria-hidden="true" size={16} strokeWidth={1.5} /> : <Eye aria-hidden="true" size={16} strokeWidth={1.5} /> },
@@ -50,18 +50,6 @@ export function sessionMenuItems(t: TranslateNS<typeof NS>, options: { unread: b
     { type: 'separator', id: 'main-separator' },
     { id: 'fork', label: t('sessions.fork'), icon: <IconBranchOutlineMedium size={16} /> },
   ]
-  if (options.includePath === true) {
-    items.push({ id: 'openPath', label: t('sessions.openPath'), icon: <IconFolderOpenOutlineMedium size={16} />, disabled: options.path === undefined })
-  }
-  if (options.moveTargets !== undefined) {
-    items.push({
-      id: 'moveWorkspace',
-      label: t('sessions.moveWorkspace'),
-      icon: <IconFolderCloseMedium size={16} />,
-      disabled: options.moveTargets.length === 0,
-      submenu: options.moveTargets.map(target => ({ id: target.id, label: target.label, icon: <IconFolderCloseMedium size={16} /> })),
-    })
-  }
   items.push(
     { type: 'separator', id: 'copy-separator' },
     { id: 'copyId', label: t('sessions.copyId'), icon: <IconLinkOutlineMedium size={16} /> },
