@@ -1,5 +1,3 @@
-import { restoreOfficialUserBubbles } from './conversation-bubbles.ts'
-
 export const CONVERSATION_HEADER_STYLE_ID = 'dcu-conversation-header-style'
 export const HEADER_PROJECT_TIP_EVENT = 'dcu-header-project-tip'
 export const HEADER_SESSION_MENU_EVENT = 'dcu-header-session-menu'
@@ -170,49 +168,31 @@ function ensureStyle(doc: Document): void {
   doc.head.append(style)
 }
 
-const CONVERSATION_BUBBLE_SELECTOR = '[data-time-hover-root],[data-dcu-user-card],[data-dcu-user-source]'
-
-type ConversationMutationImpact = {
-  headerChanged: boolean
-  bubbleRoots: Set<Element>
+function inspectConversationNode(node: Node, includeDescendants: boolean): boolean {
+  if (!(node instanceof Element)) return false
+  return node.matches('header') || node.closest('header') !== null || (includeDescendants && node.querySelector('header') !== null)
 }
 
-function inspectConversationNode(node: Node, impact: ConversationMutationImpact, includeDescendants: boolean): void {
-  if (!(node instanceof Element)) return
-  if (node.matches('header') || node.closest('header') !== null || (includeDescendants && node.querySelector('header') !== null)) {
-    impact.headerChanged = true
-  }
-  const row = node.closest('[data-time-hover-root]')
-  if (row !== null) {
-    impact.bubbleRoots.add(row)
-    return
-  }
-  if (node.matches(CONVERSATION_BUBBLE_SELECTOR) || (includeDescendants && node.querySelector(CONVERSATION_BUBBLE_SELECTOR) !== null)) {
-    impact.bubbleRoots.add(node)
-  }
-}
-
-function conversationMutationImpact(records: readonly MutationRecord[]): ConversationMutationImpact {
-  const impact: ConversationMutationImpact = { headerChanged: false, bubbleRoots: new Set() }
+function conversationHeaderChanged(records: readonly MutationRecord[]): boolean {
   for (const record of records) {
-    inspectConversationNode(record.target, impact, false)
-    for (const node of record.addedNodes) inspectConversationNode(node, impact, true)
+    if (inspectConversationNode(record.target, false)) return true
+    for (const node of record.addedNodes) {
+      if (inspectConversationNode(node, true)) return true
+    }
     for (const node of record.removedNodes) {
-      if (node instanceof Element && (node.matches('header') || node.querySelector('header') !== null)) impact.headerChanged = true
+      if (node instanceof Element && (node.matches('header') || node.querySelector('header') !== null)) return true
     }
   }
-  return impact
+  return false
 }
 
-/** 观察会话顶栏与用户气泡；只对相关子树变更按帧合并，流式回答不会触发全文档扫描。 */
+/** 观察会话顶栏；只对相关子树变更按帧合并，流式回答不会触发全文档扫描。 */
 export function observeConversationHeader(doc: Document = document): () => void {
   if (doc.head === null || doc.body === null) return () => {}
   ensureStyle(doc)
-  restoreOfficialUserBubbles(doc)
   let applying = false
   let frame: number | undefined
   let headerPending = true
-  const bubbleRoots = new Set<Element>()
   let watchedTabs: HTMLElement | undefined
   let stopWatchingTabs: (() => void) | undefined
   const run = (): void => {
@@ -220,9 +200,6 @@ export function observeConversationHeader(doc: Document = document): () => void 
     if (applying) return
     applying = true
     try {
-      const roots = [...bubbleRoots]
-      bubbleRoots.clear()
-      for (const root of roots) restoreOfficialUserBubbles(root)
       if (headerPending) {
         headerPending = false
         placeConversationTabs(doc)
@@ -245,10 +222,8 @@ export function observeConversationHeader(doc: Document = document): () => void 
   }
   sync()
   const observer = new MutationObserver(records => {
-    const impact = conversationMutationImpact(records)
-    if (!impact.headerChanged && impact.bubbleRoots.size === 0) return
-    headerPending ||= impact.headerChanged
-    for (const root of impact.bubbleRoots) bubbleRoots.add(root)
+    if (!conversationHeaderChanged(records)) return
+    headerPending = true
     sync()
   })
   observer.observe(doc.body, { childList: true, subtree: true })
