@@ -3,11 +3,8 @@ import type { Context } from '@deepseek-ai/cordis'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
 import { canRequestParentReload, dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, resolveDependencyRuntime, runtimeSupportsOfficialTurnNavigator, scheduleParentPluginReload, updateAllDependencies } from './dependency-manager.ts'
 import { hostServices } from './host-services.ts'
-import { parsePinnedWorkspaceIds, parseStoredWorkspaceGroups, readWorkspacePreferences, WORKSPACE_PREFERENCES_VERSION, writeWorkspacePreferences } from './workspace-preferences.ts'
 
 const dependenciesEndpoint = CODEX_UI_API_ENDPOINTS.dependencies
-const preferencesEndpoint = CODEX_UI_API_ENDPOINTS.preferences
-const maxPreferencesBodyBytes = 32 * 1024
 
 type HostRequest = {
   method?: string
@@ -33,7 +30,7 @@ export function publicDependencyError(error: unknown): string {
 export class RequestBodyTooLargeError extends Error {}
 
 /** 有界读取 Node HTTP body；偏好接口只接受很小的 JSON。 */
-export async function readRequestBody(request: HostRequest, maxBytes = maxPreferencesBodyBytes): Promise<string> {
+export async function readRequestBody(request: HostRequest, maxBytes = 32 * 1024): Promise<string> {
   const declared = Number(headerValue(request.headers ?? {}, 'content-length'))
   if (Number.isFinite(declared) && declared > maxBytes) throw new RequestBodyTooLargeError('请求体过大。')
   if (request[Symbol.asyncIterator] === undefined) return ''
@@ -161,65 +158,9 @@ export function apply(ctx: Context): void {
         }
       },
     })
-    const disposePreferences = host.webServer.register({
-      kind: 'exact',
-      path: preferencesEndpoint,
-      handler: async (request, response) => {
-        if (!authenticateBusinessRequest(ctx, request, response)) return
-        try {
-          if (request.method === 'GET' || request.method === 'HEAD') {
-            const preferences = await readWorkspacePreferences()
-            response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-            response.end(request.method === 'HEAD' ? undefined : JSON.stringify(preferences))
-            return
-          }
-          if (request.method === 'PUT') {
-            const body = JSON.parse(await readRequestBody(request)) as unknown
-            const record = body !== null && typeof body === 'object' ? body as Record<string, unknown> : undefined
-            const pinnedWorkspaceIds = record === undefined ? undefined : parsePinnedWorkspaceIds(record.pinnedWorkspaceIds)
-            const existing = await readWorkspacePreferences()
-            const workspaceGroups = record === undefined
-              ? undefined
-              : 'workspaceGroups' in record
-                ? parseStoredWorkspaceGroups(record.workspaceGroups)
-                : existing.workspaceGroups
-            // 仅保留同一 ID 的既有名称冲突；新增或改名不能绕过固定大小写判重。
-            const introducesTitleConflict = workspaceGroups?.some(group =>
-              !existing.workspaceGroups.some(previous => previous.id === group.id && previous.title === group.title)
-              && workspaceGroups.some(other => other.id !== group.id && other.title.toLowerCase() === group.title.toLowerCase())) === true
-            if (pinnedWorkspaceIds === undefined || workspaceGroups === undefined || introducesTitleConflict) {
-              response.writeHead(400, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-              response.end(JSON.stringify({ error: '工作区偏好格式无效。' }))
-              return
-            }
-            await writeWorkspacePreferences(pinnedWorkspaceIds, workspaceGroups)
-            response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-            response.end(JSON.stringify({ version: WORKSPACE_PREFERENCES_VERSION, pinnedWorkspaceIds, workspaceGroups, exists: true }))
-            return
-          }
-          response.writeHead(405, { allow: 'GET, HEAD, PUT' })
-          response.end()
-        } catch (error) {
-          if (error instanceof RequestBodyTooLargeError) {
-            response.writeHead(413, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-            response.end(JSON.stringify({ error: '请求体过大。' }))
-            return
-          }
-          if (error instanceof SyntaxError) {
-            response.writeHead(400, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-            response.end(JSON.stringify({ error: '置顶偏好格式无效。' }))
-            return
-          }
-          ctx.logger.warn('preferences endpoint failed: %s', error)
-          response.writeHead(503, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-          response.end(JSON.stringify({ error: '置顶偏好暂不可用。' }))
-        }
-      },
-    })
     return () => {
       disposeDependencyInstaller()
       disposeDependencies()
-      disposePreferences()
     }
   }, 'michengai-codex-ui: catalogs')
 }

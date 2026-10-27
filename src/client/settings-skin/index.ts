@@ -1,6 +1,8 @@
 import type { Context } from '@deepseek-ai/cordis'
+import React from 'react'
+import { render, unmountComponentAtNode } from 'react-dom'
 import { classifySettingsButton, SETTINGS_NAV_GROUPS } from './model.ts'
-import { getNavSearchQuery, setNavSearchQuery, subscribeNavSearch, setSkinEnabledState } from './SettingsNavHeader.tsx'
+import { getNavSearchQuery, setNavSearchQuery, subscribeNavSearch, setSkinEnabledState, SettingsNavHeader } from './SettingsNavHeader.tsx'
 import { en, zh, NS } from '../locales.ts'
 
 export const SETTINGS_SKIN_STYLE_ID = 'dcu-official-settings-skin'
@@ -75,17 +77,24 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-shortcut-modal="settin
   padding: 0 !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 10px !important;
+  gap: 14px !important;
   flex: none !important;
 }
 
-/* 顶部标题与返回栏 */
+.dcu-settings-nav-header-root {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  width: 100% !important;
+}
+
+/* 顶部标题与返回栏：拉平左对齐基线，垂直水平对齐 */
 .dcu-settings-nav-header-top {
   display: flex !important;
   align-items: center !important;
-  gap: 8px !important;
+  gap: 10px !important;
   height: 28px !important;
-  padding: 0 2px !important;
+  padding: 0 !important;
 }
 
 .dcu-settings-back-btn {
@@ -111,12 +120,13 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-shortcut-modal="settin
 .dcu-settings-nav-header-title {
   font-size: 16px !important;
   font-weight: 600 !important;
+  line-height: 28px !important;
   color: var(--dsw-alias-label-primary, #ffffff) !important;
   letter-spacing: -0.01em !important;
   user-select: none !important;
 }
 
-/* 搜索框容器与输入框：对齐原生 Codex 风格 */
+/* 搜索框容器与宿主原生 Input 规范对齐 */
 .dcu-settings-search-wrapper {
   position: relative !important;
   display: flex !important;
@@ -125,55 +135,38 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-shortcut-modal="settin
 }
 
 .dcu-settings-search-icon {
-  position: absolute !important;
-  left: 9px !important;
   width: 14px !important;
   height: 14px !important;
   color: var(--dsw-alias-label-tertiary, #8e8e8e) !important;
   pointer-events: none !important;
 }
 
+/* 宿主原生 Input 组件全宽容器与 Token 规范 */
 .dcu-settings-search-input {
+  box-sizing: border-box !important;
+  display: inline-flex !important;
   width: 100% !important;
   height: 32px !important;
-  padding: 0 26px 0 28px !important;
-  border-radius: var(--dsw-radius-sm, 6px) !important;
-  border: 1px solid var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.08)) !important;
+  border-radius: var(--dsw-radius-md, 8px) !important;
   background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.05)) !important;
-  color: var(--dsw-alias-label-primary, #ffffff) !important;
-  font-size: 13px !important;
-  box-sizing: border-box !important;
-  outline: none !important;
+  border: 0.5px solid var(--dsw-alias-border-l4, rgba(255, 255, 255, 0.08)) !important;
   transition: border-color 0.12s ease, background-color 0.12s ease !important;
 }
 
-.dcu-settings-search-input::placeholder {
-  color: var(--dsw-alias-label-tertiary, #8e8e8e) !important;
-  font-size: 13px !important;
-}
-
-.dcu-settings-search-input:focus {
-  border-color: var(--dsw-alias-state-focus-ring, var(--dsw-static-deepseek-500, #4176e6)) !important;
+.dcu-settings-search-input:focus-within {
+  border-color: var(--dsw-alias-state-business-primary, var(--dsw-static-deepseek-500, #4176e6)) !important;
   background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.08)) !important;
 }
 
-.dcu-settings-search-clear {
-  position: absolute !important;
-  right: 6px !important;
-  width: 18px !important;
-  height: 18px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  border-radius: 50% !important;
-  background: transparent !important;
-  border: none !important;
-  color: var(--dsw-alias-label-tertiary, #8e8e8e) !important;
-  cursor: pointer !important;
+.dcu-settings-search-input input {
+  font-size: 13px !important;
+  line-height: 20px !important;
+  color: var(--dsw-alias-label-primary, #ffffff) !important;
 }
 
-.dcu-settings-search-clear:hover {
-  color: var(--dsw-alias-label-primary, #ffffff) !important;
+.dcu-settings-search-input input::placeholder {
+  color: var(--dsw-alias-label-tertiary, #8e8e8e) !important;
+  font-size: 13px !important;
 }
 
 /* 导航项列表容器 */
@@ -425,11 +418,8 @@ export function decorateSettingsNav(panelEl: HTMLElement): () => void {
   if (!navList) return () => {}
 
   const isZh = (document.documentElement.lang || 'zh').startsWith('zh')
-  const titleText = isZh ? zh['settings.title'] : en['settings.title']
-  const backText = isZh ? zh['settings.back'] : en['settings.back']
-  const searchText = isZh ? zh['settings.search'] : en['settings.search']
 
-  // 1. 装饰顶部 Header（返回箭头 + 搜索框）
+  // 1. 装饰顶部 Header（返回箭头 + 搜索框，挂载 React 宿主原生 Input 原语）
   let cleanHeader = () => {}
   if (navHeader && !navHeader.querySelector('.dcu-settings-nav-header-root')) {
     const originalChildren = Array.from(navHeader.childNodes)
@@ -440,65 +430,11 @@ export function decorateSettingsNav(panelEl: HTMLElement): () => void {
     const headerRoot = document.createElement('div')
     headerRoot.className = 'dcu-settings-nav-header-root'
 
-    const topRow = document.createElement('div')
-    topRow.className = 'dcu-settings-nav-header-top'
-
-    const backBtn = document.createElement('button')
-    backBtn.type = 'button'
-    backBtn.className = 'dcu-settings-back-btn'
-    backBtn.setAttribute('aria-label', backText)
-    backBtn.setAttribute('title', backText)
-    backBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>'
-    backBtn.onclick = () => {
-      const closeBtn = panelEl.querySelector<HTMLButtonElement>('button[class*="close"]')
-      if (closeBtn) closeBtn.click()
-      else window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }))
-    }
-
-    const titleSpan = document.createElement('span')
-    titleSpan.className = 'dcu-settings-nav-header-title'
-    titleSpan.textContent = titleText
-
-    topRow.appendChild(backBtn)
-    topRow.appendChild(titleSpan)
-
-    const searchWrapper = document.createElement('div')
-    searchWrapper.className = 'dcu-settings-search-wrapper'
-    searchWrapper.innerHTML = '<svg class="dcu-settings-search-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>'
-
-    const searchInput = document.createElement('input')
-    searchInput.type = 'text'
-    searchInput.className = 'dcu-settings-search-input'
-    searchInput.placeholder = searchText
-    searchInput.setAttribute('aria-label', searchText)
-    searchInput.value = getNavSearchQuery()
-
-    const clearBtn = document.createElement('button')
-    clearBtn.type = 'button'
-    clearBtn.className = 'dcu-settings-search-clear'
-    clearBtn.setAttribute('aria-label', '清空搜索')
-    clearBtn.style.display = searchInput.value ? 'inline-flex' : 'none'
-    clearBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
-
-    searchInput.oninput = () => {
-      setNavSearchQuery(searchInput.value)
-      clearBtn.style.display = searchInput.value ? 'inline-flex' : 'none'
-    }
-    clearBtn.onclick = () => {
-      searchInput.value = ''
-      setNavSearchQuery('')
-      clearBtn.style.display = 'none'
-      searchInput.focus()
-    }
-
-    searchWrapper.appendChild(searchInput)
-    searchWrapper.appendChild(clearBtn)
-
-    headerRoot.appendChild(topRow)
-    headerRoot.appendChild(searchWrapper)
+    render(React.createElement(SettingsNavHeader), headerRoot)
     navHeader.appendChild(headerRoot)
 
     cleanHeader = () => {
+      unmountComponentAtNode(headerRoot)
       headerRoot.remove()
       originalChildren.forEach(child => {
         if (child instanceof HTMLElement) child.style.removeProperty('display')

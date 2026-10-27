@@ -1,10 +1,20 @@
 import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { useMemo } from 'react'
 import { CODEX_UI_API_ENDPOINTS } from '../../business-api.ts'
 import { NS } from '../locales.ts'
-import { currentSessionId } from '../session-host.ts'
 import { registerInputHistory } from './InputHistoryDock.tsx'
+
+function currentSessionId(state?: { current?: string; byId?: Record<string, { id?: string; retainedBy?: { mainView?: number } }> }): string | undefined {
+  if (!state) return undefined
+  if (typeof state.current === 'string' && state.current !== '') return state.current
+  const byId = state.byId ?? {}
+  for (const [id, row] of Object.entries(byId)) {
+    if (row && (row.retainedBy?.mainView ?? 0) > 0) return row.id?.trim() || id
+  }
+  return undefined
+}
 import { initializeComposerWidth, observeHeroWidthHandles } from './composer-width.ts'
 import { observeComposerToolMenus, COMPOSER_TOOL_MENU_STYLE } from './composer-tool-menus.ts'
 import { NewConversationSuggestions } from './NewConversationSuggestions.tsx'

@@ -157,6 +157,15 @@ test('桌面端顶栏避让：声明顶栏位移且不得存在遮挡顶部操�
   expect(SETTINGS_SKIN_CSS).not.toContain('[data-shortcut-modal="settings"]::after')
 })
 
+test('设置顶部搜索框对齐宿主原生 Input 规范与拉平布局', () => {
+  // 不得手绘清除按钮
+  expect(SETTINGS_SKIN_CSS).not.toContain('.dcu-settings-search-clear')
+  // 标题栏不得内缩 2px，必须拉平基线
+  expect(SETTINGS_SKIN_CSS).toContain('.dcu-settings-nav-header-top {\n  display: flex !important;\n  align-items: center !important;\n  gap: 10px !important;\n  height: 28px !important;\n  padding: 0 !important;\n}')
+  // 必须使用宿主原生 Input 的圆角 token
+  expect(SETTINGS_SKIN_CSS).toContain('var(--dsw-radius-md')
+})
+
 test('同包独立子组件契约：cordis.patch.yml 与 package.json 声明 settings-skin', () => {
   const patch = readFileSync('cordis.patch.yml', 'utf8')
   expect(patch).toMatch(/id:\s*codex-ui-settings-skin\s+name:\s*'@michengai\/dsh-codex-ui\/settings-skin'/)

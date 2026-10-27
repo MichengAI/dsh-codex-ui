@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url)
 const host = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-conversation/client'), 'utf8')
 const css = host.match(/const css\$1 = ("(?:[^"\\]|\\.)*");\s*const tagId\$1 = "@deepseek-ai\/dsh-client-ui-conversation\/InputBar.module.css"/)?.[1]
 const classes = host.match(/var InputBar_module_css_default = (\{[\s\S]*?\});/)?.[1]
-const skin = readFileSync('src/client/CodexSidebar.tsx', 'utf8').match(/const stylesheet = `([\s\S]*?)`/)?.[1]
+const skin = readFileSync('src/client/composer/new-conversation-style.ts', 'utf8').match(/NEW_CONVERSATION_STYLE = `([\s\S]*?)`/)?.[1]
 assert.ok(css && classes && skin, '宿主输入框锚点变化，需要重新核对适配')
 const c = JSON.parse(classes)
 const browser = await chromium.launch({ headless: true })

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { Context } from '@deepseek-ai/cordis'
 import { SlotCore, type PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import { expect, test, vi } from 'vitest'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({ ConnectionIndicator: () => null }))

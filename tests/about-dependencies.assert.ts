@@ -7,7 +7,6 @@ const aboutPath = new URL('../src/client/AboutSection.tsx', import.meta.url)
 assert.equal(existsSync(aboutPath), true, '必须提供设置内的关于页面')
 
 const client = readFileSync(new URL('../src/client/index.ts', import.meta.url), 'utf8')
-const sidebar = readFileSync(new URL('../src/client/CodexSidebar.tsx', import.meta.url), 'utf8')
 const host = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8')
 const dependencies = readFileSync(new URL('../src/dependencies.ts', import.meta.url), 'utf8')
 const about = readFileSync(aboutPath, 'utf8')
@@ -132,9 +131,7 @@ assert.match(manager, /updatableDependencyIds/, '批量操作必须选择未安�
 assert.match(manager, /runtime\.desktopPnpm === undefined && requestHotUpdate\(\)/, '仅旧 Host 在登记完全部版本后请求一次热更新，Desktop 必须先执行宿主安装')
 assert.match(about, /about\.feature\.search/, '关于页必须列出全局搜索能力')
 assert.match(about, /about\.feature\.navigator/, '关于页必须列出会话轮次导航能力')
-assert.match(sidebar, /selectSection\(t\('about\.nav'\)\)/, '缺失依赖的侧栏入口必须跳转关于页面')
 
 assert.match(locales, /about\.dependency\.im/, '关于页必须提供 IM 插件名称')
 assert.match(locales, /about\.dependency\.schedule/, '关于页必须提供定时任务插件名称')
 assert.match(locales, /about\.dependency\.market/, '关于页必须提供插件市场名称')
-assert.match(locales, /sidebar\.marketplace/, '插件入口必须认识市场分区标题')

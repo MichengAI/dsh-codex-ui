@@ -7,11 +7,9 @@ import { Context } from '@deepseek-ai/cordis'
 import { HostConnectionService } from '@deepseek-ai/dsh-client-connection'
 
 const dependenciesPath = '/api/dsh-codex-ui/dependencies'
-const preferencesPath = '/api/dsh-codex-ui/preferences'
 
 const expectedPaths = [
   dependenciesPath,
-  preferencesPath,
 ]
 const oldPrefix = '/api/michengai/codex-ui/'
 
@@ -116,7 +114,6 @@ try {
 
   for (const [path, method] of [
     [dependenciesPath, 'GET'],
-    [preferencesPath, 'GET'],
   ] as const) {
     const response = await invoke(path, method)
     assert.equal(response.status, 401, `${path} 必须拒绝未登录请求`)
@@ -139,8 +136,6 @@ try {
   assert.match(authenticationWarnings.at(-1) ?? '', /认证/)
   authenticationError = undefined
   rejection = undefined
-  const saved = await invoke(preferencesPath, 'PUT', [JSON.stringify({ pinnedWorkspaceIds: [], workspaceGroups: [] })])
-  assert.equal(saved.status, 200, '宿主已认证的外部 Origin 不应再被旧 loopback-only 判断拒绝')
 
   // 使用锁文件中的真实宿主信任检查，仅将登录层固定为已登录，证明跨站拒绝不依赖 401。
   const hostContext = new Context()
@@ -157,7 +152,7 @@ try {
       { origin: 'null' },
       { host: 'evil.example', origin: 'https://evil.example' },
     ]) {
-      for (const [path, method] of [[`${dependenciesPath}?action=update-all`, 'POST'], [preferencesPath, 'PUT']] as const) {
+      for (const [path, method] of [[`${dependenciesPath}?action=update-all`, 'POST']] as const) {
         let bodyRead = false
         const response: ResponseRecorder = {
           writeHead(status) { response.status = status },

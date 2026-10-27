@@ -1,19 +1,12 @@
 import { describe, expect, test } from 'vitest'
 import { en, zh, type CodexUiKey } from '../src/client/locales.ts'
 import { HostActionError, installErrorText, userErrorText, UserFacingError } from '../src/client/user-error.ts'
-import { WorkspaceGroupError } from '../src/workspace-groups.ts'
 
 function translator(dictionary: Record<CodexUiKey, string>) {
   return ((key: CodexUiKey) => dictionary[key]) as never
 }
 
 describe('用户错误本地化', () => {
-  test('按稳定错误码映射分组错误，不依赖诊断文案', () => {
-    const error = new WorkspaceGroupError('group-missing', '诊断文案已经变化')
-    expect(userErrorText(error, translator(zh))).toBe('目标分组不存在。')
-    expect(userErrorText(error, translator(en))).toBe('The target group no longer exists.')
-  })
-
   test('按 Host 业务错误码和操作类型提供明确提示', () => {
     const titleInvalid = {
       code: 'session/title-invalid',

@@ -35,7 +35,7 @@ const fishDimensions = Object.fromEntries(fishViewBox.properties.map(property =>
 }))
 assert.ok(fishDimensions.width > 0 && fishDimensions.height > 0)
 const fish = renderToStaticMarkup(createElement('svg', { className: h.fish, width: 34, height: 34 * fishDimensions.height / fishDimensions.width, viewBox: `0 0 ${fishDimensions.width} ${fishDimensions.height}`, fill: 'none', 'aria-hidden': true }, createElement('path', { d: fishPath.text, fill: 'currentColor' })))
-const skin = readFileSync('src/client/CodexSidebar.tsx', 'utf8').match(/const stylesheet = `([\s\S]*?)`/)[1]
+const skin = readFileSync('src/client/composer/new-conversation-style.ts', 'utf8').match(/NEW_CONVERSATION_STYLE = `([\s\S]*?)`/)?.[1]
 const heroSkin = readFileSync('src/client/composer/new-conversation-style.ts', 'utf8').match(/NEW_CONVERSATION_STYLE = `([\s\S]*?)`/)[1]
 const browser = await chromium.launch({ headless: true })
 try {

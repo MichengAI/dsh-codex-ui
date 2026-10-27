@@ -1,16 +1,8 @@
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { NS, type CodexUiKey } from './locales.ts'
 import { businessRequestErrorKey } from './business-request-error.ts'
-import { WorkspaceGroupError, type WorkspaceGroupErrorCode } from '../workspace-groups.ts'
 
 type Translator = TranslateNS<typeof NS>
-
-const WORKSPACE_GROUP_ERROR_KEYS: Readonly<Record<WorkspaceGroupErrorCode, CodexUiKey>> = {
-  'group-invalid': 'errors.groupInvalid',
-  'workspace-invalid': 'errors.workspaceInvalid',
-  'group-missing': 'errors.groupMissing',
-  'order-anchor-missing': 'errors.orderAnchorMissing',
-}
 
 export type HostAction = 'rename' | 'delete' | 'archive' | 'fork'
 
@@ -98,7 +90,6 @@ export function userErrorText(error: unknown, t: Translator): string {
   const requestKey = businessRequestErrorKey(error)
   if (requestKey !== undefined) return t(requestKey)
   if (error instanceof UserFacingError) return error.message
-  if (error instanceof WorkspaceGroupError) return t(WORKSPACE_GROUP_ERROR_KEYS[error.code])
   if (error instanceof HostActionError) return t(hostActionErrorKey(error))
   return t('errors.generic')
 }

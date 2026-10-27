@@ -28,10 +28,6 @@ for (const [key, value] of Object.entries(en)) {
   assert.deepEqual(enParams, zhParams, `中英文词典 ${key} 的占位符必须一致`)
 }
 
-assert.equal(en['time.justNow'], 'Just now')
-assert.equal(en['time.justNowShort'], 'now')
-assert.equal(zh['time.justNow'], '刚刚')
-assert.equal(zh['time.justNowShort'], '刚刚')
 assert.doesNotMatch(clientIndex, /throw new Error\('[^']*[㐀-鿿][^']*'\)/, '示例 Prompt 错误不得硬编码中文')
 const sessionTitleProvider = readFileSync(join(srcRoot, 'session-title-provider.ts'), 'utf8')
 assert.doesNotMatch(sessionTitleProvider, /SYSTEM_PROMPT|类型必须是其中一个|根据这条用户消息/, '会话自动命名提示词不得硬编码中文，必须走 locale 词典')

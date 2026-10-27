@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Search, X } from 'lucide-react'
+import { ArrowLeft, Search } from 'lucide-react'
+import { Input } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { NS } from '../locales.ts'
+import { zh, en, NS } from '../locales.ts'
 
 export type SettingsSearchListener = (query: string) => void
 
@@ -37,12 +38,24 @@ export function subscribeNavSearch(fn: SettingsSearchListener): () => void {
   return () => { listeners.delete(fn) }
 }
 
-export function SettingsNavHeader({ t }: PropsRuntime<'settings.header'> & PropsLocale<typeof NS>) {
+export type SettingsNavHeaderProps = Partial<PropsRuntime<'settings.header'>> & Partial<PropsLocale<typeof NS>> & {
+  t?: (key: string) => string
+}
+
+export function SettingsNavHeader(props: SettingsNavHeaderProps = {}) {
   const [enabled, setEnabled] = useState(isSkinEnabled)
   const [query, setQuery] = useState(currentQuery)
 
+  const isZh = typeof document !== 'undefined' && (document.documentElement.lang || 'zh').startsWith('zh')
+  const dict = isZh ? zh : en
+  const t = props.t ?? ((key: string) => (dict as Record<string, string>)[key] ?? key)
+
   useEffect(() => {
     return subscribeSkinEnabledState(state => setEnabled(state))
+  }, [])
+
+  useEffect(() => {
+    return subscribeNavSearch(q => setQuery(q))
   }, [])
 
   const handleQueryChange = (val: string) => {
@@ -80,25 +93,15 @@ export function SettingsNavHeader({ t }: PropsRuntime<'settings.header'> & Props
         <span className="dcu-settings-nav-header-title">{t('settings.title')}</span>
       </div>
       <div className="dcu-settings-search-wrapper">
-        <Search size={14} className="dcu-settings-search-icon" aria-hidden="true" />
-        <input
+        <Input
           type="search"
           className="dcu-settings-search-input"
+          icon={<Search size={14} className="dcu-settings-search-icon" aria-hidden="true" />}
           placeholder={t('settings.search')}
           aria-label={t('settings.search')}
           value={query}
           onChange={e => handleQueryChange(e.target.value)}
         />
-        {query ? (
-          <button
-            type="button"
-            className="dcu-settings-search-clear"
-            aria-label="清除搜索"
-            onClick={() => handleQueryChange('')}
-          >
-            <X size={12} aria-hidden="true" />
-          </button>
-        ) : null}
       </div>
     </div>
   )
