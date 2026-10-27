@@ -1,0 +1,191 @@
+import { afterEach, expect, test, vi } from 'vitest'
+import { openSettingsSection } from '../src/client/settings-navigation.ts'
+import {
+  checkSettingsSkinEnabled,
+  installSettingsSkin,
+  uninstallSettingsSkin,
+  decorateSettingsNav,
+  SETTINGS_SKIN_CSS,
+  SETTINGS_SKIN_STYLE_ID,
+} from '../src/client/settings-skin/index.ts'
+import { classifySettingsButton } from '../src/client/settings-skin/model.ts'
+import { setNavSearchQuery } from '../src/client/settings-skin/SettingsNavHeader.tsx'
+import { readFileSync, existsSync } from 'node:fs'
+
+const removeSkin: Array<() => void> = []
+afterEach(() => { removeSkin.splice(0).forEach(remove => remove()) })
+
+test('设置侧栏快捷跳转通过官方账号菜单打开原生分区', async () => {
+  const root = document.createElement('div')
+  const trigger = document.createElement('button')
+  trigger.setAttribute('aria-haspopup', 'menu')
+  trigger.setAttribute('aria-expanded', 'false')
+  trigger.addEventListener('click', () => {
+    trigger.setAttribute('aria-expanded', 'true')
+    queueMicrotask(() => {
+      const menu = document.createElement('div')
+      menu.setAttribute('role', 'menu')
+      const settings = document.createElement('button')
+      settings.setAttribute('role', 'menuitem')
+      settings.textContent = 'Settings'
+      settings.addEventListener('click', () => {
+        const overlay = document.createElement('div')
+        overlay.setAttribute('role', 'presentation')
+        const panel = document.createElement('div')
+        panel.setAttribute('data-shortcut-modal', 'settings')
+        panel.setAttribute('role', 'dialog')
+        const nav = document.createElement('nav')
+        const section = document.createElement('button')
+        section.textContent = 'General'
+        section.addEventListener('click', () => { section.setAttribute('aria-current', 'true') })
+        nav.append(section)
+        panel.append(nav)
+        overlay.append(panel)
+        document.body.append(overlay)
+        menu.remove()
+      })
+      menu.append(settings)
+      document.body.append(menu)
+    })
+  })
+  root.append(trigger)
+  document.body.append(root)
+  const selected = vi.fn()
+  try {
+    openSettingsSection(root, 'General', undefined, selected)
+    await vi.waitFor(() => expect(document.querySelector('[data-shortcut-modal="settings"] nav button')?.getAttribute('aria-current')).toBe('true'))
+    expect(selected).toHaveBeenCalledOnce()
+  } finally {
+    root.remove()
+    document.body.querySelectorAll('[role="menu"], [role="presentation"]').forEach(node => node.remove())
+  }
+})
+
+test('设置皮肤只创建一个可清理的样式节点，且支持 uninstallSettingsSkin 彻底卸载', () => {
+  const first = installSettingsSkin(document)
+  removeSkin.push(first)
+  const style = document.getElementById(SETTINGS_SKIN_STYLE_ID)
+  expect(style?.textContent).toContain('[data-shortcut-modal="settings"]')
+  expect(document.querySelectorAll(`#${SETTINGS_SKIN_STYLE_ID}`)).toHaveLength(1)
+  const second = installSettingsSkin(document)
+  removeSkin.push(second)
+  expect(document.querySelectorAll(`#${SETTINGS_SKIN_STYLE_ID}`)).toHaveLength(1)
+  uninstallSettingsSkin(document)
+  expect(document.getElementById(SETTINGS_SKIN_STYLE_ID)).toBeNull()
+})
+
+test('设置皮肤样式遵循 1:1 Codex 全屏工作台与定宽居中规范', () => {
+  expect(SETTINGS_SKIN_CSS).toContain('width: 100vw !important')
+  expect(SETTINGS_SKIN_CSS).toContain('height: 100vh !important')
+  expect(SETTINGS_SKIN_CSS).toContain('border-radius: 0 !important')
+  expect(SETTINGS_SKIN_CSS).toContain('max-width: 800px !important')
+  expect(SETTINGS_SKIN_CSS).toContain('margin-inline: auto !important')
+  expect(SETTINGS_SKIN_CSS).toContain('#18181b')
+})
+
+test('设置菜单无侵入已知项分组模型：仅置顶个人与记录，其余不指定全部自动归入集成组', () => {
+  expect(classifySettingsButton('账号与余额')).toBe('personal')
+  expect(classifySettingsButton('通用设置')).toBe('personal')
+  expect(classifySettingsButton('侧边卡片')).toBe('integrations')
+  expect(classifySettingsButton('模型')).toBe('integrations')
+  expect(classifySettingsButton('智能体预设')).toBe('integrations')
+  expect(classifySettingsButton('插件管理')).toBe('integrations')
+  expect(classifySettingsButton('内置插件')).toBe('integrations')
+  expect(classifySettingsButton('任意新安装的第三方生态工具')).toBe('integrations')
+  expect(classifySettingsButton('归档会话')).toBe('records')
+  expect(classifySettingsButton('关于 Codex UI')).toBe('records')
+})
+
+test('动态导航装饰器：宿主原生生成按钮自动添加 order 分组，且搜索过滤联动', () => {
+  const panel = document.createElement('div')
+  panel.setAttribute('data-shortcut-modal', 'settings')
+  const nav = document.createElement('nav')
+  const header = document.createElement('div')
+  const navList = document.createElement('div')
+
+  // 宿主原生生成 3 个按钮（不写死，纯由宿主追加）
+  const btn1 = document.createElement('button')
+  btn1.innerHTML = '<span>通用</span>'
+  const btn2 = document.createElement('button')
+  btn2.innerHTML = '<span>模型服务</span>'
+  const btn3 = document.createElement('button')
+  btn3.innerHTML = '<span>归档记录</span>'
+  navList.append(btn1, btn2, btn3)
+  nav.append(header, navList)
+  panel.append(nav)
+  document.body.append(panel)
+
+  const cleanup = decorateSettingsNav(panel)
+  try {
+    // 检查是否自动注入了 3 个分组标题
+    const headers = navList.querySelectorAll('.dcu-settings-nav-group-header')
+    expect(headers).toHaveLength(3)
+
+    // 检查宿主按钮是否被分类且赋予 CSS order
+    expect(btn1.getAttribute('data-dcu-group')).toBe('personal')
+    expect(btn2.getAttribute('data-dcu-group')).toBe('integrations')
+    expect(btn3.getAttribute('data-dcu-group')).toBe('records')
+    expect(Number(btn1.style.order)).toBeLessThan(Number(btn2.style.order))
+    expect(Number(btn2.style.order)).toBeLessThan(Number(btn3.style.order))
+
+    // 搜索过滤：输入 "模型"
+    setNavSearchQuery('模型')
+    expect(btn1.style.display).toBe('none')
+    expect(btn2.style.display).not.toBe('none')
+    expect(btn3.style.display).toBe('none')
+
+    // 检查分组标题：仅集成组可见
+    const personalHeader = navList.querySelector('[data-dcu-group-header="personal"]') as HTMLElement
+    const integrationsHeader = navList.querySelector('[data-dcu-group-header="integrations"]') as HTMLElement
+    expect(personalHeader.style.display).toBe('none')
+    expect(integrationsHeader.style.display).toBe('')
+
+    // 清空搜索
+    setNavSearchQuery('')
+    expect(btn1.style.display).toBe('')
+    expect(btn2.style.display).toBe('')
+    expect(personalHeader.style.display).toBe('')
+  } finally {
+    cleanup()
+    panel.remove()
+  }
+})
+
+test('桌面端顶栏避让：声明顶栏位移且不得存在遮挡顶部操作栏的 ::after 伪元素', () => {
+  expect(SETTINGS_SKIN_CSS).toContain('html[data-windows-titlebar]:not([data-fullscreen])')
+  expect(SETTINGS_SKIN_CSS).toContain('var(--dsh-windows-titlebar-height')
+  expect(SETTINGS_SKIN_CSS).not.toContain('[data-shortcut-modal="settings"]::after')
+})
+
+test('同包独立子组件契约：cordis.patch.yml 与 package.json 声明 settings-skin', () => {
+  const patch = readFileSync('cordis.patch.yml', 'utf8')
+  expect(patch).toMatch(/id:\s*codex-ui-settings-skin\s+name:\s*'@michengai\/dsh-codex-ui\/settings-skin'/)
+  const pkg = JSON.parse(readFileSync('package.json', 'utf8'))
+  expect(pkg.exports['./settings-skin']).toBeDefined()
+  expect(pkg.exports['./settings-skin/locale/*.json']).toBeDefined()
+  expect(existsSync('locale/settings-skin/zh.json')).toBe(true)
+  expect(existsSync('locale/settings-skin/en.json')).toBe(true)
+  expect(existsSync('src/settings-skin-plugin.ts')).toBe(true)
+})
+
+test('子组件启用状态检测 checkSettingsSkinEnabled 支持服务端探测与停用响应', async () => {
+  const originalFetch = globalThis.fetch
+  try {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ enabled: true }),
+    }) as unknown as typeof fetch
+    expect(await checkSettingsSkinEnabled()).toBe(true)
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+    }) as unknown as typeof fetch
+    expect(await checkSettingsSkinEnabled()).toBe(false)
+
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network offline or disabled'))
+    expect(await checkSettingsSkinEnabled()).toBe(false)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})

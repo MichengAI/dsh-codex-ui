@@ -7,7 +7,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { InputHistory } from './input-history.ts'
 import { hasDraftAttachments } from './draft-attachments.ts'
 import { bindHistoryKeys, findComposer } from './input-history-keyboard.ts'
-import { NS } from './locales.ts'
+import { NS } from '../locales.ts'
 
 export function InputHistoryHint({ t }: PropsLocale<typeof NS>) {
   // 跟随宿主占位元素的显隐和位置，避免占用工具栏或覆盖实际输入。
@@ -97,7 +97,7 @@ export function InputHistoryDock({ ctx, sessionId, history, seen }: HistoryDockP
   return <span ref={anchor} hidden />
 }
 
-export function registerInputHistory(ctx: Context): void {
+export function registerInputHistory(ctx: Context): () => void {
   let storage: Storage | undefined
   try { storage = window.localStorage } catch { console.warn('[michengai-codex-ui] 浏览器存储不可用，使用内存输入历史。') }
   const history = new InputHistory(storage)
@@ -105,10 +105,14 @@ export function registerInputHistory(ctx: Context): void {
   function Dock(props: PropsRuntime<'conversation.input.dock'>) {
     return <InputHistoryDock ctx={ctx} sessionId={props.session.sessionId} history={history} seen={seen} />
   }
-  ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
+  const unregisterDock = ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
     name: 'conversation.input.dock', id: 'codex-ui-input-history', order: -100,
   }, Dock))
-  ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
+  const unregisterHint = ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
     name: 'conversation.input.dock', id: 'codex-ui-input-history-hint', order: -100, locale: NS,
   }, InputHistoryHint))
+  return () => {
+    unregisterDock()
+    unregisterHint()
+  }
 }

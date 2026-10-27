@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Codex Composer enhancements",
+    "description": "Terminal-style input history (↑/↓), composer width handles, and suggestion cards."
+  }
+}

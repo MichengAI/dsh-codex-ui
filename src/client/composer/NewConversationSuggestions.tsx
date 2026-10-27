@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore, type CSSProperties } from 'r
 import { createPortal } from 'react-dom'
 import { Telescope, Hammer, ScanLine, Bug } from 'lucide-react'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
-import { NS } from './locales.ts'
+import { NS } from '../locales.ts'
 import type { PrefillResult, DraftPresenceSource } from './new-conversation-draft.ts'
 export type { PrefillResult } from './new-conversation-draft.ts'
 
