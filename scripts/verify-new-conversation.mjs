@@ -11,7 +11,7 @@ import ts from 'typescript'
 const require = createRequire(import.meta.url)
 const { createElement } = require('react')
 const { renderToStaticMarkup } = require('react-dom/server')
-const { SuggestionCards } = await tsImport('../src/client/NewConversationSuggestions.tsx', import.meta.url)
+const { SuggestionCards } = await tsImport('../src/client/composer/NewConversationSuggestions.tsx', import.meta.url)
 const { zh } = await tsImport('../src/client/locales.ts', import.meta.url)
 const cards = renderToStaticMarkup(createElement(SuggestionCards, { t: key => zh[key] }))
 const host = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-conversation/client'), 'utf8')
@@ -36,7 +36,7 @@ const fishDimensions = Object.fromEntries(fishViewBox.properties.map(property =>
 assert.ok(fishDimensions.width > 0 && fishDimensions.height > 0)
 const fish = renderToStaticMarkup(createElement('svg', { className: h.fish, width: 34, height: 34 * fishDimensions.height / fishDimensions.width, viewBox: `0 0 ${fishDimensions.width} ${fishDimensions.height}`, fill: 'none', 'aria-hidden': true }, createElement('path', { d: fishPath.text, fill: 'currentColor' })))
 const skin = readFileSync('src/client/CodexSidebar.tsx', 'utf8').match(/const stylesheet = `([\s\S]*?)`/)[1]
-const heroSkin = readFileSync('src/client/new-conversation-style.ts', 'utf8').match(/NEW_CONVERSATION_STYLE = `([\s\S]*?)`/)[1]
+const heroSkin = readFileSync('src/client/composer/new-conversation-style.ts', 'utf8').match(/NEW_CONVERSATION_STYLE = `([\s\S]*?)`/)[1]
 const browser = await chromium.launch({ headless: true })
 try {
   const page = await browser.newPage()

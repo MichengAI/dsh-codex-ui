@@ -1,6 +1,7 @@
-import { CHANNEL_SESSION_PREFIX } from './client/channel-api.ts'
 import { en, zh, type CodexUiKey } from './client/locales.ts'
-import { AUTOMATION_SESSION_PREFIX } from './client/schedule-sessions.ts'
+
+const AUTOMATION_SESSION_PREFIX = 'dsh-automation-session-'
+const CHANNEL_SESSION_PREFIX = 'im:'
 
 export const SESSION_TITLE_KINDS = ['feature', 'design', 'fix', 'optimize', 'release', 'explore', 'docs', 'research'] as const
 export type SessionTitleKind = (typeof SESSION_TITLE_KINDS)[number]

@@ -1,8 +1,8 @@
 import { createRequire } from 'node:module'
 import { act, createElement, type ReactNode } from 'react'
 import { expect, test, vi } from 'vitest'
-import { NewConversationSuggestions } from '../src/client/NewConversationSuggestions.tsx'
-import { prefillNewConversation, createDraftPresenceSource } from '../src/client/new-conversation-draft.ts'
+import { NewConversationSuggestions } from '../src/client/composer/NewConversationSuggestions.tsx'
+import { prefillNewConversation, createDraftPresenceSource } from '../src/client/composer/new-conversation-draft.ts'
 import { zh } from '../src/client/locales.ts'
 
 const { createRoot } = createRequire(import.meta.url)('react-dom/client') as { createRoot: (el: HTMLElement) => { render: (node: ReactNode) => void; unmount: () => void } }

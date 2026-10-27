@@ -6,10 +6,8 @@ import { authorizedExplorerWorkspacePath } from './explorer-path-policy.ts'
 import { hostServices } from './host-services.ts'
 import { ForegroundExplorer } from './native-explorer.ts'
 import { moveSessionToWorkspace, SessionMoveError } from './session-migration.ts'
-import { registerOnboardingSettings } from './onboarding-settings.ts'
 import { parsePinnedWorkspaceIds, parseStoredWorkspaceGroups, readWorkspacePreferences, WORKSPACE_PREFERENCES_VERSION, writeWorkspacePreferences } from './workspace-preferences.ts'
 
-const connectorsEndpoint = CODEX_UI_API_ENDPOINTS.connectors
 const dependenciesEndpoint = CODEX_UI_API_ENDPOINTS.dependencies
 const explorerEndpoint = CODEX_UI_API_ENDPOINTS.openInExplorer
 const preferencesEndpoint = CODEX_UI_API_ENDPOINTS.preferences
@@ -99,7 +97,7 @@ function authenticateBusinessRequest(
   }
 }
 
-export const inject = ['webServer', 'agents', 'tools', 'workspaceRegistry', 'sessions', 'sessionPersistence']
+export const inject = ['webServer', 'agents', 'workspaceRegistry', 'sessions', 'sessionPersistence']
 
 function sessionMoveStatus(error: unknown): number {
   if (!(error instanceof SessionMoveError)) return 500
@@ -137,39 +135,10 @@ function sessionMoveAuthenticationError(status: AuthenticationStatus, error: str
 
 /** 提供不泄露地址、命令和凭证的连接器目录。 */
 export function apply(ctx: Context): void {
-  // 原设置壳停用后，继续登记引导设置，但不加载可能被向上解析到的旧版 settings 包。
-  registerOnboardingSettings(ctx)
   const host = hostServices(ctx)
   ctx.effect(() => {
     const foregroundExplorer = new ForegroundExplorer()
     void foregroundExplorer.warmup().catch(error => ctx.logger.warn('foreground explorer warmup failed: %s', error))
-    const disposeConnectors = host.webServer.register({
-      kind: 'exact',
-      path: connectorsEndpoint,
-      handler: async (request, response) => {
-        if (!authenticateBusinessRequest(ctx, request, response)) return
-        if (request.method !== 'GET' && request.method !== 'HEAD') { response.writeHead(405); response.end(); return }
-        try {
-          const sessionId = new URL(request.url ?? '/', 'http://localhost').searchParams.get('sessionId')
-          const scope = sessionId === null ? undefined : host.agents.get(sessionId)
-          const connectors = new Map<string, { name: string; description: string }[]>()
-          for (const tool of host.tools.schemas(scope)) {
-            const match = /^mcp__([A-Za-z0-9_-]+?)__(.+)$/.exec(tool.name)
-            if (match === null) continue
-            const [, serverName, toolName] = match
-            const tools = connectors.get(serverName) ?? []
-            tools.push({ name: toolName, description: tool.description ?? '' })
-            connectors.set(serverName, tools)
-          }
-          const payload = [...connectors].sort(([a], [b]) => a.localeCompare(b)).map(([name, tools]) => ({ name, tools }))
-          response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-          response.end(request.method === 'HEAD' ? undefined : JSON.stringify({ connectors: payload }))
-        } catch {
-          response.writeHead(503, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-          response.end(JSON.stringify({ error: '连接器目录暂不可用。' }))
-        }
-      },
-    })
     const disposeDependencies = host.webServer.register({
       kind: 'exact',
       path: dependenciesEndpoint,
@@ -357,7 +326,6 @@ export function apply(ctx: Context): void {
     return () => {
       disposeDependencyInstaller()
       foregroundExplorer.dispose()
-      disposeConnectors()
       disposeDependencies()
       disposeExplorer()
       disposePreferences()

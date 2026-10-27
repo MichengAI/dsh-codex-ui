@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HISTORY_KEY, HistoryCursor, InputHistory } from '../src/client/input-history.ts'
+import { HISTORY_KEY, HistoryCursor, InputHistory } from '../src/client/composer/input-history.ts'
 
 describe('输入历史', () => {
   it('仅在没有新存储时导入旧 BTW 历史，保留旧键且后续仅写 Codex UI', () => {

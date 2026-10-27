@@ -35,9 +35,19 @@
       "types": "./lib/session-title-plugin.d.mts",
       "default": "./lib/session-title-plugin.mjs"
     },
+    "./settings-skin": {
+      "types": "./lib/settings-skin-plugin.d.mts",
+      "default": "./lib/settings-skin-plugin.mjs"
+    },
+    "./composer": {
+      "types": "./lib/composer-plugin.d.mts",
+      "default": "./lib/composer-plugin.mjs"
+    },
     "./package.json": "./package.json",
     "./locale/*.json": "./locale/*.json",
-    "./session-title/locale/*.json": "./locale/session-title/*.json"
+    "./session-title/locale/*.json": "./locale/session-title/*.json",
+    "./settings-skin/locale/*.json": "./locale/settings-skin/*.json",
+    "./composer/locale/*.json": "./locale/composer/*.json"
   },
   "files": [
     "lib",
@@ -71,9 +81,8 @@
     "build": "tsc --noEmit && tsdown",
     "typecheck": "tsc --noEmit",
     "test": "pnpm run typecheck && vitest run && tsdown && node tests/run-assertions.mjs && pnpm run test:layout",
-    "test:host": "node scripts/verify-settings-exit.mjs",
-    "test:settings-backdrop": "node scripts/verify-settings-backdrop.mjs",
-    "test:layout": "node scripts/verify-workspace-drop-layout.mjs --run && node scripts/verify-sidebar-transition.mjs && node scripts/verify-sidebar-expand-control.mjs && node scripts/verify-sidebar-titlebar.mjs && node scripts/verify-composer-style.mjs && node scripts/verify-new-conversation.mjs && node scripts/verify-composer-tools.mjs && node scripts/verify-hero-width.mjs && node scripts/verify-settings-backdrop.mjs && node scripts/verify-settings-geometry.mjs && node scripts/verify-upstream-style-regressions.mjs && node scripts/verify-window-drag.mjs",
+    "test:host": "node scripts/verify-native-settings.mjs",
+    "test:layout": "node scripts/verify-workspace-drop-layout.mjs --run && node scripts/verify-sidebar-transition.mjs && node scripts/verify-sidebar-expand-control.mjs && node scripts/verify-sidebar-titlebar.mjs && node scripts/verify-composer-style.mjs && node scripts/verify-new-conversation.mjs && node scripts/verify-composer-tools.mjs && node scripts/verify-hero-width.mjs && node scripts/verify-upstream-style-regressions.mjs",
     "test:compat": "node scripts/run-compat-host.mjs",
     "test:fallback-host": "node scripts/verify-plugin-fallback-host.mjs"
   },

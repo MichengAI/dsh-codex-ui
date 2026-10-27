@@ -4,7 +4,7 @@ import { chromium } from 'playwright'
 import ts from 'typescript'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-const source = readFileSync('src/client/composer-tool-menus.ts', 'utf8').replaceAll('export ', '')
+const source = readFileSync('src/client/composer/composer-tool-menus.ts', 'utf8').replaceAll('export ', '')
 const script = ts.transpileModule(source + '\nwindow.menuStyle = COMPOSER_TOOL_MENU_STYLE; window.observeMenus = observeComposerToolMenus;', { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText
 const browser = await chromium.launch({ headless: true })
 try {

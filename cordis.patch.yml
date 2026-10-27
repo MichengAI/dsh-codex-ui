@@ -1,7 +1,11 @@
 # 保留官方侧栏与设置壳，仅覆盖客户端渲染，停用后自动回退。
 # 标题提供方的回退单独管理。
 - insert:
-    - id: michengai-codex-ui-session-title
+    - id: codex-ui-session-title
       name: '@michengai/dsh-codex-ui/session-title'
+    - id: codex-ui-settings-skin
+      name: '@michengai/dsh-codex-ui/settings-skin'
+    - id: codex-ui-composer
+      name: '@michengai/dsh-codex-ui/composer'
     - id: codex-ui
       name: '@michengai/dsh-codex-ui'

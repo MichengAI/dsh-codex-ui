@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { initializeComposerWidth, COMPOSER_MIN_WIDTH, COMPOSER_EDGE_BUDGET } from '../src/client/composer-width.ts'
+import { initializeComposerWidth, COMPOSER_MIN_WIDTH, COMPOSER_EDGE_BUDGET } from '../src/client/composer/composer-width.ts'
 
 describe('输入区初始宽度', () => {
   for (const initial of [null, '', 'invalid', '-1']) {

@@ -1,6 +1,3 @@
-import { isChannelSession } from './channel-api.ts'
-import { isScheduleSession } from './schedule-sessions.ts'
-
 type SessionSummary = {
   id: string
   origin?: string | undefined
@@ -9,11 +6,11 @@ type SessionSummary = {
   displayTitle?: string | undefined
 }
 
-/** 任务树只保留普通会话，频道和定时会话各走自己的页签。 */
+/** 任务树只保留普通会话，后台或扩展类会话不混入工作区列表。 */
 export function isTaskSession(session: SessionSummary): boolean {
   if (session.origin === 'subagent' || session.origin === 'im' || session.blank === true) return false
-  if (isChannelSession(session.id)) return false
-  return !isScheduleSession(session.id, session.displayTitle ?? session.title ?? '')
+  if (session.id.startsWith('im:') || session.id.startsWith('dsh-automation-session-')) return false
+  return true
 }
 
 /** 安装包里项目会话列表的 maxItems，常量 rNc。 */

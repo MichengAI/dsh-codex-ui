@@ -27,7 +27,7 @@ const manifest = { name: 'dcu-fallback-isolated', private: true, dsh: { profile:
 await writeFile(path.join(profile, 'package.json'), JSON.stringify(manifest, null, 2), 'utf8')
 const patchPath = path.join(profile, 'cordis.patch.yml')
 const setEnabled = async enabled => {
-  await writeFile(patchPath, `- id: locale\n  config:\n    preference: zh\n- id: codex-ui\n  disabled: ${!enabled}\n- id: michengai-codex-ui-session-title\n  disabled: ${!enabled}\n`, 'utf8')
+  await writeFile(patchPath, `- id: locale\n  config:\n    preference: zh\n- id: codex-ui\n  disabled: ${!enabled}\n- id: codex-ui-session-title\n  disabled: ${!enabled}\n- id: codex-ui-settings-skin\n  disabled: ${!enabled}\n- id: codex-ui-composer\n  disabled: ${!enabled}\n`, 'utf8')
 }
 await setEnabled(true)
 const env = { ...process.env, DSH_HOME: home }
@@ -95,11 +95,12 @@ try {
     assert.ok(enabled.registrations.some(row => row.priority === 0), '启用时官方侧栏必须保留注册')
     assert.ok(enabled.registrations.some(row => row.priority === -1), '启用时 Codex 必须覆盖官方')
     if (cycle === 0) {
-      await page.getByRole('button', { name: '设置', exact: true }).click()
-      await page.locator('[data-dcu-settings-page]').waitFor({ timeout: 15000 })
-      assert.ok(await page.locator('[data-dcu-settings-page]').getByText('常规', { exact: true }).count() > 0, '启用时自定义设置页必须能渲染官方设置贡献')
-      await page.locator('.dcu-settings-back').click()
-      await page.locator('[data-dcu-settings-page]').waitFor({ state: 'detached' })
+      await page.keyboard.press('Control+,')
+      const settings = page.locator('[data-shortcut-modal="settings"]')
+      await settings.waitFor({ timeout: 15000 })
+      assert.ok(await settings.locator('nav').count() > 0, '启用时必须保留官方设置导航')
+      await page.keyboard.press('Escape')
+      await settings.waitFor({ state: 'detached' })
     }
     await setEnabled(false)
     await page.locator('.dcu-root').waitFor({ state: 'detached', timeout: 30000 })

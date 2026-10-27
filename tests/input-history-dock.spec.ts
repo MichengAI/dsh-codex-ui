@@ -3,8 +3,8 @@ import { act, createElement, type ReactNode } from 'react'
 import { afterEach, expect, test } from 'vitest'
 import type { InputState } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { SessionEventLikeEntry, SessionEventWindow, SessionLiveEventEntry } from '@deepseek-ai/dsh-api-session-controller/client'
-import { InputHistoryDock } from '../src/client/InputHistoryDock.tsx'
-import { HISTORY_KEY, InputHistory } from '../src/client/input-history.ts'
+import { InputHistoryDock, registerInputHistory } from '../src/client/composer/InputHistoryDock.tsx'
+import { HISTORY_KEY, InputHistory } from '../src/client/composer/input-history.ts'
 
 const { createRoot } = createRequire(import.meta.url)('react-dom/client') as {
   createRoot(container: Element): { render(node: ReactNode): void; unmount(): void }

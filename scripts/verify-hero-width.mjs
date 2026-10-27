@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
 import ts from 'typescript'
-const source = readFileSync('src/client/composer-width.ts', 'utf8').replaceAll('export ', '')
+const source = readFileSync('src/client/composer/composer-width.ts', 'utf8').replaceAll('export ', '')
 const script = ts.transpileModule(source + '\nwindow.startHandles=observeHeroWidthHandles;', { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText
 const browser = await chromium.launch()
 try {

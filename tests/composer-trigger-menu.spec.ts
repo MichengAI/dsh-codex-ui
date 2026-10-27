@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { expect, test, vi } from 'vitest'
-import { observeComposerToolMenus } from '../src/client/composer-tool-menus.ts'
+import { observeComposerToolMenus } from '../src/client/composer/composer-tool-menus.ts'
 
 test('点击指令按钮后，不把 @ 建议菜单的内部列表当作工具弹窗', async () => {
   document.body.innerHTML = '<section data-conversation-scroll><div data-composer-card><button aria-haspopup="listbox">指令</button></div></section>'

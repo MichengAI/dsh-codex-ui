@@ -40,7 +40,7 @@ try {
     const visualIds = (visual?.sessionIds ?? []).map(String)
     const sessionId = typeof current === 'string' && current !== '' ? current : visualIds[0]
     if (typeof sessionId !== 'string' || sessionId === '') {
-      throw new Error('隔离宿主没有可移动会话。请先跑 verify-compat-host.mjs，且 verify-settings-exit 不得清掉 current 或 visual 工作区会话。')
+      throw new Error('隔离宿主没有可移动会话。请先跑 verify-compat-host.mjs 和 verify-native-settings.mjs；不要清掉 current 或 visual 工作区会话。')
     }
     const destination = await ctx.workspaces.create({ path: targetDir })
     ctx.get('uiWorkspace').openSession(sessionId)

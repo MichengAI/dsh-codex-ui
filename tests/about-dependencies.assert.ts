@@ -35,7 +35,7 @@ assert.equal(zh['about.dependency.archive'], '归档会话')
 assert.equal(en['about.dependency.archive'], 'Archived conversations')
 
 assert.equal(locales.match(/'about\.nav': 'Codex UI'/g)?.length, 2, '设置入口的中英文文案必须统一为 Codex UI')
-assert.match(client, /id: 'about'/, '关于页必须注册为最后的设置分区')
+assert.match(client, /id: 'codex-ui'/, '关于页必须注册为最后的设置分区')
 assert.match(client, /order: Number\.MAX_SAFE_INTEGER/, '关于页必须在注册排序中保持最后')
 assert.equal(managedDependency('dsh'), undefined, '关于页不再列出或管理 DSH 运行时')
 assert.doesNotMatch(dependencies, /id: 'suite'/, '不得再把套件作为关于页安装入口')

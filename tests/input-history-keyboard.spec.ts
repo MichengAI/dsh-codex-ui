@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from 'vitest'
-import { bindHistoryKeys, findComposer } from '../src/client/input-history-keyboard.ts'
+import { bindHistoryKeys, findComposer } from '../src/client/composer/input-history-keyboard.ts'
 
 afterEach(() => document.body.replaceChildren())
 

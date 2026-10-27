@@ -6,12 +6,16 @@ import { apply, inject } from '../src/index.ts'
 import { Context } from '@deepseek-ai/cordis'
 import { HostConnectionService } from '@deepseek-ai/dsh-client-connection'
 
+const dependenciesPath = '/api/dsh-codex-ui/dependencies'
+const openExplorerPath = '/api/dsh-codex-ui/open-in-explorer'
+const preferencesPath = '/api/dsh-codex-ui/preferences'
+const sessionMovePath = '/api/dsh-codex-ui/session-move'
+
 const expectedPaths = [
-  '/api/dsh-codex-ui/connectors',
-  '/api/dsh-codex-ui/dependencies',
-  '/api/dsh-codex-ui/open-in-explorer',
-  '/api/dsh-codex-ui/preferences',
-  '/api/dsh-codex-ui/session-move',
+  dependenciesPath,
+  openExplorerPath,
+  preferencesPath,
+  sessionMovePath,
 ]
 const oldPrefix = '/api/michengai/codex-ui/'
 
@@ -115,12 +119,10 @@ try {
   assert.equal([...routes.keys()].some(path => path.startsWith(oldPrefix)), false)
 
   for (const [path, method] of [
-    [expectedPaths[0], 'GET'],
-    [expectedPaths[1], 'GET'],
-    [expectedPaths[2], 'POST'],
-    [expectedPaths[3], 'GET'],
-    [expectedPaths[4], 'POST'],
-    ...expectedPaths.slice(5).map(path => [path, 'GET'] as const),
+    [dependenciesPath, 'GET'],
+    [openExplorerPath, 'POST'],
+    [preferencesPath, 'GET'],
+    [sessionMovePath, 'POST'],
   ] as const) {
     const response = await invoke(path, method)
     assert.equal(response.status, 401, `${path} 必须拒绝未登录请求`)
@@ -130,27 +132,27 @@ try {
   assert.deepEqual((authenticatedRequests[0] as ReturnType<typeof createRequest>).headers, createRequest('GET').headers, 'Host、Origin 和其他请求头必须原样交给宿主认证')
   assert.equal((authenticatedRequests[0] as ReturnType<typeof createRequest>).url, expectedPaths[0])
 
-  const unauthorizedMove = await invoke(expectedPaths[4], 'POST')
+  const unauthorizedMove = await invoke(sessionMovePath, 'POST')
   assert.deepEqual(JSON.parse(unauthorizedMove.body ?? '{}'), { ok: false, code: 'session-move/unauthorized', error: '请先登录 DSH。' })
 
   rejection = 403
-  assert.equal((await invoke(expectedPaths[0], 'GET')).status, 403)
-  const forbiddenMove = await invoke(expectedPaths[4], 'POST')
+  assert.equal((await invoke(dependenciesPath, 'GET')).status, 403)
+  const forbiddenMove = await invoke(sessionMovePath, 'POST')
   assert.equal(JSON.parse(forbiddenMove.body ?? '{}').code, 'session-move/forbidden')
 
   connectionAvailable = false
-  assert.equal((await invoke(expectedPaths[0], 'GET')).status, 503)
-  const unavailableMove = await invoke(expectedPaths[4], 'POST')
+  assert.equal((await invoke(dependenciesPath, 'GET')).status, 503)
+  const unavailableMove = await invoke(sessionMovePath, 'POST')
   assert.equal(JSON.parse(unavailableMove.body ?? '{}').code, 'session-move/service-unavailable')
   assert.equal(authenticationWarnings.length > 0, true, '认证服务缺失必须记录服务端诊断日志')
 
   connectionAvailable = true
   authenticationError = new Error('authentication fixture failed')
-  assert.equal((await invoke(expectedPaths[0], 'GET')).status, 503)
+  assert.equal((await invoke(dependenciesPath, 'GET')).status, 503)
   assert.match(authenticationWarnings.at(-1) ?? '', /认证/)
   authenticationError = undefined
   rejection = undefined
-  const saved = await invoke(expectedPaths[3], 'PUT', [JSON.stringify({ pinnedWorkspaceIds: [], workspaceGroups: [] })])
+  const saved = await invoke(preferencesPath, 'PUT', [JSON.stringify({ pinnedWorkspaceIds: [], workspaceGroups: [] })])
   assert.equal(saved.status, 200, '宿主已认证的外部 Origin 不应再被旧 loopback-only 判断拒绝')
 
   // 使用锁文件中的真实宿主信任检查，仅将登录层固定为已登录，证明跨站拒绝不依赖 401。
@@ -168,7 +170,7 @@ try {
       { origin: 'null' },
       { host: 'evil.example', origin: 'https://evil.example' },
     ]) {
-      for (const [path, method] of [[`${expectedPaths[1]}?action=update-all`, 'POST'], [expectedPaths[3], 'PUT'], [expectedPaths[2], 'POST']] as const) {
+      for (const [path, method] of [[`${dependenciesPath}?action=update-all`, 'POST'], [preferencesPath, 'PUT'], [openExplorerPath, 'POST']] as const) {
         let bodyRead = false
         const response: ResponseRecorder = {
           writeHead(status) { response.status = status },

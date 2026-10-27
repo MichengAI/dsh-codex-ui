@@ -2,7 +2,6 @@ import { createRequire } from 'node:module'
 import { act, createElement, type ReactNode } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { AboutSection } from '../src/client/AboutSection.tsx'
-import { ConnectorsSection } from '../src/client/ConnectorsSection.tsx'
 
 const createRoot = (createRequire(import.meta.url)('react-dom/client') as {
   createRoot: (container: Element) => { render: (node: ReactNode) => void; unmount: () => void }
@@ -55,21 +54,6 @@ test.each([401, 403, 503])('依赖读取 HTTP %s 显示专属提示而非通用�
   } finally { await act(async () => { root.unmount() }) }
 })
 
-test.each([401, 403, 503])('连接器读取 HTTP %s 显示专属提示', async status => {
-  vi.stubGlobal('fetch', vi.fn(async input => new Response('', { status: input === '/mcp-connector/ui/' ? 404 : status })))
-  const container = document.createElement('div')
-  const root = createRoot(container)
-  const snapshot = { current: 'session-a', ids: [], byId: {} }
-  try {
-    await act(async () => { root.render(createElement(ConnectorsSection, {
-      sessionStore: { getSnapshot: () => snapshot, subscribe: () => () => {} } as never,
-      startPromptSession: async () => {}, t: ((key: string) => key) as never,
-    })) })
-    await flush()
-    expect(container.textContent).toContain(status === 401 ? 'errors.unauthorized' : status === 403 ? 'errors.forbidden' : 'errors.serviceUnavailable')
-  } finally { await act(async () => { root.unmount() }) }
-})
-
 test('关于页已有数据刷新失败时保留内容并显示非阻断提示', async () => {
   vi.stubGlobal('IntersectionObserver', TestIntersectionObserver)
   const fetcher = vi.fn()
@@ -99,33 +83,3 @@ test('关于页已有数据刷新失败时保留内容并显示非阻断提示',
   }
 })
 
-test('连接器市场使用 GET 探测并在成功后显示内嵌页面', async () => {
-  const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
-    return new Response('', { status: init?.method === 'HEAD' ? 405 : 200 })
-  })
-  vi.stubGlobal('fetch', fetcher)
-  const container = document.createElement('div')
-  document.body.append(container)
-  const root = createRoot(container)
-  const sessionStore = {
-    getSnapshot: () => ({ current: undefined, ids: [], byId: {} }),
-    subscribe: () => () => {},
-  }
-
-  try {
-    await act(async () => {
-      root.render(createElement(ConnectorsSection, {
-        sessionStore: sessionStore as never,
-        startPromptSession: async () => {},
-        t: ((key: string) => key) as never,
-      }))
-    })
-    await flush()
-
-    expect(fetcher).toHaveBeenCalledWith('/mcp-connector/ui/', expect.objectContaining({ method: 'GET' }))
-    expect(container.querySelector('.dcu-connector-frame')).not.toBeNull()
-  } finally {
-    await act(async () => { root.unmount() })
-    container.remove()
-  }
-})

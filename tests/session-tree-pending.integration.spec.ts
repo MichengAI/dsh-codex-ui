@@ -3,9 +3,7 @@ import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-sess
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { act, createElement, type ReactNode } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
-import { ChannelBrowser } from '../src/client/ChannelBrowser.tsx'
 import { CodexWorkspaceBrowser } from '../src/client/CodexWorkspaceBrowser.tsx'
-import { ScheduleBrowser } from '../src/client/ScheduleBrowser.tsx'
 import { WORKSPACE_GROUPS_STORAGE_KEY } from '../src/client/pinned-workspaces.ts'
 import { createWorkspaceShortcutSource } from '../src/client/workspace-shortcuts.ts'
 import type { PendingInteractionSnapshot, UseSessionPendingInteraction, UseSessionStatus } from '../src/client/session-pending.ts'
@@ -745,44 +743,6 @@ test.each([{ isComposing: true }, { keyCode: 229 }])('Host 读取失败时新建
   }
 })
 
-test('频道树从 SessionSummary 快照渲染等待审批状态', async () => {
-  const session = createSession('im:test-channel', '频道会话快照', 'approval')
-  const useSessions = createSessionStore(session)
-  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
-    groups: [{ id: 'wecom', label: '企业微信', sessions: [{ sessionId: session.id, title: '频道会话', running: true }] }],
-  }), {
-    status: 200,
-    headers: { 'content-type': 'application/json' },
-  })))
-
-  const view = await render(createElement(ChannelBrowser, { ...sessionActions, useSessions, useSessionPendingInteraction: useEmptyPendingInteractions, t } as never))
-  try {
-    expectPendingState(view.container, '频道会话', 'approval', '等待审批')
-  } finally {
-    await view.dispose()
-  }
-})
-
-test('定时树从 SessionSummary 快照渲染计划待审状态', async () => {
-  const session = createSession('dsh-automation-session-review', '2026-09-01 08:00 - 日报任务', 'plan-review')
-  const useSessions = createSessionStore(session)
-  const workspaces = { archivedSessionIds: [] }
-  const useWorkspaces = <T,>(selector: (snapshot: typeof workspaces) => T): T => selector(workspaces)
-
-  const view = await render(createElement(ScheduleBrowser, {
-    ...sessionActions,
-    useSessions,
-    useSessionPendingInteraction: useEmptyPendingInteractions,
-    useWorkspaces,
-    t,
-  } as never))
-  try {
-    expectPendingState(view.container, session.displayTitle, 'plan-review', '计划待审')
-  } finally {
-    await view.dispose()
-  }
-})
-
 test('任务树从待处理交互 Store 渲染等待审批状态', async () => {
   const session = createSession('workspace-store-session', '任务 Store 会话', undefined)
   const useSessions = createSessionStore(session)
@@ -814,30 +774,6 @@ test('任务树从待处理交互 Store 渲染等待审批状态', async () => {
   } as never))
   try {
     expectPendingState(view.container, session.displayTitle, 'approval', '等待审批')
-  } finally {
-    await view.dispose()
-  }
-})
-
-test('频道树从待处理交互 Store 渲染等待回答状态', async () => {
-  const session = createSession('im:store-channel', '频道 Store 会话快照', undefined)
-  const useSessions = createSessionStore(session)
-  const useSessionPendingInteraction = createPendingInteractionStore(session.id, 'question')
-  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
-    groups: [{ id: 'wecom', label: '企业微信', sessions: [{ sessionId: session.id, title: '频道 Store 会话', running: true }] }],
-  }), {
-    status: 200,
-    headers: { 'content-type': 'application/json' },
-  })))
-
-  const view = await render(createElement(ChannelBrowser, {
-    ...sessionActions,
-    useSessions,
-    useSessionPendingInteraction,
-    t,
-  } as never))
-  try {
-    expectPendingState(view.container, '频道 Store 会话', 'question', '等待回答')
   } finally {
     await view.dispose()
   }
@@ -879,23 +815,3 @@ test('任务树在没有旧 pending Store 时从 SessionStatus 渲染等待审�
   }
 })
 
-test('定时树从待处理交互 Store 渲染计划待审状态', async () => {
-  const session = createSession('dsh-automation-session-store-review', '2026-09-01 09:00 - Store 日报任务', undefined)
-  const useSessions = createSessionStore(session)
-  const useSessionPendingInteraction = createPendingInteractionStore(session.id, 'plan-review')
-  const workspaces = { archivedSessionIds: [] }
-  const useWorkspaces = <T,>(selector: (snapshot: typeof workspaces) => T): T => selector(workspaces)
-
-  const view = await render(createElement(ScheduleBrowser, {
-    ...sessionActions,
-    useSessions,
-    useSessionPendingInteraction,
-    useWorkspaces,
-    t,
-  } as never))
-  try {
-    expectPendingState(view.container, session.displayTitle, 'plan-review', '计划待审')
-  } finally {
-    await view.dispose()
-  }
-})
