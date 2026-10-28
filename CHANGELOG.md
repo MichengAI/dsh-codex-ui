@@ -1,8 +1,9 @@
 # Changelog
 
-## 2.0.1 (2026-10-28)
+## 2.0.2 (2026-10-28)
 
 - **Fix Modal Overlay Selector Pollution**: Scope the fullscreen settings workbench overlay selector to target only the settings panel's own presentation layer. This eliminates CSS bleed where quota queries, confirmation dialogs, and other modal windows were inadvertently stretched and pinned to the top-left corner while settings were open.
+- **Tolerate CI Virtualization in Theme Perf Regression**: Relax the consecutive theme switch timeout budget to 1000ms to eliminate false positive failures caused by shared VM CPU jitter.
 - **Optimize Documentation Screenshots**: Compress and streamline live captures across light and dark themes, reducing visual asset footprint by 52% for faster README and registry loads.
 
 ## 2.0.0 (2026-10-28)
