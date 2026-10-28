@@ -113,6 +113,13 @@ export const zh = {
   'sessionTitle.type.explore': '探索',
   'sessionTitle.type.docs': '文档',
   'sessionTitle.type.research': '研究',
+  'sidebar.more': '更多',
+  'sidebar.newSession': '新会话',
+  'sidebar.dragToMore': '拖至此处收入更多',
+  'sidebar.fixed': '始终常驻',
+  'sidebar.browsePlugins': '浏览更多插件',
+  'sidebar.createPlugin': '创建你的插件',
+  'sidebar.createPrompt': '创建一个带左侧栏入口的 DSH 插件。',
 } as const
 
 export const en: Record<keyof typeof zh, string> = {
@@ -225,6 +232,13 @@ export const en: Record<keyof typeof zh, string> = {
   'sessionTitle.type.explore': 'Explore',
   'sessionTitle.type.docs': 'Docs',
   'sessionTitle.type.research': 'Research',
+  'sidebar.more': 'More',
+  'sidebar.newSession': 'New chat',
+  'sidebar.dragToMore': 'Drag here to collapse',
+  'sidebar.fixed': 'Always pinned',
+  'sidebar.browsePlugins': 'Browse other plugins',
+  'sidebar.createPlugin': 'Create your plugin',
+  'sidebar.createPrompt': 'Create a DSH plugin with a left sidebar entry.',
 }
 
 export type CodexUiKey = keyof typeof zh

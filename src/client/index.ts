@@ -10,14 +10,16 @@ import { en, NS, zh } from './locales.ts'
 import { observeSettingsSkin } from './settings-skin/index.ts'
 import { observeSettingsNavIcon } from './settings-nav-icon.ts'
 import { observeComposerEnhancements } from './composer/index.tsx'
+import { observeSidebarNav } from './sidebar/index.ts'
 
-export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTriggers']
+export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTriggers', 'layout', 'uiWorkspace']
 
-/** 浏览器客户端插件入口；100% 保留官方原生侧边栏与工作区树，提供输入框增强、设置美化与生态关于页。 */
+/** 浏览器客户端插件入口；保留官方原生侧边栏与工作区树，提供输入框增强、设置美化与生态关于页。 */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'michengai-codex-ui: dictionaries')
   const t = ctx.locale.bind(NS)
 
+  ctx.effect(() => observeSidebarNav(ctx), 'michengai-codex-ui: sidebar navigation')
   ctx.effect(() => observeComposerEnhancements(ctx), 'michengai-codex-ui: composer enhancements')
   ctx.effect(() => observeSettingsSkin(), 'michengai-codex-ui: official settings skin')
   ctx.effect(() => observeSettingsNavIcon(() => t('about.nav')), 'michengai-codex-ui: settings nav icon')

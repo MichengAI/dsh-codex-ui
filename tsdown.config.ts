@@ -3,7 +3,7 @@ const buildMode = process.env.NODE_ENV ?? 'production'
 
 export default [
   {
-    entry: ['src/index.ts', 'src/session-title-plugin.ts', 'src/settings-skin-plugin.ts', 'src/composer-plugin.ts'],
+    entry: ['src/index.ts', 'src/session-title-plugin.ts', 'src/settings-skin-plugin.ts', 'src/composer-plugin.ts', 'src/sidebar-plugin.ts'],
     outDir: 'lib',
     format: ['esm'],
     platform: 'node',

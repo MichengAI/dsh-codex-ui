@@ -7,5 +7,7 @@
       name: '@michengai/dsh-codex-ui/settings-skin'
     - id: codex-ui-composer
       name: '@michengai/dsh-codex-ui/composer'
+    - id: codex-ui-sidebar
+      name: '@michengai/dsh-codex-ui/sidebar'
     - id: codex-ui
       name: '@michengai/dsh-codex-ui'

@@ -43,6 +43,10 @@
       "types": "./lib/composer-plugin.d.mts",
       "default": "./lib/composer-plugin.mjs"
     },
+    "./sidebar": {
+      "types": "./lib/sidebar-plugin.d.mts",
+      "default": "./lib/sidebar-plugin.mjs"
+    },
     "./package.json": "./package.json",
     "./locale/*.json": "./locale/*.json",
     "./session-title/locale/*.json": "./locale/session-title/*.json",
@@ -70,7 +74,9 @@
         "@deepseek-ai/dsh-client-ui-settings",
         "@deepseek-ai/dsh-client-ui-conversation",
         "@deepseek-ai/dsh-client-ui-input-trigger",
-        "@deepseek-ai/dsh-session"
+        "@deepseek-ai/dsh-session",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-workspace"
       ],
       "platform": "web"
     }
