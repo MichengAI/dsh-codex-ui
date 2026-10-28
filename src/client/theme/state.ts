@@ -66,7 +66,7 @@ function computeSnapshot(): ThemeSettingsState {
       : 'stock'
 
   const rawGlass = safeGetItem(STORAGE_KEYS.glassEnabled)
-  const glassEnabled = rawGlass === 'true'
+  const glassEnabled = rawGlass !== 'false'
 
   const rawMode = safeGetItem(STORAGE_KEYS.glassMode)
   const glassMode: GlassMode = rawMode === 'compat' ? 'compat' : 'mica'

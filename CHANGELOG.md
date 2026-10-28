@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.0 (2026-10-28)
+
+- **Architecture Rebuilt**: Codex UI is officially upgraded into a modular multi-subplugin architecture, structured into 6 core modules: `composer` (input enhancement), `settings-skin` (settings skin), `session-title` (smart conversation titles), `sidebar` (modular sidebar), `theme` (themes and mica skinning), and `dependencies` (ecosystem plugin management).
+- **Native Mica & Theming System**: Built-in support for both Stock Compat and Mica Floating Cards layout modes, introducing classic Codex Dark/Light and Catppuccin palettes, plus an independent toggle for ground glows.
+- **Redesigned About & Settings View**: Aligns header layout with companion plugin standards, introducing a structured sub-plugin capability list and a unified three-card section layout.
+
 ## 1.1.49 (2026-10-24)
 
 - Upgrade host admission policy: Declare `engines.dsh: ">=0.2.0-rc.1 <0.3.0-0"` to support the entire DeepSeek Harness `0.2.x` line (including `0.2.0-rc.1` onwards, future alphas, RCs, and stable releases) without requiring routine plugin version bumps.

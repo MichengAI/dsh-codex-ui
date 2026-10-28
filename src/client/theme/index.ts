@@ -54,7 +54,6 @@ function tolerantRegistration(run: () => (() => void) | void): () => void {
 }
 
 let lastAppliedTokens: string[] = []
-let lastAppliedThemeOption: ThemeOption | null = null
 
 /**
  * 将指定主题精准映射并深度应用到真实 DOM（双重保险，彻底压制并覆盖官方亮暗限制）
@@ -68,28 +67,32 @@ export function applyThemeToDocument(
   const runtime = themeRuntime ?? globalThemeRuntime
 
   if (themeOption === 'stock') {
-    lastAppliedThemeOption = 'stock'
-    // 还原官方默认
+    // 1. 清理自定义 Token 注入
     for (const name of lastAppliedTokens) {
       document.body.style.removeProperty(name)
     }
     lastAppliedTokens = []
+
+    // 2. 清理根节点残留属性，恢复官方原生渲染
+    document.documentElement.style.removeProperty('color-scheme')
+    document.documentElement.removeAttribute('data-ds-theme-source')
+    document.body.removeAttribute('data-ds-dark-theme')
+
+    // 3. 仅当宿主当前活动主题属于本插件注册的自定义主题时，才在切回 stock 时还原为系统偏好；
+    // 若宿主本就在运行原生主题（dark/light/system），严禁调用 setTheme 篡改用户的全局偏好！
     if (syncRuntime && runtime && typeof runtime.setTheme === 'function') {
       try {
-        runtime.setTheme('system')
-      } catch {
-        try {
-          runtime.setTheme('dark')
-        } catch {}
-      }
+        const activeId = runtime.getTheme?.()?.active?.id
+        if (activeId && ALL_BUILTIN_THEMES.some((t) => t.id === activeId)) {
+          runtime.setTheme('system')
+        }
+      } catch {}
     }
     return
   }
 
   const targetTheme = ALL_BUILTIN_THEMES.find((t) => t.id === themeOption)
   if (!targetTheme) return
-
-  lastAppliedThemeOption = themeOption
 
   // 1. 同步通知 ThemeRuntime（首帧启动不阻塞，用户交互时即时同步）
   if (syncRuntime && runtime && typeof runtime.setTheme === 'function') {

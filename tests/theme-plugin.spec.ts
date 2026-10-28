@@ -8,6 +8,7 @@ import { apply, isSubPluginDisabledOnDisk, name } from '../src/theme-plugin.ts'
 import {
   ALL_BUILTIN_THEMES,
   applyGlassSettings,
+  applyThemeToDocument,
   changeGlass,
   changeTheme,
   checkThemeEnabled,
@@ -164,7 +165,7 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
   it('主题状态读写、持久化与广播订阅工作正常', () => {
     const initialState = getThemeSettingsState()
     expect(initialState.themeOption).toBe('stock')
-    expect(initialState.glassEnabled).toBe(false)
+    expect(initialState.glassEnabled).toBe(true)
     expect(initialState.glassMode).toBe('mica')
     expect(initialState.glassPreset).toBe('standard')
 
@@ -176,9 +177,9 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(getThemeSettingsState().themeOption).toBe('codex-dark')
     expect(listener).toHaveBeenCalledTimes(1)
 
-    setGlassEnabled(true)
-    expect(localStorage.getItem(STORAGE_KEYS.glassEnabled)).toBe('true')
-    expect(getThemeSettingsState().glassEnabled).toBe(true)
+    setGlassEnabled(false)
+    expect(localStorage.getItem(STORAGE_KEYS.glassEnabled)).toBe('false')
+    expect(getThemeSettingsState().glassEnabled).toBe(false)
     expect(listener).toHaveBeenCalledTimes(2)
 
     setGlassMode('compat')
@@ -297,5 +298,45 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     dispose()
     expect(document.documentElement.hasAttribute(GLASS_ATTRIBUTE)).toBe(false)
     expect(registeredThemes.length).toBe(0)
+  })
+
+  it('stock 分支安全守卫：宿主运行原生主题时不调用 setTheme，且彻底清理 DOM 根属性残留', () => {
+    let hostTheme = 'dark'
+    const fakeRuntime = {
+      register: vi.fn(),
+      getTheme: vi.fn(() => ({
+        preference: hostTheme,
+        active: { id: hostTheme },
+      })),
+      setTheme: vi.fn((id: string) => {
+        hostTheme = id
+      }),
+    }
+
+    // 1. 模拟用户先选了 codex-dark 自定义主题
+    applyThemeToDocument('codex-dark', fakeRuntime as never)
+    expect(document.documentElement.style.colorScheme).toBe('dark')
+    expect(document.documentElement.getAttribute('data-ds-theme-source')).toBe('dark')
+    expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
+    expect(fakeRuntime.setTheme).toHaveBeenCalledWith('codex-dark')
+
+    // 2. 切回 stock：因为当前 active 是 codex-dark（属于自定义主题），正常还给 system
+    fakeRuntime.setTheme.mockClear()
+    applyThemeToDocument('stock', fakeRuntime as never)
+    expect(fakeRuntime.setTheme).toHaveBeenCalledWith('system')
+    expect(document.documentElement.style.colorScheme).toBe('')
+    expect(document.documentElement.hasAttribute('data-ds-theme-source')).toBe(false)
+    expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
+
+    // 3. 关键场景（P1 回归防线）：宿主此时明确运行官方 dark，拨动 stock 绝对不能重置为 system
+    hostTheme = 'dark'
+    fakeRuntime.setTheme.mockClear()
+    applyThemeToDocument('stock', fakeRuntime as never)
+    expect(fakeRuntime.setTheme).not.toHaveBeenCalled()
+  })
+
+  it('新装用户默认开箱即用：未持久化 glassEnabled 时默认随排版模式激活 (true)', () => {
+    localStorage.removeItem(STORAGE_KEYS.glassEnabled)
+    expect(getThemeSettingsState().glassEnabled).toBe(true)
   })
 })
