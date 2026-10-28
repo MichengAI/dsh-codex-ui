@@ -47,6 +47,10 @@
       "types": "./lib/sidebar-plugin.d.mts",
       "default": "./lib/sidebar-plugin.mjs"
     },
+    "./theme": {
+      "types": "./lib/theme-plugin.d.mts",
+      "default": "./lib/theme-plugin.mjs"
+    },
     "./package.json": "./package.json",
     "./locale/*.json": "./locale/*.json",
     "./session-title/locale/*.json": "./locale/session-title/*.json",
@@ -76,7 +80,8 @@
         "@deepseek-ai/dsh-client-ui-input-trigger",
         "@deepseek-ai/dsh-session",
         "@deepseek-ai/dsh-client-ui-layout",
-        "@deepseek-ai/dsh-client-ui-workspace"
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-client-ui-theme"
       ],
       "platform": "web"
     }
@@ -102,6 +107,7 @@
     "@deepseek-ai/dsh-client-ui-settings-general": ">=0.2.0-rc.1 <0.3.0-0",
     "@deepseek-ai/dsh-client-ui-sidebar": ">=0.2.0-rc.1 <0.3.0-0",
     "@deepseek-ai/dsh-client-ui-slots": ">=0.2.0-rc.1 <0.3.0-0",
+    "@deepseek-ai/dsh-client-ui-theme": ">=0.2.0-rc.1 <0.3.0-0",
     "@deepseek-ai/dsh-client-ui-workspace": ">=0.2.0-rc.1 <0.3.0-0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
@@ -126,6 +132,7 @@
     "@deepseek-ai/dsh-client-ui-settings-general": "0.2.1-rc.3",
     "@deepseek-ai/dsh-client-ui-sidebar": "0.2.1-rc.3",
     "@deepseek-ai/dsh-client-ui-slots": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-client-ui-theme": "0.2.1-rc.3",
     "@deepseek-ai/dsh-client-ui-workspace": "0.2.1-rc.3",
     "@deepseek-ai/dsh-scope": "0.2.1-rc.3",
     "@deepseek-ai/dsh-session": "0.2.1-rc.3",

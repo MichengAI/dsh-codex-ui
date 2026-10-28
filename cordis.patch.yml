@@ -9,5 +9,7 @@
       name: '@michengai/dsh-codex-ui/composer'
     - id: codex-ui-sidebar
       name: '@michengai/dsh-codex-ui/sidebar'
+    - id: codex-ui-theme
+      name: '@michengai/dsh-codex-ui/theme'
     - id: codex-ui
       name: '@michengai/dsh-codex-ui'

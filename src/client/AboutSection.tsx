@@ -7,6 +7,7 @@ import { CODEX_UI_API_ENDPOINTS } from '../business-api.ts'
 import { MANAGED_DEPENDENCIES, type ManagedDependencyId } from '../dependencies.ts'
 import { NS } from './locales.ts'
 import { installErrorText } from './user-error.ts'
+import { ThemeSettingsCard } from './theme/ThemeSettingsCard.tsx'
 
 type DependencyStatus = { id: ManagedDependencyId; packageName: string; installed: boolean; version?: string; latestVersion?: string; updateAvailable: boolean; totalDownloads?: number }
 const PROJECT_HOMEPAGES = Object.fromEntries(MANAGED_DEPENDENCIES.map(({ id, packageName }) => [
@@ -261,8 +262,10 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
       <li>{t('about.feature.composer')}</li>
       <li>{t('about.feature.settingsSkin')}</li>
       <li>{t('about.feature.sessionTitle')}</li>
+      <li>{t('about.feature.theme')}</li>
       <li>{t('about.feature.dependencies')}</li>
     </ul>
+    <ThemeSettingsCard t={t} />
     <div className="dcu-about-dependencies-heading"><h3>{t('about.dependencies')}</h3>{state === 'ready' && actionableCount > 0 && <PrimitiveButton variant="outline" size="sm" icon={installing === 'all' ? <IconLoadingOutlineMedium size={14} /> : <IconDownloadOutlineMedium size={14} />} aria-busy={installing === 'all'} disabled={installing !== undefined} onClick={() => { void updateAll() }}>{installing === 'all' ? t('about.updatingAll') : t('about.updateAll')}</PrimitiveButton>}</div>
     <p className="dcu-about-intro">{t('about.dependenciesDescription')}</p>
     {state === 'loading' ? <div className="dcu-about-message" role="status">{t('about.loading')}</div>

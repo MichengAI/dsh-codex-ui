@@ -4,6 +4,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-input-trigger/client'
+import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import type {} from '@deepseek-ai/dsh-session'
 import { AboutSection } from './AboutSection.tsx'
 import { en, NS, zh } from './locales.ts'
@@ -11,14 +12,16 @@ import { observeSettingsSkin } from './settings-skin/index.ts'
 import { observeSettingsNavIcon } from './settings-nav-icon.ts'
 import { observeComposerEnhancements } from './composer/index.tsx'
 import { observeSidebarNav } from './sidebar/index.ts'
+import { observeTheme } from './theme/index.ts'
 
-export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTriggers', 'layout', 'uiWorkspace']
+export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTriggers', 'layout', 'uiWorkspace', 'theme']
 
 /** 浏览器客户端插件入口；保留官方原生侧边栏与工作区树，提供输入框增强、设置美化与生态关于页。 */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'michengai-codex-ui: dictionaries')
   const t = ctx.locale.bind(NS)
 
+  ctx.effect(() => observeTheme(ctx), 'michengai-codex-ui: theme & appearance')
   ctx.effect(() => observeSidebarNav(ctx), 'michengai-codex-ui: sidebar navigation')
   ctx.effect(() => observeComposerEnhancements(ctx), 'michengai-codex-ui: composer enhancements')
   ctx.effect(() => observeSettingsSkin(), 'michengai-codex-ui: official settings skin')
