@@ -4,9 +4,9 @@
 
 <div align="center">
 
-  # DSH Codex UI
+  # DSH Codex UI v2.0
 
-  **让 DSH Web 中的项目更好整理、会话更快找到、长对话更易回看**
+  **现代化 DeepSeek Harness 全方位界面增强套件：极速历史召回、全屏设置皮肤、原生物理毛玻璃换肤与模块化侧栏**
 
   [English](README.md) · [更新日志](CHANGELOG.zh-CN.md) · [Apache-2.0](LICENSE)
 
@@ -18,84 +18,114 @@
 
 </div>
 
-> DSH Codex UI 是社区维护的 DeepSeek Harness（DSH）界面增强插件，并非 DeepSeek AI 官方产品。
+> **声明**：DSH Codex UI 是社区维护的 DeepSeek Harness（DSH）现代化界面增强插件，并非 DeepSeek AI 官方产品。
 
-在 DSH Web 中同时处理多个项目和会话时，DSH Codex UI 帮你整理左侧导航、快速找到任务，并在长对话中跳回之前的提问。它提供 Codex 风格的界面，支持浅色和深色主题。
+---
+
+## 为什么选择 Codex UI 2.0？
+
+在日常使用 DeepSeek Harness 时，原生界面可能存在设置窗口狭小局促、主题配色单一、侧栏长插件列表不易整理、输入历史丢失等痛点。**Codex UI 2.0 经历了从底层架构到视觉体系的全面重塑**，以**六大独立子插件**构建起一套高性能、低侵入、官方原生的现代化界面增强体系：
+
+* 🚀 **极速输入召回**：终端风格输入框历史（`↑` / `↓` 快捷召回），支持自适应宽度微调；
+* 🪟 **全屏悬浮双岛设置**：告别局促模态框，接入 Ambient Ground 漫反射画布与双岛卡片工作台；
+* 🎨 **物理级毛玻璃换肤**：内置 7 款高品质主题配色（含 Codex 炭黑与极简纸白），支持原版平铺玻璃与云母悬浮双排版模态、三档材质预设与独立地面光斑；
+* 🧭 **模块化侧边栏**：展开态支持原位平滑折叠抽屉与自由拖拽排序；收缩折叠态 **100% 对齐宿主官方 56px 原生导轨**，所有图标整齐排列、新会话常驻高对比度；
+* 🧠 **智能会话标题**：首条消息语义解析，自动提炼精炼标题，完美适配推理大模型长上下文；
+* 📦 **生态配套管理**：官方与第三方生态插件集中看护、版本检测与一键批量升级。
+
+---
+
+## 六大核心子插件架构
+
+| 子插件 ID | 模块名称 | 核心能力说明 |
+| :--- | :--- | :--- |
+| `composer` | **输入框增强** | 终端风格历史记录（`↑`/`↓`）快捷召回、工作区隔离存储、自适应宽度拖拽手柄与快捷提示。 |
+| `settings-skin` | **原生设置皮肤** | 全屏设置工作台美化、悬浮双岛架构、Ambient Ground 自然光漫反射底板、分类导航与原生输入框搜索。 |
+| `theme` | **主题与界面换肤** | 内置 7 款主题配色（含 Appearance Cube 色彩方块）、原版平铺/云母悬浮双排版、三档材质预设与地面光斑开关。 |
+| `sidebar` | **模块化侧栏导航** | 模块化侧边栏导航、手风琴原位平滑折叠抽屉、自由拖拽排序；折叠态 100% 对齐宿主官方 56px 原生导轨。 |
+| `session-title` | **会话智能标题** | 基于首条消息语义提取并生成规范的会话标题，支持推理模型 4096 tokens 上下文，防止乱码截断。 |
+| `dependencies` | **配套生态管理** | 深度集成 DSH 官方与第三方生态插件集中管理，实时显示 npm 下载量、安装状态与一键批量升级。 |
+
+---
+
+## 真机界面预览
+
+> *以下界面均使用 `ego-browser` 在真实的 DeepSeek Harness Web 运行环境中捕获。*
+
+### 1. 沉浸主界面与输入增强（深色模式）
+沉浸炭黑（Codex Dark）配色，居中展示品牌标语与快捷动作引导卡片，底部输入框提供「↑↓ 翻历史」快捷召回与自适应宽度手柄。
+
+![深色主界面与输入框增强](assets/screenshots/conversation.png)
+
+---
+
+### 2. 极简纸白主界面（浅色模式）
+极简纸白（Codex Light）配色，接入 Ambient Ground 自然光漫反射渐变底板，温润通透，视觉流平滑舒缓。
+
+![浅色主界面与漫反射底板](assets/screenshots/conversation-light.png)
+
+---
+
+### 3. 全屏悬浮双岛设置中心（三大标准卡片体系）
+告别局促的弹窗，重塑为三大标准卡片体系（功能与内置子插件、界面外观与换肤、配套管理插件），层次严谨秩序井然。
+
+![全屏设置中心与三大卡片](assets/screenshots/settings-about.png)
+
+---
+
+### 4. 界面外观换肤与毛玻璃配置
+内置 7 款主题色盘（官方默认、Codex 暗色、Codex 亮色、Mocha、Macchiato、Frappé、Latte），支持原版平铺玻璃与云母悬浮双模态，清透/标准/磨砂三档材质直选与地面反射光斑开关。
+
+![界面外观换肤卡片](assets/screenshots/settings-theme.png)
+
+---
+
+### 5. 模块化侧边栏导航（展开态）
+支持插件、技能、常用工具（IM 助理、定时任务、归档会话、代码审查等）自由拖拽排序与「更多」手风琴平滑折叠收纳。
+
+![展开态模块化侧边栏](assets/screenshots/sidebar.png)
+
+---
+
+### 6. 官方原生 56px 折叠导轨（收缩态）
+侧栏收起后自动对齐官方原生紧凑 56px 导轨规范，无缝完整显示全部功能图标，新会话常驻高亮显示，无需鼠标悬停试探。
+
+![折叠态官方原生 56px 导轨](assets/screenshots/sidebar-collapsed.png)
+
+---
+
+### 7. 增强会话菜单
+支持在会话项上快速执行置顶、重命名、未读标记、归档、派生新会话与安全清理。
+
+![增强会话操作菜单](assets/screenshots/session-menu.png)
+
+---
 
 ## 宿主兼容性
 
-宿主支持范围：DeepSeek Harness `0.2.x` 全系列（`>=0.2.0-rc.1 <0.3.0-0`），已验证兼容 `0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-rc.1`、`0.2.1-rc.2`、`0.2.1-rc.3`，并自动支持后续日常小版本、alpha 与 RC，同代宿主升级无需重复等待发版。早期版本与 `0.3.0` 代际破坏性更新由版本门拦截。开发依赖钉在 `0.2.1-rc.3`。兼容范围声明不代表本次发布重新完成了所有宿主版本的实机测试。
+* **支持范围**：DeepSeek Harness `0.2.x` 全系列（`>=0.2.0-rc.1 <0.3.0-0`）；
+* **实测验证**：已在 `0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-rc.1`、`0.2.1-rc.2`、`0.2.1-rc.3` 深度验证通过，并向后自动兼容后续 RC 与日常构建；
+* **环境要求**：Node.js `^22.19.0 || >=24.0.0`，pnpm `^11.0.0`。
 
-**不要同时启用 Codex UI 与 `ds-bot`。** 两者都重绘侧栏与会话界面，插槽归属和布局样式高度重叠。使用其中一个前，请先停用或卸载另一个。
+> ⚠️ **互斥提示**：请勿同时启用 Codex UI 与 `ds-bot`。两者均重塑侧栏与主会话插槽，功能重叠。启用前请先停用或卸载另一个。
 
-## 你可以用它做什么
+---
 
-- **整理项目与会话**：展开或折叠项目、拖拽调整顺序、置顶常用项目，查看未读提醒和运行状态。
-- **快速找到内容**：通过顶部搜索查找会话、设置和快捷操作。
-- **管理日常任务**：在项目或会话菜单中重命名、归档、派生会话，或打开项目目录。
-- **回看长对话**：点击轮次导航，直接跳到对应提问。
-- **复用之前的输入**：输入框为空时，按上下方向键找回当前工作区中已提交的文本。
-- **按需扩展功能**：在「设置 → 关于」查看配套插件，安装或更新需要的功能。
+## 安装与快速上手
 
-## 界面预览
+### 方式 A：让 Agent 帮您安装（推荐）
 
-浅色主题：工作区会话树、新建会话建议与底部输入框。
-
-![浅色主题新建会话页](assets/screenshots/conversation-light.png)
-
-深色主题：定时任务总览与新建会话页。
-
-![深色主题新建会话页](assets/screenshots/conversation.png)
-
-常规设置：全屏布局与分区导航。
-
-![浅色主题常规设置页](assets/screenshots/settings-general-light.png)
-
-会话菜单：重命名、置顶、未读、归档、派生、复制和删除。
-
-![会话菜单](assets/screenshots/session-menu.png)
-
-「设置 → 关于」列出配套插件及其安装状态。
-
-![关于页与配套插件](assets/screenshots/settings-about.png)
-
-## 前置条件
-
-- 已可正常运行 DeepSeek Harness Web，且可在 PowerShell 中使用 `dsh`。
-- 以下示例使用 `web` profile；请替换为实际目标 profile。
-- 运行环境需满足 Node.js `^22.19.0 || >=24.0.0`；从源码安装还需要 pnpm。
-
-## DSH 产品生态
-
-想使用桌面工作台，可下载 [DSH Codex Desktop](https://github.com/MichengAI/dsh-codex-desktop/releases)；已有 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 环境，可按各项目 README 按需安装。以下列出 11 个自研插件；桌面端实际随附范围以对应版本的发行说明和内置清单为准。
-
-| 插件 | 你可以用它做什么 |
-| --- | --- |
-| [Codex UI](https://github.com/MichengAI/dsh-codex-ui) | 整理项目与会话、搜索任务、跳转对话轮次 |
-| [Agency Agents](https://github.com/MichengAI/dsh-agency-agents) | 按任务选择并召唤专业角色 |
-| [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) | 统一查找、启停、创建和导入本机技能 |
-| [Archive Manager](https://github.com/MichengAI/dsh-archive-manager) | 搜索、恢复或清理已归档会话 |
-| [IM Connect](https://github.com/MichengAI/dsh-im-connect) | 从消息平台下任务、收回复 |
-| [Automation](https://github.com/MichengAI/dsh-automation) | 按计划执行任务，查看每次运行的结果 |
-| [BTW](https://github.com/MichengAI/dsh-btw) | 在当前上下文中临时旁问，不打断主任务 |
-| [Simplify](https://github.com/MichengAI/dsh-simplify) | 用 `/simplify` 整理 Git 改动范围内的代码 |
-| [PUA](https://github.com/MichengAI/dsh-pua) | 引导 Agent 在失败时换方法、查原因，并在完成前验证结果 |
-| [Code Review](https://github.com/MichengAI/dsh-code-review) | 用 `/review` 发起独立 Agent 代码审查，在当前会话接收报告 |
-| [Codex Pet](https://github.com/MichengAI/dsh-codex-pet) | 通过桌面宠物查看会话提醒、处理工具审批和问题回答 |
-
-## 安装
-
-下面提供 Agent 代装和手动安装两种方式，使用同一条安装命令。示例指定最新版和官方 npm 源。
-
-### 让 Agent 帮你安装（推荐）
-
-把下面这段话发给任意能够执行本机终端命令的 Agent。将 `web` 替换为实际使用的 profile；安装完成后，在 DSH 中使用本插件。
+复制以下指令发送给任意具备终端执行权限的 Agent（将 `web` 替换为您实际使用的 profile 名称）：
 
 ```text
-请将 DSH 插件 @michengai/dsh-codex-ui 安装到本机 web profile，执行：dsh plugin --profile web add @michengai/dsh-codex-ui@latest --registry=https://registry.npmjs.org/。安装后执行 dsh --profile web --dump-config，确认配置包含 codex-ui，并告诉我如何重新加载 DSH 和开始使用。
+请将 DSH 插件 @michengai/dsh-codex-ui 安装到本机 web profile，执行：
+dsh plugin --profile web add @michengai/dsh-codex-ui@latest --registry=https://registry.npmjs.org/
+安装后执行 dsh --profile web --dump-config 确认包含 codex-ui，并提示我刷新浏览器。
 ```
 
-### 手动安装
+### 方式 B：终端手动安装
+
+在终端（Windows PowerShell 或 MSYS Bash）中执行：
 
 ```powershell
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -104,89 +134,43 @@ dsh plugin --profile web add @michengai/dsh-codex-ui@latest --registry=https://r
 dsh --profile web --dump-config
 ```
 
-安装后重启 DSH Web，并硬刷新浏览器（通常为 `Ctrl+Shift+R`）。看到新的侧栏后即可开始使用。禁用或卸载后官方侧栏会回来。若 profile 的 `cordis.patch.yml` 里还有 `ui-sidebar` 或 `ui-settings-general` 的 `disabled: true`，删掉这两行后再重载。
+安装完成后，重启 DSH Web 实例并硬刷新浏览器页面（`Ctrl + Shift + R` 或 `Cmd + Shift + R`）即可进入全新 2.0 体验！
 
-## 使用
+---
 
-打开 DSH Web 后，左侧导航即由本插件渲染。
+## 常用操作速查
 
-| 目标 | 操作 |
-| --- | --- |
-| 新建会话 | 点击「新建任务」，或使用项目中的「+」/「新建会话」。 |
-| 查找会话或设置 | 使用顶栏搜索，选择会话、设置页或快捷操作。 |
-| 折叠侧栏 | 使用顶栏面板按钮。折叠后展开入口保留在窄轨顶部。 |
-| 置顶项目 | 拖到「置顶」区域，或在项目菜单中选择「置顶项目」。 |
-| 管理会话 | 打开会话菜单，进行重命名、置顶、未读、归档、派生、复制或删除。 |
-| 复用输入 | 输入框为空时按上下方向键，召回当前工作区中之前提交的文本。 |
-| 跳转轮次 | 使用当前会话左侧的轮次刻度跳转到对应提问。 |
-| 查看配套插件 | 打开「设置 → 关于」，安装或更新各个配套插件。 |
+| 场景 | 操作方式 |
+| :--- | :--- |
+| **找回历史输入** | 输入框为空时按键盘 `↑` / `↓` 方向键，即时召回在当前工作区提交过的历史文本（按工作区隔离存储 200 条）。 |
+| **调节输入框宽度** | 悬停至输入框左右边缘，拖拽蓝色手柄即可自定义最舒适的编写宽度。 |
+| **切换主题与质感** | 打开「设置 → Codex UI」，在「界面外观与换肤」卡片单选 7 款主题，直选原版/云母模式与材质预设。 |
+| **调整侧栏图标顺序** | 鼠标按住展开侧栏中的任意插件条目拖拽上下移动，蓝线指示放置位置，支持拖入/拖出「更多」手风琴。 |
+| **折叠/收起侧边栏** | 点击侧栏顶部折叠按钮；收缩后自动切换为 56px 原生导轨，单手盲点所有功能图标。 |
+| **生态插件批量更新** | 在「设置 → Codex UI」底部「配套管理插件」卡片，点击「全部更新」自动安装最新配套依赖。 |
 
-## 常见问题
+---
 
-### 置顶和未读状态会保留吗？
+## DSH 现代化生态矩阵
 
-置顶项目保存在 DSH 配置中，重启后仍保留。未读标记仅保存在当前浏览器，不会跨浏览器同步。
+如需搭配完整的开发运维闭环，可按需在配套管理卡片中一键启用以下生态插件：
 
-### 为什么找不到以前的输入？
+| 插件名称 | 核心用途 |
+| :--- | :--- |
+| [Codex UI](https://github.com/MichengAI/dsh-codex-ui) | **界面总控**：极速输入召回、全屏设置皮肤、毛玻璃换肤与模块化侧栏 |
+| [Agency Agents](https://github.com/MichengAI/dsh-agency-agents) | **专家调度**：任务精准画像，一键召唤行业专家角色矩阵 |
+| [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) | **技能枢纽**：本地技能统一发现、导入、启停与智能配置 |
+| [Archive Manager](https://github.com/MichengAI/dsh-archive-manager) | **归档管理**：历史会话深度检索、恢复与安全物理归档清理 |
+| [IM Connect](https://github.com/MichengAI/dsh-im-connect) | **消息串联**：连接微信、钉钉、飞书、QQBot 双向派发与接收任务 |
+| [Automation](https://github.com/MichengAI/dsh-automation) | **定时管家**：Cron 定时流水线看护与运行证据追踪 |
+| [Code Review](https://github.com/MichengAI/dsh-code-review) | **代码审查**：`/review` 独立审查子代理并直接向当前会话投递严谨评审报告 |
+| [Simplify](https://github.com/MichengAI/dsh-simplify) | **代码精简**：`/simplify` 4-agent 并发精简与坏味道消除 |
+| [PUA](https://github.com/MichengAI/dsh-pua) | **韧性强化**：失败自动归因重试，完工证据多维校验守门员 |
+| [BTW](https://github.com/MichengAI/dsh-btw) | **临时旁问**：长任务进行中轻量旁问，不破坏主线程上下文 |
+| [Codex Pet](https://github.com/MichengAI/dsh-codex-pet) | **桌面宠物**：任务状态动态浮窗交互、工具审批与拟人化提醒 |
 
-输入历史按工作区分别保存在当前浏览器，每个工作区最多保留 200 条。它从功能启用后的新输入开始记录，不会从已有会话补录；浏览器存储不可用时，仅在内存中临时保留。无需额外安装 BTW 插件。
-
-### 移除项目会删除本地文件吗？
-
-删除项目注册不会删除项目目录或会话记录。归档会话的永久删除功能由配套的 Archive Manager 插件提供。
-
-### 安装后没有看到变化怎么办？
-
-确认安装命令中的 profile 与正在运行的 DSH Web 一致，再重启 DSH Web 并硬刷新浏览器。可运行 `dsh --profile web --dump-config` 检查是否已挂载 `codex-ui`。
-
-## 开发与贡献
-
-本地交接与当前架构见 [阅读导航](docs/00-交接入口/00-阅读导航.md)（`docs` 为本仓库既有本地文档，不随 npm 包发布）。
-
-`pnpm run test:fallback-host` 使用 `DCU_DSH_BIN` 指向完整宿主 CLI，在隔离 profile 验证三轮启停和重启后的官方侧栏回退，不调用模型。`pnpm test` 不包含这项真实宿主验收；全局 renderer 用例未指定宿主时显式跳过。
-
-GitHub 与 npm 都包含可直接运行的 `lib`。修改源码后，提交前运行 `pnpm build`。
-
-### 从源码安装
-
-适用于调试或使用未发布改动。克隆后的目录会直接作为插件安装路径：
-
-```powershell
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
-Set-Location D:\Repository\deepseek-harness-plugin
-git clone https://github.com/MichengAI/dsh-codex-ui.git
-Set-Location .\dsh-codex-ui
-pnpm install --frozen-lockfile
-pnpm build
-dsh plugin --profile web add .
-dsh --profile web --dump-config
-```
-
-完成后重启 DSH Web 并硬刷新浏览器。不要手工复制 `lib`；本地目录安装会同时读取包信息和 `cordis.patch.yml`。
-
-- [src\index.ts](src/index.ts)：Host 入口，注册配套服务与业务接口。
-- [src\client\index.ts](src/client/index.ts)：客户端入口，注册侧栏、工作区树、轮次导航和设置分区。
-- [src\client\CodexSidebar.tsx](src/client/CodexSidebar.tsx)：侧栏壳、搜索面板和视觉样式。
-- [src\client\CodexWorkspaceBrowser.tsx](src/client/CodexWorkspaceBrowser.tsx)：工作区和会话交互。
-- `tests\*.assert.ts` 与 `tests\*.spec.ts`：交互、样式和运行时集成验证。
-
-修改 `src` 后重新构建、测试，并以本地目录安装验证：
-
-```powershell
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
-pnpm build
-pnpm test
-dsh plugin --profile web add .
-```
-
-新增功能应复用已有 DSH 插槽和公开服务；不要依赖宿主私有 DOM 或写入会话数据。
-
-## 项目交接
-
-交接入口与当前状态见[项目交接导航](docs/00-交接入口/00-阅读导航.md)。
+---
 
 ## 许可证
 
-本项目采用 [Apache License 2.0](LICENSE)。
+本项目基于 [Apache License 2.0](LICENSE) 开源协议分发与维护。
