@@ -88,10 +88,15 @@ html[data-dsh-glass] [data-shortcut-modal="settings"] {
 }
 
 html[data-dsh-glass] [data-shortcut-modal="settings"] > nav {
-  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #121214)) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: color-mix(
+    in srgb,
+    var(--dsw-specific-sidebar-fill, #181825) 85%,
+    var(--dsw-alias-bg-base, #09090b)
+  ) !important;
+  backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
   border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05) !important;
 }
 
 html[data-dsh-glass] [data-shortcut-modal="settings"] > div:not(nav) {

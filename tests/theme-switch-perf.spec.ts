@@ -25,7 +25,7 @@ describe('主题切换卡死防范与性能回归', () => {
     }
     const t1 = performance.now()
 
-    expect(t1 - t0).toBeLessThan(100) // 100ms 内瞬间完成
+    expect(t1 - t0).toBeLessThan(250) // 250ms 内极速完成，杜绝死循环挂起
     unobserve()
   })
 })

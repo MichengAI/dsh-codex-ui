@@ -1,5 +1,5 @@
 import React, { useSyncExternalStore } from 'react'
-import { Button, SegmentedControl, Switch } from '@deepseek-ai/dsh-client-ui-primitives'
+import { SegmentedControl, Switch } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
   changeGlass,
   changeTheme,
@@ -17,16 +17,17 @@ export interface ThemeSettingsCardProps {
 const THEME_BUTTONS: readonly {
   id: ThemeOption
   labelKey: string
+  subKey: string
   accent: string
   colorScheme: 'light' | 'dark' | 'auto'
 }[] = [
-  { id: 'stock', labelKey: 'theme.paletteStock', accent: '#3b82f6', colorScheme: 'auto' },
-  { id: 'codex-dark', labelKey: 'theme.paletteCodexDark', accent: '#10a37f', colorScheme: 'dark' },
-  { id: 'codex-light', labelKey: 'theme.paletteCodexLight', accent: '#10a37f', colorScheme: 'light' },
-  { id: 'catppuccin-mocha', labelKey: 'theme.paletteMocha', accent: '#cba6f7', colorScheme: 'dark' },
-  { id: 'catppuccin-macchiato', labelKey: 'theme.paletteMacchiato', accent: '#c6a0f6', colorScheme: 'dark' },
-  { id: 'catppuccin-frappe', labelKey: 'theme.paletteFrappe', accent: '#ca9ee6', colorScheme: 'dark' },
-  { id: 'catppuccin-latte', labelKey: 'theme.paletteLatte', accent: '#8839ef', colorScheme: 'light' },
+  { id: 'stock', labelKey: 'theme.paletteStock', subKey: 'theme.subStock', accent: '#3b82f6', colorScheme: 'auto' },
+  { id: 'codex-dark', labelKey: 'theme.paletteCodexDark', subKey: 'theme.subCodexDark', accent: '#10a37f', colorScheme: 'dark' },
+  { id: 'codex-light', labelKey: 'theme.paletteCodexLight', subKey: 'theme.subCodexLight', accent: '#10a37f', colorScheme: 'light' },
+  { id: 'catppuccin-mocha', labelKey: 'theme.paletteMocha', subKey: 'theme.subMocha', accent: '#cba6f7', colorScheme: 'dark' },
+  { id: 'catppuccin-macchiato', labelKey: 'theme.paletteMacchiato', subKey: 'theme.subMacchiato', accent: '#c6a0f6', colorScheme: 'dark' },
+  { id: 'catppuccin-frappe', labelKey: 'theme.paletteFrappe', subKey: 'theme.subFrappe', accent: '#ca9ee6', colorScheme: 'dark' },
+  { id: 'catppuccin-latte', labelKey: 'theme.paletteLatte', subKey: 'theme.subLatte', accent: '#8839ef', colorScheme: 'light' },
 ]
 
 const stylesheet = `
@@ -42,21 +43,78 @@ const stylesheet = `
 }
 .dcu-theme-palette-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
   gap: 8px;
 }
-.dcu-theme-palette-grid button {
-  width: 100% !important;
-  justify-content: flex-start !important;
-  padding: 0 10px !important;
+.dcu-theme-cube {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.02));
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
 }
-.dcu-theme-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 6px;
+.dcu-theme-cube:hover:not(.selected) {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.06));
+  border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.16));
+}
+.dcu-theme-cube:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: 2px;
+}
+/* 选中态：深度融入主题专属强调色与同色发光边框 */
+.dcu-theme-cube.selected {
+  background: color-mix(in srgb, var(--cube-accent) 14%, var(--dsw-alias-bg-layer-2, #18181b)) !important;
+  border-color: var(--cube-accent) !important;
+  box-shadow: 0 0 0 1px var(--cube-accent), 0 2px 10px color-mix(in srgb, var(--cube-accent) 25%, transparent) !important;
+}
+.dcu-theme-cube-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+}
+.dcu-theme-swatch {
   flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background-color: var(--cube-accent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--cube-accent) 45%, transparent);
+}
+.dcu-theme-cube-title {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--dsw-alias-label-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dcu-theme-cube.selected .dcu-theme-cube-title {
+  font-weight: 600;
+}
+.dcu-theme-cube-sub {
+  font-size: 11px;
+  line-height: 15px;
+  color: var(--dsw-alias-label-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+.dcu-theme-cube.selected .dcu-theme-cube-sub {
+  color: var(--dsw-alias-label-secondary);
 }
 .dcu-theme-row {
   display: flex;
@@ -126,18 +184,22 @@ export function ThemeSettingsCard({ t }: ThemeSettingsCardProps): React.JSX.Elem
           {THEME_BUTTONS.map((item) => {
             const isActive = state.themeOption === item.id
             return (
-              <Button
+              <button
                 key={item.id}
-                size="sm"
-                variant={isActive ? 'primary' : 'outline'}
+                type="button"
+                className={`dcu-theme-cube${isActive ? ' selected' : ''}`}
+                style={{ '--cube-accent': item.accent } as React.CSSProperties}
                 aria-pressed={isActive}
                 onClick={() => {
                   changeTheme(item.id)
                 }}
               >
-                <span className="dcu-theme-dot" style={{ backgroundColor: item.accent }} aria-hidden="true" />
-                {t(item.labelKey)}
-              </Button>
+                <div className="dcu-theme-cube-head">
+                  <span className="dcu-theme-swatch" aria-hidden="true" />
+                  <span className="dcu-theme-cube-title">{t(item.labelKey)}</span>
+                </div>
+                <span className="dcu-theme-cube-sub">{t(item.subKey)}</span>
+              </button>
             )
           })}
         </div>
