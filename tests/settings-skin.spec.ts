@@ -241,7 +241,7 @@ test('设置皮肤立即预装：observeSettingsSkin 启动时即刻注入样式
 
 test('浅色模式下设置工作台背景与按钮高对比度规则兜底', () => {
   expect(SETTINGS_SKIN_CSS).toContain('body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]')
-  expect(SETTINGS_SKIN_CSS).toContain('body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"] > div:not(nav)')
+  expect(SETTINGS_SKIN_CSS).toContain('body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav)')
 })
 
 test('decorateSettingsNav 兼容新版宿主平铺 4 块结构（navTitle 与 nav 为同级直属子节点）', () => {
