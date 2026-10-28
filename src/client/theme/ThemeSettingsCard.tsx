@@ -41,9 +41,14 @@ const stylesheet = `
   gap: 10px;
 }
 .dcu-theme-palette-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 8px;
+}
+.dcu-theme-palette-grid button {
+  width: 100% !important;
+  justify-content: flex-start !important;
+  padding: 0 10px !important;
 }
 .dcu-theme-dot {
   display: inline-block;
@@ -65,6 +70,7 @@ const stylesheet = `
   flex-direction: column;
   gap: 2px;
   min-width: 140px;
+  flex: 1;
 }
 .dcu-theme-row-title {
   font-size: 13px;
@@ -75,14 +81,25 @@ const stylesheet = `
   font-size: 12px;
   color: var(--dsw-alias-label-tertiary);
 }
+.dcu-theme-sub-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.06));
+  border-radius: 8px;
+}
 .dcu-theme-sub-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding-left: 12px;
-  border-left: 2px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12));
   flex-wrap: wrap;
+}
+.dcu-theme-sub-row [role="tablist"],
+.dcu-theme-sub-row [data-slot="segmented-control"] {
+  min-width: 240px;
 }
 `
 
@@ -141,48 +158,49 @@ export function ThemeSettingsCard({ t }: ThemeSettingsCardProps): React.JSX.Elem
         />
       </div>
 
-      {/* 排版模式（当玻璃质感开启时展示） */}
+      {/* 玻璃质感参数子组（当玻璃质感开启时展示） */}
       {state.glassEnabled && (
-        <div className="dcu-theme-sub-row">
-          <div className="dcu-theme-row-label">
-            <span className="dcu-theme-row-title">{t('theme.mode')}</span>
-            <span className="dcu-theme-row-hint">{t('theme.modeHint')}</span>
+        <div className="dcu-theme-sub-group">
+          {/* 排版模式 */}
+          <div className="dcu-theme-sub-row">
+            <div className="dcu-theme-row-label">
+              <span className="dcu-theme-row-title">{t('theme.mode')}</span>
+              <span className="dcu-theme-row-hint">{t('theme.modeHint')}</span>
+            </div>
+            <SegmentedControl<GlassMode>
+              id="codex-ui-glass-mode"
+              label={t('theme.mode')}
+              value={state.glassMode}
+              options={[
+                { value: 'mica', label: t('theme.modeMica') },
+                { value: 'compat', label: t('theme.modeCompat') },
+              ]}
+              onChange={(nextMode) => {
+                changeGlass({ mode: nextMode })
+              }}
+            />
           </div>
-          <SegmentedControl<GlassMode>
-            id="codex-ui-glass-mode"
-            label={t('theme.mode')}
-            value={state.glassMode}
-            options={[
-              { value: 'mica', label: t('theme.modeMica') },
-              { value: 'compat', label: t('theme.modeCompat') },
-            ]}
-            onChange={(nextMode) => {
-              changeGlass({ mode: nextMode })
-            }}
-          />
-        </div>
-      )}
 
-      {/* 材质预设（当玻璃质感开启时展示，云母与原版排版模式下均可切换） */}
-      {state.glassEnabled && (
-        <div className="dcu-theme-sub-row">
-          <div className="dcu-theme-row-label">
-            <span className="dcu-theme-row-title">{t('theme.glassPreset')}</span>
-            <span className="dcu-theme-row-hint">{t('theme.glassPresetHint')}</span>
+          {/* 材质预设 */}
+          <div className="dcu-theme-sub-row">
+            <div className="dcu-theme-row-label">
+              <span className="dcu-theme-row-title">{t('theme.glassPreset')}</span>
+              <span className="dcu-theme-row-hint">{t('theme.glassPresetHint')}</span>
+            </div>
+            <SegmentedControl<GlassPreset>
+              id="codex-ui-glass-preset"
+              label={t('theme.glassPreset')}
+              value={state.glassPreset}
+              options={[
+                { value: 'clear', label: t('theme.presetClear') },
+                { value: 'standard', label: t('theme.presetStandard') },
+                { value: 'frosted', label: t('theme.presetFrosted') },
+              ]}
+              onChange={(nextPreset) => {
+                changeGlass({ preset: nextPreset })
+              }}
+            />
           </div>
-          <SegmentedControl<GlassPreset>
-            id="codex-ui-glass-preset"
-            label={t('theme.glassPreset')}
-            value={state.glassPreset}
-            options={[
-              { value: 'clear', label: t('theme.presetClear') },
-              { value: 'standard', label: t('theme.presetStandard') },
-              { value: 'frosted', label: t('theme.presetFrosted') },
-            ]}
-            onChange={(nextPreset) => {
-              changeGlass({ preset: nextPreset })
-            }}
-          />
         </div>
       )}
     </div>

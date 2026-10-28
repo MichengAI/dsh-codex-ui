@@ -72,29 +72,32 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-shortcut-modal="settin
   flex-direction: column !important;
 }
 
-/* 云母/玻璃质感开启时：设置面板底板、设置侧边栏与内容工作区一起生效毛玻璃半透明 */
+/* 设置工作台必须使用实色不透明底板，严禁半透明导致底层文本透出重影 */
+[data-shortcut-modal="settings"] {
+  background: var(--dsw-alias-bg-base, #151517) !important;
+}
+
+[data-shortcut-modal="settings"] > div:not(nav) {
+  background: var(--dsw-alias-bg-base, #151517) !important;
+}
+
 html[data-dsh-glass] [data-shortcut-modal="settings"] {
-  background: color-mix(in srgb, var(--dsw-alias-bg-base) calc(var(--dsh-glass-frost, 1) * 65%), transparent) !important;
-  backdrop-filter: blur(var(--dsh-glass-blur, 14px)) !important;
-  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 14px)) !important;
+  background: var(--dsw-alias-bg-base, #151517) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 html[data-dsh-glass] [data-shortcut-modal="settings"] > nav {
-  background: color-mix(in srgb, var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1)) calc(var(--dsh-glass-frost, 1) * 45%), transparent) !important;
-  backdrop-filter: blur(var(--dsh-glass-blur, 14px)) !important;
-  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 14px)) !important;
+  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #121214)) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05) !important;
 }
 
 html[data-dsh-glass] [data-shortcut-modal="settings"] > div:not(nav) {
-  background: transparent !important;
-}
-
-html[data-dsh-glass] [data-shortcut-modal="settings"] > div:not(nav) > :first-child {
-  background: color-mix(in srgb, var(--dsw-alias-bg-base) calc(var(--dsh-glass-frost, 1) * 50%), transparent) !important;
-  backdrop-filter: blur(var(--dsh-glass-blur, 14px)) !important;
-  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 14px)) !important;
+  background: var(--dsw-alias-bg-base, #151517) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
