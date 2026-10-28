@@ -159,6 +159,17 @@ test('桌面端顶栏避让：声明顶栏位移且不得存在遮挡顶部操�
   expect(SETTINGS_SKIN_CSS).not.toContain('[data-shortcut-modal="settings"]::after')
 })
 
+test('全屏工作台遮罩选择器只命中有设置面板的那一层，不得污染其它模态窗', () => {
+  // 宿主所有 Modal（确认框、插件弹窗等）的 root 都是 body 直属的 role="presentation"；
+  // 旧写法 body:has(> [role="presentation"] > [data-shortcut-modal="settings"]) > [role="presentation"]
+  // 会把同时打开的其它模态窗也改成 align-items: stretch，卡片被拉到左上角。
+  expect(SETTINGS_SKIN_CSS).not.toContain('body:has(> [role="presentation"]')
+  expect(SETTINGS_SKIN_CSS).toContain('body > [role="presentation"]:has(> [data-shortcut-modal="settings"])')
+  expect(SETTINGS_SKIN_CSS).toContain(
+    'html[data-dsh-glass-float] body > [role="presentation"]:has(> [data-shortcut-modal="settings"])',
+  )
+})
+
 test('设置顶部搜索框对齐宿主原生 Input 规范与拉平布局', () => {
   // 不得手绘清除按钮
   expect(SETTINGS_SKIN_CSS).not.toContain('.dcu-settings-search-clear')
