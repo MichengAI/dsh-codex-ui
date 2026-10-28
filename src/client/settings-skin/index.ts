@@ -480,20 +480,41 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
 }
 `
 
-/** 探测宿主 settings-skin 子组件是否处于激活状态 */
-export async function checkSettingsSkinEnabled(): Promise<boolean> {
+let lastSkinCheckTime = 0
+let cachedSkinEnabledResult: boolean | null = null
+
+/** 探测宿主 settings-skin 子组件是否处于激活状态（含 5 秒 TTL 缓存，避免频繁打开弹层连续网络开销） */
+export async function checkSettingsSkinEnabled(force = false): Promise<boolean> {
+  const now = Date.now()
+  if (!force && cachedSkinEnabledResult !== null && now - lastSkinCheckTime < 5000) {
+    return cachedSkinEnabledResult
+  }
   try {
     const response = await fetch('/api/michengai/dsh-codex-ui/settings-skin', {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     })
-    if (!response.ok) return false
+    if (!response.ok) {
+      cachedSkinEnabledResult = false
+      lastSkinCheckTime = now
+      return false
+    }
     const data = await response.json()
-    return data?.enabled === true
+    cachedSkinEnabledResult = data?.enabled === true
+    lastSkinCheckTime = now
+    return cachedSkinEnabledResult
   } catch {
     // 无法连通 /api/michengai/dsh-codex-ui/settings-skin（例如子组件被停用导致端点不存在、或网络断开），坚决返回 false！
+    cachedSkinEnabledResult = false
+    lastSkinCheckTime = now
     return false
   }
+}
+
+/** 重置 settings-skin 探测缓存（用于测试或强制重新探测） */
+export function refreshSettingsSkinCache(): void {
+  lastSkinCheckTime = 0
+  cachedSkinEnabledResult = null
 }
 
 /** 注入 Codex 1:1 设置皮肤样式 */

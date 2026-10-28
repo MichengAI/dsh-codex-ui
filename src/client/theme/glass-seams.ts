@@ -101,10 +101,20 @@ export function startGlassSeamStamper(): () => void {
   let frame: number | undefined
   let dirty = false
   let disposed = false
+  let lastStampTime = Date.now()
+  const MIN_THROTTLE_MS = 150
+
   const stampFrame = (): void => {
     frame = undefined
     if (!dirty) return
+    const now = Date.now()
+    if (now - lastStampTime < MIN_THROTTLE_MS) {
+      // 距离上次扫描不足 150ms（如会话流式输出突发），推迟等待下一个周期，避免每帧执行全文档选择器扫描
+      frame = requestAnimationFrame(stampFrame)
+      return
+    }
     dirty = false
+    lastStampTime = now
     stampAll()
   }
   const schedule = (): void => {

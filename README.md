@@ -66,8 +66,8 @@ Codex Light palette powered by Ambient Ground diffuse lighting gradient, deliver
 
 ---
 
-### 3. Full-Screen Dual-Island Settings (3 Standard Cards)
-Spacious settings workbench organized into three unified standard cards: Feature Overview, Theme & Glassmorphism, and Companion Plugins.
+### 3. Full-Screen Dual-Island Settings (Modular Card System)
+Spacious settings workbench organized into a modular card system (Feature Overview, Theme & Glassmorphism, and Companion Plugins), dynamically adapting based on active sub-components.
 
 ![Full-Screen Settings Workbench](assets/screenshots/settings-about.png)
 

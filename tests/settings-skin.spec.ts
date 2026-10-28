@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from 'vitest'
 import {
   checkSettingsSkinEnabled,
+  refreshSettingsSkinCache,
   installSettingsSkin,
   uninstallSettingsSkin,
   decorateSettingsNav,
@@ -181,21 +182,25 @@ test('同包独立子组件契约：cordis.patch.yml 与 package.json 声明 set
 test('子组件启用状态检测 checkSettingsSkinEnabled 支持服务端探测与停用响应', async () => {
   const originalFetch = globalThis.fetch
   try {
+    refreshSettingsSkinCache()
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ enabled: true }),
     }) as unknown as typeof fetch
     expect(await checkSettingsSkinEnabled()).toBe(true)
 
+    refreshSettingsSkinCache()
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 404,
     }) as unknown as typeof fetch
     expect(await checkSettingsSkinEnabled()).toBe(false)
 
+    refreshSettingsSkinCache()
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network offline or disabled'))
     expect(await checkSettingsSkinEnabled()).toBe(false)
   } finally {
+    refreshSettingsSkinCache()
     globalThis.fetch = originalFetch
   }
 })
