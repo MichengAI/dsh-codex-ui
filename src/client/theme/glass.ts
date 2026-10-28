@@ -75,7 +75,7 @@ export function applyGlassSettings(options: {
     '--dsh-glass-frost': String(Math.min(spec.frost / 50, 1.4)),
     '--dsh-glass-brightness-black': '0',
     '--dsh-glass-brightness-white': '0',
-    '--dsh-glass-glow': '0',
+    '--dsh-glass-glow': '1',
   }
 
   for (const [prop, val] of Object.entries(knobs)) {

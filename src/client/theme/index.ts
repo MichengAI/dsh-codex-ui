@@ -52,21 +52,73 @@ function tolerantRegistration(run: () => (() => void) | void): () => void {
   }
 }
 
+let lastAppliedTokens: string[] = []
+
+/**
+ * 将指定主题精准映射并深度应用到真实 DOM（双重保险，彻底压制并覆盖官方亮暗限制）
+ */
+export function applyThemeToDocument(themeOption: ThemeOption, themeRuntime?: ThemeRuntime): void {
+  if (typeof document === 'undefined') return
+  const runtime = themeRuntime ?? globalThemeRuntime
+
+  if (themeOption === 'stock') {
+    // 还原官方默认
+    for (const name of lastAppliedTokens) {
+      document.body.style.removeProperty(name)
+    }
+    lastAppliedTokens = []
+    if (runtime && typeof runtime.setTheme === 'function') {
+      try {
+        runtime.setTheme('system')
+      } catch {
+        try {
+          runtime.setTheme('dark')
+        } catch {}
+      }
+    }
+    return
+  }
+
+  const targetTheme = ALL_BUILTIN_THEMES.find((t) => t.id === themeOption)
+  if (!targetTheme) return
+
+  // 1. 同步通知 ThemeRuntime
+  if (runtime && typeof runtime.setTheme === 'function') {
+    try {
+      runtime.setTheme(targetTheme.id)
+    } catch {}
+  }
+
+  // 2. 深度同步 DOM 根属性与配色模式（确保全应用与 Electron 窗口标题栏全部跟随）
+  const scheme = targetTheme.colorScheme
+  document.documentElement.style.colorScheme = scheme
+  document.documentElement.setAttribute('data-ds-theme-source', scheme)
+  if (scheme === 'dark') {
+    document.body.setAttribute('data-ds-dark-theme', '')
+  } else {
+    document.body.removeAttribute('data-ds-dark-theme')
+  }
+
+  // 3. 逐 Token 注入 CSSOM（覆盖官方原生与第三方样式的默认值）
+  for (const name of lastAppliedTokens) {
+    if (!(name in targetTheme.tokens)) {
+      document.body.style.removeProperty(name)
+    }
+  }
+  const applied: string[] = []
+  for (const [name, value] of Object.entries(targetTheme.tokens)) {
+    document.body.style.setProperty(name, value)
+    applied.push(name)
+  }
+  lastAppliedTokens = applied
+}
+
 /**
  * 供 UI 直接调用的主题切换入口，立即执行 ThemeRuntime.setTheme 并持久化。
  */
 export function changeTheme(themeOption: ThemeOption): void {
   setThemeOption(themeOption)
-  if (!globalThemeRuntime || typeof globalThemeRuntime.setTheme !== 'function') return
-  try {
-    if (themeOption === 'stock') {
-      globalThemeRuntime.setTheme('system')
-    } else {
-      globalThemeRuntime.setTheme(themeOption)
-    }
-  } catch (e) {
-    console.warn('[codex-ui:theme] setTheme failed:', e)
-  }
+  applyThemeToDocument(themeOption)
 }
 
 /**
@@ -121,32 +173,8 @@ export function observeTheme(ctx: ClientContext): () => void {
       preset: state.glassPreset,
     })
 
-    // 2. 同步主题配色
-    if (!theme || typeof theme.setTheme !== 'function') return
-    const currentThemeId = theme.getTheme?.()?.active?.id ?? theme.getTheme?.()?.preference
-
-    if (state.themeOption !== 'stock') {
-      if (currentThemeId !== state.themeOption) {
-        try {
-          theme.setTheme(state.themeOption)
-        } catch (e) {
-          console.warn(`[codex-ui:theme] failed to set ${state.themeOption}:`, e)
-        }
-      }
-    } else {
-      const isCustomTheme = ALL_BUILTIN_THEMES.some((t) => t.id === currentThemeId)
-      if (isCustomTheme) {
-        try {
-          theme.setTheme('system')
-        } catch {
-          try {
-            theme.setTheme('dark')
-          } catch {
-            // 忽略恢复异常
-          }
-        }
-      }
-    }
+    // 2. 同步主题配色（双重保险，直接应用并压制官方覆盖）
+    applyThemeToDocument(state.themeOption, theme)
   }
 
   // 探活检查：只有在明确 disabled: true 时才回退
@@ -168,6 +196,31 @@ export function observeTheme(ctx: ClientContext): () => void {
   // 初始即时应用（避免白闪与延迟）
   applyCurrentState()
 
+  // 关键防官方覆盖：当官方通用设置或内部 adopt() 广播 theme/change 时，
+  // 只要用户在 Codex UI 选择了自选主题，在当前微任务中立即抢回控制权并强制覆盖官方明亮/黑暗
+  let restorePending = false
+  const offThemeChange = ctx.on('theme/change', () => {
+    if (disposed) return
+    const state = getThemeSettingsState()
+    if (state.themeOption === 'stock') return
+    const currentThemeId = theme?.getTheme?.()?.active?.id ?? theme?.getTheme?.()?.preference
+    if (currentThemeId !== state.themeOption && !restorePending) {
+      restorePending = true
+      queueMicrotask(() => {
+        restorePending = false
+        if (disposed) return
+        const latest = getThemeSettingsState()
+        if (latest.themeOption !== 'stock' && theme && typeof theme.setTheme === 'function') {
+          try {
+            theme.setTheme(latest.themeOption)
+          } catch {
+            // 忽略恢复异常
+          }
+        }
+      })
+    }
+  })
+
   // 监听状态订阅
   const unsubscribe = subscribeThemeSettings(() => {
     applyCurrentState()
@@ -176,6 +229,7 @@ export function observeTheme(ctx: ClientContext): () => void {
   return () => {
     disposed = true
     unsubscribe()
+    offThemeChange?.()
     disposeGlassMode()
     for (const dispose of disposers) dispose()
     if (globalThemeRuntime === theme) globalThemeRuntime = undefined
