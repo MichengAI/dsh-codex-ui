@@ -39,16 +39,21 @@ const endpoint = CODEX_UI_API_ENDPOINTS.dependencies
 
 const stylesheet = `
 .dcu-about{color:var(--dsw-alias-label-primary);font-family:var(--dsw-font-family);display:flex;flex-direction:column}
+.dcu-about-head{display:flex;flex-direction:column;align-items:stretch;gap:12px;margin-bottom:12px}
+.dcu-about-title-block{min-width:0}
+.dcu-about h2,.dcu-about-title{margin:0;font-size:24px;line-height:32px;font-weight:600;letter-spacing:-.4px;color:var(--dsw-alias-label-primary)}
+.dcu-about-intro,.dcu-about-desc{margin:12px 0 0;color:var(--dsw-alias-label-tertiary,#a0a0a0);font-size:14px;line-height:22px}
+.dcu-about h3{margin:24px 0 12px;font-size:16px;font-weight:600;line-height:24px;color:var(--dsw-alias-label-primary)}
+.dcu-about-features{margin:0 0 20px;padding-left:20px;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:24px}
+.dcu-about-title-row{display:flex;align-items:center;gap:8px 12px;min-width:0;flex-wrap:wrap}
+.dcu-about-feedback-links,.dcu-about-links{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dcu-about-version{margin-left:8px;color:var(--dsw-alias-label-tertiary);font-family:inherit;font-size:12px;font-weight:500;line-height:18px;letter-spacing:0;white-space:nowrap;vertical-align:baseline}
 .dcu-section-card{box-sizing:border-box;display:flex;flex-direction:column;gap:16px;padding:18px 20px;background:var(--dsw-alias-bg-layer-2,#18181b);border:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,0.08));border-radius:12px;margin-bottom:16px;transition:border-color 0.15s ease,background-color 0.15s ease}
 html[data-dsh-glass] .dcu-section-card{background:var(--dsw-alias-bg-layer-2,#18181b)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08)}
 .dcu-section-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .dcu-section-title-wrap{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
 .dcu-section-title{margin:0;font-size:15px;font-weight:600;line-height:22px;color:var(--dsw-alias-label-primary);display:flex;align-items:center;gap:8px}
 .dcu-section-desc{margin:0;font-size:13px;line-height:18px;color:var(--dsw-alias-label-tertiary)}
-.dcu-feature-section{display:flex;flex-direction:column;gap:8px;margin-top:2px;padding-top:12px;border-top:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,0.06))}
-.dcu-feature-label{font-size:12px;font-weight:500;color:var(--dsw-alias-label-secondary)}
-.dcu-feature-grid{display:flex;flex-wrap:wrap;gap:8px}
-.dcu-feature-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-1,rgba(255,255,255,0.03));border:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,0.06));border-radius:6px}
 .dcu-about-dependencies{overflow:hidden;border:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,0.08));border-radius:8px;background:var(--dsw-alias-bg-layer-1,rgba(0,0,0,0.15))}
 .dcu-about-dependency{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:38px;padding:6px 14px;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,0.06));transition:background-color 120ms ease}
 .dcu-about-dependency:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,0.04))}
@@ -250,55 +255,53 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
   const title = (id: ManagedDependencyId): string => t(`about.dependency.${id}`)
   return <section ref={root} className="dcu-about" aria-label={t('about.nav')}>
     <style>{stylesheet}</style>
-    {/* 区域一：关于介绍与核心特性卡片 */}
-    <div className="dcu-section-card dcu-card-about">
-      <div className="dcu-section-header">
-        <div className="dcu-section-title-wrap">
+    {/* 页面顶部标题区：对齐宿主与各插件统一的标准页头规范 */}
+    <div className="dcu-about-head">
+      <div className="dcu-about-title-block">
+        <div className="dcu-about-title-row">
           <h2 className="dcu-about-title">{t('about.title')}{selfVersion === undefined ? null : <span className="dcu-about-version">v{selfVersion}</span>}</h2>
-          <p className="dcu-section-desc">{t('about.description')}</p>
+          <div className="dcu-about-feedback-links dcu-about-links">
+            <PrimitiveButton
+              variant="outline"
+              size="sm"
+              icon={<GithubMark16 />}
+              aria-label={t('about.viewProject')}
+              onClick={() => { openExternal('https://github.com/MichengAI/dsh-codex-ui') }}
+            >
+              {t('about.viewProject')}
+            </PrimitiveButton>
+            <PrimitiveButton
+              variant="outline"
+              size="sm"
+              icon={<IconListPenOutlineMedium size={14} />}
+              aria-label={t('about.feedback')}
+              onClick={() => { openExternal('https://github.com/MichengAI/dsh-codex-ui/issues') }}
+            >
+              {t('about.feedback')}
+            </PrimitiveButton>
+            <PrimitiveButton
+              variant="outline"
+              size="sm"
+              icon={state === 'loading' ? <IconLoadingOutlineMedium size={14} /> : <IconRefreshOutlineMedium size={14} />}
+              aria-label={t('about.checkUpdate')}
+              disabled={state === 'loading' || installing !== undefined}
+              onClick={() => { void load() }}
+            >
+              {state === 'loading' ? t('about.checking') : t('about.checkUpdate')}
+            </PrimitiveButton>
+          </div>
         </div>
-        <div className="dcu-about-feedback-links dcu-about-links">
-          <PrimitiveButton
-            variant="outline"
-            size="sm"
-            icon={<GithubMark16 />}
-            aria-label={t('about.viewProject')}
-            onClick={() => { openExternal('https://github.com/MichengAI/dsh-codex-ui') }}
-          >
-            {t('about.viewProject')}
-          </PrimitiveButton>
-          <PrimitiveButton
-            variant="outline"
-            size="sm"
-            icon={<IconListPenOutlineMedium size={14} />}
-            aria-label={t('about.feedback')}
-            onClick={() => { openExternal('https://github.com/MichengAI/dsh-codex-ui/issues') }}
-          >
-            {t('about.feedback')}
-          </PrimitiveButton>
-          <PrimitiveButton
-            variant="outline"
-            size="sm"
-            icon={state === 'loading' ? <IconLoadingOutlineMedium size={14} /> : <IconRefreshOutlineMedium size={14} />}
-            aria-label={t('about.checkUpdate')}
-            disabled={state === 'loading' || installing !== undefined}
-            onClick={() => { void load() }}
-          >
-            {state === 'loading' ? t('about.checking') : t('about.checkUpdate')}
-          </PrimitiveButton>
-        </div>
-      </div>
-      <div className="dcu-feature-section">
-        <span className="dcu-feature-label">{t('about.features')}</span>
-        <div className="dcu-feature-grid">
-          <span className="dcu-feature-pill">{t('about.feature.composer')}</span>
-          <span className="dcu-feature-pill">{t('about.feature.settingsSkin')}</span>
-          <span className="dcu-feature-pill">{t('about.feature.sessionTitle')}</span>
-          <span className="dcu-feature-pill">{t('about.feature.theme')}</span>
-          <span className="dcu-feature-pill">{t('about.feature.dependencies')}</span>
-        </div>
+        <p className="dcu-about-desc dcu-about-intro">{t('about.description')}</p>
       </div>
     </div>
+    <h3>{t('about.features')}</h3>
+    <ul className="dcu-about-features">
+      <li>{t('about.feature.composer')}</li>
+      <li>{t('about.feature.settingsSkin')}</li>
+      <li>{t('about.feature.sessionTitle')}</li>
+      <li>{t('about.feature.theme')}</li>
+      <li>{t('about.feature.dependencies')}</li>
+    </ul>
 
     {/* 区域二：界面外观与换肤配置卡片 */}
     <ThemeSettingsCard t={t} />
