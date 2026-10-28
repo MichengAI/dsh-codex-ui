@@ -48,7 +48,7 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(name).toBe('codex-ui-theme')
   })
 
-  it('宿主插件正确向 webServer 注册 /api/dsh-codex-ui/theme 端点', () => {
+  it('宿主插件正确向 webServer 注册 /api/michengai/dsh-codex-ui/theme 端点', () => {
     const ctx = new Context()
     let registeredPath = ''
     let handlerFn:

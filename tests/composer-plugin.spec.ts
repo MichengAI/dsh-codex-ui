@@ -12,7 +12,7 @@ describe('codex-ui-composer sub-plugin', () => {
     expect(name).toBe('codex-ui-composer')
   })
 
-  it('宿主插件正确向 webServer 注册 /api/dsh-codex-ui/composer 端点', () => {
+  it('宿主插件正确向 webServer 注册 /api/michengai/dsh-codex-ui/composer 端点', () => {
     const ctx = new Context()
     let registeredPath = ''
     let handlerFn: ((req: unknown, res: { writeHead: (status: number, headers?: Record<string, string>) => void; end: (body?: string) => void }) => void) | undefined

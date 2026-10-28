@@ -6,7 +6,7 @@ import { apply, inject } from '../src/index.ts'
 import { Context } from '@deepseek-ai/cordis'
 import { HostConnectionService } from '@deepseek-ai/dsh-client-connection'
 
-const dependenciesPath = '/api/dsh-codex-ui/dependencies'
+const dependenciesPath = '/api/michengai/dsh-codex-ui/dependencies'
 
 const expectedPaths = [
   dependenciesPath,

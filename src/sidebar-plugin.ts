@@ -32,7 +32,7 @@ export function isSubPluginDisabledOnDisk(id: string, homeDir?: string): boolean
 
 /**
  * 侧栏导航子组件 (Host 侧)
- * 挂载时通过 webServer 暴露 /api/dsh-codex-ui/sidebar；
+ * 挂载时通过 webServer 暴露 /api/michengai/dsh-codex-ui/sidebar；
  * 停用此子组件或端点不可达时，客户端关闭增强并回退 DSH 官方侧栏。
  */
 export function apply(ctx: Context): void {

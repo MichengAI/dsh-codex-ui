@@ -381,7 +381,7 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
 /** 探测宿主 settings-skin 子组件是否处于激活状态 */
 export async function checkSettingsSkinEnabled(): Promise<boolean> {
   try {
-    const response = await fetch('/api/dsh-codex-ui/settings-skin', {
+    const response = await fetch('/api/michengai/dsh-codex-ui/settings-skin', {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     })
@@ -389,7 +389,7 @@ export async function checkSettingsSkinEnabled(): Promise<boolean> {
     const data = await response.json()
     return data?.enabled === true
   } catch {
-    // 无法连通 /api/dsh-codex-ui/settings-skin（例如子组件被停用导致端点不存在、或网络断开），坚决返回 false！
+    // 无法连通 /api/michengai/dsh-codex-ui/settings-skin（例如子组件被停用导致端点不存在、或网络断开），坚决返回 false！
     return false
   }
 }

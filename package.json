@@ -55,7 +55,9 @@
     "./locale/*.json": "./locale/*.json",
     "./session-title/locale/*.json": "./locale/session-title/*.json",
     "./settings-skin/locale/*.json": "./locale/settings-skin/*.json",
-    "./composer/locale/*.json": "./locale/composer/*.json"
+    "./composer/locale/*.json": "./locale/composer/*.json",
+    "./sidebar/locale/*.json": "./locale/sidebar/*.json",
+    "./theme/locale/*.json": "./locale/theme/*.json"
   },
   "files": [
     "lib",

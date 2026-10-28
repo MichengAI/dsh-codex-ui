@@ -9,7 +9,7 @@ declare const inject: string[];
 declare function isSubPluginDisabledOnDisk(id: string, homeDir?: string): boolean;
 /**
  * Composer 输入框增强子组件 (Host 侧)
- * 挂载时通过 webServer 暴露 /api/dsh-codex-ui/composer 端点；
+ * 挂载时通过 webServer 暴露 /api/michengai/dsh-codex-ui/composer 端点；
  * 当在 DSH 插件管理中停用此子组件时，此 fiber 被销毁或在此端点响应 enabled: false，客户端自动回退至 DSH 原生输入区。
  */
 declare function apply(ctx: Context): void;
