@@ -4,6 +4,7 @@ import {
   refreshSettingsSkinCache,
   installSettingsSkin,
   uninstallSettingsSkin,
+  observeSettingsSkin,
   decorateSettingsNav,
   getHostSidebarExpandedWidth,
   DEFAULT_SIDEBAR_WIDTH,
@@ -222,4 +223,23 @@ test('子组件启用状态检测 checkSettingsSkinEnabled 支持服务端探测
     refreshSettingsSkinCache()
     globalThis.fetch = originalFetch
   }
+})
+
+test('设置皮肤立即预装：observeSettingsSkin 启动时即刻注入样式，无需等待弹窗打开或网络往返', async () => {
+  uninstallSettingsSkin(document)
+  expect(document.getElementById(SETTINGS_SKIN_STYLE_ID)).toBeNull()
+
+  const dispose = observeSettingsSkin()
+  try {
+    // 启动即预装，零延迟消除打开弹窗变大的闪烁
+    expect(document.getElementById(SETTINGS_SKIN_STYLE_ID)).not.toBeNull()
+  } finally {
+    dispose()
+    uninstallSettingsSkin(document)
+  }
+})
+
+test('浅色模式下设置工作台背景与按钮高对比度规则兜底', () => {
+  expect(SETTINGS_SKIN_CSS).toContain('body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]')
+  expect(SETTINGS_SKIN_CSS).toContain('body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"] > div:not(nav)')
 })

@@ -82,6 +82,17 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-shortcut-modal="settin
   background: var(--dsw-alias-bg-base, #151517) !important;
 }
 
+/* 浅色模式全局兜底：浅底高对比度规范，绝不允许残留或回退暗黑色 */
+body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"],
+html[data-ds-theme-source="light"] [data-shortcut-modal="settings"] {
+  background: var(--dsw-alias-bg-base, var(--dsw-static-neutral-bluish-00, #ffffff)) !important;
+}
+
+body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"] > div:not(nav),
+html[data-ds-theme-source="light"] [data-shortcut-modal="settings"] > div:not(nav) {
+  background: var(--dsw-alias-bg-layer-1, var(--dsw-static-neutral-bluish-00, #ffffff)) !important;
+}
+
 /* 玻璃质感/原版兼容排版模式（Compat） */
 html[data-dsh-glass]:not([data-dsh-glass-float]) [data-shortcut-modal="settings"] {
   background: var(--dsw-alias-bg-base, #151517) !important;
@@ -421,6 +432,39 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
+}
+
+/* 浅色模式右侧内容区实色与文字按钮高对比度兜底 */
+body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"] > div:not(nav) > :first-child,
+html[data-ds-theme-source="light"] [data-shortcut-modal="settings"] > div:not(nav) > :first-child {
+  background: var(--dsw-alias-bg-layer-1, #ffffff) !important;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)) !important;
+}
+
+body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"] > div:not(nav) > :first-child h2,
+body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"] > div:not(nav) > :first-child span,
+html[data-ds-theme-source="light"] [data-shortcut-modal="settings"] > div:not(nav) > :first-child h2,
+html[data-ds-theme-source="light"] [data-shortcut-modal="settings"] > div:not(nav) > :first-child span {
+  color: var(--dsw-alias-label-primary, #18181b) !important;
+}
+
+body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"] > div:not(nav) > :first-child button,
+body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"] > div:not(nav) > :first-child a,
+html[data-ds-theme-source="light"] [data-shortcut-modal="settings"] > div:not(nav) > :first-child button,
+html[data-ds-theme-source="light"] [data-shortcut-modal="settings"] > div:not(nav) > :first-child a {
+  color: var(--dsw-alias-label-secondary, #52525b) !important;
+}
+
+body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"] > div:not(nav) > :first-child button:hover,
+body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"] > div:not(nav) > :first-child a:hover,
+html[data-ds-theme-source="light"] [data-shortcut-modal="settings"] > div:not(nav) > :first-child button:hover,
+html[data-ds-theme-source="light"] [data-shortcut-modal="settings"] > div:not(nav) > :first-child a:hover {
+  color: var(--dsw-alias-label-primary, #18181b) !important;
+}
+
+body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"] > div:not(nav) > :nth-child(2),
+html[data-ds-theme-source="light"] [data-shortcut-modal="settings"] > div:not(nav) > :nth-child(2) {
+  background: var(--dsw-alias-bg-layer-1, #ffffff) !important;
 }
 
 /* 右侧设置区固定宽度规范：居中排版，避免宽屏下拉伸 */
@@ -782,8 +826,13 @@ export function observeSettingsSkin(_ctx?: Context): () => void {
     }
   }
 
-  // 仅当 DOM 中已存在设置弹层时才触发同步，避免应用启动时在后台触发多余的网络探测与样式加载
-  if (typeof document !== 'undefined' && document.querySelector('[data-shortcut-modal="settings"]')) {
+  // 1. 启动时立即预装样式（零延迟，避免打开弹层时从 800x800 小窗闪烁到全屏）
+  if (typeof document !== 'undefined') {
+    installSettingsSkin(document)
+    const existingModal = document.querySelector<HTMLElement>('[data-shortcut-modal="settings"]')
+    if (existingModal) {
+      cleanDecorator = decorateSettingsNav(existingModal)
+    }
     void sync()
   }
 
@@ -791,7 +840,14 @@ export function observeSettingsSkin(_ctx?: Context): () => void {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
         if (node instanceof HTMLElement) {
-          if (node.getAttribute('data-shortcut-modal') === 'settings' || node.querySelector('[data-shortcut-modal="settings"]')) {
+          const modal = node.getAttribute('data-shortcut-modal') === 'settings'
+            ? node
+            : node.querySelector<HTMLElement>('[data-shortcut-modal="settings"]')
+          if (modal) {
+            // 确保样式预装，并同步执行装饰器，彻底消除等待网络请求导致的 1-2 秒小窗卡顿
+            installSettingsSkin(document)
+            cleanDecorator?.()
+            cleanDecorator = decorateSettingsNav(modal)
             void sync()
             return
           }

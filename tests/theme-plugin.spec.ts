@@ -315,6 +315,77 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(registeredThemes.length).toBe(0)
   })
 
+  it('启动时对齐宿主 ThemeRuntime：当本地已保存自定义主题（如 catppuccin-latte）时，首帧必须调用 setTheme 对齐', () => {
+    localStorage.setItem(STORAGE_KEYS.themeOption, 'catppuccin-latte')
+    refreshThemeSettingsSnapshot()
+
+    let currentPreference = 'dark'
+    const fakeThemeRuntime = {
+      register: vi.fn(),
+      setTheme: vi.fn((id: string) => {
+        currentPreference = id
+      }),
+      getTheme: vi.fn(() => ({
+        preference: currentPreference,
+        active: { id: currentPreference },
+      })),
+    }
+
+    const ctx = new Context()
+    ctx.provide('theme', fakeThemeRuntime as never)
+
+    const dispose = observeTheme(ctx)
+
+    try {
+      expect(fakeThemeRuntime.setTheme).toHaveBeenCalledWith('catppuccin-latte')
+      expect(document.documentElement.style.colorScheme).toBe('light')
+      expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
+    } finally {
+      dispose()
+      localStorage.removeItem(STORAGE_KEYS.themeOption)
+      refreshThemeSettingsSnapshot()
+    }
+  })
+
+  it('宿主触发 theme/change 时：浅色主题必须强制纠正 data-ds-dark-theme 与 colorScheme，防止黑字压黑底', () => {
+    localStorage.setItem(STORAGE_KEYS.themeOption, 'catppuccin-latte')
+    refreshThemeSettingsSnapshot()
+
+    const fakeThemeRuntime = {
+      register: vi.fn(),
+      setTheme: vi.fn(),
+      getTheme: vi.fn(() => ({
+        preference: 'catppuccin-latte',
+        active: { id: 'catppuccin-latte', colorScheme: 'light' },
+      })),
+    }
+
+    const ctx = new Context()
+    ctx.provide('theme', fakeThemeRuntime as never)
+
+    const dispose = observeTheme(ctx)
+
+    try {
+      // 模拟宿主 ui-layout 呈现器在接收到系统事件后，误将 body 标为 dark 态
+      document.body.setAttribute('data-ds-dark-theme', '')
+      document.documentElement.style.colorScheme = 'dark'
+
+      // 宿主触发 theme/change
+      ctx.emit('theme/change', {
+        preference: 'system',
+        active: { id: 'dark', colorScheme: 'dark', tokens: {} },
+      } as never)
+
+      // 验证 observeTheme 拦截 theme/change 并强制同步为用户的浅色主题属性，绝不允许残留 data-ds-dark-theme
+      expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
+      expect(document.documentElement.style.colorScheme).toBe('light')
+    } finally {
+      dispose()
+      localStorage.removeItem(STORAGE_KEYS.themeOption)
+      refreshThemeSettingsSnapshot()
+    }
+  })
+
   it('stock 分支安全守卫：宿主运行原生主题时不调用 setTheme，且彻底清理 DOM 根属性残留', () => {
     let hostTheme = 'dark'
     const fakeRuntime = {

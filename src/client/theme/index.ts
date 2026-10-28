@@ -211,6 +211,8 @@ export function observeTheme(ctx: ClientContext): () => void {
   // 注册全部 6 套主题（4 套 Catppuccin + 2 套 Codex）
   if (theme) {
     registerThemesOnRuntime(theme)
+    const state = getThemeSettingsState()
+    applyThemeToDocument(state.themeOption, theme, true)
   } else {
     // 服务注册时序兜底：当宿主 theme 服务稍晚就绪时自动补齐注册与状态同步
     let retries = 0
@@ -248,8 +250,8 @@ export function observeTheme(ctx: ClientContext): () => void {
       glow: state.glassGlow,
     })
 
-    // 2. 同步主题配色（首帧启动时不阻塞宿主 ThemeRuntime）
-    applyThemeToDocument(state.themeOption, theme, syncRuntime)
+    // 2. 同步主题配色（首帧启动即同步宿主 ThemeRuntime）
+    applyThemeToDocument(state.themeOption, globalThemeRuntime ?? theme, syncRuntime)
   }
 
   // 探活检查与自愈同步机制：
@@ -277,13 +279,13 @@ export function observeTheme(ctx: ClientContext): () => void {
         hasAppliedCustomTheme = false
       }
 
-      // 优先启动低频自愈探测（15 秒），网络恢复或端点挂载后自动恢复
+      // 优先启动快速自愈探测（3 秒），网络恢复或端点挂载后自动恢复
       if (!healTimer) {
         healTimer = setInterval(() => {
           if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
             void checkAndSync()
           }
-        }, 15000)
+        }, 3000)
       }
 
       // 安全尝试将宿主主题还原为系统偏好，任何异常均安全捕获不阻断
@@ -323,21 +325,16 @@ export function observeTheme(ctx: ClientContext): () => void {
   // 启动探活
   void checkAndSync()
 
-  // 初始即时应用（首帧只注入 CSSOM，确保 0 延迟、0 白闪且绝对不阻断宿主启动生命周期）
-  applyCurrentState(false)
+  // 初始即时应用（首帧注入并立即同步宿主 ThemeRuntime）
+  applyCurrentState(true)
 
-  // 监听官方 theme/change：当官方或系统切换主题时，若当前处于自选主题，仅补齐 DOM tokens 确保不丢失，
-  // 严禁在此处调用 theme.setTheme 导致无限微任务死循环卡死页面。
+  // 监听官方 theme/change：当官方或系统切换主题时，若当前处于自选主题，同步 DOM tokens 并纠正 DOM 根属性
+  // 传入 syncRuntime = false 防止调用 theme.setTheme 导致无限微任务死循环卡死页面。
   const offThemeChange = ctx.on('theme/change', () => {
     if (disposed || !isThemeSubPluginEnabled()) return
     const state = getThemeSettingsState()
     if (state.themeOption === 'stock') return
-    const targetTheme = ALL_BUILTIN_THEMES.find((t) => t.id === state.themeOption)
-    if (targetTheme) {
-      for (const [name, value] of Object.entries(targetTheme.tokens)) {
-        document.body.style.setProperty(name, value)
-      }
-    }
+    applyThemeToDocument(state.themeOption, undefined, false)
   })
 
   // 监听状态订阅
