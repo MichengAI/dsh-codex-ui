@@ -111,6 +111,16 @@ try {
     await page.screenshot({ path: 'C:/Users/YUJIYU/AppData/Local/hermes/cache/scratch/settings-sidebar-glass.png' })
     console.log('测试截图已保存至 scratch/settings-sidebar-glass.png')
 
+    // 点击 Codex 亮色测试浅色模式下的温润云母画布底色
+    const codexLightBtn = page.locator('.dcu-theme-cube:has-text("Codex 亮色")')
+    if (await codexLightBtn.isVisible()) {
+      console.log('点击 Codex 亮色...')
+      await codexLightBtn.click()
+      await page.waitForTimeout(600)
+      await page.screenshot({ path: 'C:/Users/YUJIYU/AppData/Local/hermes/cache/scratch/settings-light-ground.png' })
+      console.log('浅色设置页截图已保存至 scratch/settings-light-ground.png')
+    }
+
     // 4. 关闭设置面板看主界面侧栏与背景
     await page.keyboard.press('Escape')
     await page.waitForTimeout(600)
