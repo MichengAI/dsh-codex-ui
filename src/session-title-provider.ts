@@ -2,7 +2,7 @@ import { alignThemeToMessage, assembleSessionTitle, parseTypeAndTheme, resolveSe
 
 export const SESSION_TITLE_PROVIDER_ID = 'codex-ui-session-title'
 const MAX_INPUT_BYTES = 4096
-const MAX_OUTPUT_TOKENS = 64
+const MAX_OUTPUT_TOKENS = 4096
 const TIMEOUT_MS = 60_000
 
 export type SessionTitleHost = {

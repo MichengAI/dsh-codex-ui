@@ -331,3 +331,41 @@ test('模型被截断或中断时放弃标题以保留回退', async () => {
     await expect(providers[0]!.generate(request({ id: 'session-1' }))).rejects.toThrow()
   }
 })
+
+test('会话标题请求对齐官方 4096 预算，防止推理模型被思考 token 耗尽', async () => {
+  const streamOptions: Record<string, unknown>[] = []
+  const prepareOptions: Record<string, unknown>[] = []
+  const providers: Provider[] = []
+
+  const llm = {
+    prepareCall: async (
+      route: { provider: string; model: string; maxTokens?: number },
+      _signal?: AbortSignal,
+      selector?: (controls: Record<string, unknown>, model: { reasoning?: { efforts?: { id: string }[] } }) => Record<string, unknown>
+    ) => {
+      prepareOptions.push(route)
+      const selected = selector ? selector({}, { reasoning: { efforts: [{ id: 'low' }, { id: 'medium' }] } }) : {}
+      return {
+        config: { ...selected },
+        stream: (opts: Record<string, unknown>) => {
+          streamOptions.push(opts)
+          return textStream('功能｜模型资源聚合插件调研')
+        },
+      }
+    },
+    stream: (opts: Record<string, unknown>) => {
+      streamOptions.push(opts)
+      return textStream('功能｜模型资源聚合插件调研')
+    },
+  }
+
+  registerSessionTitleProvider(host({
+    sessionTitle: { register: provider => { providers.push(provider); return () => {} } },
+    llm,
+  }))
+
+  const result = await providers[0]!.generate(request({ id: 'session-1' }, '调研 dsh 插件'))
+  expect(result.title).toBe(`${SESSION_TITLE_EMOJI.feature} 功能｜模型资源聚合插件调研`)
+  expect(prepareOptions[0]?.maxTokens).toBe(4096)
+  expect(streamOptions[0]?.reasoningEffort).toBe('low')
+})
