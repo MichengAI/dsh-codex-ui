@@ -22,6 +22,7 @@ import {
   GLASS_FLOAT_ATTRIBUTE,
   GLASS_PRESETS,
   getThemeSettingsState,
+  refreshThemeSettingsSnapshot,
   observeTheme,
   setGlassEnabled,
   setGlassGlow,
@@ -354,7 +355,46 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
   })
 
   it('新装用户默认开箱即用：未持久化 glassEnabled 时默认随排版模式激活 (true)', () => {
+    setGlassEnabled(false)
+    expect(getThemeSettingsState().glassEnabled).toBe(false)
+
     localStorage.removeItem(STORAGE_KEYS.glassEnabled)
+    refreshThemeSettingsSnapshot()
     expect(getThemeSettingsState().glassEnabled).toBe(true)
+  })
+
+  it('主题探活具备自愈机制：初次失败降级后，端点恢复时能够自动重新激活', async () => {
+    const root = document.documentElement
+    root.removeAttribute(GLASS_ATTRIBUTE)
+
+    // 1. 初次探活失败（模拟网关未就绪 404）
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+    } as Response)
+
+    const ctx = {
+      on: vi.fn(),
+      get: vi.fn().mockReturnValue(undefined),
+    }
+
+    const dispose = observeTheme(ctx as never)
+    // 等待首帧探活执行
+    await new Promise((r) => setTimeout(r, 50))
+    expect(root.hasAttribute(GLASS_ATTRIBUTE)).toBe(false)
+
+    // 2. 服务恢复 200 { enabled: true }，触发 focus 事件自愈
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ enabled: true }),
+    } as Response)
+
+    window.dispatchEvent(new Event('focus'))
+    await new Promise((r) => setTimeout(r, 50))
+
+    // 自愈成功，毛玻璃重新挂载
+    expect(root.hasAttribute(GLASS_ATTRIBUTE)).toBe(true)
+
+    dispose()
   })
 })

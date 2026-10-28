@@ -42,13 +42,18 @@ describe('profile-resolver', () => {
     expect(info.profileDir).toBe(join(tempHome, 'profiles', 'web'))
   })
 
-  it('能够从命令行参数 --profile <name> 中正确解析', () => {
+  it('能够从命令行参数 --profile <name> 与 --profile=<name> 中正确解析', () => {
     const origArgv = process.argv
     try {
       process.argv = ['node', 'app.js', '--profile', 'qa-profile']
-      const info = resolveCurrentProfile(undefined, tempHome)
-      expect(info.profileName).toBe('qa-profile')
-      expect(info.profileDir).toBe(join(tempHome, 'profiles', 'qa-profile'))
+      const info1 = resolveCurrentProfile(undefined, tempHome)
+      expect(info1.profileName).toBe('qa-profile')
+      expect(info1.profileDir).toBe(join(tempHome, 'profiles', 'qa-profile'))
+
+      process.argv = ['node', 'app.js', '--profile=ci-profile']
+      const info2 = resolveCurrentProfile(undefined, tempHome)
+      expect(info2.profileName).toBe('ci-profile')
+      expect(info2.profileDir).toBe(join(tempHome, 'profiles', 'ci-profile'))
     } finally {
       process.argv = origArgv
     }
@@ -75,14 +80,14 @@ describe('profile-resolver', () => {
     const webCtx = {
       get: (key: string) => (key === 'profileContext' ? { name: 'web', dir: webDir } : undefined),
     }
-    const disabledInWeb = isSubPluginDisabledOnDisk('codex-ui-theme', webCtx as never, tempHome)
+    const disabledInWeb = isSubPluginDisabledOnDisk('codex-ui-theme', tempHome, webCtx as never)
     expect(disabledInWeb).toBe(false)
 
     // 当明确在 desktop profile 下时，如实报告 disabled: true
     const desktopCtx = {
       get: (key: string) => (key === 'profileContext' ? { name: 'desktop', dir: desktopDir } : undefined),
     }
-    const disabledInDesktop = isSubPluginDisabledOnDisk('codex-ui-theme', desktopCtx as never, tempHome)
+    const disabledInDesktop = isSubPluginDisabledOnDisk('codex-ui-theme', tempHome, desktopCtx as never)
     expect(disabledInDesktop).toBe(true)
   })
 })

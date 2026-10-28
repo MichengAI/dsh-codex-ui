@@ -83,6 +83,12 @@ function computeSnapshot(): ThemeSettingsState {
 
 let currentSnapshot: ThemeSettingsState = computeSnapshot()
 
+/** 强制重算并刷新主题与云母外观配置快照（测试用例或外部直接写入 localStorage 时使用） */
+export function refreshThemeSettingsSnapshot(): ThemeSettingsState {
+  currentSnapshot = computeSnapshot()
+  return currentSnapshot
+}
+
 /** 获取当前主题与云母外观配置快照（通过事件驱动同步，避免高频无谓读盘） */
 export function getThemeSettingsState(): ThemeSettingsState {
   return currentSnapshot

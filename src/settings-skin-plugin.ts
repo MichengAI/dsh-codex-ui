@@ -25,7 +25,7 @@ export function apply(ctx: Context): void {
       kind: 'exact',
       path: endpoint,
       handler: (_request, response) => {
-        const disabled = isSubPluginDisabledOnDisk('codex-ui-settings-skin', ctx)
+        const disabled = isSubPluginDisabledOnDisk('codex-ui-settings-skin', undefined, ctx)
         response.writeHead(200, {
           'content-type': 'application/json; charset=utf-8',
           'cache-control': 'no-store',

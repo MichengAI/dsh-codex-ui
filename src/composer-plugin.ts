@@ -10,7 +10,7 @@ export const inject = ['webServer']
  * 避免在 DSH 桌面端未开启 HMR 或未重启时，内存 fiber 依然错误响应 enabled: true。
  */
 export function isSubPluginDisabledOnDisk(id: string, homeDir?: string, ctx?: Context): boolean {
-  return checkDisabledOnDisk(id, ctx, homeDir)
+  return checkDisabledOnDisk(id, homeDir, ctx)
 }
 
 /**

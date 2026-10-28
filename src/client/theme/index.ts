@@ -214,8 +214,11 @@ export function observeTheme(ctx: ClientContext): () => void {
     disposers.push(() => clearInterval(timer))
   }
 
+  let themeActive = true
+  let healTimer: ReturnType<typeof setInterval> | undefined
+
   const applyCurrentState = (syncRuntime = true): void => {
-    if (disposed) return
+    if (disposed || !themeActive) return
     const state = getThemeSettingsState()
 
     // 1. 同步玻璃质感与排版模式
@@ -230,21 +233,58 @@ export function observeTheme(ctx: ClientContext): () => void {
     applyThemeToDocument(state.themeOption, theme, syncRuntime)
   }
 
-  // 探活检查：只有在明确 disabled: true 时才回退
-  void checkThemeEnabled().then((enabled) => {
+  // 探活检查与自愈同步机制：
+  // 1. 当服务端显式停用或端点未就绪时，fail-closed 回退官方原生，并彻底清除 190 个自定义 Token；
+  // 2. 挂载窗口 focus 监听与低频轮询，一旦服务就绪或网络恢复自动重新激活，消除单次抖动永久降级。
+  const checkAndSync = async (): Promise<void> => {
     if (disposed) return
+    const enabled = await checkThemeEnabled()
+    if (disposed) return
+
     if (!enabled) {
+      themeActive = false
       disposeGlassMode()
+      for (const name of lastAppliedTokens) {
+        document.body.style.removeProperty(name)
+      }
+      lastAppliedTokens = []
       if (theme && typeof theme.setTheme === 'function') {
         const cur = theme.getTheme?.()?.active?.id
         if (ALL_BUILTIN_THEMES.some((t) => t.id === cur)) {
           theme.setTheme('system')
         }
       }
+      if (!healTimer) {
+        healTimer = setInterval(() => {
+          if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+            void checkAndSync()
+          }
+        }, 15000)
+      }
       return
     }
+
+    if (healTimer) {
+      clearInterval(healTimer)
+      healTimer = undefined
+    }
+    themeActive = true
     applyCurrentState(true)
-  })
+  }
+
+  // 窗口重获焦点时尝试自愈
+  const onFocus = (): void => {
+    if (!themeActive && !disposed) {
+      void checkAndSync()
+    }
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('focus', onFocus)
+    disposers.push(() => window.removeEventListener('focus', onFocus))
+  }
+
+  // 启动探活
+  void checkAndSync()
 
   // 初始即时应用（首帧只注入 CSSOM，确保 0 延迟、0 白闪且绝对不阻断宿主启动生命周期）
   applyCurrentState(false)
@@ -270,6 +310,7 @@ export function observeTheme(ctx: ClientContext): () => void {
 
   return () => {
     disposed = true
+    if (healTimer) clearInterval(healTimer)
     unsubscribe()
     offThemeChange?.()
     disposeGlassMode()

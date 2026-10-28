@@ -47,12 +47,17 @@ export function resolveCurrentProfile(ctx?: Context, customHomeDir?: string): Pr
     } catch {}
   }
 
-  // 3. 从命令行参数 --profile <name> 解析
+  // 3. 从命令行参数 --profile <name> 或 --profile=<name> 解析
   if (!profileName && typeof process !== 'undefined' && Array.isArray(process.argv)) {
     const argv = process.argv
     for (let i = 0; i < argv.length; i++) {
-      if (argv[i] === '--profile' && argv[i + 1]) {
+      const arg = argv[i]
+      if (arg === '--profile' && argv[i + 1]) {
         profileName = argv[i + 1].trim()
+        break
+      }
+      if (typeof arg === 'string' && arg.startsWith('--profile=')) {
+        profileName = arg.slice('--profile='.length).trim()
         break
       }
     }
@@ -78,9 +83,9 @@ export function resolveCurrentProfile(ctx?: Context, customHomeDir?: string): Pr
  * 严格基于当前 Profile 检查 cordis.patch.yml 中是否显式配置了 disabled: true。
  * 杜绝跨 Profile 串读（绝不扫描非当前 Profile 的目录）。
  */
-export function isSubPluginDisabledOnDisk(id: string, ctx?: Context, customHomeDir?: string): boolean {
+export function isSubPluginDisabledOnDisk(id: string, homeDir?: string, ctx?: Context): boolean {
   try {
-    const { profileDir } = resolveCurrentProfile(ctx, customHomeDir)
+    const { profileDir } = resolveCurrentProfile(ctx, homeDir)
     const patchPath = join(profileDir, 'cordis.patch.yml')
     if (existsSync(patchPath)) {
       const content = readFileSync(patchPath, 'utf8')

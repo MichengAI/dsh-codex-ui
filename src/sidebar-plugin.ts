@@ -13,7 +13,7 @@ const SUB_PLUGIN_ID = 'codex-ui-sidebar'
  * 与 composer / settings-skin 保持一致：停用后端点如实回报，客户端回退官方侧栏。
  */
 export function isSubPluginDisabledOnDisk(id: string, homeDir?: string, ctx?: Context): boolean {
-  return checkDisabledOnDisk(id, ctx, homeDir)
+  return checkDisabledOnDisk(id, homeDir, ctx)
 }
 
 /**
