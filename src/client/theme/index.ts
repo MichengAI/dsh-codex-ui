@@ -53,6 +53,7 @@ function tolerantRegistration(run: () => (() => void) | void): () => void {
 }
 
 let lastAppliedTokens: string[] = []
+let lastAppliedThemeOption: ThemeOption | null = null
 
 /**
  * 将指定主题精准映射并深度应用到真实 DOM（双重保险，彻底压制并覆盖官方亮暗限制）
@@ -62,6 +63,7 @@ export function applyThemeToDocument(themeOption: ThemeOption, themeRuntime?: Th
   const runtime = themeRuntime ?? globalThemeRuntime
 
   if (themeOption === 'stock') {
+    lastAppliedThemeOption = 'stock'
     // 还原官方默认
     for (const name of lastAppliedTokens) {
       document.body.style.removeProperty(name)
@@ -82,10 +84,15 @@ export function applyThemeToDocument(themeOption: ThemeOption, themeRuntime?: Th
   const targetTheme = ALL_BUILTIN_THEMES.find((t) => t.id === themeOption)
   if (!targetTheme) return
 
-  // 1. 同步通知 ThemeRuntime
+  lastAppliedThemeOption = themeOption
+
+  // 1. 同步通知 ThemeRuntime（单次安全调用，不重复触发）
   if (runtime && typeof runtime.setTheme === 'function') {
     try {
-      runtime.setTheme(targetTheme.id)
+      const activeId = runtime.getTheme?.()?.active?.id
+      if (activeId !== targetTheme.id) {
+        runtime.setTheme(targetTheme.id)
+      }
     } catch {}
   }
 
@@ -196,28 +203,17 @@ export function observeTheme(ctx: ClientContext): () => void {
   // 初始即时应用（避免白闪与延迟）
   applyCurrentState()
 
-  // 关键防官方覆盖：当官方通用设置或内部 adopt() 广播 theme/change 时，
-  // 只要用户在 Codex UI 选择了自选主题，在当前微任务中立即抢回控制权并强制覆盖官方明亮/黑暗
-  let restorePending = false
+  // 监听官方 theme/change：当官方或系统切换主题时，若当前处于自选主题，仅补齐 DOM tokens 确保不丢失，
+  // 严禁在此处调用 theme.setTheme 导致无限微任务死循环卡死页面。
   const offThemeChange = ctx.on('theme/change', () => {
     if (disposed) return
     const state = getThemeSettingsState()
     if (state.themeOption === 'stock') return
-    const currentThemeId = theme?.getTheme?.()?.active?.id ?? theme?.getTheme?.()?.preference
-    if (currentThemeId !== state.themeOption && !restorePending) {
-      restorePending = true
-      queueMicrotask(() => {
-        restorePending = false
-        if (disposed) return
-        const latest = getThemeSettingsState()
-        if (latest.themeOption !== 'stock' && theme && typeof theme.setTheme === 'function') {
-          try {
-            theme.setTheme(latest.themeOption)
-          } catch {
-            // 忽略恢复异常
-          }
-        }
-      })
+    const targetTheme = ALL_BUILTIN_THEMES.find((t) => t.id === state.themeOption)
+    if (targetTheme) {
+      for (const [name, value] of Object.entries(targetTheme.tokens)) {
+        document.body.style.setProperty(name, value)
+      }
     }
   })
 
