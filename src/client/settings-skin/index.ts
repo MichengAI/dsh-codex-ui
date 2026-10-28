@@ -761,6 +761,14 @@ export function observeSettingsSkin(_ctx?: Context): () => void {
           }
         }
       }
+      for (const node of mutation.removedNodes) {
+        if (node instanceof HTMLElement) {
+          if (node.getAttribute('data-shortcut-modal') === 'settings' || node.querySelector('[data-shortcut-modal="settings"]')) {
+            cleanDecorator?.()
+            cleanDecorator = undefined
+          }
+        }
+      }
     }
   })
 

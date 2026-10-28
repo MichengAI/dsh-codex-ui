@@ -23,6 +23,7 @@ import {
   GLASS_PRESETS,
   getThemeSettingsState,
   refreshThemeSettingsSnapshot,
+  setThemeSubPluginEnabled,
   observeTheme,
   setGlassEnabled,
   setGlassGlow,
@@ -396,5 +397,29 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(root.hasAttribute(GLASS_ATTRIBUTE)).toBe(true)
 
     dispose()
+  })
+
+  it('当主题子插件被停用（fail-closed）时，所有切主题与事件回填入口全部物理熔断，0 个 Token 被写入 DOM', () => {
+    try {
+      setThemeSubPluginEnabled(false)
+      document.body.removeAttribute('style')
+
+      const fakeRuntime = {
+        setTheme: vi.fn(),
+        getTheme: () => ({ active: { id: 'dark' } }),
+      }
+
+      // 1. 尝试直接调用 changeTheme
+      changeTheme('codex-dark')
+      expect(document.body.style.length).toBe(0)
+      expect(fakeRuntime.setTheme).not.toHaveBeenCalled()
+
+      // 2. 尝试调用 applyThemeToDocument
+      applyThemeToDocument('codex-dark', fakeRuntime as never)
+      expect(document.body.style.length).toBe(0)
+      expect(fakeRuntime.setTheme).not.toHaveBeenCalled()
+    } finally {
+      setThemeSubPluginEnabled(true)
+    }
   })
 })

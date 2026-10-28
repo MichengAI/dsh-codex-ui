@@ -55,6 +55,17 @@ function tolerantRegistration(run: () => (() => void) | void): () => void {
 
 let lastAppliedTokens: string[] = []
 let hasAppliedCustomTheme = false
+let themeSubPluginEnabled = true
+
+/** 检查当前主题子插件是否在 Host 侧处于激活启用状态 */
+export function isThemeSubPluginEnabled(): boolean {
+  return themeSubPluginEnabled
+}
+
+/** 供测试与内部状态机同步主题子插件启用标记 */
+export function setThemeSubPluginEnabled(enabled: boolean): void {
+  themeSubPluginEnabled = enabled
+}
 
 /**
  * 将指定主题精准映射并深度应用到真实 DOM（双重保险，彻底压制并覆盖官方亮暗限制）
@@ -65,6 +76,16 @@ export function applyThemeToDocument(
   syncRuntime = true,
 ): void {
   if (typeof document === 'undefined') return
+
+  // 物理熔断守卫：当主题子插件被停用时，绝不向 DOM 注入任何 Token，并清理已存在的残留
+  if (!themeSubPluginEnabled) {
+    for (const name of lastAppliedTokens) {
+      document.body.style.removeProperty(name)
+    }
+    lastAppliedTokens = []
+    return
+  }
+
   const runtime = themeRuntime ?? globalThemeRuntime
 
   if (themeOption === 'stock') {
@@ -139,6 +160,10 @@ export function applyThemeToDocument(
  * 供 UI 直接调用的主题切换入口，立即执行 ThemeRuntime.setTheme 并持久化。
  */
 export function changeTheme(themeOption: ThemeOption): void {
+  if (!themeSubPluginEnabled) {
+    console.warn('[codex-ui:theme] Theme sub-plugin is disabled on host, changeTheme skipped')
+    return
+  }
   setThemeOption(themeOption)
   applyThemeToDocument(themeOption)
 }
@@ -152,6 +177,10 @@ export function changeGlass(options: {
   preset?: GlassPreset
   glow?: boolean
 }): void {
+  if (!themeSubPluginEnabled) {
+    console.warn('[codex-ui:theme] Theme sub-plugin is disabled on host, changeGlass skipped')
+    return
+  }
   const state = getThemeSettingsState()
   const enabled = options.enabled ?? state.glassEnabled
   const mode = options.mode ?? state.glassMode
@@ -242,6 +271,7 @@ export function observeTheme(ctx: ClientContext): () => void {
     if (disposed) return
 
     if (!enabled) {
+      themeSubPluginEnabled = false
       themeActive = false
       disposeGlassMode()
       for (const name of lastAppliedTokens) {
@@ -268,6 +298,7 @@ export function observeTheme(ctx: ClientContext): () => void {
       clearInterval(healTimer)
       healTimer = undefined
     }
+    themeSubPluginEnabled = true
     themeActive = true
     applyCurrentState(true)
   }
@@ -292,7 +323,7 @@ export function observeTheme(ctx: ClientContext): () => void {
   // 监听官方 theme/change：当官方或系统切换主题时，若当前处于自选主题，仅补齐 DOM tokens 确保不丢失，
   // 严禁在此处调用 theme.setTheme 导致无限微任务死循环卡死页面。
   const offThemeChange = ctx.on('theme/change', () => {
-    if (disposed) return
+    if (disposed || !themeSubPluginEnabled) return
     const state = getThemeSettingsState()
     if (state.themeOption === 'stock') return
     const targetTheme = ALL_BUILTIN_THEMES.find((t) => t.id === state.themeOption)
@@ -305,6 +336,7 @@ export function observeTheme(ctx: ClientContext): () => void {
 
   // 监听状态订阅
   const unsubscribe = subscribeThemeSettings(() => {
+    if (disposed || !themeSubPluginEnabled) return
     applyCurrentState()
   })
 
