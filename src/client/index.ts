@@ -14,7 +14,7 @@ import { observeComposerEnhancements } from './composer/index.tsx'
 import { observeSidebarNav } from './sidebar/index.ts'
 import { observeTheme } from './theme/index.ts'
 
-export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTriggers', 'layout', 'uiWorkspace', 'theme']
+export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTriggers', 'layout', 'uiWorkspace']
 
 /** 浏览器客户端插件入口；保留官方原生侧边栏与工作区树，提供输入框增强、设置美化与生态关于页。 */
 export function apply(ctx: ClientContext): void {

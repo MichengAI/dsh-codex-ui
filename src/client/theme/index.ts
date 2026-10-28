@@ -58,7 +58,11 @@ let lastAppliedThemeOption: ThemeOption | null = null
 /**
  * 将指定主题精准映射并深度应用到真实 DOM（双重保险，彻底压制并覆盖官方亮暗限制）
  */
-export function applyThemeToDocument(themeOption: ThemeOption, themeRuntime?: ThemeRuntime): void {
+export function applyThemeToDocument(
+  themeOption: ThemeOption,
+  themeRuntime?: ThemeRuntime,
+  syncRuntime = true,
+): void {
   if (typeof document === 'undefined') return
   const runtime = themeRuntime ?? globalThemeRuntime
 
@@ -69,7 +73,7 @@ export function applyThemeToDocument(themeOption: ThemeOption, themeRuntime?: Th
       document.body.style.removeProperty(name)
     }
     lastAppliedTokens = []
-    if (runtime && typeof runtime.setTheme === 'function') {
+    if (syncRuntime && runtime && typeof runtime.setTheme === 'function') {
       try {
         runtime.setTheme('system')
       } catch {
@@ -86,8 +90,8 @@ export function applyThemeToDocument(themeOption: ThemeOption, themeRuntime?: Th
 
   lastAppliedThemeOption = themeOption
 
-  // 1. 同步通知 ThemeRuntime（单次安全调用，不重复触发）
-  if (runtime && typeof runtime.setTheme === 'function') {
+  // 1. 同步通知 ThemeRuntime（首帧启动不阻塞，用户交互时即时同步）
+  if (syncRuntime && runtime && typeof runtime.setTheme === 'function') {
     try {
       const activeId = runtime.getTheme?.()?.active?.id
       if (activeId !== targetTheme.id) {
@@ -169,7 +173,7 @@ export function observeTheme(ctx: ClientContext): () => void {
     }
   }
 
-  const applyCurrentState = (): void => {
+  const applyCurrentState = (syncRuntime = true): void => {
     if (disposed) return
     const state = getThemeSettingsState()
 
@@ -180,8 +184,8 @@ export function observeTheme(ctx: ClientContext): () => void {
       preset: state.glassPreset,
     })
 
-    // 2. 同步主题配色（双重保险，直接应用并压制官方覆盖）
-    applyThemeToDocument(state.themeOption, theme)
+    // 2. 同步主题配色（首帧启动时不阻塞宿主 ThemeRuntime）
+    applyThemeToDocument(state.themeOption, theme, syncRuntime)
   }
 
   // 探活检查：只有在明确 disabled: true 时才回退
@@ -197,11 +201,11 @@ export function observeTheme(ctx: ClientContext): () => void {
       }
       return
     }
-    applyCurrentState()
+    applyCurrentState(true)
   })
 
-  // 初始即时应用（避免白闪与延迟）
-  applyCurrentState()
+  // 初始即时应用（首帧只注入 CSSOM，确保 0 延迟、0 白闪且绝对不阻断宿主启动生命周期）
+  applyCurrentState(false)
 
   // 监听官方 theme/change：当官方或系统切换主题时，若当前处于自选主题，仅补齐 DOM tokens 确保不丢失，
   // 严禁在此处调用 theme.setTheme 导致无限微任务死循环卡死页面。

@@ -3,10 +3,10 @@ import { readFileSync } from 'fs'
 
 async function run() {
   const logContent = readFileSync('C:/Users/YUJIYU/AppData/Local/hermes/cache/scratch/dsh_web.log', 'utf8')
-  const match = logContent.match(/dsh web: (http:\/\/127\.0\.0\.1:\d+\/\?token=[^\s\r\n]+)/)
-  if (!match) throw new Error('未能从 dsh_web.log 中提取到 URL')
-
-  const url = match[1]
+  const lines = logContent.split('\n')
+  const dshLine = lines.find((l) => l.includes('dsh web:'))
+  if (!dshLine) throw new Error('未能从 dsh_web.log 中提取到 URL')
+  const url = dshLine.replace('dsh web:', '').trim()
   console.log('连接 URL:', url)
 
   const browser = await chromium.launch({ headless: true })
@@ -56,7 +56,7 @@ async function run() {
 
   console.log('开始轮流点击 7 套主题...')
   for (const name of buttons) {
-    const btn = page.locator(`.dcu-theme-palette-grid button:has-text("${name}")`)
+    const btn = page.locator(`.dcu-theme-cube:has-text("${name}")`)
     if (await btn.count() > 0) {
       const t0 = Date.now()
       await btn.first().click()
