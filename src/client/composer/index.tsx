@@ -27,18 +27,18 @@ function browserStorage(): Storage | undefined {
   catch { return undefined }
 }
 
-/** 探测宿主 codex-ui-composer 子组件是否处于激活状态 */
+/** 探测宿主 codex-ui-composer 子组件是否处于激活状态（遵循 fail-closed 契约） */
 export async function checkComposerEnabled(): Promise<boolean> {
   try {
     const response = await fetch(CODEX_UI_API_ENDPOINTS.composer, {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     })
-    if (!response.ok) return true
+    if (!response.ok) return false
     const data = await response.json()
-    return data?.enabled !== false
+    return data?.enabled === true
   } catch {
-    return true
+    return false
   }
 }
 
@@ -171,12 +171,12 @@ export function observeComposerEnhancements(ctx: Context): () => void {
     observer.observe(document.body, { childList: true, subtree: true })
   }
 
-  // 3. 周期性轻量探活 (2.5 秒)，当窗口处于激活可见状态时静默同步状态
+  // 3. 周期性轻量探活 (15 秒)，当窗口处于激活可见状态时静默同步状态
   const pollTimer = setInterval(() => {
     if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
       void sync()
     }
-  }, 2500)
+  }, 15000)
 
   return () => {
     disposed = true

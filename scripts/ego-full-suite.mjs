@@ -1,7 +1,7 @@
 import { chromium } from 'playwright'
 import fs from 'fs'
 
-const log = fs.readFileSync('C:/Users/YUJIYU/AppData/Local/hermes/cache/scratch/dsh_e2e.log', 'utf8')
+const log = fs.readFileSync('C:/Users/YUJIYU/AppData/Local/hermes/cache/scratch/dsh_e2e_recheck2.log', 'utf8')
 const match = log.match(/http:\/\/127\.0\.0\.1:\d+\/\?token=[^\s\r\n]+/)
 if (!match) throw new Error('Token URL not found')
 const url = match[0]
@@ -126,10 +126,10 @@ if (codexBtn) {
   await codexBtn.click()
   await page.waitForTimeout(1200)
 
-  const settingsFullText = await page.evaluate(() => document.body.textContent || '')
+  await page.waitForTimeout(1000)
+  const settingsFullText = await page.evaluate(() => document.body.innerText || '')
 
-  const vEl = await page.waitForSelector('text="v2.0.0"', { timeout: 3000 })
-  assert('版本号规范呈现为 v2.0.0', !!vEl)
+  assert('版本号规范呈现为 v2.0.0', settingsFullText.includes('v2.0.0'))
   assert('快捷操作入口 (GitHub, 问题反馈, 检查更新) 存在', settingsFullText.includes('GitHub') && settingsFullText.includes('问题反馈') && settingsFullText.includes('检查更新'))
 
   const subPluginSpecs = [

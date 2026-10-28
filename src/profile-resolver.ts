@@ -1,0 +1,94 @@
+import type { Context } from '@deepseek-ai/cordis'
+import { existsSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { basename, isAbsolute, join, resolve } from 'node:path'
+
+export interface ProfileContextInfo {
+  profileName: string
+  profileDir: string
+  homeDir: string
+}
+
+/**
+ * 健壮解析当前 DSH 实例的 Profile 信息：
+ * 优先级：
+ * 1. Cordis 服务 profileContext（官方运行时注入，最权威）
+ * 2. 环境变量 DSH_PROFILE_DIR
+ * 3. 命令行参数 --profile <name>
+ * 4. 环境变量 DSH_PROFILE
+ * 5. 兜底默认值 'web'
+ */
+export function resolveCurrentProfile(ctx?: Context, customHomeDir?: string): ProfileContextInfo {
+  const homeDir = customHomeDir ?? process.env.DSH_HOME ?? join(homedir(), '.dsh')
+
+  let profileName: string | undefined
+  let profileDir: string | undefined
+
+  // 1. 从 Context 获取 profileContext 服务
+  try {
+    const launched = ctx?.get?.('profileContext') as { name?: string; dir?: string } | undefined
+    if (typeof launched?.name === 'string' && launched.name.trim()) {
+      profileName = launched.name.trim()
+    }
+    if (typeof launched?.dir === 'string' && isAbsolute(launched.dir)) {
+      profileDir = resolve(launched.dir)
+    }
+  } catch {
+    // 忽略服务读取异常
+  }
+
+  // 2. 从 DSH_PROFILE_DIR 环境变量解析
+  if (!profileDir && process.env.DSH_PROFILE_DIR) {
+    try {
+      profileDir = resolve(process.env.DSH_PROFILE_DIR)
+      if (!profileName) {
+        profileName = basename(profileDir)
+      }
+    } catch {}
+  }
+
+  // 3. 从命令行参数 --profile <name> 解析
+  if (!profileName && typeof process !== 'undefined' && Array.isArray(process.argv)) {
+    const argv = process.argv
+    for (let i = 0; i < argv.length; i++) {
+      if (argv[i] === '--profile' && argv[i + 1]) {
+        profileName = argv[i + 1].trim()
+        break
+      }
+    }
+  }
+
+  // 4. 从 DSH_PROFILE 环境变量兜底
+  if (!profileName && process.env.DSH_PROFILE) {
+    profileName = process.env.DSH_PROFILE.trim()
+  }
+
+  // 5. 最终兜底为官方标准 web profile
+  if (!profileName) {
+    profileName = 'web'
+  }
+  if (!profileDir) {
+    profileDir = join(homeDir, 'profiles', profileName)
+  }
+
+  return { profileName, profileDir, homeDir }
+}
+
+/**
+ * 严格基于当前 Profile 检查 cordis.patch.yml 中是否显式配置了 disabled: true。
+ * 杜绝跨 Profile 串读（绝不扫描非当前 Profile 的目录）。
+ */
+export function isSubPluginDisabledOnDisk(id: string, ctx?: Context, customHomeDir?: string): boolean {
+  try {
+    const { profileDir } = resolveCurrentProfile(ctx, customHomeDir)
+    const patchPath = join(profileDir, 'cordis.patch.yml')
+    if (existsSync(patchPath)) {
+      const content = readFileSync(patchPath, 'utf8')
+      const regex = new RegExp(`id:\\s*['"]?${id}['"]?\\s*\\n\\s*disabled:\\s*true`, 'm')
+      if (regex.test(content)) return true
+    }
+  } catch {
+    // 发生文件 IO 错误时，保持启用以防误判
+  }
+  return false
+}

@@ -48,19 +48,22 @@ describe('codex-ui-composer sub-plugin', () => {
     const testDir = join(tmpdir(), `dcu-test-${Date.now()}`)
     const desktopProfile = join(testDir, 'profiles', 'desktop')
     mkdirSync(desktopProfile, { recursive: true })
+    const ctx = {
+      get: (k: string) => (k === 'profileContext' ? { name: 'desktop', dir: desktopProfile } : undefined),
+    } as never
 
     try {
       // 1. 无 disabled 配置
       writeFileSync(join(desktopProfile, 'cordis.patch.yml'), '- id: other\n  config: {}\n', 'utf8')
-      expect(isSubPluginDisabledOnDisk('codex-ui-composer', testDir)).toBe(false)
+      expect(isSubPluginDisabledOnDisk('codex-ui-composer', testDir, ctx)).toBe(false)
 
       // 2. 显式配置 disabled: true
       writeFileSync(join(desktopProfile, 'cordis.patch.yml'), '- id: codex-ui-composer\n  disabled: true\n', 'utf8')
-      expect(isSubPluginDisabledOnDisk('codex-ui-composer', testDir)).toBe(true)
+      expect(isSubPluginDisabledOnDisk('codex-ui-composer', testDir, ctx)).toBe(true)
 
       // 3. 显式配置 disabled: false
       writeFileSync(join(desktopProfile, 'cordis.patch.yml'), '- id: codex-ui-composer\n  disabled: false\n', 'utf8')
-      expect(isSubPluginDisabledOnDisk('codex-ui-composer', testDir)).toBe(false)
+      expect(isSubPluginDisabledOnDisk('codex-ui-composer', testDir, ctx)).toBe(false)
     } finally {
       rmSync(testDir, { recursive: true, force: true })
     }
@@ -93,6 +96,17 @@ describe('codex-ui-composer sub-plugin', () => {
 
       const enabled = await checkComposerEnabled()
       expect(enabled).toBe(false)
+    })
+
+    it('当端点返回 404 或网络不可达时，遵循统一 fail-closed 契约回退原生', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+      } as Response)
+      expect(await checkComposerEnabled()).toBe(false)
+
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'))
+      expect(await checkComposerEnabled()).toBe(false)
     })
   })
 })

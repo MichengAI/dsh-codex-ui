@@ -1,35 +1,9 @@
 import type { Context } from '@deepseek-ai/cordis'
-import { existsSync, readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { join } from 'node:path'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
+import { isSubPluginDisabledOnDisk } from './profile-resolver.ts'
 
 export const name = 'codex-ui-settings-skin'
 export const inject = ['webServer']
-
-/**
- * 检查 profile 的 cordis.patch.yml 中是否显式配置了 disabled: true
- */
-function isSubPluginDisabledOnDisk(id: string): boolean {
-  try {
-    const home = process.env.DSH_HOME ?? join(homedir(), '.dsh')
-    const profile = process.env.DSH_PROFILE ?? 'desktop'
-    const candidatePaths = [
-      join(home, 'profiles', profile, 'cordis.patch.yml'),
-      join(home, 'profiles', 'desktop', 'cordis.patch.yml'),
-      join(home, 'profiles', 'web', 'cordis.patch.yml'),
-    ]
-    for (const patchPath of candidatePaths) {
-      if (!existsSync(patchPath)) continue
-      const content = readFileSync(patchPath, 'utf8')
-      const regex = new RegExp(`id:\\s*['"]?${id}['"]?\\s*\\n\\s*disabled:\\s*true`, 'm')
-      if (regex.test(content)) return true
-    }
-  } catch {
-    // 忽略异常
-  }
-  return false
-}
 
 /**
  * 原生设置皮肤子组件 (Host 侧)
@@ -51,7 +25,7 @@ export function apply(ctx: Context): void {
       kind: 'exact',
       path: endpoint,
       handler: (_request, response) => {
-        const disabled = isSubPluginDisabledOnDisk('codex-ui-settings-skin')
+        const disabled = isSubPluginDisabledOnDisk('codex-ui-settings-skin', ctx)
         response.writeHead(200, {
           'content-type': 'application/json; charset=utf-8',
           'cache-control': 'no-store',

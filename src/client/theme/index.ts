@@ -22,7 +22,7 @@ let globalThemeRuntime: ThemeRuntime | undefined
 
 /**
  * 校验主题子插件是否在 Host 侧被显式停用。
- * 只有当接口明确返回 { enabled: false } 时才关闭；网络失败或旧服务端 404 时保持客户端可用。
+ * 遵循统一的 fail-closed 契约：当端点 404 或网络不可达时视为停用并回退官方。
  */
 export async function checkThemeEnabled(): Promise<boolean> {
   try {
@@ -33,11 +33,11 @@ export async function checkThemeEnabled(): Promise<boolean> {
       : CODEX_UI_API_ENDPOINTS.theme
     const url = new URL(path, normalizedBase).href
     const res = await fetch(url)
-    if (!res.ok) return true // 接口未注册时保持本地可用
+    if (!res.ok) return false
     const data = (await res.json()) as { enabled?: boolean }
-    return data.enabled !== false
+    return data?.enabled === true
   } catch {
-    return true
+    return false
   }
 }
 
@@ -208,6 +208,7 @@ export function observeTheme(ctx: ClientContext): () => void {
         applyThemeToDocument(state.themeOption, lateTheme, true)
       } else if (++retries >= 100) {
         clearInterval(timer)
+        console.warn('[codex-ui:theme] host theme service not ready after 5s polling, continuing with DOM-only fallback')
       }
     }, 50)
     disposers.push(() => clearInterval(timer))

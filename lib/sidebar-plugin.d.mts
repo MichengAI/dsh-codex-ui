@@ -6,7 +6,7 @@ declare const inject: string[];
  * 检查 profile 的 cordis.patch.yml 中是否显式配置了 disabled: true。
  * 与 composer / settings-skin 保持一致：停用后端点如实回报，客户端回退官方侧栏。
  */
-declare function isSubPluginDisabledOnDisk(id: string, homeDir?: string): boolean;
+declare function isSubPluginDisabledOnDisk(id: string, homeDir?: string, ctx?: Context): boolean;
 /**
  * 侧栏导航子组件 (Host 侧)
  * 挂载时通过 webServer 暴露 /api/michengai/dsh-codex-ui/sidebar；

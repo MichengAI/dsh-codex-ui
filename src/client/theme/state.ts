@@ -83,17 +83,8 @@ function computeSnapshot(): ThemeSettingsState {
 
 let currentSnapshot: ThemeSettingsState = computeSnapshot()
 
+/** 获取当前主题与云母外观配置快照（通过事件驱动同步，避免高频无谓读盘） */
 export function getThemeSettingsState(): ThemeSettingsState {
-  const next = computeSnapshot()
-  if (
-    currentSnapshot.themeOption !== next.themeOption ||
-    currentSnapshot.glassEnabled !== next.glassEnabled ||
-    currentSnapshot.glassMode !== next.glassMode ||
-    currentSnapshot.glassPreset !== next.glassPreset ||
-    currentSnapshot.glassGlow !== next.glassGlow
-  ) {
-    currentSnapshot = next
-  }
   return currentSnapshot
 }
 

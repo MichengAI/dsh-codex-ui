@@ -1,8 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis'
-import { existsSync, readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { join } from 'node:path'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
+import { isSubPluginDisabledOnDisk as checkDisabledOnDisk } from './profile-resolver.ts'
 
 export const name = 'codex-ui-sidebar'
 export const inject = ['webServer']
@@ -14,20 +12,8 @@ const SUB_PLUGIN_ID = 'codex-ui-sidebar'
  * 检查 profile 的 cordis.patch.yml 中是否显式配置了 disabled: true。
  * 与 composer / settings-skin 保持一致：停用后端点如实回报，客户端回退官方侧栏。
  */
-export function isSubPluginDisabledOnDisk(id: string, homeDir?: string): boolean {
-  try {
-    const home = homeDir ?? process.env.DSH_HOME ?? join(homedir(), '.dsh')
-    const profile = process.env.DSH_PROFILE ?? 'desktop'
-    const patchPath = join(home, 'profiles', profile, 'cordis.patch.yml')
-    if (existsSync(patchPath)) {
-      const content = readFileSync(patchPath, 'utf8')
-      const regex = new RegExp(`id:\\s*['"]?${id}['"]?\\s*\\n\\s*disabled:\\s*true`, 'm')
-      if (regex.test(content)) return true
-    }
-  } catch {
-    // 读取失败时保持启用，避免因临时 IO 问题让用户侧栏变回原生却没有任何提示。
-  }
-  return false
+export function isSubPluginDisabledOnDisk(id: string, homeDir?: string, ctx?: Context): boolean {
+  return checkDisabledOnDisk(id, ctx, homeDir)
 }
 
 /**
@@ -50,7 +36,7 @@ export function apply(ctx: Context): void {
       kind: 'exact',
       path: endpoint,
       handler: (_request, response) => {
-        const disabled = isSubPluginDisabledOnDisk(SUB_PLUGIN_ID)
+        const disabled = isSubPluginDisabledOnDisk(SUB_PLUGIN_ID, undefined, ctx)
         response.writeHead(200, {
           'content-type': 'application/json; charset=utf-8',
           'cache-control': 'no-store',

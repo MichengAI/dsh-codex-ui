@@ -1,8 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis'
-import { existsSync, readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { join } from 'node:path'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
+import { isSubPluginDisabledOnDisk as checkDisabledOnDisk } from './profile-resolver.ts'
 
 export const name = 'codex-ui-composer'
 export const inject = ['webServer']
@@ -11,25 +9,8 @@ export const inject = ['webServer']
  * 检查 profile 的 cordis.patch.yml 中是否显式配置了 disabled: true
  * 避免在 DSH 桌面端未开启 HMR 或未重启时，内存 fiber 依然错误响应 enabled: true。
  */
-export function isSubPluginDisabledOnDisk(id: string, homeDir?: string): boolean {
-  try {
-    const home = homeDir ?? process.env.DSH_HOME ?? join(homedir(), '.dsh')
-    const profile = process.env.DSH_PROFILE ?? 'desktop'
-    const candidatePaths = [
-      join(home, 'profiles', profile, 'cordis.patch.yml'),
-      join(home, 'profiles', 'desktop', 'cordis.patch.yml'),
-      join(home, 'profiles', 'web', 'cordis.patch.yml'),
-    ]
-    for (const patchPath of candidatePaths) {
-      if (!existsSync(patchPath)) continue
-      const content = readFileSync(patchPath, 'utf8')
-      const regex = new RegExp(`id:\\s*['"]?${id}['"]?\\s*\\n\\s*disabled:\\s*true`, 'm')
-      if (regex.test(content)) return true
-    }
-  } catch {
-    // 忽略异常
-  }
-  return false
+export function isSubPluginDisabledOnDisk(id: string, homeDir?: string, ctx?: Context): boolean {
+  return checkDisabledOnDisk(id, ctx, homeDir)
 }
 
 /**
@@ -52,7 +33,7 @@ export function apply(ctx: Context): void {
       kind: 'exact',
       path: endpoint,
       handler: (_request, response) => {
-        const disabled = isSubPluginDisabledOnDisk('codex-ui-composer')
+        const disabled = isSubPluginDisabledOnDisk('codex-ui-composer', undefined, ctx)
         response.writeHead(200, {
           'content-type': 'application/json; charset=utf-8',
           'cache-control': 'no-store',

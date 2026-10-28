@@ -225,7 +225,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
         if (cancelled || !response.ok || !isInstallProgress(payload.progress)) return
         setProgress(payload.progress)
       } catch {
-        if (!cancelled) return
+        // 轮询失败时忽略异常
       }
     }
     void pull()
