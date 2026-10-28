@@ -38,28 +38,28 @@ const PROGRESS_PHASES = new Set<ProgressPhase>(['resolving', 'downloading', 'lin
 interface SubPluginEntry {
   readonly id: string
   readonly nameKey:
-    | 'about.subplugin.composer.name'
-    | 'about.subplugin.settingsSkin.name'
-    | 'about.subplugin.sessionTitle.name'
-    | 'about.subplugin.sidebar.name'
-    | 'about.subplugin.theme.name'
-    | 'about.subplugin.dependencies.name'
+    | 'about.feature.composer.name'
+    | 'about.feature.settingsSkin.name'
+    | 'about.feature.sessionTitle.name'
+    | 'about.feature.sidebar.name'
+    | 'about.feature.theme.name'
+    | 'about.feature.dependencies.name'
   readonly descKey:
-    | 'about.subplugin.composer.desc'
-    | 'about.subplugin.settingsSkin.desc'
-    | 'about.subplugin.sessionTitle.desc'
-    | 'about.subplugin.sidebar.desc'
-    | 'about.subplugin.theme.desc'
-    | 'about.subplugin.dependencies.desc'
+    | 'about.feature.composer'
+    | 'about.feature.settingsSkin'
+    | 'about.feature.sessionTitle'
+    | 'about.feature.sidebar'
+    | 'about.feature.theme'
+    | 'about.feature.dependencies'
 }
 
 const SUB_PLUGINS: readonly SubPluginEntry[] = [
-  { id: 'composer', nameKey: 'about.subplugin.composer.name', descKey: 'about.subplugin.composer.desc' },
-  { id: 'settings-skin', nameKey: 'about.subplugin.settingsSkin.name', descKey: 'about.subplugin.settingsSkin.desc' },
-  { id: 'session-title', nameKey: 'about.subplugin.sessionTitle.name', descKey: 'about.subplugin.sessionTitle.desc' },
-  { id: 'sidebar', nameKey: 'about.subplugin.sidebar.name', descKey: 'about.subplugin.sidebar.desc' },
-  { id: 'theme', nameKey: 'about.subplugin.theme.name', descKey: 'about.subplugin.theme.desc' },
-  { id: 'dependencies', nameKey: 'about.subplugin.dependencies.name', descKey: 'about.subplugin.dependencies.desc' },
+  { id: 'composer', nameKey: 'about.feature.composer.name', descKey: 'about.feature.composer' },
+  { id: 'settings-skin', nameKey: 'about.feature.settingsSkin.name', descKey: 'about.feature.settingsSkin' },
+  { id: 'session-title', nameKey: 'about.feature.sessionTitle.name', descKey: 'about.feature.sessionTitle' },
+  { id: 'sidebar', nameKey: 'about.feature.sidebar.name', descKey: 'about.feature.sidebar' },
+  { id: 'theme', nameKey: 'about.feature.theme.name', descKey: 'about.feature.theme' },
+  { id: 'dependencies', nameKey: 'about.feature.dependencies.name', descKey: 'about.feature.dependencies' },
 ]
 
 const endpoint = CODEX_UI_API_ENDPOINTS.dependencies
@@ -334,7 +334,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
     </div>
     {/* 子插件功能清单 */}
     <div className="dcu-subplugins-section">
-      <h3 className="dcu-subplugins-heading">{t('about.subplugins')}</h3>
+      <h3 className="dcu-subplugins-heading">{t('about.features')}</h3>
       <div className="dcu-subplugins-list">
         {SUB_PLUGINS.map(item => (
           <div key={item.id} className="dcu-subplugin-item">
