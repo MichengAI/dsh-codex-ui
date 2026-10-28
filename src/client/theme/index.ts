@@ -186,6 +186,18 @@ export function changeGlass(options: {
   applyGlassSettings({ enabled, mode, preset, glow })
 }
 
+let globalCheckAndSync: (() => Promise<void>) | undefined
+
+/** 供外部（如关于页或弹窗交互）主动触发主题启用状态探活与同步 */
+export async function syncThemeState(): Promise<void> {
+  if (globalCheckAndSync) {
+    await globalCheckAndSync()
+  } else {
+    const enabled = await checkThemeEnabled()
+    setThemeSubPluginEnabled(enabled)
+  }
+}
+
 /**
  * 挂载并观察主题与外观增强：
  * - 注册全部 6 套内置主题至 ThemeRuntime；
@@ -311,9 +323,11 @@ export function observeTheme(ctx: ClientContext): () => void {
     setThemeSubPluginEnabled(true)
   }
 
-  // 窗口重获焦点时尝试自愈
+  globalCheckAndSync = checkAndSync
+
+  // 窗口重获焦点时即时同步状态（响应用户在插件管理中实时切开关）
   const onFocus = (): void => {
-    if (!isThemeSubPluginEnabled() && !disposed) {
+    if (!disposed) {
       void checkAndSync()
     }
   }
@@ -345,6 +359,7 @@ export function observeTheme(ctx: ClientContext): () => void {
 
   return () => {
     disposed = true
+    if (globalCheckAndSync === checkAndSync) globalCheckAndSync = undefined
     if (healTimer) clearInterval(healTimer)
     unsubscribe()
     offThemeChange?.()
