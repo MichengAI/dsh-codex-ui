@@ -34,24 +34,6 @@ const stylesheet = `
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px;
-  background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.04));
-  border: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08));
-  border-radius: 10px;
-  margin-bottom: 20px;
-}
-.dcu-theme-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 22px;
-  color: var(--dsw-alias-label-primary);
-}
-.dcu-theme-desc {
-  margin: 2px 0 0;
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--dsw-alias-label-tertiary);
 }
 .dcu-theme-section {
   display: flex;
@@ -108,11 +90,13 @@ export function ThemeSettingsCard({ t }: ThemeSettingsCardProps): React.JSX.Elem
   const state = useSyncExternalStore(subscribeThemeSettings, getThemeSettingsState)
 
   return (
-    <div className="dcu-theme-settings" aria-label={t('theme.title')}>
+    <div className="dcu-section-card dcu-theme-settings" aria-label={t('theme.title')}>
       <style>{stylesheet}</style>
-      <div>
-        <h4 className="dcu-theme-title">{t('theme.title')}</h4>
-        <p className="dcu-theme-desc">{t('theme.desc')}</p>
+      <div className="dcu-section-header">
+        <div className="dcu-section-title-wrap">
+          <h3 className="dcu-section-title">{t('theme.title')}</h3>
+          <p className="dcu-section-desc">{t('theme.desc')}</p>
+        </div>
       </div>
 
       {/* 主题配色切换：官方默认 + Codex 2套 + Catppuccin 4套 */}

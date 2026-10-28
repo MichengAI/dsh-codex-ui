@@ -38,11 +38,41 @@ const PROGRESS_PHASES = new Set<ProgressPhase>(['resolving', 'downloading', 'lin
 const endpoint = CODEX_UI_API_ENDPOINTS.dependencies
 
 const stylesheet = `
-.dcu-about{color:var(--dsw-alias-label-primary);font-family:var(--dsw-font-family)}.dcu-about-head{display:flex;flex-direction:column;align-items:stretch;gap:12px;margin-bottom:12px}.dcu-about-title-block{min-width:0}.dcu-about h2,.dcu-about-title{margin:0;font-size:24px;line-height:32px;font-weight:600;letter-spacing:-.4px;color:var(--dsw-alias-label-primary)}.dcu-about-intro,.dcu-about-desc{margin:12px 0 0;color:var(--dsw-alias-label-tertiary,#a0a0a0);font-size:14px;line-height:22px}.dcu-about h3{margin:24px 0 12px;font-size:16px;font-weight:600;line-height:24px;color:var(--dsw-alias-label-primary)}.dcu-about-features{margin:0;padding-left:20px;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:24px}.dcu-about-dependencies-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:24px}.dcu-about-dependencies-heading h3{margin:0}.dcu-about-dependencies-heading+.dcu-about-intro,.dcu-about-dependencies-heading+.dcu-about-desc{margin-top:8px;margin-bottom:14px}.dcu-about-dependencies{overflow:hidden;border:1px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-bg-layer-1,transparent)}.dcu-about-dependency{display:flex;align-items:center;gap:12px;min-height:38px;padding:4px 12px;border-bottom:1px solid var(--dsw-alias-border-l2);transition:background-color 120ms ease}.dcu-about-dependency:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,0.04))}.dcu-about-dependency:last-child{border-bottom:0}.dcu-about-copy{min-width:0;flex:1;display:flex;flex-direction:column;justify-content:center;gap:1px}.dcu-about-name{font-size:13px;line-height:17px;font-weight:600}.dcu-about-package{overflow:hidden;margin-top:0;color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:14px;text-overflow:ellipsis;white-space:nowrap}.dcu-about-status{display:flex;align-items:center;gap:4px;font-size:12px;line-height:16px;white-space:nowrap;flex-shrink:0}.dcu-about-status[data-installed=true]{color:var(--dsw-alias-state-success-primary)}.dcu-about-status[data-installed=false]{color:var(--dsw-alias-state-error-primary)}.dcu-about-status[data-update=true]{color:var(--dsw-alias-state-warning-primary)}.dcu-about-progress{position:relative;margin-top:16px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;padding:10px 14px 12px;background:var(--dsw-alias-bg-layer-2);display:flex;align-items:center;gap:10px;font-size:12px;overflow:hidden}.dcu-about-progress code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--dsw-alias-label-secondary)}.dcu-about-progress-pct{flex:none;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;font-weight:500}.dcu-about-progress-bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--dsw-alias-border-l2);overflow:hidden}.dcu-about-progress-fill{height:100%;background:var(--dsw-alias-state-business-primary);transition:width 200ms ease}.dcu-about-progress-fill[data-wave=true]{width:40%;animation:dcu-progress-wave 1.4s ease-in-out infinite}@keyframes dcu-progress-wave{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}.dcu-about-message{margin-top:16px;border-radius:8px;padding:10px 14px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font-size:13px;line-height:20px;border:1px solid var(--dsw-alias-border-l2)}.dcu-about-message[data-error=true]{background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 12%,transparent);border-color:color-mix(in srgb,var(--dsw-alias-state-error-primary) 30%,transparent)}
-.dcu-about-title-row{display:flex;align-items:center;gap:8px 12px;min-width:0;flex-wrap:wrap}.dcu-about-feedback-links,.dcu-about-links{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.dcu-about-external-link{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 8px;color:var(--dsw-alias-label-secondary);background:transparent;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;font-size:12px;font-weight:500;line-height:18px;text-decoration:none;white-space:nowrap}.dcu-about-external-link:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.dcu-about-external-link:focus-visible{outline:2px solid var(--dsw-alias-state-success-primary);outline-offset:2px}.dcu-about-external-link svg{flex:none}@media(max-width:720px){.dcu-about-title-row{flex-wrap:wrap}}
-.dcu-about-version{margin-left:8px;color:var(--dsw-alias-label-tertiary);font-family:inherit;font-size:12px;font-weight:500;line-height:18px;letter-spacing:0;white-space:nowrap;vertical-align:baseline}
-.dcu-about-project-link{color:inherit;text-decoration:none}.dcu-about-project-link:hover{text-decoration:underline;text-underline-offset:3px}.dcu-about-project-link:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px;border-radius:2px}
-.dcu-about-name-row{display:flex;align-items:center;gap:10px;min-width:0}.dcu-about-name-row .dcu-about-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dcu-about-downloads{display:inline-flex;align-items:center;gap:4px;flex:none;color:var(--dsw-alias-label-secondary);font-size:11px;line-height:20px;font-weight:400;font-variant-numeric:tabular-nums;text-decoration:none;white-space:nowrap}.dcu-about-downloads svg{flex:none;opacity:.75}.dcu-about-downloads:hover{color:var(--dsw-alias-label-primary)}.dcu-about-downloads:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:3px;border-radius:2px}@media(max-width:480px){.dcu-about-dependency{flex-wrap:wrap;gap:8px}.dcu-about-copy{flex-basis:100%}}
+.dcu-about{color:var(--dsw-alias-label-primary);font-family:var(--dsw-font-family);display:flex;flex-direction:column}
+.dcu-section-card{box-sizing:border-box;display:flex;flex-direction:column;gap:16px;padding:18px 20px;background:var(--dsw-alias-bg-layer-2,rgba(255,255,255,0.04));border:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,0.08));border-radius:12px;margin-bottom:16px;transition:border-color 0.15s ease,background-color 0.15s ease}
+html[data-dsh-glass] .dcu-section-card{background:color-mix(in srgb,var(--dsw-alias-bg-layer-2,rgba(255,255,255,0.04)) calc(var(--dsh-glass-frost,1) * 70%),transparent)!important;backdrop-filter:blur(var(--dsh-glass-blur,14px))!important;-webkit-backdrop-filter:blur(var(--dsh-glass-blur,14px))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08)}
+.dcu-section-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.dcu-section-title-wrap{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.dcu-section-title{margin:0;font-size:15px;font-weight:600;line-height:22px;color:var(--dsw-alias-label-primary);display:flex;align-items:center;gap:8px}
+.dcu-section-desc{margin:0;font-size:13px;line-height:18px;color:var(--dsw-alias-label-tertiary)}
+.dcu-feature-section{display:flex;flex-direction:column;gap:8px;margin-top:2px;padding-top:12px;border-top:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,0.06))}
+.dcu-feature-label{font-size:12px;font-weight:500;color:var(--dsw-alias-label-secondary)}
+.dcu-feature-grid{display:flex;flex-wrap:wrap;gap:8px}
+.dcu-feature-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-1,rgba(255,255,255,0.03));border:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,0.06));border-radius:6px}
+.dcu-about-dependencies{overflow:hidden;border:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,0.08));border-radius:8px;background:var(--dsw-alias-bg-layer-1,rgba(0,0,0,0.15))}
+.dcu-about-dependency{display:flex;align-items:center;gap:12px;min-height:38px;padding:4px 12px;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,0.06));transition:background-color 120ms ease}
+.dcu-about-dependency:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,0.04))}
+.dcu-about-dependency:last-child{border-bottom:0}
+.dcu-about-copy{min-width:0;flex:1;display:flex;flex-direction:column;justify-content:center;gap:1px}
+.dcu-about-name{font-size:13px;line-height:17px;font-weight:600}
+.dcu-about-package{overflow:hidden;margin-top:0;color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:14px;text-overflow:ellipsis;white-space:nowrap}
+.dcu-about-status{display:flex;align-items:center;gap:4px;font-size:12px;line-height:16px;white-space:nowrap;flex-shrink:0}
+.dcu-about-status[data-installed=true]{color:var(--dsw-alias-state-success-primary)}
+.dcu-about-status[data-installed=false]{color:var(--dsw-alias-state-error-primary)}
+.dcu-about-status[data-update=true]{color:var(--dsw-alias-state-warning-primary)}
+.dcu-about-progress{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:8px}
+.dcu-about-progress-bar{flex:1;height:4px;background:var(--dsw-alias-border-l2);border-radius:2px;overflow:hidden}
+.dcu-about-progress-fill{height:100%;background:var(--dsw-alias-brand-primary);transition:width 0.2s ease}
+.dcu-about-message{padding:8px 12px;border-radius:6px;font-size:12px;margin-top:8px}
+.dcu-about-message[data-error="true"]{color:var(--dsw-alias-state-error-primary,#ef4444);background:rgba(239,68,68,0.1)}
+.dcu-about-feedback-links,.dcu-about-links{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dcu-about-version{margin-left:8px;color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:500}
+.dcu-about-project-link{color:inherit;text-decoration:none}
+.dcu-about-project-link:hover{text-decoration:underline;text-underline-offset:3px}
+.dcu-about-name-row{display:flex;align-items:center;gap:10px;min-width:0}
+.dcu-about-name-row .dcu-about-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dcu-about-downloads{display:inline-flex;align-items:center;gap:4px;flex:none;color:var(--dsw-alias-label-secondary);font-size:11px;line-height:20px;font-weight:400;text-decoration:none;white-space:nowrap}
+.dcu-about-downloads svg{flex:none;opacity:.75}
 `
 
 /** 宿主图标库不提供 GitHub 品牌标识，内联后可离线使用并继承当前文字颜色。 */
@@ -219,60 +249,74 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
   const title = (id: ManagedDependencyId): string => t(`about.dependency.${id}`)
   return <section ref={root} className="dcu-about" aria-label={t('about.nav')}>
     <style>{stylesheet}</style>
-    <div className="dcu-about-head">
-      <div className="dcu-about-title-block">
-        <div className="dcu-about-title-row">
+    {/* 区域一：关于介绍与核心特性卡片 */}
+    <div className="dcu-section-card dcu-card-about">
+      <div className="dcu-section-header">
+        <div className="dcu-section-title-wrap">
           <h2 className="dcu-about-title">{t('about.title')}{selfVersion === undefined ? null : <span className="dcu-about-version">v{selfVersion}</span>}</h2>
-          <div className="dcu-about-feedback-links dcu-about-links">
-            <PrimitiveButton
-              variant="outline"
-              size="sm"
-              icon={<GithubMark16 />}
-              aria-label={t('about.viewProject')}
-              onClick={() => { openExternal('https://github.com/MichengAI/dsh-codex-ui') }}
-            >
-              {t('about.viewProject')}
-            </PrimitiveButton>
-            <PrimitiveButton
-              variant="outline"
-              size="sm"
-              icon={<IconListPenOutlineMedium size={14} />}
-              aria-label={t('about.feedback')}
-              onClick={() => { openExternal('https://github.com/MichengAI/dsh-codex-ui/issues') }}
-            >
-              {t('about.feedback')}
-            </PrimitiveButton>
-            <PrimitiveButton
-              variant="outline"
-              size="sm"
-              icon={state === 'loading' ? <IconLoadingOutlineMedium size={14} /> : <IconRefreshOutlineMedium size={14} />}
-              aria-label={t('about.checkUpdate')}
-              disabled={state === 'loading' || installing !== undefined}
-              onClick={() => { void load() }}
-            >
-              {state === 'loading' ? t('about.checking') : t('about.checkUpdate')}
-            </PrimitiveButton>
-          </div>
+          <p className="dcu-section-desc">{t('about.description')}</p>
         </div>
-        <p className="dcu-about-desc dcu-about-intro">{t('about.description')}</p>
+        <div className="dcu-about-feedback-links dcu-about-links">
+          <PrimitiveButton
+            variant="outline"
+            size="sm"
+            icon={<GithubMark16 />}
+            aria-label={t('about.viewProject')}
+            onClick={() => { openExternal('https://github.com/MichengAI/dsh-codex-ui') }}
+          >
+            {t('about.viewProject')}
+          </PrimitiveButton>
+          <PrimitiveButton
+            variant="outline"
+            size="sm"
+            icon={<IconListPenOutlineMedium size={14} />}
+            aria-label={t('about.feedback')}
+            onClick={() => { openExternal('https://github.com/MichengAI/dsh-codex-ui/issues') }}
+          >
+            {t('about.feedback')}
+          </PrimitiveButton>
+          <PrimitiveButton
+            variant="outline"
+            size="sm"
+            icon={state === 'loading' ? <IconLoadingOutlineMedium size={14} /> : <IconRefreshOutlineMedium size={14} />}
+            aria-label={t('about.checkUpdate')}
+            disabled={state === 'loading' || installing !== undefined}
+            onClick={() => { void load() }}
+          >
+            {state === 'loading' ? t('about.checking') : t('about.checkUpdate')}
+          </PrimitiveButton>
+        </div>
+      </div>
+      <div className="dcu-feature-section">
+        <span className="dcu-feature-label">{t('about.features')}</span>
+        <div className="dcu-feature-grid">
+          <span className="dcu-feature-pill">{t('about.feature.composer')}</span>
+          <span className="dcu-feature-pill">{t('about.feature.settingsSkin')}</span>
+          <span className="dcu-feature-pill">{t('about.feature.sessionTitle')}</span>
+          <span className="dcu-feature-pill">{t('about.feature.theme')}</span>
+          <span className="dcu-feature-pill">{t('about.feature.dependencies')}</span>
+        </div>
       </div>
     </div>
-    <h3>{t('about.features')}</h3>
-    <ul className="dcu-about-features">
-      <li>{t('about.feature.composer')}</li>
-      <li>{t('about.feature.settingsSkin')}</li>
-      <li>{t('about.feature.sessionTitle')}</li>
-      <li>{t('about.feature.theme')}</li>
-      <li>{t('about.feature.dependencies')}</li>
-    </ul>
+
+    {/* 区域二：界面外观与换肤配置卡片 */}
     <ThemeSettingsCard t={t} />
-    <div className="dcu-about-dependencies-heading"><h3>{t('about.dependencies')}</h3>{state === 'ready' && actionableCount > 0 && <PrimitiveButton variant="outline" size="sm" icon={installing === 'all' ? <IconLoadingOutlineMedium size={14} /> : <IconDownloadOutlineMedium size={14} />} aria-busy={installing === 'all'} disabled={installing !== undefined} onClick={() => { void updateAll() }}>{installing === 'all' ? t('about.updatingAll') : t('about.updateAll')}</PrimitiveButton>}</div>
-    <p className="dcu-about-intro">{t('about.dependenciesDescription')}</p>
+
+    {/* 区域三：配套生态管理与在线更新卡片 */}
+    <div className="dcu-section-card dcu-card-dependencies">
+      <div className="dcu-section-header">
+        <div className="dcu-section-title-wrap">
+          <h3 className="dcu-section-title">{t('about.dependencies')}</h3>
+          <p className="dcu-section-desc">{t('about.dependenciesDescription')}</p>
+        </div>
+        {state === 'ready' && actionableCount > 0 && <PrimitiveButton variant="outline" size="sm" icon={installing === 'all' ? <IconLoadingOutlineMedium size={14} /> : <IconDownloadOutlineMedium size={14} />} aria-busy={installing === 'all'} disabled={installing !== undefined} onClick={() => { void updateAll() }}>{installing === 'all' ? t('about.updatingAll') : t('about.updateAll')}</PrimitiveButton>}
+      </div>
     {state === 'loading' ? <div className="dcu-about-message" role="status">{t('about.loading')}</div>
       : state === 'failed' ? <div className="dcu-about-message" data-error="true" role="alert">{t(businessRequestErrorKey(loadFailure) ?? 'about.statusFailed')}</div>
         : <div className="dcu-about-dependencies" aria-busy={installing !== undefined}>{dependencies.map(dependency => <article className="dcu-about-dependency" key={dependency.id}><div className="dcu-about-copy"><div className="dcu-about-name-row"><a className="dcu-about-name dcu-about-project-link" href={PROJECT_HOMEPAGES[dependency.id]} target="_blank" rel="noreferrer">{title(dependency.id)}</a><a className="dcu-about-downloads" href={`https://www.npmjs.com/package/${dependency.packageName}`} target="_blank" rel="noreferrer" title={t('about.downloadsSource')} aria-label={`${dependency.packageName} · ${t('about.totalDownloads')} · ${typeof dependency.totalDownloads === 'number' && Number.isSafeInteger(dependency.totalDownloads) && dependency.totalDownloads >= 0 ? dependency.totalDownloads.toLocaleString() : t('about.downloadsUnavailable')}`}><IconDownloadOutlineMedium size={12} aria-hidden="true" /><span className="dcu-about-downloads-count">{typeof dependency.totalDownloads === 'number' && Number.isSafeInteger(dependency.totalDownloads) && dependency.totalDownloads >= 0 ? dependency.totalDownloads.toLocaleString() : '—'}</span></a></div><div className="dcu-about-package" title={dependency.packageName}><a className="dcu-about-project-link" href={PROJECT_HOMEPAGES[dependency.id]} target="_blank" rel="noreferrer">{dependency.packageName}</a>{dependency.version === undefined ? '' : ` · ${dependency.version}`}{dependency.updateAvailable && dependency.latestVersion !== undefined ? ` → ${dependency.latestVersion}` : ''}</div></div><div className="dcu-about-status" data-installed={dependency.installed} data-update={dependency.updateAvailable}>{dependency.installed && !dependency.updateAvailable && <IconCheckOutlineMedium size={14} />}{dependency.updateAvailable ? t('about.updateAvailable') : dependency.installed ? t('about.installed') : t('about.missing')}</div>{(!dependency.installed || dependency.updateAvailable) && <PrimitiveButton variant="outline" size="sm" icon={installing === dependency.id ? <IconLoadingOutlineMedium size={14} /> : (!dependency.installed ? <IconDownloadOutlineMedium size={14} /> : <IconRefreshOutlineMedium size={14} />)} disabled={installing !== undefined} aria-busy={installing === dependency.id} onClick={() => { void install(dependency.id) }}>{installing === dependency.id ? t('about.installing') : dependency.updateAvailable ? t('about.update') : t('about.install')}</PrimitiveButton>}</article>)}</div>}
     {installing !== undefined && <div className="dcu-about-progress" role="status"><span><IconLoadingOutlineMedium size={14} /></span><code>{progress === undefined ? t('about.progressHint') : progressLabel(progress, t)}</code>{progress?.percent !== null && progress?.percent !== undefined && <span className="dcu-about-progress-pct">{progress.percent}%</span>}<div className="dcu-about-progress-bar"><div className="dcu-about-progress-fill" data-wave={progress?.percent === null || progress?.percent === undefined} style={progress?.percent === null || progress?.percent === undefined ? undefined : { width: `${progress.percent}%` }} /></div></div>}
     {refreshFailed && state === 'ready' && <div className="dcu-about-message" data-error="true" role="status">{t(businessRequestErrorKey(loadFailure) ?? 'about.refreshFailed')}</div>}
     {message !== undefined && <div className="dcu-about-message" data-error={message.error} role={message.error ? 'alert' : 'status'}>{message.text}</div>}
+    </div>
   </section>
 }
