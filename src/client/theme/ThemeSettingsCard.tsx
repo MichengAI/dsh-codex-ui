@@ -116,13 +116,6 @@ const stylesheet = `
 .dcu-theme-cube.selected .dcu-theme-cube-sub {
   color: var(--dsw-alias-label-secondary);
 }
-.dcu-theme-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
 .dcu-theme-row-label {
   display: flex;
   flex-direction: column;
@@ -205,66 +198,49 @@ export function ThemeSettingsCard({ t }: ThemeSettingsCardProps): React.JSX.Elem
         </div>
       </div>
 
-      {/* 玻璃质感主开关 */}
-      <div className="dcu-theme-row">
-        <div className="dcu-theme-row-label">
-          <span className="dcu-theme-row-title">{t('theme.glassEnable')}</span>
-          <span className="dcu-theme-row-hint">{t('theme.glassHint')}</span>
+      {/* 排版模式与材质预设：直接常驻展示，无需多余主开关 */}
+      <div className="dcu-theme-sub-group">
+        {/* 排版模式：原版排版在前，云母效果在后 */}
+        <div className="dcu-theme-sub-row">
+          <div className="dcu-theme-row-label">
+            <span className="dcu-theme-row-title">{t('theme.mode')}</span>
+            <span className="dcu-theme-row-hint">{t('theme.modeHint')}</span>
+          </div>
+          <SegmentedControl<GlassMode>
+            id="codex-ui-glass-mode"
+            label={t('theme.mode')}
+            value={state.glassMode}
+            options={[
+              { value: 'compat', label: t('theme.modeCompat') },
+              { value: 'mica', label: t('theme.modeMica') },
+            ]}
+            onChange={(nextMode) => {
+              changeGlass({ mode: nextMode, enabled: true })
+            }}
+          />
         </div>
-        <Switch
-          label={t('theme.glassEnable')}
-          checked={state.glassEnabled}
-          onChange={(checked) => {
-            changeGlass({ enabled: checked })
-          }}
-        />
+
+        {/* 材质预设 */}
+        <div className="dcu-theme-sub-row">
+          <div className="dcu-theme-row-label">
+            <span className="dcu-theme-row-title">{t('theme.glassPreset')}</span>
+            <span className="dcu-theme-row-hint">{t('theme.glassPresetHint')}</span>
+          </div>
+          <SegmentedControl<GlassPreset>
+            id="codex-ui-glass-preset"
+            label={t('theme.glassPreset')}
+            value={state.glassPreset}
+            options={[
+              { value: 'clear', label: t('theme.presetClear') },
+              { value: 'standard', label: t('theme.presetStandard') },
+              { value: 'frosted', label: t('theme.presetFrosted') },
+            ]}
+            onChange={(nextPreset) => {
+              changeGlass({ preset: nextPreset, enabled: true })
+            }}
+          />
+        </div>
       </div>
-
-      {/* 玻璃质感参数子组（当玻璃质感开启时展示） */}
-      {state.glassEnabled && (
-        <div className="dcu-theme-sub-group">
-          {/* 排版模式 */}
-          <div className="dcu-theme-sub-row">
-            <div className="dcu-theme-row-label">
-              <span className="dcu-theme-row-title">{t('theme.mode')}</span>
-              <span className="dcu-theme-row-hint">{t('theme.modeHint')}</span>
-            </div>
-            <SegmentedControl<GlassMode>
-              id="codex-ui-glass-mode"
-              label={t('theme.mode')}
-              value={state.glassMode}
-              options={[
-                { value: 'mica', label: t('theme.modeMica') },
-                { value: 'compat', label: t('theme.modeCompat') },
-              ]}
-              onChange={(nextMode) => {
-                changeGlass({ mode: nextMode })
-              }}
-            />
-          </div>
-
-          {/* 材质预设 */}
-          <div className="dcu-theme-sub-row">
-            <div className="dcu-theme-row-label">
-              <span className="dcu-theme-row-title">{t('theme.glassPreset')}</span>
-              <span className="dcu-theme-row-hint">{t('theme.glassPresetHint')}</span>
-            </div>
-            <SegmentedControl<GlassPreset>
-              id="codex-ui-glass-preset"
-              label={t('theme.glassPreset')}
-              value={state.glassPreset}
-              options={[
-                { value: 'clear', label: t('theme.presetClear') },
-                { value: 'standard', label: t('theme.presetStandard') },
-                { value: 'frosted', label: t('theme.presetFrosted') },
-              ]}
-              onChange={(nextPreset) => {
-                changeGlass({ preset: nextPreset })
-              }}
-            />
-          </div>
-        </div>
-      )}
     </div>
   )
 }

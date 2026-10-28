@@ -35,6 +35,33 @@ type InstallProgress = {
 
 const PROGRESS_PHASES = new Set<ProgressPhase>(['resolving', 'downloading', 'linking', 'building'])
 
+interface SubPluginEntry {
+  readonly id: string
+  readonly nameKey:
+    | 'about.subplugin.composer.name'
+    | 'about.subplugin.settingsSkin.name'
+    | 'about.subplugin.sessionTitle.name'
+    | 'about.subplugin.sidebar.name'
+    | 'about.subplugin.theme.name'
+    | 'about.subplugin.dependencies.name'
+  readonly descKey:
+    | 'about.subplugin.composer.desc'
+    | 'about.subplugin.settingsSkin.desc'
+    | 'about.subplugin.sessionTitle.desc'
+    | 'about.subplugin.sidebar.desc'
+    | 'about.subplugin.theme.desc'
+    | 'about.subplugin.dependencies.desc'
+}
+
+const SUB_PLUGINS: readonly SubPluginEntry[] = [
+  { id: 'composer', nameKey: 'about.subplugin.composer.name', descKey: 'about.subplugin.composer.desc' },
+  { id: 'settings-skin', nameKey: 'about.subplugin.settingsSkin.name', descKey: 'about.subplugin.settingsSkin.desc' },
+  { id: 'session-title', nameKey: 'about.subplugin.sessionTitle.name', descKey: 'about.subplugin.sessionTitle.desc' },
+  { id: 'sidebar', nameKey: 'about.subplugin.sidebar.name', descKey: 'about.subplugin.sidebar.desc' },
+  { id: 'theme', nameKey: 'about.subplugin.theme.name', descKey: 'about.subplugin.theme.desc' },
+  { id: 'dependencies', nameKey: 'about.subplugin.dependencies.name', descKey: 'about.subplugin.dependencies.desc' },
+]
+
 const endpoint = CODEX_UI_API_ENDPOINTS.dependencies
 
 const stylesheet = `
@@ -43,11 +70,22 @@ const stylesheet = `
 .dcu-about-title-block{min-width:0}
 .dcu-about h2,.dcu-about-title{margin:0;font-size:24px;line-height:32px;font-weight:600;letter-spacing:-.4px;color:var(--dsw-alias-label-primary)}
 .dcu-about-intro,.dcu-about-desc{margin:12px 0 0;color:var(--dsw-alias-label-tertiary,#a0a0a0);font-size:14px;line-height:22px}
-.dcu-about h3{margin:24px 0 12px;font-size:16px;font-weight:600;line-height:24px;color:var(--dsw-alias-label-primary)}
-.dcu-about-features{margin:0 0 20px;padding-left:20px;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:24px}
 .dcu-about-title-row{display:flex;align-items:center;gap:8px 12px;min-width:0;flex-wrap:wrap}
 .dcu-about-feedback-links,.dcu-about-links{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .dcu-about-version{margin-left:8px;color:var(--dsw-alias-label-tertiary);font-family:inherit;font-size:12px;font-weight:500;line-height:18px;letter-spacing:0;white-space:nowrap;vertical-align:baseline}
+.dcu-subplugins-section{margin:8px 0 20px}
+.dcu-subplugins-heading{margin:0 0 10px;font-size:14px;font-weight:600;line-height:20px;color:var(--dsw-alias-label-primary)}
+.dcu-subplugins-list{display:flex;flex-direction:column;gap:6px}
+.dcu-subplugin-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;background:var(--dsw-alias-bg-layer-1,rgba(255,255,255,0.03));border:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,0.06));border-radius:8px;transition:background-color 120ms ease}
+.dcu-subplugin-item:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,0.05))}
+.dcu-subplugin-header{display:inline-flex;align-items:center;gap:8px;flex:none}
+.dcu-subplugin-name{font-size:13px;font-weight:600;line-height:18px;color:var(--dsw-alias-label-primary)}
+.dcu-subplugin-badge{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;line-height:14px;padding:2px 6px;border-radius:4px;color:var(--dsw-alias-label-tertiary);background:var(--dsw-alias-bg-layer-2,rgba(255,255,255,0.06))}
+.dcu-subplugin-desc{margin:0;flex:1;min-width:0;text-align:right;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px}
+@media(max-width:768px){
+  .dcu-subplugin-item{flex-direction:column;align-items:flex-start;gap:4px}
+  .dcu-subplugin-desc{text-align:left}
+}
 .dcu-section-card{box-sizing:border-box;display:flex;flex-direction:column;gap:16px;padding:18px 20px;background:var(--dsw-alias-bg-layer-2,#18181b);border:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,0.08));border-radius:12px;margin-bottom:16px;transition:border-color 0.15s ease,background-color 0.15s ease}
 html[data-dsh-glass] .dcu-section-card{background:var(--dsw-alias-bg-layer-2,#18181b)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08)}
 .dcu-section-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
@@ -294,14 +332,21 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
         <p className="dcu-about-desc dcu-about-intro">{t('about.description')}</p>
       </div>
     </div>
-    <h3>{t('about.features')}</h3>
-    <ul className="dcu-about-features">
-      <li>{t('about.feature.composer')}</li>
-      <li>{t('about.feature.settingsSkin')}</li>
-      <li>{t('about.feature.sessionTitle')}</li>
-      <li>{t('about.feature.theme')}</li>
-      <li>{t('about.feature.dependencies')}</li>
-    </ul>
+    {/* 子插件功能清单 */}
+    <div className="dcu-subplugins-section">
+      <h3 className="dcu-subplugins-heading">{t('about.subplugins')}</h3>
+      <div className="dcu-subplugins-list">
+        {SUB_PLUGINS.map(item => (
+          <div key={item.id} className="dcu-subplugin-item">
+            <div className="dcu-subplugin-header">
+              <span className="dcu-subplugin-name">{t(item.nameKey)}</span>
+              <code className="dcu-subplugin-badge">{item.id}</code>
+            </div>
+            <p className="dcu-subplugin-desc">{t(item.descKey)}</p>
+          </div>
+        ))}
+      </div>
+    </div>
 
     {/* 区域二：界面外观与换肤配置卡片 */}
     <ThemeSettingsCard t={t} />
