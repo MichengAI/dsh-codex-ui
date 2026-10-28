@@ -536,6 +536,180 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"] > div:not(na
   [data-shortcut-modal="settings"] > div > :first-child { height: 48px !important; min-height: 48px !important; padding: 0 16px !important; }
 
   [data-shortcut-modal="settings"] > div > :nth-child(2) { padding: 16px !important; }
+
+  [data-shortcut-modal="settings"]:has(> [class*="options"]) {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="navTitle"],
+  [data-shortcut-modal="settings"]:has(> [class*="options"]) > nav {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+}
+
+/* 新版宿主平铺 4 块 Grid 布局映射（0.2.1-alpha.3+），杜绝 4 列横向撕裂 */
+[data-shortcut-modal="settings"]:has(> [class*="options"]) {
+  display: grid !important;
+  grid-template-columns: var(--dcu-settings-nav-width, 280px) minmax(0, 1fr) !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  flex-direction: unset !important;
+}
+
+[data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="navTitle"] {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  box-sizing: border-box !important;
+  width: var(--dcu-settings-nav-width, 280px) !important;
+  min-width: var(--dcu-settings-nav-width, 280px) !important;
+  max-width: var(--dcu-settings-nav-width, 280px) !important;
+  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #121214)) !important;
+  border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  padding: 16px 12px 0 !important;
+  margin: 0 !important;
+  height: auto !important;
+  flex: none !important;
+}
+
+[data-shortcut-modal="settings"]:has(> [class*="options"]) > nav,
+[data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="nav"] {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  box-sizing: border-box !important;
+  width: var(--dcu-settings-nav-width, 280px) !important;
+  min-width: var(--dcu-settings-nav-width, 280px) !important;
+  max-width: var(--dcu-settings-nav-width, 280px) !important;
+  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #121214)) !important;
+  border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  padding: 0 12px 24px !important;
+  margin: 0 !important;
+  overflow-y: auto !important;
+  height: 100% !important;
+  flex: none !important;
+}
+
+[data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  box-sizing: border-box !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  padding: 0 32px !important;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.07)) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  background: var(--dsw-alias-bg-layer-2, #18181b) !important;
+  margin: 0 !important;
+  flex: none !important;
+}
+
+[data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  box-sizing: border-box !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  padding: 32px 48px 64px !important;
+  background: var(--dsw-alias-bg-layer-2, #18181b) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  margin: 0 !important;
+  height: 100% !important;
+  flex: none !important;
+}
+
+[data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] > * {
+  width: 100% !important;
+  max-width: 800px !important;
+  margin-inline: auto !important;
+  box-sizing: border-box !important;
+}
+
+/* 浅色模式新版 Grid 兜底 */
+body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="navTitle"],
+html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="navTitle"] {
+  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #ffffff)) !important;
+  border-right: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)) !important;
+}
+
+body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > nav,
+html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:has(> [class*="options"]) > nav {
+  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #ffffff)) !important;
+  border-right: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)) !important;
+}
+
+body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"],
+html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] {
+  background: var(--dsw-alias-bg-layer-1, #ffffff) !important;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)) !important;
+}
+
+body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"],
+html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] {
+  background: var(--dsw-alias-bg-layer-1, #ffffff) !important;
+}
+
+/* 云母悬浮双岛（Mica Mode）新版 Grid 适配 */
+html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) {
+  grid-template-columns: calc(var(--dcu-settings-nav-width, 280px) - 24px) minmax(0, 1fr) !important;
+  gap: 0 12px !important;
+  padding: 8px 12px 12px 12px !important;
+}
+
+html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="navTitle"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  border-right: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-left: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-top: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-bottom: none !important;
+  border-radius: 16px 16px 0 0 !important;
+  background: var(--dsh-glass-card, var(--dsw-alias-bg-layer-1)) !important;
+  backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+}
+
+html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > nav,
+html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="nav"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  border-right: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-left: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-bottom: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-top: none !important;
+  border-radius: 0 0 16px 16px !important;
+  background: var(--dsh-glass-card, var(--dsw-alias-bg-layer-1)) !important;
+  backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+}
+
+html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] {
+  margin: 0 !important;
+  border-right: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-left: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-top: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  border-radius: 16px 16px 0 0 !important;
+  background: var(--dsw-alias-bg-layer-1) !important;
+}
+
+html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] {
+  margin: 0 !important;
+  border-right: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-left: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-bottom: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-top: none !important;
+  border-radius: 0 0 16px 16px !important;
+  background: var(--dsw-alias-bg-layer-1) !important;
+  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
 }
 `
 
@@ -666,8 +840,12 @@ export function decorateSettingsNav(panelEl: HTMLElement): () => void {
   const sidebarWidth = getHostSidebarExpandedWidth(panelEl.ownerDocument || document)
   panelEl.style.setProperty('--dcu-settings-nav-width', `${sidebarWidth}px`)
 
-  const navHeader = panelEl.querySelector<HTMLElement>('nav > :first-child')
-  const navList = panelEl.querySelector<HTMLElement>('nav > :nth-child(2)')
+  // 兼容新旧两版宿主结构：新版（0.2.1-alpha.3+）navTitle 与 nav 为同级兄弟节点；旧版 navTitle 是 nav 的首个子元素
+  const navHeader = panelEl.querySelector<HTMLElement>(':scope > [class*="navTitle"]')
+    ?? panelEl.querySelector<HTMLElement>('nav > :first-child')
+  const navList = panelEl.querySelector<HTMLElement>('nav [class*="navList"]')
+    ?? panelEl.querySelector<HTMLElement>('nav > :nth-child(2)')
+    ?? panelEl.querySelector<HTMLElement>('nav > :first-child')
   if (!navList) return () => {}
 
   const isZh = (document.documentElement.lang || 'zh').startsWith('zh')

@@ -243,3 +243,60 @@ test('浅色模式下设置工作台背景与按钮高对比度规则兜底', ()
   expect(SETTINGS_SKIN_CSS).toContain('body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]')
   expect(SETTINGS_SKIN_CSS).toContain('body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"] > div:not(nav)')
 })
+
+test('decorateSettingsNav 兼容新版宿主平铺 4 块结构（navTitle 与 nav 为同级直属子节点）', () => {
+  const panel = document.createElement('div')
+  panel.setAttribute('data-shortcut-modal', 'settings')
+
+  // 新版宿主结构：navTitle 是 panel 直属子元素，nav 内部只有 navList
+  const navTitle = document.createElement('div')
+  navTitle.className = 'VOzbGW_navTitle'
+  navTitle.innerHTML = '<span>设置</span>'
+
+  const nav = document.createElement('nav')
+  nav.className = 'VOzbGW_nav'
+  const navList = document.createElement('div')
+  navList.className = 'VOzbGW_navList'
+
+  const btn1 = document.createElement('button')
+  btn1.innerHTML = '<span>账号与余额</span>'
+  const btn2 = document.createElement('button')
+  btn2.innerHTML = '<span>模型</span>'
+  navList.append(btn1, btn2)
+  nav.append(navList)
+
+  const header = document.createElement('div')
+  header.className = 'VOzbGW_header'
+
+  const options = document.createElement('div')
+  options.className = 'VOzbGW_options'
+
+  panel.append(navTitle, nav, header, options)
+  document.body.append(panel)
+
+  try {
+    const cleanup = decorateSettingsNav(panel)
+
+    // 验证新版结构下成功挂载了搜索 Header 到 navTitle
+    expect(navTitle.querySelector('.dcu-settings-nav-header-root')).not.toBeNull()
+
+    // 验证成功注入了分组 Header 到 navList
+    expect(navList.querySelectorAll('.dcu-settings-nav-group-header').length).toBeGreaterThan(0)
+
+    // 验证按钮已被分类
+    expect(btn1.getAttribute('data-dcu-group')).toBe('personal')
+    expect(btn2.getAttribute('data-dcu-group')).toBe('integrations')
+
+    cleanup()
+  } finally {
+    panel.remove()
+  }
+})
+
+test('SETTINGS_SKIN_CSS 包含新版平铺 Grid 4 块布局映射规则，杜绝 4 列横向撕裂', () => {
+  expect(SETTINGS_SKIN_CSS).toContain('[data-shortcut-modal=\"settings\"]:has(> [class*=\"options\"])')
+  expect(SETTINGS_SKIN_CSS).toContain('grid-template-columns')
+  expect(SETTINGS_SKIN_CSS).toContain('> [class*=\"navTitle\"]')
+  expect(SETTINGS_SKIN_CSS).toContain('> [class*=\"header\"]')
+  expect(SETTINGS_SKIN_CSS).toContain('> [class*=\"options\"]')
+})
