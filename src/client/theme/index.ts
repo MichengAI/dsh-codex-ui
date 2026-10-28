@@ -1,17 +1,27 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type { ThemeRuntime } from '@deepseek-ai/dsh-client-ui-theme/client'
 import { CODEX_UI_API_ENDPOINTS } from '../../business-api.ts'
-import { applyGlassMode, disposeGlassMode } from './glass.ts'
-import { CODEX_DARK_THEME, CODEX_LIGHT_THEME } from './palettes.ts'
-import { getThemeSettingsState, subscribeThemeSettings } from './state.ts'
+import { applyGlassSettings, disposeGlassMode, type GlassMode, type GlassPreset } from './glass.ts'
+import { ALL_BUILTIN_THEMES } from './palettes.ts'
+import {
+  getThemeSettingsState,
+  setGlassEnabled,
+  setGlassMode,
+  setGlassPreset,
+  setThemeOption,
+  subscribeThemeSettings,
+  type ThemeOption,
+} from './state.ts'
 
 export * from './glass.ts'
 export * from './palettes.ts'
 export * from './state.ts'
 
+let globalThemeRuntime: ThemeRuntime | undefined
+
 /**
- * 校验主题子插件是否在 Host 侧启用。
- * 遵循 fail-closed 原则：404、网络失败或未显式 enabled 时视为关闭并回退官方。
+ * 校验主题子插件是否在 Host 侧被显式停用。
+ * 只有当接口明确返回 { enabled: false } 时才关闭；网络失败或旧服务端 404 时保持客户端可用。
  */
 export async function checkThemeEnabled(): Promise<boolean> {
   try {
@@ -22,11 +32,11 @@ export async function checkThemeEnabled(): Promise<boolean> {
       : CODEX_UI_API_ENDPOINTS.theme
     const url = new URL(path, normalizedBase).href
     const res = await fetch(url)
-    if (!res.ok) return false
+    if (!res.ok) return true // 接口未注册时保持本地可用
     const data = (await res.json()) as { enabled?: boolean }
-    return data.enabled === true
+    return data.enabled !== false
   } catch {
-    return false
+    return true
   }
 }
 
@@ -43,53 +53,89 @@ function tolerantRegistration(run: () => (() => void) | void): () => void {
 }
 
 /**
+ * 供 UI 直接调用的主题切换入口，立即执行 ThemeRuntime.setTheme 并持久化。
+ */
+export function changeTheme(themeOption: ThemeOption): void {
+  setThemeOption(themeOption)
+  if (!globalThemeRuntime || typeof globalThemeRuntime.setTheme !== 'function') return
+  try {
+    if (themeOption === 'stock') {
+      globalThemeRuntime.setTheme('system')
+    } else {
+      globalThemeRuntime.setTheme(themeOption)
+    }
+  } catch (e) {
+    console.warn('[codex-ui:theme] setTheme failed:', e)
+  }
+}
+
+/**
+ * 供 UI 直接调用的玻璃质感与排版模式切换入口。
+ */
+export function changeGlass(options: {
+  enabled?: boolean
+  mode?: GlassMode
+  preset?: GlassPreset
+}): void {
+  const state = getThemeSettingsState()
+  const enabled = options.enabled ?? state.glassEnabled
+  const mode = options.mode ?? state.glassMode
+  const preset = options.preset ?? state.glassPreset
+
+  if (options.enabled !== undefined) setGlassEnabled(options.enabled)
+  if (options.mode !== undefined) setGlassMode(options.mode)
+  if (options.preset !== undefined) setGlassPreset(options.preset)
+
+  applyGlassSettings({ enabled, mode, preset })
+}
+
+/**
  * 挂载并观察主题与外观增强：
- * - 注册 Codex 暗色与亮色至 ThemeRuntime；
+ * - 注册全部 6 套内置主题至 ThemeRuntime；
  * - 响应本地配置与云母模式切换；
  * - 卸载时纯净还原 DOM 与官方主题。
  */
 export function observeTheme(ctx: ClientContext): () => void {
   let disposed = false
   const theme = ctx.get('theme') as ThemeRuntime | undefined
+  globalThemeRuntime = theme
 
-  let disposeDark: (() => void) | null = null
-  let disposeLight: (() => void) | null = null
+  const disposers: (() => void)[] = []
 
+  // 注册全部 6 套主题（4 套 Catppuccin + 2 套 Codex）
   if (theme && typeof theme.register === 'function') {
-    disposeDark = tolerantRegistration(() => theme.register(CODEX_DARK_THEME))
-    disposeLight = tolerantRegistration(() => theme.register(CODEX_LIGHT_THEME))
+    for (const themeDef of ALL_BUILTIN_THEMES) {
+      const dispose = tolerantRegistration(() => theme.register(themeDef))
+      disposers.push(dispose)
+    }
   }
 
   const applyCurrentState = (): void => {
     if (disposed) return
     const state = getThemeSettingsState()
 
-    // 1. 同步云母质感
-    applyGlassMode(state.glassEnabled, state.glassPreset)
+    // 1. 同步玻璃质感与排版模式
+    applyGlassSettings({
+      enabled: state.glassEnabled,
+      mode: state.glassMode,
+      preset: state.glassPreset,
+    })
 
     // 2. 同步主题配色
     if (!theme || typeof theme.setTheme !== 'function') return
     const currentThemeId = theme.getTheme?.()?.active?.id ?? theme.getTheme?.()?.preference
 
-    if (state.themeOption === 'codex-dark') {
-      if (currentThemeId !== 'codex-dark') {
+    if (state.themeOption !== 'stock') {
+      if (currentThemeId !== state.themeOption) {
         try {
-          theme.setTheme('codex-dark')
+          theme.setTheme(state.themeOption)
         } catch (e) {
-          console.warn('[codex-ui:theme] failed to set codex-dark:', e)
+          console.warn(`[codex-ui:theme] failed to set ${state.themeOption}:`, e)
         }
       }
-    } else if (state.themeOption === 'codex-light') {
-      if (currentThemeId !== 'codex-light') {
-        try {
-          theme.setTheme('codex-light')
-        } catch (e) {
-          console.warn('[codex-ui:theme] failed to set codex-light:', e)
-        }
-      }
-    } else if (state.themeOption === 'stock') {
-      // 若当前为主题插件专属定制的主题，则恢复为官方系统跟随
-      if (currentThemeId === 'codex-dark' || currentThemeId === 'codex-light') {
+    } else {
+      const isCustomTheme = ALL_BUILTIN_THEMES.some((t) => t.id === currentThemeId)
+      if (isCustomTheme) {
         try {
           theme.setTheme('system')
         } catch {
@@ -103,14 +149,14 @@ export function observeTheme(ctx: ClientContext): () => void {
     }
   }
 
-  // 先行异步探活，若子模块在服务端显式停用，则不生效并还原
+  // 探活检查：只有在明确 disabled: true 时才回退
   void checkThemeEnabled().then((enabled) => {
     if (disposed) return
     if (!enabled) {
       disposeGlassMode()
       if (theme && typeof theme.setTheme === 'function') {
         const cur = theme.getTheme?.()?.active?.id
-        if (cur === 'codex-dark' || cur === 'codex-light') {
+        if (ALL_BUILTIN_THEMES.some((t) => t.id === cur)) {
           theme.setTheme('system')
         }
       }
@@ -131,7 +177,7 @@ export function observeTheme(ctx: ClientContext): () => void {
     disposed = true
     unsubscribe()
     disposeGlassMode()
-    disposeDark?.()
-    disposeLight?.()
+    for (const dispose of disposers) dispose()
+    if (globalThemeRuntime === theme) globalThemeRuntime = undefined
   }
 }

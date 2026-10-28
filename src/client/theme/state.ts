@@ -1,20 +1,39 @@
-import type { GlassPreset } from './glass.ts'
+import type { GlassMode, GlassPreset } from './glass.ts'
 
-export type ThemeOption = 'stock' | 'codex-dark' | 'codex-light'
+export type ThemeOption =
+  | 'stock'
+  | 'codex-dark'
+  | 'codex-light'
+  | 'catppuccin-mocha'
+  | 'catppuccin-macchiato'
+  | 'catppuccin-frappe'
+  | 'catppuccin-latte'
 
 export interface ThemeSettingsState {
-  themeOption: ThemeOption
-  glassEnabled: boolean
-  glassPreset: GlassPreset
+  readonly themeOption: ThemeOption
+  readonly glassEnabled: boolean
+  readonly glassMode: GlassMode
+  readonly glassPreset: GlassPreset
 }
 
 export const STORAGE_KEYS = Object.freeze({
   themeOption: 'codex-ui.theme.option',
   glassEnabled: 'codex-ui.glass.enabled',
+  glassMode: 'codex-ui.glass.mode',
   glassPreset: 'codex-ui.glass.preset',
 })
 
 const listeners = new Set<() => void>()
+
+const VALID_THEMES: readonly ThemeOption[] = [
+  'stock',
+  'codex-dark',
+  'codex-light',
+  'catppuccin-mocha',
+  'catppuccin-macchiato',
+  'catppuccin-frappe',
+  'catppuccin-latte',
+]
 
 function safeGetItem(key: string): string | null {
   try {
@@ -40,16 +59,21 @@ function safeSetItem(key: string, value: string): void {
 function computeSnapshot(): ThemeSettingsState {
   const rawTheme = safeGetItem(STORAGE_KEYS.themeOption)
   const themeOption: ThemeOption =
-    rawTheme === 'codex-dark' || rawTheme === 'codex-light' ? rawTheme : 'stock'
+    rawTheme && (VALID_THEMES as readonly string[]).includes(rawTheme)
+      ? (rawTheme as ThemeOption)
+      : 'stock'
 
   const rawGlass = safeGetItem(STORAGE_KEYS.glassEnabled)
   const glassEnabled = rawGlass === 'true'
+
+  const rawMode = safeGetItem(STORAGE_KEYS.glassMode)
+  const glassMode: GlassMode = rawMode === 'compat' ? 'compat' : 'mica'
 
   const rawPreset = safeGetItem(STORAGE_KEYS.glassPreset)
   const glassPreset: GlassPreset =
     rawPreset === 'clear' || rawPreset === 'frosted' ? rawPreset : 'standard'
 
-  return Object.freeze({ themeOption, glassEnabled, glassPreset })
+  return Object.freeze({ themeOption, glassEnabled, glassMode, glassPreset })
 }
 
 let currentSnapshot: ThemeSettingsState = computeSnapshot()
@@ -59,6 +83,7 @@ export function getThemeSettingsState(): ThemeSettingsState {
   if (
     currentSnapshot.themeOption !== next.themeOption ||
     currentSnapshot.glassEnabled !== next.glassEnabled ||
+    currentSnapshot.glassMode !== next.glassMode ||
     currentSnapshot.glassPreset !== next.glassPreset
   ) {
     currentSnapshot = next
@@ -87,6 +112,11 @@ export function setGlassEnabled(enabled: boolean): void {
   notify()
 }
 
+export function setGlassMode(mode: GlassMode): void {
+  safeSetItem(STORAGE_KEYS.glassMode, mode)
+  notify()
+}
+
 export function setGlassPreset(preset: GlassPreset): void {
   safeSetItem(STORAGE_KEYS.glassPreset, preset)
   notify()
@@ -105,6 +135,7 @@ if (typeof window !== 'undefined') {
     if (
       event.key === STORAGE_KEYS.themeOption ||
       event.key === STORAGE_KEYS.glassEnabled ||
+      event.key === STORAGE_KEYS.glassMode ||
       event.key === STORAGE_KEYS.glassPreset
     ) {
       notify()

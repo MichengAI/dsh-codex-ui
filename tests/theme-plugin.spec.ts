@@ -6,17 +6,24 @@ import { join } from 'node:path'
 import { CODEX_UI_API_ENDPOINTS } from '../src/business-api.ts'
 import { apply, isSubPluginDisabledOnDisk, name } from '../src/theme-plugin.ts'
 import {
+  ALL_BUILTIN_THEMES,
+  applyGlassSettings,
+  changeGlass,
+  changeTheme,
   checkThemeEnabled,
-  observeTheme,
   CODEX_DARK_THEME,
   CODEX_DARK_THEME_ID,
   CODEX_LIGHT_THEME,
   CODEX_LIGHT_THEME_ID,
-  applyGlassMode,
   disposeGlassMode,
+  GLASS_ATTRIBUTE,
+  GLASS_COMPAT_ATTRIBUTE,
+  GLASS_FLOAT_ATTRIBUTE,
   GLASS_PRESETS,
   getThemeSettingsState,
+  observeTheme,
   setGlassEnabled,
+  setGlassMode,
   setGlassPreset,
   setThemeOption,
   STORAGE_KEYS,
@@ -118,19 +125,21 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     } as Response)
     expect(await checkThemeEnabled()).toBe(true)
 
-    // 禁用响应
+    // 显式禁用响应
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ enabled: false }),
     } as Response)
     expect(await checkThemeEnabled()).toBe(false)
 
-    // 网络异常响应
+    // 网络异常时保持客户端可用（不阻断换肤）
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'))
-    expect(await checkThemeEnabled()).toBe(false)
+    expect(await checkThemeEnabled()).toBe(true)
   })
 
-  it('内置色盘包含完整的 Codex 暗色与亮色，且覆盖全套 --dsw-* 设计变量', () => {
+  it('内置色盘包含完整的 6 套主题（4套Catppuccin + 2套Codex），均覆盖全套 190 个 --dsw-* 设计变量', () => {
+    expect(ALL_BUILTIN_THEMES.length).toBe(6)
+
     expect(CODEX_DARK_THEME.id).toBe(CODEX_DARK_THEME_ID)
     expect(CODEX_DARK_THEME.colorScheme).toBe('dark')
     expect(Object.keys(CODEX_DARK_THEME.tokens).length).toBe(190)
@@ -142,12 +151,20 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     // 验证核心底色与高对比度文字
     expect(CODEX_DARK_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#09090b')
     expect(CODEX_LIGHT_THEME.tokens['--dsw-static-neutral-bluish-00']).toBe('#ffffff')
+
+    // 验证包含参考插件的四套
+    const themeIds = ALL_BUILTIN_THEMES.map((t) => t.id)
+    expect(themeIds).toContain('catppuccin-mocha')
+    expect(themeIds).toContain('catppuccin-macchiato')
+    expect(themeIds).toContain('catppuccin-frappe')
+    expect(themeIds).toContain('catppuccin-latte')
   })
 
   it('主题状态读写、持久化与广播订阅工作正常', () => {
     const initialState = getThemeSettingsState()
     expect(initialState.themeOption).toBe('stock')
     expect(initialState.glassEnabled).toBe(false)
+    expect(initialState.glassMode).toBe('mica')
     expect(initialState.glassPreset).toBe('standard')
 
     const listener = vi.fn()
@@ -163,43 +180,53 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(getThemeSettingsState().glassEnabled).toBe(true)
     expect(listener).toHaveBeenCalledTimes(2)
 
+    setGlassMode('compat')
+    expect(localStorage.getItem(STORAGE_KEYS.glassMode)).toBe('compat')
+    expect(getThemeSettingsState().glassMode).toBe('compat')
+    expect(listener).toHaveBeenCalledTimes(3)
+
     setGlassPreset('frosted')
     expect(localStorage.getItem(STORAGE_KEYS.glassPreset)).toBe('frosted')
     expect(getThemeSettingsState().glassPreset).toBe('frosted')
-    expect(listener).toHaveBeenCalledTimes(3)
+    expect(listener).toHaveBeenCalledTimes(4)
 
     unsubscribe()
     setThemeOption('codex-light')
-    expect(listener).toHaveBeenCalledTimes(3)
+    expect(listener).toHaveBeenCalledTimes(4)
   })
 
-  it('云母模式（Mica）开关与材质预设正确操作 DOM 与样式标签', () => {
+  it('玻璃质感、云母/兼容排版模式与预设正确操作 DOM 与样式标签', () => {
     const root = document.documentElement
 
     // 1. 初始关闭
-    applyGlassMode(false)
-    expect(root.getAttribute('data-codex-glass')).toBeNull()
+    applyGlassSettings({ enabled: false })
+    expect(root.hasAttribute(GLASS_ATTRIBUTE)).toBe(false)
     expect(document.getElementById('dsh-codex-ui-glass-style')).toBeNull()
 
-    // 2. 开启并选用 clear 预设
-    applyGlassMode(true, 'clear')
-    expect(root.getAttribute('data-codex-glass')).toBe('true')
-    expect(root.getAttribute('data-codex-glass-preset')).toBe('clear')
-    expect(root.style.getPropertyValue('--codex-glass-blur')).toBe(`${GLASS_PRESETS.clear.blur}px`)
+    // 2. 开启并选用云母模式 (mica) + clear 预设
+    applyGlassSettings({ enabled: true, mode: 'mica', preset: 'clear' })
+    expect(root.hasAttribute(GLASS_ATTRIBUTE)).toBe(true)
+    expect(root.hasAttribute(GLASS_FLOAT_ATTRIBUTE)).toBe(true)
+    expect(root.hasAttribute(GLASS_COMPAT_ATTRIBUTE)).toBe(false)
+    expect(root.style.getPropertyValue('--dsh-glass-blur')).toBe(`${GLASS_PRESETS.clear.blur}px`)
     expect(document.getElementById('dsh-codex-ui-glass-style')).not.toBeNull()
 
-    // 3. 切换至 frosted 预设
-    applyGlassMode(true, 'frosted')
-    expect(root.getAttribute('data-codex-glass-preset')).toBe('frosted')
-    expect(root.style.getPropertyValue('--codex-glass-blur')).toBe(`${GLASS_PRESETS.frosted.blur}px`)
+    // 3. 切换至原版兼容排版模式 (compat) + frosted 预设（证明非云母也能切换材质预设！）
+    applyGlassSettings({ enabled: true, mode: 'compat', preset: 'frosted' })
+    expect(root.hasAttribute(GLASS_ATTRIBUTE)).toBe(true)
+    expect(root.hasAttribute(GLASS_FLOAT_ATTRIBUTE)).toBe(false)
+    expect(root.hasAttribute(GLASS_COMPAT_ATTRIBUTE)).toBe(true)
+    expect(root.style.getPropertyValue('--dsh-glass-blur')).toBe(`${GLASS_PRESETS.frosted.blur}px`)
 
     // 4. 清理还原
     disposeGlassMode()
-    expect(root.getAttribute('data-codex-glass')).toBeNull()
+    expect(root.hasAttribute(GLASS_ATTRIBUTE)).toBe(false)
+    expect(root.hasAttribute(GLASS_FLOAT_ATTRIBUTE)).toBe(false)
+    expect(root.hasAttribute(GLASS_COMPAT_ATTRIBUTE)).toBe(false)
     expect(document.getElementById('dsh-codex-ui-glass-style')).toBeNull()
   })
 
-  it('observeTheme 生命周期正常：注册主题、响应偏好切换，卸载时纯净还原', () => {
+  it('observeTheme 生命周期正常：注册全部 6 套主题，直通 changeTheme/changeGlass，卸载时纯净还原', () => {
     const registeredThemes: string[] = []
     let currentPreference = 'system'
 
@@ -223,38 +250,44 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     const ctx = new Context()
     ctx.provide('theme', fakeThemeRuntime as never)
 
-    // 模拟服务端探活通过
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ enabled: true }),
-    } as Response)
-
     const dispose = observeTheme(ctx)
 
-    // 验证注册了两个主题
-    expect(fakeThemeRuntime.register).toHaveBeenCalledTimes(2)
+    // 验证注册了全部 6 套主题
+    expect(fakeThemeRuntime.register).toHaveBeenCalledTimes(6)
     expect(registeredThemes).toContain(CODEX_DARK_THEME_ID)
     expect(registeredThemes).toContain(CODEX_LIGHT_THEME_ID)
+    expect(registeredThemes).toContain('catppuccin-mocha')
+    expect(registeredThemes).toContain('catppuccin-latte')
 
-    // 切换至 codex-dark
-    setThemeOption('codex-dark')
+    // 用户通过 UI 调用 changeTheme 切换至 codex-dark
+    changeTheme('codex-dark')
     expect(fakeThemeRuntime.setTheme).toHaveBeenCalledWith('codex-dark')
+    expect(getThemeSettingsState().themeOption).toBe('codex-dark')
 
-    // 切换至 codex-light
-    setThemeOption('codex-light')
-    expect(fakeThemeRuntime.setTheme).toHaveBeenCalledWith('codex-light')
+    // 切换至 catppuccin-mocha
+    changeTheme('catppuccin-mocha')
+    expect(fakeThemeRuntime.setTheme).toHaveBeenCalledWith('catppuccin-mocha')
+    expect(getThemeSettingsState().themeOption).toBe('catppuccin-mocha')
 
     // 切换至 stock
-    setThemeOption('stock')
+    changeTheme('stock')
     expect(fakeThemeRuntime.setTheme).toHaveBeenCalledWith('system')
 
-    // 开启云母模式
-    setGlassEnabled(true)
-    expect(document.documentElement.getAttribute('data-codex-glass')).toBe('true')
+    // 用户通过 UI 调用 changeGlass
+    changeGlass({ enabled: true, mode: 'mica', preset: 'standard' })
+    expect(document.documentElement.hasAttribute(GLASS_ATTRIBUTE)).toBe(true)
+    expect(document.documentElement.hasAttribute(GLASS_FLOAT_ATTRIBUTE)).toBe(true)
+
+    // 用户在原版排版模式下切换预设
+    changeGlass({ mode: 'compat', preset: 'frosted' })
+    expect(document.documentElement.hasAttribute(GLASS_COMPAT_ATTRIBUTE)).toBe(true)
+    expect(document.documentElement.style.getPropertyValue('--dsh-glass-blur')).toBe(
+      `${GLASS_PRESETS.frosted.blur}px`,
+    )
 
     // 卸载
     dispose()
-    expect(document.documentElement.getAttribute('data-codex-glass')).toBeNull()
+    expect(document.documentElement.hasAttribute(GLASS_ATTRIBUTE)).toBe(false)
     expect(registeredThemes.length).toBe(0)
   })
 })

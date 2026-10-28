@@ -1,18 +1,33 @@
 import React, { useSyncExternalStore } from 'react'
-import { SegmentedControl, Switch } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { GlassPreset } from './glass.ts'
+import { Button, SegmentedControl, Switch } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
+  changeGlass,
+  changeTheme,
   getThemeSettingsState,
-  setGlassEnabled,
-  setGlassPreset,
-  setThemeOption,
   subscribeThemeSettings,
+  type GlassMode,
+  type GlassPreset,
   type ThemeOption,
-} from './state.ts'
+} from './index.ts'
 
 export interface ThemeSettingsCardProps {
   t: (key: any) => string
 }
+
+const THEME_BUTTONS: readonly {
+  id: ThemeOption
+  labelKey: string
+  accent: string
+  colorScheme: 'light' | 'dark' | 'auto'
+}[] = [
+  { id: 'stock', labelKey: 'theme.paletteStock', accent: '#3b82f6', colorScheme: 'auto' },
+  { id: 'codex-dark', labelKey: 'theme.paletteCodexDark', accent: '#10a37f', colorScheme: 'dark' },
+  { id: 'codex-light', labelKey: 'theme.paletteCodexLight', accent: '#10a37f', colorScheme: 'light' },
+  { id: 'catppuccin-mocha', labelKey: 'theme.paletteMocha', accent: '#cba6f7', colorScheme: 'dark' },
+  { id: 'catppuccin-macchiato', labelKey: 'theme.paletteMacchiato', accent: '#c6a0f6', colorScheme: 'dark' },
+  { id: 'catppuccin-frappe', labelKey: 'theme.paletteFrappe', accent: '#ca9ee6', colorScheme: 'dark' },
+  { id: 'catppuccin-latte', labelKey: 'theme.paletteLatte', accent: '#8839ef', colorScheme: 'light' },
+]
 
 const stylesheet = `
 .dcu-theme-settings {
@@ -37,6 +52,24 @@ const stylesheet = `
   font-size: 13px;
   line-height: 18px;
   color: var(--dsw-alias-label-tertiary);
+}
+.dcu-theme-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dcu-theme-palette-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.dcu-theme-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  flex: none;
 }
 .dcu-theme-row {
   display: flex;
@@ -82,28 +115,34 @@ export function ThemeSettingsCard({ t }: ThemeSettingsCardProps): React.JSX.Elem
         <p className="dcu-theme-desc">{t('theme.desc')}</p>
       </div>
 
-      {/* 主题配色切换 */}
-      <div className="dcu-theme-row">
+      {/* 主题配色切换：官方默认 + Codex 2套 + Catppuccin 4套 */}
+      <div className="dcu-theme-section">
         <div className="dcu-theme-row-label">
           <span className="dcu-theme-row-title">{t('theme.palette')}</span>
           <span className="dcu-theme-row-hint">{t('theme.paletteHint')}</span>
         </div>
-        <SegmentedControl<ThemeOption>
-          id="codex-ui-theme-option"
-          label={t('theme.palette')}
-          value={state.themeOption}
-          options={[
-            { value: 'stock', label: t('theme.paletteStock') },
-            { value: 'codex-dark', label: t('theme.paletteCodexDark') },
-            { value: 'codex-light', label: t('theme.paletteCodexLight') },
-          ]}
-          onChange={(next) => {
-            setThemeOption(next)
-          }}
-        />
+        <div className="dcu-theme-palette-grid" role="group" aria-label={t('theme.palette')}>
+          {THEME_BUTTONS.map((item) => {
+            const isActive = state.themeOption === item.id
+            return (
+              <Button
+                key={item.id}
+                size="sm"
+                variant={isActive ? 'primary' : 'outline'}
+                aria-pressed={isActive}
+                onClick={() => {
+                  changeTheme(item.id)
+                }}
+              >
+                <span className="dcu-theme-dot" style={{ backgroundColor: item.accent }} aria-hidden="true" />
+                {t(item.labelKey)}
+              </Button>
+            )
+          })}
+        </div>
       </div>
 
-      {/* 云母质感开关 */}
+      {/* 玻璃质感主开关 */}
       <div className="dcu-theme-row">
         <div className="dcu-theme-row-label">
           <span className="dcu-theme-row-title">{t('theme.glassEnable')}</span>
@@ -113,12 +152,34 @@ export function ThemeSettingsCard({ t }: ThemeSettingsCardProps): React.JSX.Elem
           label={t('theme.glassEnable')}
           checked={state.glassEnabled}
           onChange={(checked) => {
-            setGlassEnabled(checked)
+            changeGlass({ enabled: checked })
           }}
         />
       </div>
 
-      {/* 材质预设（云母模式开启时展示） */}
+      {/* 排版模式（当玻璃质感开启时展示） */}
+      {state.glassEnabled && (
+        <div className="dcu-theme-sub-row">
+          <div className="dcu-theme-row-label">
+            <span className="dcu-theme-row-title">{t('theme.mode')}</span>
+            <span className="dcu-theme-row-hint">{t('theme.modeHint')}</span>
+          </div>
+          <SegmentedControl<GlassMode>
+            id="codex-ui-glass-mode"
+            label={t('theme.mode')}
+            value={state.glassMode}
+            options={[
+              { value: 'mica', label: t('theme.modeMica') },
+              { value: 'compat', label: t('theme.modeCompat') },
+            ]}
+            onChange={(nextMode) => {
+              changeGlass({ mode: nextMode })
+            }}
+          />
+        </div>
+      )}
+
+      {/* 材质预设（当玻璃质感开启时展示，云母与原版排版模式下均可切换） */}
       {state.glassEnabled && (
         <div className="dcu-theme-sub-row">
           <div className="dcu-theme-row-label">
@@ -134,8 +195,8 @@ export function ThemeSettingsCard({ t }: ThemeSettingsCardProps): React.JSX.Elem
               { value: 'standard', label: t('theme.presetStandard') },
               { value: 'frosted', label: t('theme.presetFrosted') },
             ]}
-            onChange={(next) => {
-              setGlassPreset(next)
+            onChange={(nextPreset) => {
+              changeGlass({ preset: nextPreset })
             }}
           />
         </div>
