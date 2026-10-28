@@ -305,8 +305,8 @@ export function observeTheme(ctx: ClientContext): () => void {
       clearInterval(healTimer)
       healTimer = undefined
     }
+    // 翻转启用标记并广播，由 subscribeThemeSettings 自动触发状态恢复与 UI 重渲染
     setThemeSubPluginEnabled(true)
-    applyCurrentState(true)
   }
 
   // 窗口重获焦点时尝试自愈
