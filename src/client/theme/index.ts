@@ -243,11 +243,10 @@ export function observeTheme(ctx: ClientContext): () => void {
     disposers.push(() => clearInterval(timer))
   }
 
-  let themeActive = true
   let healTimer: ReturnType<typeof setInterval> | undefined
 
   const applyCurrentState = (syncRuntime = true): void => {
-    if (disposed || !themeActive) return
+    if (disposed || !themeSubPluginEnabled) return
     const state = getThemeSettingsState()
 
     // 1. 同步玻璃质感与排版模式
@@ -264,7 +263,8 @@ export function observeTheme(ctx: ClientContext): () => void {
 
   // 探活检查与自愈同步机制：
   // 1. 当服务端显式停用或端点未就绪时，fail-closed 回退官方原生，并彻底清除 190 个自定义 Token；
-  // 2. 挂载窗口 focus 监听与低频轮询，一旦服务就绪或网络恢复自动重新激活，消除单次抖动永久降级。
+  // 2. 先挂载自愈定时器，再执行状态复位，杜绝宿主服务抛错导致自愈定时器无法启动；
+  // 3. 挂载窗口 focus 监听与低频轮询，一旦服务就绪或网络恢复自动重新激活，消除单次抖动永久降级。
   const checkAndSync = async (): Promise<void> => {
     if (disposed) return
     const enabled = await checkThemeEnabled()
@@ -272,24 +272,31 @@ export function observeTheme(ctx: ClientContext): () => void {
 
     if (!enabled) {
       themeSubPluginEnabled = false
-      themeActive = false
       disposeGlassMode()
       for (const name of lastAppliedTokens) {
         document.body.style.removeProperty(name)
       }
       lastAppliedTokens = []
-      if (theme && typeof theme.setTheme === 'function') {
-        const cur = theme.getTheme?.()?.active?.id
-        if (ALL_BUILTIN_THEMES.some((t) => t.id === cur)) {
-          theme.setTheme('system')
-        }
-      }
+
+      // 优先启动低频自愈探测（15 秒），网络恢复或端点挂载后自动恢复
       if (!healTimer) {
         healTimer = setInterval(() => {
           if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
             void checkAndSync()
           }
         }, 15000)
+      }
+
+      // 安全尝试将宿主主题还原为系统偏好，任何异常均安全捕获不阻断
+      try {
+        if (theme && typeof theme.setTheme === 'function') {
+          const cur = theme.getTheme?.()?.active?.id
+          if (ALL_BUILTIN_THEMES.some((t) => t.id === cur)) {
+            theme.setTheme('system')
+          }
+        }
+      } catch {
+        // 宿主 theme 抛错时安全忽略，不阻断自愈
       }
       return
     }
@@ -299,13 +306,12 @@ export function observeTheme(ctx: ClientContext): () => void {
       healTimer = undefined
     }
     themeSubPluginEnabled = true
-    themeActive = true
     applyCurrentState(true)
   }
 
   // 窗口重获焦点时尝试自愈
   const onFocus = (): void => {
-    if (!themeActive && !disposed) {
+    if (!themeSubPluginEnabled && !disposed) {
       void checkAndSync()
     }
   }

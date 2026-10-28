@@ -4,6 +4,7 @@ import {
   changeGlass,
   changeTheme,
   getThemeSettingsState,
+  isThemeSubPluginEnabled,
   subscribeThemeSettings,
   type GlassMode,
   type GlassPreset,
@@ -203,9 +204,14 @@ html[data-dsh-glass] .dcu-section-card {
 
 export function ThemeSettingsCard({ t }: ThemeSettingsCardProps): React.JSX.Element {
   const state = useSyncExternalStore(subscribeThemeSettings, getThemeSettingsState)
+  const isEnabled = isThemeSubPluginEnabled()
 
   return (
-    <div className="dcu-section-card dcu-theme-settings" aria-label={t('theme.title')}>
+    <div
+      className="dcu-section-card dcu-theme-settings"
+      aria-label={t('theme.title')}
+      style={isEnabled ? undefined : { opacity: 0.65, pointerEvents: 'none' }}
+    >
       <style>{stylesheet}</style>
       <div className="dcu-section-header">
         <div className="dcu-section-title-wrap">
@@ -213,6 +219,23 @@ export function ThemeSettingsCard({ t }: ThemeSettingsCardProps): React.JSX.Elem
           <p className="dcu-section-desc">{t('theme.desc')}</p>
         </div>
       </div>
+
+      {!isEnabled && (
+        <div
+          role="status"
+          style={{
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontSize: '12px',
+            lineHeight: '16px',
+            color: 'var(--dsw-alias-label-secondary, #a1a1aa)',
+            background: 'var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.04))',
+            border: '1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08))',
+          }}
+        >
+          ℹ️ 主题子插件已在当前 Profile 停用，外观换肤与云母效果暂不可用
+        </div>
+      )}
 
       {/* 主题配色切换：官方默认 + Codex 2套 + Catppuccin 4套 */}
       <div className="dcu-theme-section">
