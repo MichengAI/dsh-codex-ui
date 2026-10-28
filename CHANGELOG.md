@@ -3,7 +3,8 @@
 ## 2.0.0 (2026-10-28)
 
 - **Architecture Rebuilt**: Codex UI is officially upgraded into a modular multi-subplugin architecture, structured into 6 core modules: `composer` (input enhancement), `settings-skin` (settings skin), `session-title` (smart conversation titles), `sidebar` (modular sidebar), `theme` (themes and mica skinning), and `dependencies` (ecosystem plugin management).
-- **Native Mica & Theming System**: Built-in support for both Stock Compat and Mica Floating Cards layout modes, introducing classic Codex Dark/Light and Catppuccin palettes, plus an independent toggle for ground glows.
+- **Native Mica & Palette Rectification**: Restores authentic Codex tech-blue and monochrome palettes by eliminating green tints; supports Stock and Mica layout modes, introduces independent ground-glow switch, and enables glass by default for new installs.
+- **Native 56px Collapsed Rail**: Strictly falls back to the host's native 56px icon rail during sidebar collapse, preserving official tooltips and high-contrast new session indicators.
 - **Redesigned About & Settings View**: Aligns header layout with companion plugin standards, introducing a structured sub-plugin capability list and a unified three-card section layout.
 
 ## 1.1.49 (2026-10-24)

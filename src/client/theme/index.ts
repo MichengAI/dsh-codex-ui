@@ -54,6 +54,7 @@ function tolerantRegistration(run: () => (() => void) | void): () => void {
 }
 
 let lastAppliedTokens: string[] = []
+let hasAppliedCustomTheme = false
 
 /**
  * 将指定主题精准映射并深度应用到真实 DOM（双重保险，彻底压制并覆盖官方亮暗限制）
@@ -73,10 +74,14 @@ export function applyThemeToDocument(
     }
     lastAppliedTokens = []
 
-    // 2. 清理根节点残留属性，恢复官方原生渲染
-    document.documentElement.style.removeProperty('color-scheme')
-    document.documentElement.removeAttribute('data-ds-theme-source')
-    document.body.removeAttribute('data-ds-dark-theme')
+    // 2. 仅在插件之前确实写入过自定义主题时，才清理根节点属性；
+    // 若宿主本身就在原生深色/浅色态，严禁删除宿主自己的 data-ds-dark-theme 和 color-scheme！
+    if (hasAppliedCustomTheme) {
+      document.documentElement.style.removeProperty('color-scheme')
+      document.documentElement.removeAttribute('data-ds-theme-source')
+      document.body.removeAttribute('data-ds-dark-theme')
+      hasAppliedCustomTheme = false
+    }
 
     // 3. 仅当宿主当前活动主题属于本插件注册的自定义主题时，才在切回 stock 时还原为系统偏好；
     // 若宿主本就在运行原生主题（dark/light/system），严禁调用 setTheme 篡改用户的全局偏好！
@@ -93,6 +98,8 @@ export function applyThemeToDocument(
 
   const targetTheme = ALL_BUILTIN_THEMES.find((t) => t.id === themeOption)
   if (!targetTheme) return
+
+  hasAppliedCustomTheme = true
 
   // 1. 同步通知 ThemeRuntime（首帧启动不阻塞，用户交互时即时同步）
   if (syncRuntime && runtime && typeof runtime.setTheme === 'function') {

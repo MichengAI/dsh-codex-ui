@@ -328,11 +328,19 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(document.documentElement.hasAttribute('data-ds-theme-source')).toBe(false)
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
 
-    // 3. 关键场景（P1 回归防线）：宿主此时明确运行官方 dark，拨动 stock 绝对不能重置为 system
+    // 3. 关键场景（P1 回归防线）：宿主此时明确运行官方 dark，宿主自行挂载了 dark 根属性，
+    // 在 stock 状态下无论拨动几次开关或刷新，绝对不能重置为 system，且绝对不能删除宿主的 dark 属性！
     hostTheme = 'dark'
+    document.documentElement.style.colorScheme = 'dark'
+    document.documentElement.setAttribute('data-ds-theme-source', 'dark')
+    document.body.setAttribute('data-ds-dark-theme', '')
+
     fakeRuntime.setTheme.mockClear()
     applyThemeToDocument('stock', fakeRuntime as never)
     expect(fakeRuntime.setTheme).not.toHaveBeenCalled()
+    expect(document.documentElement.style.colorScheme).toBe('dark')
+    expect(document.documentElement.getAttribute('data-ds-theme-source')).toBe('dark')
+    expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
   })
 
   it('新装用户默认开箱即用：未持久化 glassEnabled 时默认随排版模式激活 (true)', () => {
