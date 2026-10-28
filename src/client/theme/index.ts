@@ -336,6 +336,55 @@ export function observeTheme(ctx: ClientContext): () => void {
     disposers.push(() => window.removeEventListener('focus', onFocus))
   }
 
+  // 监听设置面板内的开关交互（响应用户在插件管理列表或设置弹窗中实时切开关）
+  if (typeof document !== 'undefined') {
+    let clickTimer: ReturnType<typeof setTimeout> | undefined
+    const onClick = (e: MouseEvent): void => {
+      if (disposed) return
+      const target = e.target as Element | null
+      if (target?.closest?.('[data-plugin-rows], [data-plugin-row], [data-shortcut-modal="settings"], [role="switch"]')) {
+        if (clickTimer) clearTimeout(clickTimer)
+        clickTimer = setTimeout(() => {
+          if (!disposed) void checkAndSync()
+        }, 150)
+      }
+    }
+    document.addEventListener('click', onClick, true)
+    disposers.push(() => {
+      if (clickTimer) clearTimeout(clickTimer)
+      document.removeEventListener('click', onClick, true)
+    })
+  }
+
+  // 观察设置面板 DOM 结构变更（如插件状态从运行中变为已关闭）
+  if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+    let settingsObserverTimer: ReturnType<typeof setTimeout> | undefined
+    const observer = new MutationObserver((mutations) => {
+      if (disposed) return
+      let touchesSettings = false
+      for (const m of mutations) {
+        if (
+          (m.target instanceof HTMLElement && (m.target.closest('[data-shortcut-modal="settings"]') || m.target.closest('[data-plugin-rows]'))) ||
+          [...m.addedNodes, ...m.removedNodes].some(n => n instanceof HTMLElement && (n.getAttribute?.('data-shortcut-modal') === 'settings' || n.querySelector?.('[data-shortcut-modal="settings"]')))
+        ) {
+          touchesSettings = true
+          break
+        }
+      }
+      if (touchesSettings) {
+        if (settingsObserverTimer) clearTimeout(settingsObserverTimer)
+        settingsObserverTimer = setTimeout(() => {
+          if (!disposed) void checkAndSync()
+        }, 150)
+      }
+    })
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-state', 'aria-checked'] })
+    disposers.push(() => {
+      if (settingsObserverTimer) clearTimeout(settingsObserverTimer)
+      observer.disconnect()
+    })
+  }
+
   // 启动探活
   void checkAndSync()
 

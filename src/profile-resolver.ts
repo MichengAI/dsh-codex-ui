@@ -89,8 +89,19 @@ export function isSubPluginDisabledOnDisk(id: string, homeDir?: string, ctx?: Co
     const patchPath = join(profileDir, 'cordis.patch.yml')
     if (existsSync(patchPath)) {
       const content = readFileSync(patchPath, 'utf8')
-      const regex = new RegExp(`id:\\s*['"]?${id}['"]?\\s*\\n\\s*disabled:\\s*true`, 'm')
-      if (regex.test(content)) return true
+      // 1. 逐条目解析 YAML 列表块，按倒序取最后一条匹配项（容纳 name/config 中间字段、CRLF 换行及不同缩进）
+      const itemBlocks = content.split(/(?:\r?\n)(?=-\s+)/)
+      for (let i = itemBlocks.length - 1; i >= 0; i--) {
+        const block = itemBlocks[i]
+        const idRegex = new RegExp(`(?:^|\\s)id:\\s*['"]?${id}['"]?(?:\\s|$)`, 'm')
+        if (idRegex.test(block)) {
+          if (/(?:^|\s)disabled:\s*true(?:\s|$)/m.test(block)) return true
+          if (/(?:^|\s)disabled:\s*false(?:\s|$)/m.test(block)) return false
+        }
+      }
+      // 2. 兜底支持嵌套 insert 块中的定义
+      const fallbackRegex = new RegExp(`id:\\s*['"]?${id}['"]?[\\s\\S]*?\\bdisabled:\\s*true\\b`, 'm')
+      if (fallbackRegex.test(content)) return true
     }
   } catch {
     // 发生文件 IO 错误时，保持启用以防误判
