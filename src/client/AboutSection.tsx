@@ -66,15 +66,12 @@ const endpoint = CODEX_UI_API_ENDPOINTS.dependencies
 
 const stylesheet = `
 .dcu-about{color:var(--dsw-alias-label-primary);font-family:var(--dsw-font-family);display:flex;flex-direction:column}
-.dcu-about-head{display:flex;flex-direction:column;align-items:stretch;gap:12px;margin-bottom:12px}
+.dcu-about-head{display:flex;flex-direction:column;align-items:stretch;gap:12px;margin-bottom:16px}
 .dcu-about-title-block{min-width:0}
 .dcu-about h2,.dcu-about-title{margin:0;font-size:24px;line-height:32px;font-weight:600;letter-spacing:-.4px;color:var(--dsw-alias-label-primary)}
-.dcu-about-intro,.dcu-about-desc{margin:12px 0 0;color:var(--dsw-alias-label-tertiary,#a0a0a0);font-size:14px;line-height:22px}
 .dcu-about-title-row{display:flex;align-items:center;gap:8px 12px;min-width:0;flex-wrap:wrap}
 .dcu-about-feedback-links,.dcu-about-links{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .dcu-about-version{margin-left:8px;color:var(--dsw-alias-label-tertiary);font-family:inherit;font-size:12px;font-weight:500;line-height:18px;letter-spacing:0;white-space:nowrap;vertical-align:baseline}
-.dcu-subplugins-section{margin:8px 0 20px}
-.dcu-subplugins-heading{margin:0 0 10px;font-size:14px;font-weight:600;line-height:20px;color:var(--dsw-alias-label-primary)}
 .dcu-subplugins-list{display:flex;flex-direction:column;gap:6px}
 .dcu-subplugin-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;background:var(--dsw-alias-bg-layer-1,rgba(255,255,255,0.03));border:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,0.06));border-radius:8px;transition:background-color 120ms ease}
 .dcu-subplugin-item:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,0.05))}
@@ -329,12 +326,17 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
             </PrimitiveButton>
           </div>
         </div>
-        <p className="dcu-about-desc dcu-about-intro">{t('about.description')}</p>
       </div>
     </div>
-    {/* 子插件功能清单 */}
-    <div className="dcu-subplugins-section">
-      <h3 className="dcu-subplugins-heading">{t('about.features')}</h3>
+
+    {/* 区域一：内置功能与子插件介绍卡片 */}
+    <div className="dcu-section-card dcu-card-features">
+      <div className="dcu-section-header">
+        <div className="dcu-section-title-wrap">
+          <h3 className="dcu-section-title">{t('about.features')}</h3>
+          <p className="dcu-section-desc">{t('about.description')}</p>
+        </div>
+      </div>
       <div className="dcu-subplugins-list">
         {SUB_PLUGINS.map(item => (
           <div key={item.id} className="dcu-subplugin-item">

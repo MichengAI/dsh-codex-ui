@@ -36,10 +36,11 @@ export function applyGlassSettings(options: {
   enabled: boolean
   mode?: GlassMode
   preset?: GlassPreset
+  glow?: boolean
 }): void {
   if (typeof document === 'undefined') return
 
-  const { enabled, mode = 'mica', preset = 'standard' } = options
+  const { enabled, mode = 'mica', preset = 'standard', glow = false } = options
   const root = document.documentElement
 
   if (!enabled) {
@@ -75,7 +76,7 @@ export function applyGlassSettings(options: {
     '--dsh-glass-frost': String(Math.min(spec.frost / 50, 1.4)),
     '--dsh-glass-brightness-black': '0',
     '--dsh-glass-brightness-white': '0',
-    '--dsh-glass-glow': '1',
+    '--dsh-glass-glow': glow ? '1' : '0',
   }
 
   for (const [prop, val] of Object.entries(knobs)) {

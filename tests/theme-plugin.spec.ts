@@ -23,6 +23,7 @@ import {
   getThemeSettingsState,
   observeTheme,
   setGlassEnabled,
+  setGlassGlow,
   setGlassMode,
   setGlassPreset,
   setThemeOption,
@@ -190,9 +191,14 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(getThemeSettingsState().glassPreset).toBe('frosted')
     expect(listener).toHaveBeenCalledTimes(4)
 
+    setGlassGlow(true)
+    expect(localStorage.getItem(STORAGE_KEYS.glassGlow)).toBe('true')
+    expect(getThemeSettingsState().glassGlow).toBe(true)
+    expect(listener).toHaveBeenCalledTimes(5)
+
     unsubscribe()
     setThemeOption('codex-light')
-    expect(listener).toHaveBeenCalledTimes(4)
+    expect(listener).toHaveBeenCalledTimes(5)
   })
 
   it('玻璃质感、云母/兼容排版模式与预设正确操作 DOM 与样式标签', () => {
@@ -203,20 +209,22 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(root.hasAttribute(GLASS_ATTRIBUTE)).toBe(false)
     expect(document.getElementById('dsh-codex-ui-glass-style')).toBeNull()
 
-    // 2. 开启并选用云母模式 (mica) + clear 预设
-    applyGlassSettings({ enabled: true, mode: 'mica', preset: 'clear' })
+    // 2. 开启并选用云母模式 (mica) + clear 预设 + glow: true
+    applyGlassSettings({ enabled: true, mode: 'mica', preset: 'clear', glow: true })
     expect(root.hasAttribute(GLASS_ATTRIBUTE)).toBe(true)
     expect(root.hasAttribute(GLASS_FLOAT_ATTRIBUTE)).toBe(true)
     expect(root.hasAttribute(GLASS_COMPAT_ATTRIBUTE)).toBe(false)
     expect(root.style.getPropertyValue('--dsh-glass-blur')).toBe(`${GLASS_PRESETS.clear.blur}px`)
+    expect(root.style.getPropertyValue('--dsh-glass-glow')).toBe('1')
     expect(document.getElementById('dsh-codex-ui-glass-style')).not.toBeNull()
 
-    // 3. 切换至原版兼容排版模式 (compat) + frosted 预设（证明非云母也能切换材质预设！）
-    applyGlassSettings({ enabled: true, mode: 'compat', preset: 'frosted' })
+    // 3. 切换至原版兼容排版模式 (compat) + frosted 预设 + glow: false
+    applyGlassSettings({ enabled: true, mode: 'compat', preset: 'frosted', glow: false })
     expect(root.hasAttribute(GLASS_ATTRIBUTE)).toBe(true)
     expect(root.hasAttribute(GLASS_FLOAT_ATTRIBUTE)).toBe(false)
     expect(root.hasAttribute(GLASS_COMPAT_ATTRIBUTE)).toBe(true)
     expect(root.style.getPropertyValue('--dsh-glass-blur')).toBe(`${GLASS_PRESETS.frosted.blur}px`)
+    expect(root.style.getPropertyValue('--dsh-glass-glow')).toBe('0')
 
     // 4. 清理还原
     disposeGlassMode()

@@ -14,6 +14,7 @@ export interface ThemeSettingsState {
   readonly glassEnabled: boolean
   readonly glassMode: GlassMode
   readonly glassPreset: GlassPreset
+  readonly glassGlow: boolean
 }
 
 export const STORAGE_KEYS = Object.freeze({
@@ -21,6 +22,7 @@ export const STORAGE_KEYS = Object.freeze({
   glassEnabled: 'codex-ui.glass.enabled',
   glassMode: 'codex-ui.glass.mode',
   glassPreset: 'codex-ui.glass.preset',
+  glassGlow: 'codex-ui.glass.glow',
 })
 
 const listeners = new Set<() => void>()
@@ -73,7 +75,10 @@ function computeSnapshot(): ThemeSettingsState {
   const glassPreset: GlassPreset =
     rawPreset === 'clear' || rawPreset === 'frosted' ? rawPreset : 'standard'
 
-  return Object.freeze({ themeOption, glassEnabled, glassMode, glassPreset })
+  const rawGlow = safeGetItem(STORAGE_KEYS.glassGlow)
+  const glassGlow = rawGlow === 'true'
+
+  return Object.freeze({ themeOption, glassEnabled, glassMode, glassPreset, glassGlow })
 }
 
 let currentSnapshot: ThemeSettingsState = computeSnapshot()
@@ -84,7 +89,8 @@ export function getThemeSettingsState(): ThemeSettingsState {
     currentSnapshot.themeOption !== next.themeOption ||
     currentSnapshot.glassEnabled !== next.glassEnabled ||
     currentSnapshot.glassMode !== next.glassMode ||
-    currentSnapshot.glassPreset !== next.glassPreset
+    currentSnapshot.glassPreset !== next.glassPreset ||
+    currentSnapshot.glassGlow !== next.glassGlow
   ) {
     currentSnapshot = next
   }
@@ -122,6 +128,11 @@ export function setGlassPreset(preset: GlassPreset): void {
   notify()
 }
 
+export function setGlassGlow(glow: boolean): void {
+  safeSetItem(STORAGE_KEYS.glassGlow, String(glow))
+  notify()
+}
+
 export function subscribeThemeSettings(listener: () => void): () => void {
   listeners.add(listener)
   return () => {
@@ -136,7 +147,8 @@ if (typeof window !== 'undefined') {
       event.key === STORAGE_KEYS.themeOption ||
       event.key === STORAGE_KEYS.glassEnabled ||
       event.key === STORAGE_KEYS.glassMode ||
-      event.key === STORAGE_KEYS.glassPreset
+      event.key === STORAGE_KEYS.glassPreset ||
+      event.key === STORAGE_KEYS.glassGlow
     ) {
       notify()
     }

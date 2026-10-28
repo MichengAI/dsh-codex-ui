@@ -240,6 +240,21 @@ export function ThemeSettingsCard({ t }: ThemeSettingsCardProps): React.JSX.Elem
             }}
           />
         </div>
+
+        {/* 地面光斑（反射光晕）：在渐变地面上叠加柔光反射斑 */}
+        <div className="dcu-theme-sub-row">
+          <div className="dcu-theme-row-label">
+            <span className="dcu-theme-row-title">{t('theme.glassGlow')}</span>
+            <span className="dcu-theme-row-hint">{t('theme.glassGlowHint')}</span>
+          </div>
+          <Switch
+            label={t('theme.glassGlow')}
+            checked={state.glassGlow}
+            onChange={(nextGlow) => {
+              changeGlass({ glow: nextGlow, enabled: true })
+            }}
+          />
+        </div>
       </div>
     </div>
   )

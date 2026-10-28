@@ -6,6 +6,7 @@ import { ALL_BUILTIN_THEMES } from './palettes.ts'
 import {
   getThemeSettingsState,
   setGlassEnabled,
+  setGlassGlow,
   setGlassMode,
   setGlassPreset,
   setThemeOption,
@@ -139,17 +140,20 @@ export function changeGlass(options: {
   enabled?: boolean
   mode?: GlassMode
   preset?: GlassPreset
+  glow?: boolean
 }): void {
   const state = getThemeSettingsState()
   const enabled = options.enabled ?? state.glassEnabled
   const mode = options.mode ?? state.glassMode
   const preset = options.preset ?? state.glassPreset
+  const glow = options.glow ?? state.glassGlow
 
   if (options.enabled !== undefined) setGlassEnabled(options.enabled)
   if (options.mode !== undefined) setGlassMode(options.mode)
   if (options.preset !== undefined) setGlassPreset(options.preset)
+  if (options.glow !== undefined) setGlassGlow(options.glow)
 
-  applyGlassSettings({ enabled, mode, preset })
+  applyGlassSettings({ enabled, mode, preset, glow })
 }
 
 /**
@@ -182,6 +186,7 @@ export function observeTheme(ctx: ClientContext): () => void {
       enabled: state.glassEnabled,
       mode: state.glassMode,
       preset: state.glassPreset,
+      glow: state.glassGlow,
     })
 
     // 2. 同步主题配色（首帧启动时不阻塞宿主 ThemeRuntime）
