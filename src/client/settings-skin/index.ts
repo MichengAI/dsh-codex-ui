@@ -115,10 +115,10 @@ html[data-dsh-glass-float] body:has(> [role="presentation"] > [data-shortcut-mod
 html[data-dsh-glass-float] [data-shortcut-modal="settings"] {
   background:
     radial-gradient(58% 46% at 18% 6%,
-      color-mix(in srgb, var(--dsw-alias-brand-primary-new-colorprimary-new-color, #10a37f)
+      color-mix(in srgb, var(--dsw-alias-brand-primary-new-colorprimary-new-color, #0169cc)
         calc(12% * var(--dsh-glass-ambience, 1) * var(--dsh-glass-glow, 1)), transparent), transparent 68%),
     radial-gradient(48% 42% at 86% 14%,
-      color-mix(in srgb, var(--dsw-alias-state-success-tertiary, #10a37f)
+      color-mix(in srgb, var(--dsw-alias-brand-primary, #339cff)
         calc(10% * var(--dsh-glass-ambience, 1) * var(--dsh-glass-glow, 1)), transparent), transparent 62%),
     linear-gradient(165deg,
       color-mix(in srgb, var(--dsh-glass-ground, var(--dsw-alias-bg-base)), var(--dsh-glass-wash-tint, #ffffff)
