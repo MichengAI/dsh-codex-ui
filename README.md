@@ -74,9 +74,7 @@ Spacious settings workbench organized into three unified standard cards: Feature
 ---
 
 ### 4. Theme Customization & Glassmorphism
-7 Appearance Cube color cards (Stock, Codex Dark, Codex Light, Mocha, Macchiato, Frappé, Latte), Segmented Controls for layout modes and material blur, plus ground reflection toggle.
-
-![Theme & Glass Customization Card](assets/screenshots/settings-theme.png)
+7 Appearance Cube color cards (Stock, classic Codex tech-blue/monochrome, Mocha, Macchiato, Frappé, Latte), Segmented Controls for layout modes and material blur, plus ground reflection toggle.
 
 ---
 

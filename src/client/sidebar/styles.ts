@@ -25,8 +25,9 @@ export const SIDEBAR_CSS = `
 }
 
 /* 确保宿主原生 newSession 按钮在折叠态下常驻可见、图标对比度清晰，不依赖 hover */
-[data-sidebar-collapsed="true"] button[class*="newSession"],
-[class*="collapsed"] button[class*="newSession"] {
+[${SIDEBAR_ACTIVE_ATTR}][data-sidebar-collapsed="true"] button[class*="newSession"],
+[${SIDEBAR_ACTIVE_ATTR}][class*="collapsed"] button[class*="newSession"],
+[data-sidebar-collapsed="true"] [${SIDEBAR_ACTIVE_ATTR}] button[class*="newSession"] {
   color: var(--dsw-alias-label-primary, inherit) !important;
   opacity: 1 !important;
 }

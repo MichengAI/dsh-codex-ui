@@ -106,8 +106,6 @@ html[data-dsh-glass] .dcu-section-card{background:var(--dsw-alias-bg-layer-2,#18
 .dcu-about-progress-fill{height:100%;background:var(--dsw-alias-brand-primary);transition:width 0.2s ease}
 .dcu-about-message{padding:8px 12px;border-radius:6px;font-size:12px;margin-top:8px}
 .dcu-about-message[data-error="true"]{color:var(--dsw-alias-state-error-primary,#ef4444);background:rgba(239,68,68,0.1)}
-.dcu-about-feedback-links,.dcu-about-links{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.dcu-about-version{margin-left:8px;color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:500}
 .dcu-about-project-link{color:inherit;text-decoration:none}
 .dcu-about-project-link:hover{text-decoration:underline;text-underline-offset:3px}
 .dcu-about-name-row{display:flex;align-items:center;gap:10px;min-width:0}

@@ -74,9 +74,7 @@
 ---
 
 ### 4. 界面外观换肤与毛玻璃配置
-内置 7 款主题色盘（官方默认、Codex 暗色、Codex 亮色、Mocha、Macchiato、Frappé、Latte），支持原版平铺玻璃与云母悬浮双模态，清透/标准/磨砂三档材质直选与地面反射光斑开关。
-
-![界面外观换肤卡片](assets/screenshots/settings-theme.png)
+内置 7 款主题色盘（官方默认、Codex 经典科技蓝黑白、Mocha、Macchiato、Frappé、Latte），支持原版平铺玻璃与云母悬浮双模态，清透/标准/磨砂三档材质直选与地面反射光斑开关。
 
 ---
 

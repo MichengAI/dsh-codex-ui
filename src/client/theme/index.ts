@@ -179,12 +179,38 @@ export function observeTheme(ctx: ClientContext): () => void {
 
   const disposers: (() => void)[] = []
 
-  // 注册全部 6 套主题（4 套 Catppuccin + 2 套 Codex）
-  if (theme && typeof theme.register === 'function') {
-    for (const themeDef of ALL_BUILTIN_THEMES) {
-      const dispose = tolerantRegistration(() => theme.register(themeDef))
-      disposers.push(dispose)
+  const registerThemesOnRuntime = (runtimeInstance: ThemeRuntime): void => {
+    if (typeof runtimeInstance.register === 'function') {
+      for (const themeDef of ALL_BUILTIN_THEMES) {
+        const dispose = tolerantRegistration(() => runtimeInstance.register(themeDef))
+        disposers.push(dispose)
+      }
     }
+  }
+
+  // 注册全部 6 套主题（4 套 Catppuccin + 2 套 Codex）
+  if (theme) {
+    registerThemesOnRuntime(theme)
+  } else {
+    // 服务注册时序兜底：当宿主 theme 服务稍晚就绪时自动补齐注册与状态同步
+    let retries = 0
+    const timer = setInterval(() => {
+      if (disposed) {
+        clearInterval(timer)
+        return
+      }
+      const lateTheme = ctx.get('theme') as ThemeRuntime | undefined
+      if (lateTheme) {
+        clearInterval(timer)
+        globalThemeRuntime = lateTheme
+        registerThemesOnRuntime(lateTheme)
+        const state = getThemeSettingsState()
+        applyThemeToDocument(state.themeOption, lateTheme, true)
+      } else if (++retries >= 100) {
+        clearInterval(timer)
+      }
+    }, 50)
+    disposers.push(() => clearInterval(timer))
   }
 
   const applyCurrentState = (syncRuntime = true): void => {
