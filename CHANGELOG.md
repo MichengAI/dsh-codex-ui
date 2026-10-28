@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.3 (2026-10-28)
+
+- **Support iOS Safe Area Insets and Mobile Layout**: Introduce W3C standard `env(safe-area-inset-*)` safe-area padding into mobile settings skin overrides (`@media (max-width: 640px)`) and enforce single-column layout priorities. This eliminates the collision where the "← Back to app" button was covered by iPhone notches and the Dynamic Island (#61).
+
 ## 2.0.2 (2026-10-28)
 
 - **Fix Modal Overlay Selector Pollution**: Scope the fullscreen settings workbench overlay selector to target only the settings panel's own presentation layer. This eliminates CSS bleed where quota queries, confirmation dialogs, and other modal windows were inadvertently stretched and pinned to the top-left corner while settings were open.

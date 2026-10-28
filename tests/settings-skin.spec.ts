@@ -170,6 +170,14 @@ test('全屏工作台遮罩选择器只命中有设置面板的那一层，不�
   )
 })
 
+test('移动端布局声明 iOS 安全区并强制收缩为单列，防止刘海/灵动岛遮挡 (#61)', () => {
+  expect(SETTINGS_SKIN_CSS).toContain('@media (max-width: 640px)')
+  expect(SETTINGS_SKIN_CSS).toContain('padding-top: env(safe-area-inset-top, 0px) !important')
+  expect(SETTINGS_SKIN_CSS).toContain('padding-bottom: env(safe-area-inset-bottom, 0px) !important')
+  expect(SETTINGS_SKIN_CSS).toContain('flex-direction: column !important')
+  expect(SETTINGS_SKIN_CSS).toContain('width: 100% !important')
+})
+
 test('设置顶部搜索框对齐宿主原生 Input 规范与拉平布局', () => {
   // 不得手绘清除按钮
   expect(SETTINGS_SKIN_CSS).not.toContain('.dcu-settings-search-clear')
