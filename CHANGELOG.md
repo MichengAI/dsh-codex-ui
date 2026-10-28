@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1 (2026-10-28)
+
+- **Fix Modal Overlay Selector Pollution**: Scope the fullscreen settings workbench overlay selector to target only the settings panel's own presentation layer. This eliminates CSS bleed where quota queries, confirmation dialogs, and other modal windows were inadvertently stretched and pinned to the top-left corner while settings were open.
+- **Optimize Documentation Screenshots**: Compress and streamline live captures across light and dark themes, reducing visual asset footprint by 52% for faster README and registry loads.
+
 ## 2.0.0 (2026-10-28)
 
 - **Architecture Rebuilt**: Codex UI is officially upgraded into a modular multi-subplugin architecture, structured into 6 core modules: `composer` (input enhancement), `settings-skin` (settings skin), `session-title` (smart conversation titles), `sidebar` (modular sidebar), `theme` (themes and mica skinning), and `dependencies` (ecosystem plugin management).
