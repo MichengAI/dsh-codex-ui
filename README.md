@@ -35,6 +35,26 @@ When working across complex projects in DeepSeek Harness, users often encounter 
 
 ---
 
+## Architectural Evolution: Why a Ground-Up Rewrite?
+
+### 1. The Legacy 1.x Dilemma: Technical Debt of Forceful Component Overrides
+In the early days of the DeepSeek Harness (DSH) plugin ecosystem, host frontend extension infrastructure was still nascent: fine-grained Slots registries were absent, official headless primitive libraries were unavailable, and plugin lifecycle hooks were sparse. To deliver a sleek, Codex-style immersive experience rapidly, **legacy 1.x had to rely heavily on invasive component overriding**: forcefully hijacking host DOM elements, injecting high-specificity CSS stylesheets, and hardcoding global CSS variables.
+
+**The Inevitable Maintenance Bottleneck**: As official DSH iterated rapidly (introducing `profile` multi-environment isolation, `shortcuts` service gating, standard Slots registries, and the official primitive suite `@deepseek-ai/dsh-client-ui-primitives`), the technical debt of "forceful overrides" escalated dramatically:
+* 💥 **Extremely Brittle Compatibility**: Any subtle DOM change or build-hash class update in upstream DSH would instantly break CSS overrides or cause full-page rendering crashes, stalling updates;
+* 🎨 **Style Bleed & Half-Degradation Trap**: Injected global CSS tokens lacked clean lifecycle boundaries. Toggling off a theme failed to purge root attributes, resulting in awkward "half-degraded" states where glass effects vanished but hardcoded dark backgrounds lingered;
+* 🧩 **Broken Lifecycles & Zombie Settings**: When a sub-feature was disabled, overridden views could not cleanly fall back to host native interfaces, leaving inert, non-functional configuration controls stuck in the settings modal.
+
+### 2. The 2.0.0 Rearchitecture Decision: Fully Embracing Host Natives
+Faced with these compounding challenges, we made the decisive choice in v2.0.0 to **completely scrap all 1.x component override code** and establish a new baseline: **zero-intrusion, micro-kernel decoupling, and native-first engineering**:
+* 🏛️ **Strict Adoption of Official Primitives & Slots**: Prohibited custom hand-drawn CSS widgets; strictly leveraged official `Switch`, `SegmentedControl`, and `Button` primitives. When collapsed, the sidebar strictly aligns with the official 56px native icon rail;
+* 🧩 **Six Decoupled Micro-Kernel Sub-Plugins**: Broken down into 6 self-contained, high-cohesion sub-plugins with explicit boundaries, enabling independent lifecycle management and streamlined code audits;
+* 🛡️ **Fail-Closed Circuit Breaker & Adaptive UI**: Implemented strict fail-closed safety contracts. When a sub-plugin is disabled or unreachable, the runtime physically cleanses all injected tokens/root attributes, while the settings UI **completely hides the defunct card (0 DOM nodes)**, reverting instantly to pristine host defaults without visual clutter;
+* 🔒 **Authoritative Profile Isolation & Self-Healing**: Unambiguous Profile directory resolution eliminates cross-profile contamination, backed by window-focus self-healing probes for resilient network handling;
+* 🎨 **Authentic Codex Tech Aesthetic**: Purged legacy green color pollution, strictly adhering to `#339cff` tech-blue, minimalist paper, and charcoal dark tones with dual layout modes and ambient ground reflection glows.
+
+---
+
 ## Architecture: 6 Core Sub-Plugins
 
 | Sub-Plugin ID | Name | Capabilities |
