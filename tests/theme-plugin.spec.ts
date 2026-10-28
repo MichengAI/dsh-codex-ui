@@ -33,6 +33,9 @@ import {
   STORAGE_KEYS,
   subscribeThemeSettings,
 } from '../src/client/theme/index.ts'
+import { ThemeSettingsCard } from '../src/client/theme/ThemeSettingsCard.tsx'
+import React from 'react'
+import { renderToString } from 'react-dom/server'
 
 describe('codex-ui-theme 子模块与主题换肤', () => {
   const originalFetch = globalThis.fetch
@@ -418,6 +421,22 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
       applyThemeToDocument('codex-dark', fakeRuntime as never)
       expect(document.body.style.length).toBe(0)
       expect(fakeRuntime.setTheme).not.toHaveBeenCalled()
+    } finally {
+      setThemeSubPluginEnabled(true)
+    }
+  })
+
+  it('当主题子插件被停用时，ThemeSettingsCard 换肤内容直接全部隐藏 (返回 null)', () => {
+    try {
+      setThemeSubPluginEnabled(false)
+      expect(getThemeSettingsState().subPluginEnabled).toBe(false)
+      const htmlDisabled = renderToString(React.createElement(ThemeSettingsCard, { t: (k: string) => k }))
+      expect(htmlDisabled).toBe('')
+
+      setThemeSubPluginEnabled(true)
+      expect(getThemeSettingsState().subPluginEnabled).toBe(true)
+      const htmlEnabled = renderToString(React.createElement(ThemeSettingsCard, { t: (k: string) => k }))
+      expect(htmlEnabled).toContain('dcu-theme-settings')
     } finally {
       setThemeSubPluginEnabled(true)
     }

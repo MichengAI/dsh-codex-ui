@@ -15,6 +15,7 @@ export interface ThemeSettingsState {
   readonly glassMode: GlassMode
   readonly glassPreset: GlassPreset
   readonly glassGlow: boolean
+  readonly subPluginEnabled: boolean
 }
 
 export const STORAGE_KEYS = Object.freeze({
@@ -78,7 +79,29 @@ function computeSnapshot(): ThemeSettingsState {
   const rawGlow = safeGetItem(STORAGE_KEYS.glassGlow)
   const glassGlow = rawGlow === 'true'
 
-  return Object.freeze({ themeOption, glassEnabled, glassMode, glassPreset, glassGlow })
+  return Object.freeze({
+    themeOption,
+    glassEnabled,
+    glassMode,
+    glassPreset,
+    glassGlow,
+    subPluginEnabled: currentSubPluginEnabled,
+  })
+}
+
+let currentSubPluginEnabled = true
+
+/** 检查当前主题子插件是否在 Host 侧处于激活启用状态 */
+export function isThemeSubPluginEnabled(): boolean {
+  return currentSubPluginEnabled
+}
+
+/** 供状态机与测试更新主题子插件启用标记，并广播触发响应式重渲染 */
+export function setThemeSubPluginEnabled(enabled: boolean): void {
+  if (currentSubPluginEnabled !== enabled) {
+    currentSubPluginEnabled = enabled
+    notify()
+  }
 }
 
 let currentSnapshot: ThemeSettingsState = computeSnapshot()
