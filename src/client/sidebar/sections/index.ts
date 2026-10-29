@@ -459,6 +459,8 @@ export function observeWorkspaceSections(
 
   /** 正在做折叠动画的分区：这段时间里 placeHeaders 不要改写成员的显示状态。 */
   const animatingSections = new Set<string>()
+  /** 每个分区最近一次折叠动画的代号，用来丢弃过期回调。 */
+  const animationGeneration = new Map<string, number>()
   const SECTION_ANIM_MS = 180
 
   /**
@@ -473,9 +475,14 @@ export function observeWorkspaceSections(
       document.querySelectorAll<HTMLElement>(`[data-dcu-section-member="${sectionId}"]`),
     )
     if (blocks.length === 0) return
+    // 每次动画带一个代号：宿主重渲染、用户连点都会让上一轮的超时回调过期，过期就不能再改状态。
+    const generation = (animationGeneration.get(sectionId) ?? 0) + 1
+    animationGeneration.set(sectionId, generation)
     animatingSections.add(sectionId)
     const saved = blocks.map(block => block.style.cssText)
+    let animate = true
     for (const block of blocks) {
+      if (!block.isConnected) continue
       block.removeAttribute('data-dcu-section-hidden')
       block.style.overflow = 'hidden'
       if (collapse) {
@@ -486,17 +493,37 @@ export function observeWorkspaceSections(
         block.style.maxHeight = '0px'
         block.style.opacity = '0'
       } else {
+        // 先回到自然高度量一次（宿主块可能带 content-visibility，scrollHeight 会读成 0），
+        // 再压到 0 起动画；量不到高度就干脆不做动画，直接显示。
+        block.style.maxHeight = ''
+        void block.offsetHeight
+        const natural = Math.max(block.offsetHeight, block.scrollHeight)
+        if (natural <= 0) {
+          animate = false
+          block.style.maxHeight = ''
+          block.style.opacity = '1'
+          continue
+        }
         block.style.maxHeight = '0px'
         block.style.opacity = '0'
         void block.offsetHeight
-        block.style.maxHeight = `${block.scrollHeight}px`
+        block.style.maxHeight = `${natural}px`
         block.style.opacity = '1'
       }
     }
     window.setTimeout(() => {
+      // 这一轮已被更新的一轮取代（用户连点 / 状态变化），直接放弃收尾。
+      if (animationGeneration.get(sectionId) !== generation) return
       blocks.forEach((block, index) => {
+        if (!block.isConnected) return
         block.style.cssText = saved[index] ?? ''
+        if (!animate) {
+          block.removeAttribute('data-dcu-section-hidden')
+          return
+        }
         if (collapse) block.setAttribute('data-dcu-section-hidden', 'true')
+        // 展开结束再兜底清一次：期间若有任何逻辑重新打上 hidden，这里纠正回来。
+        else block.removeAttribute('data-dcu-section-hidden')
       })
       animatingSections.delete(sectionId)
       scheduleSync()

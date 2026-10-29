@@ -724,4 +724,27 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(fake.service.insertBefore.mock.calls.length).toBeLessThanOrEqual(1)
     expect(hostSection('s1').ids).toEqual(['c'])
   })
+  it('收起后再展开，内容会真的留在展开态（不会自己缩回去）', async () => {
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+    const def = headers().find(header => header.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+
+    const settle = async (): Promise<void> => {
+      await new Promise<void>(resolve => {
+        window.setTimeout(resolve, 320)
+      })
+      await waitForSync()
+    }
+
+    def.click()
+    await settle()
+    expect(document.querySelectorAll('[data-dcu-section-hidden="true"]').length).toBeGreaterThan(0)
+
+    def.click()
+    await settle()
+    // 展开后不能再被收起，也不应残留 collapsing 中间态。
+    expect(document.querySelectorAll('[data-dcu-section-hidden="true"]').length).toBe(0)
+    expect(document.querySelectorAll('[data-dcu-section-hidden="collapsing"]').length).toBe(0)
+  })
 })
