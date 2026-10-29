@@ -60,7 +60,7 @@ const GLASS_EXTRA_CSS = `
 /* 轨迹视图保持 100% 满宽排版，严禁被云母浮动模式缩减为居中窄列与圆角卡片 */
 [data-dsh-glass-float] [data-dsh-glass-trajectory],
 [data-dsh-glass] [data-dsh-glass-trajectory],
-[data-conversation-composer-overlay] {
+[data-dsh-glass] [data-conversation-composer-overlay] {
   width: 100% !important;
   max-width: none !important;
   height: 100% !important;

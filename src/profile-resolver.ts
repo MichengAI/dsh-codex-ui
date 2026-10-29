@@ -96,14 +96,11 @@ export function isSubPluginDisabledOnDisk(id: string, homeDir?: string, ctx?: Co
         const idRegex = new RegExp(`(?:^|\\s)id:\\s*['"]?${id}['"]?(?:\\s|$)`, 'm')
         if (idRegex.test(block)) {
           if (/(?:^|\s)disabled:\s*true(?:\s|$)/m.test(block)) return true
-          if (/(?:^|\s)disabled:\s*false(?:\s|$)/m.test(block)) return false
+          if (/(?:^|\s)disabled:\s*false(?:\\s|$)/m.test(block)) return false
           // 目标 id 明确存在于当前条目且未声明 disabled: true 时，确认为未停用，直接返回 false，避免落入跨条目正则误伤
           return false
         }
       }
-      // 2. 兜底支持嵌套 insert 块中的定义
-      const fallbackRegex = new RegExp(`id:\\s*['"]?${id}['"]?[\\s\\S]*?\\bdisabled:\\s*true\\b`, 'm')
-      if (fallbackRegex.test(content)) return true
     }
   } catch {
     // 发生文件 IO 错误时，保持启用以防误判

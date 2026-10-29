@@ -103,7 +103,7 @@ export function ensureThemeSurfaceStyles(doc: Document = typeof document !== 'un
 /* 轨迹视图保持 100% 满宽排版，严禁被云母浮动模式缩减为居中窄列与圆角卡片 */
 [data-dsh-glass-float] [data-dsh-glass-trajectory],
 [data-dsh-glass] [data-dsh-glass-trajectory],
-[data-conversation-composer-overlay] {
+[data-dsh-glass] [data-conversation-composer-overlay] {
   width: 100% !important;
   max-width: none !important;
   height: 100% !important;
@@ -136,6 +136,27 @@ export function removeThemeSurfaceStyles(doc: Document = typeof document !== 'un
 }
 
 /**
+ * 彻底恢复宿主官方原生主题呈现（严格遵循宿主 boot-theme 规范）：
+ * - 根据宿主持久化偏好（system/dark/light）与 OS 当前真实明暗（prefers-color-scheme）正确计算深色标记；
+ * - 绝不盲目删除 data-ds-dark-theme 导致「跟随系统（黑）」误退化为浅面白屏！
+ */
+export function restoreNativeThemePresentation(themeRuntime?: ThemeRuntime): void {
+  if (typeof document === 'undefined') return
+  const runtime = themeRuntime ?? globalThemeRuntime
+  const preference = runtime?.getTheme?.()?.preference ?? 'system'
+  const systemDark = typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches
+  const isDark = preference === 'dark' || (preference === 'system' && systemDark)
+
+  document.documentElement.dataset.dsThemeSource = preference
+  document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+  if (isDark) {
+    document.body.setAttribute('data-ds-dark-theme', '')
+  } else {
+    document.body.removeAttribute('data-ds-dark-theme')
+  }
+}
+
+/**
  * 将指定主题精准映射并深度应用到真实 DOM（双重保险，彻底压制并覆盖官方亮暗限制）
  */
 export function applyThemeToDocument(
@@ -165,16 +186,7 @@ export function applyThemeToDocument(
     }
     lastAppliedTokens = []
 
-    // 2. 仅在插件之前确实写入过自定义主题时，才清理根节点属性；
-    // 若宿主本身就在原生深色/浅色态，严禁删除宿主自己的 data-ds-dark-theme 和 color-scheme！
-    if (hasAppliedCustomTheme) {
-      document.documentElement.style.removeProperty('color-scheme')
-      document.documentElement.removeAttribute('data-ds-theme-source')
-      document.body.removeAttribute('data-ds-dark-theme')
-      hasAppliedCustomTheme = false
-    }
-
-    // 3. 仅当宿主当前活动主题属于本插件注册的自定义主题时，才在切回 stock 时还原为系统偏好；
+    // 2. 仅当宿主当前活动主题属于本插件注册的自定义主题时，才在切回 stock 时还原为系统偏好；
     // 若宿主本就在运行原生主题（dark/light/system），严禁调用 setTheme 篡改用户的全局偏好！
     if (syncRuntime && runtime && typeof runtime.setTheme === 'function') {
       try {
@@ -183,6 +195,12 @@ export function applyThemeToDocument(
           runtime.setTheme('system')
         }
       } catch {}
+    }
+
+    // 3. 切回 stock 时，恢复宿主原生主题呈现
+    if (hasAppliedCustomTheme) {
+      restoreNativeThemePresentation(runtime)
+      hasAppliedCustomTheme = false
     }
     return
   }
@@ -351,11 +369,9 @@ export function observeTheme(ctx: ClientContext): () => void {
       }
       lastAppliedTokens = []
 
-      // 彻底清理根节点属性，恢复官方原生标记
+      // 恢复官方原生主题呈现，根据宿主偏好与 OS 明暗保持正确深浅，绝不盲目剥除深色属性变白屏
       if (hasAppliedCustomTheme) {
-        document.documentElement.style.removeProperty('color-scheme')
-        document.documentElement.removeAttribute('data-ds-theme-source')
-        document.body.removeAttribute('data-ds-dark-theme')
+        restoreNativeThemePresentation(theme ?? globalThemeRuntime)
         hasAppliedCustomTheme = false
       }
 
@@ -447,8 +463,8 @@ export function observeTheme(ctx: ClientContext): () => void {
   // 启动探活
   void checkAndSync()
 
-  // 初始即时应用（首帧注入并立即同步宿主 ThemeRuntime）
-  applyCurrentState(true)
+  // 初始即时应用（首帧仅同步 DOM 样式，不强制同步宿主 ThemeRuntime，等待探活确认启用）
+  applyCurrentState(false)
 
   // 监听官方 theme/change：当官方或系统切换主题时，若当前处于自选主题，同步 DOM tokens 并纠正 DOM 根属性
   // 传入 syncRuntime = false 防止调用 theme.setTheme 导致无限微任务死循环卡死页面。

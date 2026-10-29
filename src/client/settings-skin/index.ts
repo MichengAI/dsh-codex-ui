@@ -235,6 +235,8 @@ button.dcu-settings-back-btn,
   min-width: 28px !important;
   max-width: 28px !important;
   height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
   flex: none !important;
   border-radius: var(--dsw-radius-sm, 6px) !important;
   background: transparent !important;

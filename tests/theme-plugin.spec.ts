@@ -43,12 +43,18 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
   beforeEach(() => {
     localStorage.clear()
     disposeGlassMode()
+    setThemeSubPluginEnabled(true)
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ enabled: true }),
+    })
   })
 
   afterEach(() => {
     globalThis.fetch = originalFetch
     localStorage.clear()
     disposeGlassMode()
+    setThemeSubPluginEnabled(true)
   })
 
   it('子插件元数据命名必须是 codex-ui-theme', () => {
@@ -315,7 +321,7 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(registeredThemes.length).toBe(0)
   })
 
-  it('启动时对齐宿主 ThemeRuntime：当本地已保存自定义主题（如 catppuccin-latte）时，首帧必须调用 setTheme 对齐', () => {
+  it('启动时对齐宿主 ThemeRuntime：当本地已保存自定义主题（如 catppuccin-latte）时，首帧必须调用 setTheme 对齐', async () => {
     localStorage.setItem(STORAGE_KEYS.themeOption, 'catppuccin-latte')
     refreshThemeSettingsSnapshot()
 
@@ -337,7 +343,9 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     const dispose = observeTheme(ctx)
 
     try {
-      expect(fakeThemeRuntime.setTheme).toHaveBeenCalledWith('catppuccin-latte')
+      await vi.waitFor(() => {
+        expect(fakeThemeRuntime.setTheme).toHaveBeenCalledWith('catppuccin-latte')
+      })
       expect(document.documentElement.style.colorScheme).toBe('light')
       expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
     } finally {
@@ -406,13 +414,11 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
     expect(fakeRuntime.setTheme).toHaveBeenCalledWith('codex-dark')
 
-    // 2. 切回 stock：因为当前 active 是 codex-dark（属于自定义主题），正常还给 system
+    // 2. 切回 stock：因为当前 active 是 codex-dark（属于自定义主题），正常还给 system，并恢复原生呈现
     fakeRuntime.setTheme.mockClear()
     applyThemeToDocument('stock', fakeRuntime as never)
     expect(fakeRuntime.setTheme).toHaveBeenCalledWith('system')
-    expect(document.documentElement.style.colorScheme).toBe('')
-    expect(document.documentElement.hasAttribute('data-ds-theme-source')).toBe(false)
-    expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
+    expect(document.documentElement.dataset.dsThemeSource).toBe('system')
 
     // 3. 关键场景（P1 回归防线）：宿主此时明确运行官方 dark，宿主自行挂载了 dark 根属性，
     // 在 stock 状态下无论拨动几次开关或刷新，绝对不能重置为 system，且绝对不能删除宿主的 dark 属性！
