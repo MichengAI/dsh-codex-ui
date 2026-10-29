@@ -77,14 +77,16 @@ const SECTIONS_CSS = `
 .dcu-ws-section{display:flex;align-items:center;gap:4px;height:30px;margin:8px 2px 2px;padding:0 4px 0 var(--dcu-section-lead,6px);font-size:12px;letter-spacing:.2px;color:var(--dsw-alias-label-tertiary,rgba(127,127,127,.95));-webkit-app-region:no-drag;cursor:pointer;border-radius:6px}
 .dcu-ws-section:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.10))}
 .dcu-ws-section-label{flex:0 0 auto;max-width:70%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dcu-ws-section-chevron{display:inline-grid;place-items:center;flex:none;width:12px;height:12px;opacity:.55;transition:transform .15s ease}
-.dcu-ws-section-chevron svg{display:block}
+.dcu-ws-section-chevron{display:inline-grid;place-items:center;flex:none;width:16px;height:16px;color:var(--dsw-alias-label-caption,var(--dsw-alias-label-tertiary,#888));transition:transform .15s var(--ds-ease-in-out,cubic-bezier(.2,0,0,1))}
+.dcu-ws-section-chevron svg{display:block;width:16px;height:16px}
 .dcu-ws-section[data-open='true'] .dcu-ws-section-chevron{transform:rotate(90deg)}
 .dcu-ws-section-grow{flex:1 1 auto}
 .dcu-ws-section-input{flex:1 1 auto;min-width:0;height:22px;padding:0 6px;border-radius:5px;font:inherit;font-size:12.5px;color:var(--dsw-alias-label-primary,inherit);background:var(--dsw-alias-bg-layer-2,rgba(127,127,127,.14));border:.5px solid var(--dsw-alias-border-l3,rgba(127,127,127,.4));outline:none}
 .dcu-ws-section-editing{margin:4px 2px;padding-left:0}
 /* 分区成员不加缩进：项目行以下全是宿主自己的排版（会话行、缩进变量都在里面），
    这里再补 padding 会把整个项目块连同会话一起右移，跟原生不一致。成员标记只用于折叠隐藏。 */
+[data-dcu-section-member]{transition:height 180ms var(--ds-ease-in-out,cubic-bezier(.2,0,0,1)),opacity 180ms var(--ds-ease-in-out,cubic-bezier(.2,0,0,1))}
+[data-dcu-section-hidden='collapsing']{height:0 !important;min-height:0 !important;opacity:0;overflow:hidden;pointer-events:none;margin:0 !important}
 [data-dcu-section-hidden='true']{display:none !important}
 .dcu-ws-section-actions{display:flex;gap:2px;opacity:.55;transition:opacity .12s ease;flex:none}
 .dcu-ws-section:hover .dcu-ws-section-actions,.dcu-ws-section:focus-within .dcu-ws-section-actions{opacity:1}
@@ -101,6 +103,10 @@ const SECTIONS_CSS = `
 .dcu-ws-section-menu button[aria-current='true']{color:var(--dsw-alias-state-business-primary,#4176e6)}
 .dcu-ws-section[data-dcu-section-fixed='true']{cursor:default}
 .dcu-ws-section[data-dcu-drop-target='true']{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.18));color:var(--dsw-alias-label-primary,inherit)}
+/* 分区标题作为落点时，压住宿主自己的落点线，避免同屏出现两条线。 */
+body.dcu-section-drop-active [class*="workspaceDropBefore"]::before,
+body.dcu-section-drop-active [class*="workspaceDropAfter"]::after,
+body.dcu-section-drop-active [class*="listTopDropIndicator"]{display:none !important}
 
 `
 
@@ -445,11 +451,54 @@ export function observeWorkspaceSections(
   }
 
   function toggleSection(sectionId: string): void {
-    collapsed = { ...collapsed, [sectionId]: collapsed[sectionId] !== true }
+    const collapse = collapsed[sectionId] !== true
+    collapsed = { ...collapsed, [sectionId]: collapse }
     persistCollapsed()
     const header = headers.get(sectionId)
-    if (header !== undefined) header.dataset.open = collapsed[sectionId] === true ? 'false' : 'true'
+    if (header !== undefined) header.dataset.open = collapse ? 'false' : 'true'
+    animateSectionMembers(sectionId, collapse)
     scheduleSync()
+  }
+
+  /** 正在做折叠动画的分区：这段时间里 placeHeaders 不要改写成员的显示状态。 */
+  const animatingSections = new Set<string>()
+  const SECTION_ANIM_MS = 180
+
+  /**
+   * 折叠/展开动画。
+   *
+   * 成员是宿主的分组块，没法包容器，所以给块本身做高度过渡：
+   * 靠 `interpolate-size: allow-keywords` 让 `height: auto ↔ 0` 也能插值，
+   * 中间态用 `data-dcu-section-hidden="collapsing"` 表示，过渡结束后再切成 display:none。
+   */
+  function animateSectionMembers(sectionId: string, collapse: boolean): void {
+    const blocks = Array.from(
+      document.querySelectorAll<HTMLElement>(`[data-dcu-section-member="${sectionId}"]`),
+    )
+    if (blocks.length === 0) return
+    animatingSections.add(sectionId)
+    for (const block of blocks) {
+      if (collapse) {
+        // 先确保是展开态（有具体高度），再切到中间态触发 0 高度过渡。
+        block.removeAttribute('data-dcu-section-hidden')
+        void block.offsetHeight
+        block.setAttribute('data-dcu-section-hidden', 'collapsing')
+      } else {
+        block.setAttribute('data-dcu-section-hidden', 'collapsing')
+        block.style.height = '0px'
+        void block.offsetHeight
+        block.style.height = ''
+        block.removeAttribute('data-dcu-section-hidden')
+      }
+    }
+    window.setTimeout(() => {
+      for (const block of blocks) {
+        block.style.height = ''
+        if (collapse) block.setAttribute('data-dcu-section-hidden', 'true')
+      }
+      animatingSections.delete(sectionId)
+      scheduleSync()
+    }, SECTION_ANIM_MS + 20)
   }
 
   function readCollapsed(): Record<string, boolean> {
@@ -485,12 +534,16 @@ export function observeWorkspaceSections(
   function clearDropLine(): void {
     dropLine?.remove()
     dropLine = undefined
+    document.body.classList.remove('dcu-section-drop-active')
     for (const header of headers.values()) header.removeAttribute('data-dcu-drop-target')
   }
 
   /** 把某个分区标题标成落点，并在它下沿画线（空分区没有成员行，只有这条路径能落进去）。 */
   function showSectionDrop(header: HTMLElement): void {
     clearDropLine()
+    // 悬停在分区标题上时，宿主也会在列表顶部画它自己的落点线；同屏两条线会互相打架，
+    // 所以这一段只保留我们这条（画法本身和宿主一致，用户看到的就是一条）。
+    document.body.classList.add('dcu-section-drop-active')
     header.setAttribute('data-dcu-drop-target', 'true')
     const rect = header.getBoundingClientRect()
     const line = document.createElement('div')
@@ -554,6 +607,7 @@ export function observeWorkspaceSections(
         continue
       }
       block.block.setAttribute('data-dcu-section-member', sectionId)
+      if (animatingSections.has(sectionId)) continue
       if (collapsed[sectionId] === true) block.block.setAttribute('data-dcu-section-hidden', 'true')
       else block.block.removeAttribute('data-dcu-section-hidden')
     }
@@ -575,8 +629,10 @@ export function observeWorkspaceSections(
       .find((block): block is HTMLElement => block !== null)
     if (ungrouped !== undefined) {
       ungrouped.setAttribute('data-dcu-section-member', DEFAULT_SECTION_ID)
-      if (collapsed[DEFAULT_SECTION_ID] === true) ungrouped.setAttribute('data-dcu-section-hidden', 'true')
-      else ungrouped.removeAttribute('data-dcu-section-hidden')
+      if (!animatingSections.has(DEFAULT_SECTION_ID)) {
+        if (collapsed[DEFAULT_SECTION_ID] === true) ungrouped.setAttribute('data-dcu-section-hidden', 'true')
+        else ungrouped.removeAttribute('data-dcu-section-hidden')
+      }
     }
 
     // 标题顺序必须等于分区顺序：宿主顺序与本地状态短暂不一致时（首次加载、外部拖动），
@@ -1021,7 +1077,8 @@ export function observeWorkspaceSections(
   const iconSection = (): string => hostIconMarkup('IconChecklistOutlineRegular')
   const iconCheck = (): string => hostIconMarkup('IconCheckOutlineRegular')
   const iconPlus = (): string => hostIconMarkup('IconPlusOutlineRegular')
-  const iconChevron = (): string => hostIconMarkup('IconTriangleRightFillRegular', 10)
+  // 宿主自己的工作区行也是这颗三角、按默认 16px 渲染，尺寸对齐才不会显得小一号。
+  const iconChevron = (): string => hostIconMarkup('IconTriangleRightFillRegular', 16)
   const iconEdit = (): string => hostIconMarkup('IconEditOutlineRegular')
   const iconClose = (): string => hostIconMarkup('IconCloseOutlineRegular')
 
@@ -1286,6 +1343,11 @@ export function observeWorkspaceSections(
       return
     }
     list = next
+    // 让 `height: auto → 0` 能插值（Chromium 129+），分区折叠才有高度过渡。
+    // TS 的 CSSStyleDeclaration 还没有这个新属性，用 setProperty 写入。
+    if (list.style.getPropertyValue('interpolate-size') !== 'allow-keywords') {
+      list.style.setProperty('interpolate-size', 'allow-keywords')
+    }
     // 首次找到列表就立刻接上订阅与观察器，不等轮询：拖拽与重渲染都要实时感知。
     if (!wired) {
       wired = true

@@ -440,6 +440,10 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
 
     const defaultHeader = headers().find(header => header.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
     defaultHeader.click()
+    // 折叠现在有 180ms 的高度过渡，等动画收尾后再断言最终状态。
+    await new Promise<void>(resolve => {
+      window.setTimeout(resolve, 420)
+    })
     await waitForSync()
     expect(ungrouped.getAttribute('data-dcu-section-hidden')).toBe('true')
   })

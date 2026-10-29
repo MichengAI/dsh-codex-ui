@@ -230,7 +230,7 @@ export const SIDEBAR_CSS = `
   flex-shrink: 0;
   margin-left: auto;
   color: var(--dsw-alias-label-tertiary, #888);
-  transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+  transition: transform 150ms var(--ds-ease-in-out, cubic-bezier(0.2, 0, 0, 1));
   pointer-events: none;
 }
 
@@ -242,7 +242,7 @@ export const SIDEBAR_CSS = `
   display: grid;
   grid-template-rows: 0fr;
   opacity: 0;
-  transition: grid-template-rows 220ms cubic-bezier(0.2, 0, 0, 1), opacity 160ms ease;
+  transition: grid-template-rows 220ms cubic-bezier(0.2, 0, 0, 1), opacity 220ms cubic-bezier(0.2, 0, 0, 1);
   overflow: hidden;
   -webkit-app-region: no-drag !important;
 }
@@ -250,7 +250,9 @@ export const SIDEBAR_CSS = `
 .dcu-sb-accordion.dcu-sb-accordion-open {
   grid-template-rows: 1fr;
   opacity: 1;
-  overflow: visible;
+  /* 保持 hidden：1fr 已经是内容自然高度，切成 visible 会让内容在动画第一帧就整块露出来，
+     看起来「没有展开动画」。 */
+  overflow: hidden;
 }
 
 .dcu-sb-accordion[aria-hidden="true"] {
@@ -266,7 +268,7 @@ export const SIDEBAR_CSS = `
 }
 
 .dcu-sb-accordion.dcu-sb-accordion-open .dcu-sb-accordion-content {
-  overflow: visible;
+  overflow: hidden;
 }
 
 .dcu-sb-empty-drop-hint {
