@@ -103,10 +103,6 @@ const SECTIONS_CSS = `
 .dcu-ws-section-menu button[aria-current='true']{color:var(--dsw-alias-state-business-primary,#4176e6)}
 .dcu-ws-section[data-dcu-section-fixed='true']{cursor:default}
 .dcu-ws-section[data-dcu-drop-target='true']{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.18));color:var(--dsw-alias-label-primary,inherit)}
-/* 分区标题作为落点时，压住宿主自己的落点线，避免同屏出现两条线。 */
-body.dcu-section-drop-active [class*="workspaceDropBefore"]::before,
-body.dcu-section-drop-active [class*="workspaceDropAfter"]::after,
-body.dcu-section-drop-active [class*="listTopDropIndicator"]{display:none !important}
 
 `
 
@@ -534,25 +530,18 @@ export function observeWorkspaceSections(
   function clearDropLine(): void {
     dropLine?.remove()
     dropLine = undefined
-    document.body.classList.remove('dcu-section-drop-active')
     for (const header of headers.values()) header.removeAttribute('data-dcu-drop-target')
   }
 
-  /** 把某个分区标题标成落点，并在它下沿画线（空分区没有成员行，只有这条路径能落进去）。 */
+  /**
+   * 把某个分区标题标成落点（空分区没有成员行，拖到标题上是它唯一的入口）。
+   *
+   * 这里**不画线**：拖动项目时宿主自己会画一条落点线，我们再画一条就会同屏出现两条
+   * （不同落点位置还会让鼠标在两行之间来回跳）。落点用标题高亮表达，线只保留宿主那一条。
+   */
   function showSectionDrop(header: HTMLElement): void {
     clearDropLine()
-    // 悬停在分区标题上时，宿主也会在列表顶部画它自己的落点线；同屏两条线会互相打架，
-    // 所以这一段只保留我们这条（画法本身和宿主一致，用户看到的就是一条）。
-    document.body.classList.add('dcu-section-drop-active')
     header.setAttribute('data-dcu-drop-target', 'true')
-    const rect = header.getBoundingClientRect()
-    const line = document.createElement('div')
-    line.className = 'dcu-ws-section-drop'
-    line.style.top = `${rect.bottom - 6}px`
-    line.style.left = `${rect.left}px`
-    line.style.right = `${Math.max(0, window.innerWidth - rect.right)}px`
-    document.body.appendChild(line)
-    dropLine = line
   }
 
   /** 把标题按分区顺序放到各自第一个分组块前面；空分区贴着下一个分区显示。 */

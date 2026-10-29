@@ -663,7 +663,8 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     // 直接命中分区标题：空分区没有项目行，只能从这里落进去。
     pinnedHeader.dispatchEvent(drag('dragover', pinnedHeader))
     expect(pinnedHeader.getAttribute('data-dcu-drop-target')).toBe('true')
-    expect(document.querySelector('.dcu-ws-section-drop')).not.toBeNull()
+    // 落点只靠标题高亮表达，插件不再自己画线（否则会和宿主的线同屏两条）。
+    expect(document.querySelector('.dcu-ws-section-drop')).toBeNull()
 
     pinnedHeader.dispatchEvent(drag('drop', pinnedHeader))
     await waitForSync(12)
