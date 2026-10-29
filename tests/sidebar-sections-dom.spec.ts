@@ -468,30 +468,33 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     }
   })
 
-  it('分区菜单右边缘贴住「···」右边缘，向左展开', async () => {
+  it('分区菜单和宿主行菜单同一套定位：左缘贴住「···」、向右展开', async () => {
     seedSections({
-        sections: [
-          { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
-          { id: 's1', name: '测试分区', ids: ['a'] },
-          { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
-        ],
-      })
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '测试分区', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    })
     mountFixture(['a'])
     mount(['a'])
     await waitForSync()
 
     const custom = headers().find(header => header.getAttribute(SECTION_HEADER_ATTR) === 's1')!
     const button = custom.querySelector<HTMLElement>('.dcu-ws-section-actions button')!
+    const box = (left: number, top: number, width: number, height: number) =>
+      ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON: () => ({}) }) as DOMRect
+    // 宿主自己的行菜单是「左缘≈按钮左缘+4，向右铺」；这里把按钮放在右侧验证同一个规则。
+    vi.spyOn(button, 'getBoundingClientRect').mockReturnValue(box(187, 100, 24, 24))
+
     button.click()
     await waitForSync(2)
 
     const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
-    expect(panel).not.toBeNull()
-    const menu = panel.getBoundingClientRect()
-    const anchor = button.getBoundingClientRect()
-    // 允许 1px 的取整误差。
-    expect(Math.abs(menu.right - anchor.right)).toBeLessThanOrEqual(1)
+    expect(panel.style.left).toBe('191px')
+    expect(panel.style.top).toBe('128px')
   })
+
   it('项目行上的拖动不再由插件接管（落点线交给宿主）', async () => {
     mountFixture(['a', 'b', 'c'])
     mount(['a', 'b', 'c'])

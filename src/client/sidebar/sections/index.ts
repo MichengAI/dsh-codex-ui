@@ -78,15 +78,16 @@ const SECTIONS_CSS = `
 .dcu-ws-section:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.10))}
 .dcu-ws-section-label{flex:0 0 auto;max-width:70%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcu-ws-section-chevron{display:inline-grid;place-items:center;flex:none;width:16px;height:16px;color:var(--dsw-alias-label-caption,var(--dsw-alias-label-tertiary,#888));transition:transform .15s var(--ds-ease-in-out,cubic-bezier(.2,0,0,1))}
-.dcu-ws-section-chevron svg{display:block;width:16px;height:16px}
-.dcu-ws-section[data-open='true'] .dcu-ws-section-chevron{transform:rotate(90deg)}
+.dcu-ws-section-chevron svg{display:block;width:16px;height:16px;transform:translateX(-2px);transition:transform .15s var(--ds-ease-in-out,cubic-bezier(.2,0,0,1))}
+/* 收起态是「▶」，三角的重心在左侧、看起来离文字更远；展开态旋转 90° 后重心居中。
+   所以收起态整体左移 2px 做视觉补偿，两种状态离文字的距离才一致。 */
+.dcu-ws-section[data-open='true'] .dcu-ws-section-chevron svg{transform:rotate(90deg)}
 .dcu-ws-section-grow{flex:1 1 auto}
 .dcu-ws-section-input{flex:1 1 auto;min-width:0;height:22px;padding:0 6px;border-radius:5px;font:inherit;font-size:12.5px;color:var(--dsw-alias-label-primary,inherit);background:var(--dsw-alias-bg-layer-2,rgba(127,127,127,.14));border:.5px solid var(--dsw-alias-border-l3,rgba(127,127,127,.4));outline:none}
 .dcu-ws-section-editing{margin:4px 2px;padding-left:0}
 /* 分区成员不加缩进：项目行以下全是宿主自己的排版（会话行、缩进变量都在里面），
    这里再补 padding 会把整个项目块连同会话一起右移，跟原生不一致。成员标记只用于折叠隐藏。 */
-[data-dcu-section-member]{transition:height 180ms var(--ds-ease-in-out,cubic-bezier(.2,0,0,1)),opacity 180ms var(--ds-ease-in-out,cubic-bezier(.2,0,0,1))}
-[data-dcu-section-hidden='collapsing']{height:0 !important;min-height:0 !important;opacity:0;overflow:hidden;pointer-events:none;margin:0 !important}
+[data-dcu-section-member]{transition:max-height 180ms var(--ds-ease-in-out,cubic-bezier(.2,0,0,1)),opacity 180ms var(--ds-ease-in-out,cubic-bezier(.2,0,0,1))}
 [data-dcu-section-hidden='true']{display:none !important}
 .dcu-ws-section-actions{display:flex;gap:2px;opacity:.55;transition:opacity .12s ease;flex:none}
 .dcu-ws-section:hover .dcu-ws-section-actions,.dcu-ws-section:focus-within .dcu-ws-section-actions{opacity:1}
@@ -463,9 +464,9 @@ export function observeWorkspaceSections(
   /**
    * 折叠/展开动画。
    *
-   * 成员是宿主的分组块，没法包容器，所以给块本身做高度过渡：
-   * 靠 `interpolate-size: allow-keywords` 让 `height: auto ↔ 0` 也能插值，
-   * 中间态用 `data-dcu-section-hidden="collapsing"` 表示，过渡结束后再切成 display:none。
+   * 成员是宿主的分组块，不能包容器，所以对块本身做 max-height 过渡（经典稳妥做法）：
+   * 先量出当前高度写成具体 px，再过渡到 0；展开反向。用 max-height 而不是 `height:auto`
+   * 是因为宿主块内部有自己的布局，auto 插值在逐帧重排时会互相压住（表现为项目文件夹重叠）。
    */
   function animateSectionMembers(sectionId: string, collapse: boolean): void {
     const blocks = Array.from(
@@ -473,25 +474,30 @@ export function observeWorkspaceSections(
     )
     if (blocks.length === 0) return
     animatingSections.add(sectionId)
+    const saved = blocks.map(block => block.style.cssText)
     for (const block of blocks) {
+      block.removeAttribute('data-dcu-section-hidden')
+      block.style.overflow = 'hidden'
       if (collapse) {
-        // 先确保是展开态（有具体高度），再切到中间态触发 0 高度过渡。
-        block.removeAttribute('data-dcu-section-hidden')
+        const height = block.offsetHeight
+        block.style.maxHeight = `${height}px`
+        block.style.opacity = '1'
         void block.offsetHeight
-        block.setAttribute('data-dcu-section-hidden', 'collapsing')
+        block.style.maxHeight = '0px'
+        block.style.opacity = '0'
       } else {
-        block.setAttribute('data-dcu-section-hidden', 'collapsing')
-        block.style.height = '0px'
+        block.style.maxHeight = '0px'
+        block.style.opacity = '0'
         void block.offsetHeight
-        block.style.height = ''
-        block.removeAttribute('data-dcu-section-hidden')
+        block.style.maxHeight = `${block.scrollHeight}px`
+        block.style.opacity = '1'
       }
     }
     window.setTimeout(() => {
-      for (const block of blocks) {
-        block.style.height = ''
+      blocks.forEach((block, index) => {
+        block.style.cssText = saved[index] ?? ''
         if (collapse) block.setAttribute('data-dcu-section-hidden', 'true')
-      }
+      })
       animatingSections.delete(sectionId)
       scheduleSync()
     }, SECTION_ANIM_MS + 20)
@@ -712,8 +718,8 @@ export function observeWorkspaceSections(
       panel.style.left = `${left}px`
       panel.style.top = `${top}px`
     } else {
-      // 独立菜单（分区标题的 ···）：右边缘贴住触发按钮，向左展开。
-      panel.style.left = `${Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8))}px`
+      // 独立菜单（分区标题的 ···）：和宿主自己的行菜单一致——左边缘贴在触发按钮上、向右展开。
+      panel.style.left = `${Math.max(8, Math.min(rect.left + 4, window.innerWidth - width - 8))}px`
       panel.style.top = `${Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - height - 8))}px`
     }
     menuHost = panel
@@ -1332,11 +1338,6 @@ export function observeWorkspaceSections(
       return
     }
     list = next
-    // 让 `height: auto → 0` 能插值（Chromium 129+），分区折叠才有高度过渡。
-    // TS 的 CSSStyleDeclaration 还没有这个新属性，用 setProperty 写入。
-    if (list.style.getPropertyValue('interpolate-size') !== 'allow-keywords') {
-      list.style.setProperty('interpolate-size', 'allow-keywords')
-    }
     // 首次找到列表就立刻接上订阅与观察器，不等轮询：拖拽与重渲染都要实时感知。
     if (!wired) {
       wired = true
