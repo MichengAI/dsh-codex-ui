@@ -112,6 +112,18 @@ export function ensureThemeSurfaceStyles(doc: Document = typeof document !== 'un
   box-shadow: none !important;
   border-radius: 0 !important;
 }
+
+/* 彻底清除输入框底部 dock / stats 区域的半透明灰色脏色块与切线 */
+[data-dsh-glass] [data-phase] [data-dsh-glass-inputbar] > [class*="dock"]:before,
+[data-dsh-glass] [data-phase] [data-dsh-glass-inputbar] > [data-composer-dock]:before,
+[data-dsh-glass] [class*="dock"]:before,
+[data-dsh-glass] [data-composer-dock]:before {
+  display: none !important;
+  content: none !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
 `
     doc.head.appendChild(tag)
   }
