@@ -43,10 +43,12 @@ test('座舱上沿必须有 16px 渐隐带，且靠 mask 淡出同一块底盘',
 })
 
 test('云母浮动顶栏：正文必须在顶栏区域内淡出，且不得改动顶栏自身外观', () => {
-  // 用滚动容器的 mask 让内容在顶栏区域淡出：顶部 88px 全透明，88→108px 渐入
+  // 用滚动容器的 mask 让内容在顶栏区域淡出
   expect(GLASS_EXTRA_CSS).toContain('[data-dsh-glass-float] [data-phase=active] [data-conversation-scroll]')
+  // 常量推导（改值必须重算）：mask 原点 = 滚动容器 border box（容器顶 = 顶栏底边 97 − 95 = 2px）
+  // 96px → 绝对 y=98，压在顶栏底边 97 之下；106px → y=108，早于内容最早起点 y=109
   expect(GLASS_EXTRA_CSS).toContain(
-    'mask-image: linear-gradient(180deg, transparent 0, transparent 88px, #000 108px)',
+    'mask-image: linear-gradient(180deg, transparent 0, transparent 96px, #000 106px)',
   )
   // 不允许通过给顶栏铺不透明底色来遮挡：那会盖掉顶栏自己的边框、阴影与磨砂质感
   expect(GLASS_EXTRA_CSS).not.toMatch(
