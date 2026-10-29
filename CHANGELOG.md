@@ -2,13 +2,15 @@
 
 ## 2.0.4 (2026-10-29)
 
-- **Support Latest Host Matrix**: Expand the host support matrix to include DeepSeek Harness latest RC (`0.2.1-rc.4`) and alpha (`0.2.2-alpha.2`), ensuring flawless compatibility across the entire `0.2.x` line.
-- **Fix Settings Page Flat Grid 4-Column Layout Fragmentation (#68)**: Adapt to the host's new flat grid container structure (`> [class*="options"]`), eliminating horizontal layout tearing and 800px content width penetration, and ensuring the sidebar and content pane render seamlessly.
-- **Restore Native Theme Presentation & Preference Protection**: Align `restoreNativeThemePresentation` with the host's `ThemePresenter` contract (`active.colorScheme`). When disabling or switching themes in "Follow System (Dark)" mode or custom dark palettes, dark mode is preserved without accidentally resetting to light mode.
-- **Fix Settings Skin Lifecycle Gating**: Ensure settings skin styles and DOM decorators are strictly gated behind confirmed enablement, eliminating modal open/close resize flickers when the skin is disabled.
-- **Fix Mica Float Mode 56px Header Alignment**: Align the float mode right workbench header (`right: 12px`) with the content card's right boundary inside the padding box.
-- **Eliminate Composer Dock & Trajectory Layout Issues**: Remove the pseudo-element behind composer dock stats pills to eliminate rectangular gray smudges, and restore trajectory view to full-bleed width.
-- **Fix Selector Nesting & Old Host Back Button**: Correct `html[data-dsh-glass] body:not([data-ds-dark-theme])` selector hierarchy for light mica cards, lock the back button to 28x28px (`min-height: 28px !important`), and remove greedy YAML parsing fallbacks.
+- **Support Latest Host Versions**: Expand the host support matrix to officially support DeepSeek Harness latest RC (`0.2.1-rc.4`) and alpha (`0.2.2-alpha.2`).
+- **Fix Settings Layout Fragmentation (#68)**: Adapt to the latest host settings structure, eliminating horizontal multi-column tearing, content width overflow, and title overlap to restore clean two-column layout and header bar.
+- **Protect Theme Preferences & Dark Mode**: Prevent the UI from inadvertently reverting to a white/light theme when disabling theme enhancements or switching to default under "Follow System (Dark)" or custom dark palettes.
+- **Eliminate Settings Modal Resize Flicker**: Ensure settings skin does not cause modal expand/shrink resize flickers when the skin is disabled.
+- **Refine Visual Details & Layout Polishing**:
+  - Fix float mode right header alignment with content cards;
+  - Remove dirty gray smudges behind composer bottom stats pills;
+  - Restore trajectory view to full-bleed width in mica mode;
+  - Eliminate the sticky header color seam in the plugin manager.
 
 ## 2.0.3 (2026-10-28)
 
