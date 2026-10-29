@@ -617,41 +617,42 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [
   flex: none !important;
 }
 
-/* 顶部操作区（打开配置文件 + 关闭按钮）：脱离流直接在右上角轻盈悬浮，杜绝任何空条或多余分割线 */
+/* 顶部操作区（打开配置文件 + 关闭按钮）：整行 56px 顶栏，精准对齐老版标准头部 */
 [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] {
+  grid-column: 2 !important;
+  grid-row: 1 / -1 !important;
   position: absolute !important;
-  top: 16px !important;
-  right: 28px !important;
-  z-index: 30 !important;
-  height: 36px !important;
-  min-height: 0 !important;
-  width: auto !important;
-  padding: 0 !important;
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  box-sizing: border-box !important;
+  padding: 0 32px !important;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-end !important;
   gap: 12px !important;
+  background: var(--dsw-alias-bg-layer-2, #18181b) !important;
+  z-index: 10 !important;
   margin: 0 !important;
-  pointer-events: none !important;
 }
 
 [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] > * {
   pointer-events: auto !important;
 }
 
-/* 右侧内容工作区：独占右侧整列（Row 1 至 Row 2 全高一体），成为单一纯净的工作台卡片 */
+/* 右侧内容工作区：独占右侧整列（Row 1 至 Row 2 全高一体），首屏内容自 56px 顶栏下方舒展排列 */
 [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] {
   grid-column: 2 !important;
   grid-row: 1 / -1 !important;
   box-sizing: border-box !important;
   min-height: 0 !important;
   overflow-y: auto !important;
-  padding: 32px 48px 64px !important;
+  padding-top: calc(56px + 28px) !important;
+  padding-bottom: 64px !important;
+  padding-inline: 48px !important;
   background: var(--dsw-alias-bg-layer-2, #18181b) !important;
   display: flex !important;
   flex-direction: column !important;
@@ -691,9 +692,8 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:has(> [class
 
 body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"],
 html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  background: var(--dsw-alias-bg-layer-1, #ffffff) !important;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)) !important;
 }
 
 body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"],
@@ -701,7 +701,7 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:has(> [class
   background: var(--dsw-alias-bg-layer-1, #ffffff) !important;
 }
 
-/* 云母悬浮双岛（Mica Mode）新版 Grid 适配：右侧整列为单一 16px 圆角大卡片 */
+/* 云母悬浮双岛（Mica Mode）新版 Grid 适配：右侧整列为标准 56px 顶栏 + 16px 圆角大卡片 */
 html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) {
   grid-template-columns: calc(var(--dcu-settings-nav-width, 280px) - 24px) minmax(0, 1fr) !important;
   gap: 0 12px !important;
@@ -741,13 +741,33 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="optio
 }
 
 html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] {
-  top: 24px !important;
-  right: 28px !important;
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  grid-column: 2 !important;
+  grid-row: 1 / -1 !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  margin: 0 !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  box-sizing: border-box !important;
+  padding: 0 32px !important;
+  border-radius: 16px 16px 0 0 !important;
+  border: 1px solid var(--dsh-glass-rim-soft, rgba(255, 255, 255, 0.08)) !important;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  background: var(--dsw-alias-bg-layer-1) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+  z-index: 10 !important;
+}
+
+html[data-dsh-glass-float] body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"],
+html[data-dsh-glass-float] html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] {
+  background: var(--dsw-alias-bg-layer-1, #ffffff) !important;
+  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)) !important;
 }
 
 html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] {
@@ -756,7 +776,9 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="optio
   border-radius: 16px !important;
   background: var(--dsw-alias-bg-layer-1) !important;
   box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
-  padding: 24px 36px 48px !important;
+  padding-top: calc(56px + 28px) !important;
+  padding-bottom: 48px !important;
+  padding-inline: 36px !important;
 }
 `
 
