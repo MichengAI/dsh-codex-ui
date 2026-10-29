@@ -747,4 +747,25 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(document.querySelectorAll('[data-dcu-section-hidden="true"]').length).toBe(0)
     expect(document.querySelectorAll('[data-dcu-section-hidden="collapsing"]').length).toBe(0)
   })
+  it('展开箭头是手绘的一对三角：收起显示向右、展开显示向下', async () => {
+    mountFixture(['a'])
+    mount(['a'])
+    await waitForSync()
+    const header = headers().find(item => item.getAttribute(SECTION_HEADER_ATTR) === PINNED_SECTION_ID)!
+    const chevron = header.querySelector('.dcu-ws-section-chevron')!
+    const right = chevron.querySelector('.dcu-chevron-right')!
+    const down = chevron.querySelector('.dcu-chevron-down')!
+    expect(right).not.toBeNull()
+    expect(down).not.toBeNull()
+
+    // 默认是展开态：向下三角可见、向右三角隐藏。
+    expect(header.getAttribute('data-open')).toBe('true')
+    expect(getComputedStyle(right).opacity).toBe('0')
+    expect(getComputedStyle(down).opacity).toBe('1')
+
+    // 收起态：换成向右三角。
+    header.setAttribute('data-open', 'false')
+    expect(getComputedStyle(right).opacity).toBe('1')
+    expect(getComputedStyle(down).opacity).toBe('0')
+  })
 })
