@@ -42,6 +42,13 @@ test('座舱上沿必须有 16px 渐隐带，且靠 mask 淡出同一块底盘',
   expect(GLASS_EXTRA_CSS).toContain('mask-image: linear-gradient(180deg, transparent 0, #000 100%)')
 })
 
+test('云母浮动顶栏同样要补实底，正文不得透过悬浮顶栏显示', () => {
+  expect(GLASS_EXTRA_CSS).toContain('[data-dsh-glass-float] [data-phase] header:not([class*="headerBlank"])')
+  // 顶栏与座舱必须共用同一块「复制底盘 + 固定到视口」的背景，才能都做到无色差
+  expect(GLASS_EXTRA_CSS).toContain('var(--dsh-glass-ground-layers)')
+  expect(GLASS_EXTRA_CSS).toContain('[data-dsh-glass] body {')
+})
+
 test('输入框座舱遮挡：追加 CSS 必须排在生成 CSS 之后才能生效', () => {
   applyGlassSettings({ enabled: true, mode: 'mica', preset: 'standard' })
   const css = injectedCss()
