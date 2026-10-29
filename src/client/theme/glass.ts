@@ -56,6 +56,19 @@ const GLASS_EXTRA_CSS = `
   border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
   pointer-events: none !important;
 }
+
+/* 轨迹视图保持 100% 满宽排版，严禁被云母浮动模式缩减为居中窄列与圆角卡片 */
+[data-dsh-glass-float] [data-dsh-glass-trajectory],
+[data-dsh-glass] [data-dsh-glass-trajectory],
+[data-conversation-composer-overlay] {
+  width: 100% !important;
+  max-width: none !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
 `
 
 let styleTag: HTMLStyleElement | null = null
