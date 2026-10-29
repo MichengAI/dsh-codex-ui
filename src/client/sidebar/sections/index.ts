@@ -256,6 +256,8 @@ export function observeWorkspaceSections(
   let unsubscribe: (() => void) | undefined
   const headers = new Map<string, HTMLElement>()
   let menuHost: HTMLElement | undefined
+  /** 当前二级菜单的锚点（「分区」那一行），悬停重复触发时用来去重。 */
+  let assignAnchor: HTMLElement | undefined
 
   const workspaces = (): WorkspacesLike | undefined => {
     const service = (ctx as unknown as { get?: (name: string) => unknown }).get?.('workspaces')
@@ -693,6 +695,7 @@ export function observeWorkspaceSections(
   function closeSectionMenu(): void {
     menuHost?.remove()
     menuHost = undefined
+    assignAnchor = undefined
   }
 
   /**
@@ -1158,7 +1161,9 @@ export function observeWorkspaceSections(
     if (document.querySelector(`[${MENU_ITEM_ATTR}]`) !== null) return
     // 任意一个已渲染出行的菜单都算候选；宿主把菜单外壳与菜单项分两拍挂上来，
     // 所以「外壳在、行还没渲染」也要能用缓存模板立刻注入，否则用户会看到菜单先出来、置顶晚到。
-    const menus = Array.from(document.querySelectorAll<HTMLElement>('[role="menu"]'))
+    const menus = Array.from(document.querySelectorAll<HTMLElement>('[role="menu"]')).filter(
+      item => !isOwnPanel(item),
+    )
     const rendered = menus.filter(menu => menu.querySelector('button[role="menuitem"]') !== null)
     const menu = rendered[rendered.length - 1] ?? (hostMenuRowTemplate === undefined ? undefined : menus[menus.length - 1])
     if (menu === undefined) {
@@ -1184,7 +1189,7 @@ export function observeWorkspaceSections(
       hostMenuViewportTemplate =
         viewport === undefined || viewport === null ? undefined : (viewport.cloneNode(false) as HTMLElement)
     }
-    if (reference !== undefined && hostMenuRowTemplate === undefined) {
+    if (reference !== undefined && hostMenuRowTemplate === undefined && !isOwnPanel(reference)) {
       hostMenuRowTemplate = reference.parentElement?.cloneNode(true) as HTMLElement | undefined
       hostMenuSurface = menu
       hostMenuClassName = menu.className
@@ -1213,11 +1218,31 @@ export function observeWorkspaceSections(
     }
     if (sectionRow !== null) {
       const button = sectionRow.querySelector('button')
-      button?.addEventListener('click', event => {
-        event.preventDefault()
-        event.stopPropagation()
-        openAssignMenu(button, menu)
-      })
+      const anchorButton = button
+      if (anchorButton !== null) {
+        let hoverTimer: number | undefined
+        const cancelHover = (): void => {
+          if (hoverTimer === undefined) return
+          window.clearTimeout(hoverTimer)
+          hoverTimer = undefined
+        }
+        anchorButton.addEventListener('mouseenter', () => {
+          cancelHover()
+          // 悬停即展开（和 Codex 的「移动到项目」一样），留 90ms 防误触。
+          hoverTimer = window.setTimeout(() => {
+            hoverTimer = undefined
+            if (menuHost !== undefined && assignAnchor === anchorButton) return
+            openAssignMenu(anchorButton, menu)
+          }, 90)
+        })
+        anchorButton.addEventListener('mouseleave', cancelHover)
+        anchorButton.addEventListener('click', event => {
+          event.preventDefault()
+          event.stopPropagation()
+          cancelHover()
+          openAssignMenu(anchorButton, menu)
+        })
+      }
       container.insertBefore(sectionRow, reference?.parentElement ?? container.firstChild)
     }
   }
@@ -1238,6 +1263,7 @@ export function observeWorkspaceSections(
   let collapsed: Record<string, boolean> = readCollapsed()
 
   function openAssignMenu(anchor: HTMLElement, parentMenu?: HTMLElement): void {
+    assignAnchor = anchor
     const workspaceId = assigningWorkspaceId
     if (workspaceId === undefined) return
     const current = sectionOf(state, workspaceId)
@@ -1342,13 +1368,18 @@ export function observeWorkspaceSections(
   }
 
   /** 缓存宿主菜单的表面类名与行结构，供分区菜单复用（任意宿主菜单都可以当模板）。 */
+  /** 是不是我们自己画的面板（分区菜单）。宿主菜单模板绝不能取自它。 */
+  function isOwnPanel(element: Element | null | undefined): boolean {
+    return element instanceof Element && element.closest(`.${MENU_CLASS}`) !== null
+  }
+
   function cacheHostMenuTemplate(): void {
     if (hostMenuRowTemplate !== undefined && hostMenuRowTemplate.isConnected) {
       // 已缓存的模板就是新鲜节点，不必重取。
       return
     }
     const menu = Array.from(document.querySelectorAll<HTMLElement>('[role="menu"]')).find(
-      item => item.querySelector('button[role="menuitem"]') !== null,
+      item => item.querySelector('button[role="menuitem"]') !== null && !isOwnPanel(item),
     )
     const reference = menu?.querySelector<HTMLButtonElement>('button[role="menuitem"]')
     const wrapper = reference?.parentElement
