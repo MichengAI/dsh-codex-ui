@@ -99,11 +99,14 @@ const SECTIONS_CSS = `
 .dcu-ws-section.dcu-dragging{opacity:.4}
 [data-sidebar-collapsed='true'] .dcu-ws-section{display:none !important}
 .dcu-ws-section-drop{position:fixed;left:8px;right:8px;height:12px;pointer-events:none;z-index:40;background:linear-gradient(55deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 0 / 5px 7px no-repeat,linear-gradient(125deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 5px / 5px 7px no-repeat,linear-gradient(var(--dsw-alias-state-business-primary,#4f8cff) 0 0) 4px 5px / calc(100% - 4px) 2px no-repeat}
-.dcu-ws-section-menu{z-index:1000;min-width:184px;padding:5px;border-radius:12px;background:var(--dsw-alias-bg-layer-2,#2c2c2e);border:.5px solid var(--dsw-alias-border-l2,rgba(255,255,255,.14));box-shadow:0 12px 32px rgba(0,0,0,.32);backdrop-filter:blur(20px)}
-.dcu-ws-section-menu button{display:flex;align-items:center;gap:8px;width:100%;height:32px;padding:0 8px;text-align:left;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-primary,#f2f2f3);font:inherit;font-size:13px;cursor:pointer}
-.dcu-ws-section-menu .dcu-ws-section-menu-icon{display:grid;place-items:center;width:16px;height:16px;flex:none;opacity:.85}
+.dcu-ws-section-menu{position:fixed;z-index:1000;min-width:184px;max-width:280px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:4px;display:flex;flex-direction:column;gap:2px;border:none;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-menu-surface-fill,var(--dsw-alias-surface-overlay,#1e1e22));backdrop-filter:var(--dsw-menu-backdrop-filter,blur(40px) saturate(150%));-webkit-backdrop-filter:var(--dsw-menu-backdrop-filter,blur(40px) saturate(150%));box-shadow:var(--dsw-elevation-prominent,0 6px 20px rgba(0,0,0,.45));color:var(--dsw-alias-label-primary,#ededed)}
+/* 父菜单与二级菜单之间有一小段空隙：铺一条透明桥，指针穿过去时不会触发离开事件。 */
+.dcu-ws-section-menu[data-flyout='true']::before{content:'';position:absolute;top:0;bottom:0;left:-6px;width:8px}
+.dcu-ws-section-menu button{display:flex;align-items:center;gap:8px;width:100%;min-height:28px;padding:6px 10px;text-align:left;border:0;border-radius:var(--dsw-radius-sm,6px);background:transparent;color:inherit;font:inherit;font-size:13px;line-height:20px;cursor:pointer;transition:background-color .12s ease}
+.dcu-ws-section-menu .dcu-ws-section-menu-icon{display:grid;place-items:center;width:16px;height:16px;flex:none;color:var(--dsw-alias-label-secondary,#a1a1a6)}
+.dcu-ws-section-menu .dcu-ws-section-menu-icon:empty{display:none}
 .dcu-ws-section-menu .dcu-ws-section-menu-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dcu-ws-section-menu button:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.08))}
+.dcu-ws-section-menu button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.08))}
 .dcu-ws-section-menu button[aria-current='true']{color:var(--dsw-alias-state-business-primary,#4176e6)}
 .dcu-ws-section[data-dcu-section-fixed='true']{cursor:default}
 .dcu-ws-section[data-dcu-drop-target='true']{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.18));color:var(--dsw-alias-label-primary,inherit)}
@@ -732,22 +735,42 @@ export function observeWorkspaceSections(
       panel.appendChild(button)
     }
 
+    let leaveTimer: number | undefined
+    const cancelLeave = (): void => {
+      if (leaveTimer === undefined) return
+      window.clearTimeout(leaveTimer)
+      leaveTimer = undefined
+    }
+    panel.addEventListener('mouseenter', cancelLeave)
+    panel.addEventListener('mouseleave', () => {
+      cancelLeave()
+      leaveTimer = window.setTimeout(() => {
+        leaveTimer = undefined
+        closeSectionMenu()
+      }, 180)
+    })
+
     document.body.appendChild(panel)
     // 先变成 fixed 再量尺寸：块级 div 挂在 body 下会撑满整行，量出来的宽度没有意义。
-    panel.style.position = 'fixed'
     panel.style.left = '0px'
     panel.style.top = '0px'
     const rect = anchor.getBoundingClientRect()
     const width = panel.offsetWidth || 196
     const height = panel.offsetHeight || 120
-    // 从父菜单里点开的二级菜单：与宿主原生子菜单一致，贴着父菜单右侧弹出、与所点那一行对齐。
     const parentMenu =
       flyoutFrom?.isConnected === true ? flyoutFrom : anchor.closest<HTMLElement>('[role="menu"]')
     if (parentMenu !== null && parentMenu !== undefined) {
+      // 二级菜单：贴着父菜单右侧、与所点那一行顶部对齐；右侧不够就翻到左边。
+      panel.dataset.flyout = 'true'
       const parentRect = parentMenu.getBoundingClientRect()
-      let left = parentRect.right + 4
-      if (left + width > window.innerWidth - 8) left = Math.max(8, parentRect.left - width - 4)
-      const top = Math.max(8, Math.min(rect.top - 5, window.innerHeight - height - 8))
+      let left = parentRect.right + 2
+      if (left + width > window.innerWidth - 10) left = Math.max(10, parentRect.left - width - 4)
+      const maxHeight = Math.max(140, Math.min(360, window.innerHeight - 20))
+      panel.style.maxHeight = `${maxHeight}px`
+      let top = rect.top - 4
+      if (top + Math.min(height, maxHeight) > window.innerHeight - 10) {
+        top = Math.max(10, window.innerHeight - Math.min(height, maxHeight) - 10)
+      }
       panel.style.left = `${left}px`
       panel.style.top = `${top}px`
     } else {
@@ -1206,6 +1229,16 @@ export function observeWorkspaceSections(
     const pinRow = buildMenuRow(reference, pinned ? iconPinned() : iconPin(), text(pinned ? 'sections.unpin' : 'sections.pin', pinned ? '取消置顶' : '置顶'), MENU_ITEM_ATTR, hostMenuRowTemplate)
     const sectionRow = buildMenuRow(reference, iconSection(), text('sections.menu', '分区'), MENU_ITEM_ATTR, hostMenuRowTemplate)
 
+    /**
+     * 插到宿主菜单行所在的同一个父亲里、紧挨在第一条宿主行之前。
+     *
+     * 归档插件就是这么做的：先拿到宿主行的外层 wrapper，再把克隆行插进「wrapper 的父亲」。
+     * 这样我们的行和宿主的行是亲兄弟，共用同一块菜单表面；换成自己猜容器的话，
+     * 某些布局下（桌面端）拿到的会是外壳层，行就被渲染成一个独立浮层。
+     */
+    const hostWrap = reference?.parentElement ?? null
+    const hostParent = hostWrap?.parentElement ?? container
+    const insertBeforeNode = hostWrap !== null && hostWrap.parentElement === hostParent ? hostWrap : container.firstChild
     if (pinRow !== null) {
       const button = pinRow.querySelector('button')
       button?.addEventListener('click', event => {
@@ -1214,7 +1247,7 @@ export function observeWorkspaceSections(
         closeMenusByEscape()
         commitExplicit(assignWorkspace(state, workspaceId, pinned ? DEFAULT_SECTION_ID : PINNED_SECTION_ID))
       })
-      container.insertBefore(pinRow, reference?.parentElement ?? container.firstChild)
+      hostParent.insertBefore(pinRow, insertBeforeNode)
     }
     if (sectionRow !== null) {
       const button = sectionRow.querySelector('button')
@@ -1235,7 +1268,14 @@ export function observeWorkspaceSections(
             openAssignMenu(anchorButton, menu)
           }, 90)
         })
-        anchorButton.addEventListener('mouseleave', cancelHover)
+        anchorButton.addEventListener('mouseleave', () => {
+          cancelHover()
+          // 指针往右穿过空隙去二级菜单时不该收：留 180ms 宽限，二级菜单自己会续期。
+          hoverTimer = window.setTimeout(() => {
+            hoverTimer = undefined
+            if (assignAnchor === anchorButton) closeSectionMenu()
+          }, 180)
+        })
         anchorButton.addEventListener('click', event => {
           event.preventDefault()
           event.stopPropagation()
@@ -1243,7 +1283,8 @@ export function observeWorkspaceSections(
           openAssignMenu(anchorButton, menu)
         })
       }
-      container.insertBefore(sectionRow, reference?.parentElement ?? container.firstChild)
+      // 插在「置顶」后面，保证顺序是 置顶 → 分区 → 宿主自己的项。
+      hostParent.insertBefore(sectionRow, pinRow?.nextSibling ?? insertBeforeNode)
     }
   }
 
