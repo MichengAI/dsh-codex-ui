@@ -202,9 +202,8 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
   flex: none !important;
 }
 
-/* 彻底隐藏宿主原生的 settings.header 插槽内容，杜绝旧版宿主中原生“设置”文本复活并被挤到右边竖排折行 */
+/* 彻底隐藏宿主原生的 settings.header 插槽内容，杜绝原生“设置”文本复活并被挤到右边竖排折行 */
 [data-shortcut-modal="settings"] [data-slot="settings.header"],
-[data-shortcut-modal="settings"] > nav > :first-child > :not(.dcu-settings-nav-header-root),
 [data-shortcut-modal="settings"] [class*="navTitle"] > :not(.dcu-settings-nav-header-root) {
   display: none !important;
 }
