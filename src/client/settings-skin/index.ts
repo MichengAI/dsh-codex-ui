@@ -290,6 +290,7 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
 }
 
 /* 导航项列表容器 */
+[data-shortcut-modal="settings"] nav [class*="navList"],
 [data-shortcut-modal="settings"] > nav > :nth-child(2) {
   display: flex !important;
   flex-direction: column !important;
@@ -326,6 +327,7 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
 }
 
 /* 导航项按钮：Codex 原生胶囊形态（Capsule） */
+[data-shortcut-modal="settings"] nav button,
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button {
   box-sizing: border-box !important;
   display: flex !important;
@@ -343,8 +345,10 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
   cursor: pointer !important;
   transition: background 0.12s ease, color 0.12s ease !important;
   text-align: left !important;
+  width: 100% !important;
 }
 
+[data-shortcut-modal="settings"] nav button svg,
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button svg {
   width: 16px !important;
   height: 16px !important;
@@ -354,16 +358,21 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
   transition: color 0.12s ease !important;
 }
 
+[data-shortcut-modal="settings"] nav button:hover,
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button:hover {
   background: var(--dsw-specific-sidebar-nav-item-hover, var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.05))) !important;
   color: var(--dsw-alias-label-primary, #ffffff) !important;
 }
 
+[data-shortcut-modal="settings"] nav button:hover svg,
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button:hover svg {
   color: var(--dsw-alias-label-primary, #ffffff) !important;
 }
 
 /* 选中菜单项：纯正 Codex 胶囊激活态（Capsule Pill） */
+[data-shortcut-modal="settings"] nav button[aria-current="true"],
+[data-shortcut-modal="settings"] nav button[class*="active"],
+[data-shortcut-modal="settings"] nav [class*="navCell"][class*="active"],
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button[aria-current="true"],
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button[class*="active"] {
   background: var(--dsw-specific-sidebar-nav-item-active, var(--dsw-alias-interactive-bg-selected, rgba(255, 255, 255, 0.10))) !important;
@@ -371,11 +380,15 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
   font-weight: 500 !important;
 }
 
+[data-shortcut-modal="settings"] nav button[aria-current="true"] svg,
+[data-shortcut-modal="settings"] nav button[class*="active"] svg,
+[data-shortcut-modal="settings"] nav [class*="navCell"][class*="active"] svg,
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button[aria-current="true"] svg,
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button[class*="active"] svg {
   color: var(--dsw-alias-label-primary, #ffffff) !important;
 }
 
+[data-shortcut-modal="settings"] nav button:focus-visible,
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button:focus-visible {
   outline: 2px solid var(--dsw-alias-state-focus-ring, var(--dsw-static-deepseek-500, #4176e6)) !important;
   outline-offset: 1px !important;
@@ -620,11 +633,19 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [
   flex: none !important;
 }
 
-[data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] > * {
+[data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] > *,
+[data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] > * > *,
+[data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] [class*="section"],
+[data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] [class*="card"] {
+  box-sizing: border-box !important;
+}
+
+[data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] > :not([style*="display: contents"]):not([data-slot]),
+[data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] > * > *,
+[data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] [class*="section"] {
   width: 100% !important;
   max-width: 800px !important;
   margin-inline: auto !important;
-  box-sizing: border-box !important;
 }
 
 /* 浅色模式新版 Grid 兜底 */
