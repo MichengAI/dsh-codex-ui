@@ -1,6 +1,6 @@
 {
   "name": "@michengai/dsh-codex-ui",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "DSH Codex UI — 为 DeepSeek Harness 提供极速历史召回、全屏设置皮肤、原生物理毛玻璃换肤与模块化侧栏 · Input enhancement, settings skin, native glass theme, and modular sidebar for DSH",
   "license": "Apache-2.0",
   "publishConfig": {

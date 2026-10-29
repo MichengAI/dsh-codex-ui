@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.5 (2026-10-29)
+
+- **Fix Chat History Bleeding Through Composer (#69)**: Restore an opaque ground-aligned occlusion base and smooth top fade for the composer seat in glass and mica modes, eliminating text overlap and visual clutter where scrolled messages bled through the input card and status dock, while ensuring the last message remains fully legible when scrolled to the bottom.
+- **Eliminate Scrolled Content Bleeding Under Floating Mica Header**: Prevent conversation messages and pills from bleeding through the floating header, top margin, and rounded corners during scroll, gracefully fading out overlapped content while keeping the header's native border, drop shadow, and frosted glass texture intact.
+
 ## 2.0.4 (2026-10-29)
 
 - **Support Latest Host Versions**: Expand the host support matrix to officially support DeepSeek Harness latest RC (`0.2.1-rc.4`) and alpha (`0.2.2-alpha.2`).
