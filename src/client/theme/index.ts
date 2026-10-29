@@ -70,22 +70,34 @@ export function ensureThemeSurfaceStyles(doc: Document = typeof document !== 'un
     tag = doc.createElement('style')
     tag.id = THEME_SURFACE_STYLE_ID
     tag.textContent = `
-/* 彻底消除插件管理页顶栏与全局背景之间的色差：静止态保持背景透明，与全局背景底色与渐变自然融为一体；仅在滚动时呈现微透遮罩与磨砂 */
-[data-plugin-bar]:before {
+/* 彻底消除插件管理页顶栏与全局背景之间的色差：静止与滚动吸顶均保持底板透明，与全局背景底色与渐变自然融为一体；吸顶时仅保留微透磨砂与底部分割线 */
+[data-plugin-bar]:before,
+[class*="pageBar"]:before {
   background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   transition: background 0.15s ease !important;
 }
 
 [data-plugin-bar][data-scrolled]:before,
-[data-plugin-bar][data-compact]:before {
-  background: var(--dsw-alias-bg-base) !important;
+[data-plugin-bar][data-compact]:before,
+[class*="pageBar"][data-scrolled]:before,
+[class*="pageBar"][data-compact]:before {
+  background: transparent !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
 }
 
-[data-dsh-glass] [data-plugin-bar][data-scrolled]:before,
-[data-dsh-glass] [data-plugin-bar][data-compact]:before {
-  background: color-mix(in srgb, var(--dsh-glass-ground, var(--dsw-alias-bg-base)) 85%, transparent) !important;
-  backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
-  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+[data-plugin-bar][data-compact]:after,
+[class*="pageBar"][data-compact]:after,
+[data-plugin-bar][data-scrolled]:after,
+[class*="pageBar"][data-scrolled]:after {
+  content: "" !important;
+  position: absolute !important;
+  inset-inline: 0 !important;
+  bottom: 0 !important;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  pointer-events: none !important;
 }
 `
     doc.head.appendChild(tag)
