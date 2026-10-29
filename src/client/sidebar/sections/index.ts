@@ -92,7 +92,7 @@ const SECTIONS_CSS = `
 .dcu-ws-section-action:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.16))}
 .dcu-ws-section.dcu-dragging{opacity:.4}
 [data-sidebar-collapsed='true'] .dcu-ws-section{display:none !important}
-.dcu-ws-section-drop{position:fixed;left:8px;right:8px;height:2px;border-radius:2px;pointer-events:none;z-index:40;background:var(--dsw-alias-state-business-primary,#4f8cff)}
+.dcu-ws-section-drop{position:fixed;left:8px;right:8px;height:12px;pointer-events:none;z-index:40;background:linear-gradient(55deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 0 / 5px 7px no-repeat,linear-gradient(125deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 5px / 5px 7px no-repeat,linear-gradient(var(--dsw-alias-state-business-primary,#4f8cff) 0 0) 4px 5px / calc(100% - 4px) 2px no-repeat}
 .dcu-ws-section-menu{z-index:1000;min-width:184px;padding:5px;border-radius:12px;background:var(--dsw-alias-bg-layer-2,#2c2c2e);border:.5px solid var(--dsw-alias-border-l2,rgba(255,255,255,.14));box-shadow:0 12px 32px rgba(0,0,0,.32);backdrop-filter:blur(20px)}
 .dcu-ws-section-menu button{display:flex;align-items:center;gap:8px;width:100%;height:32px;padding:0 8px;text-align:left;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-primary,#f2f2f3);font:inherit;font-size:13px;cursor:pointer}
 .dcu-ws-section-menu .dcu-ws-section-menu-icon{display:grid;place-items:center;width:16px;height:16px;flex:none;opacity:.85}
@@ -495,7 +495,7 @@ export function observeWorkspaceSections(
     const rect = header.getBoundingClientRect()
     const line = document.createElement('div')
     line.className = 'dcu-ws-section-drop'
-    line.style.top = `${rect.bottom - 1}px`
+    line.style.top = `${rect.bottom - 6}px`
     line.style.left = `${rect.left}px`
     line.style.right = `${Math.max(0, window.innerWidth - rect.right)}px`
     document.body.appendChild(line)
@@ -818,7 +818,7 @@ export function observeWorkspaceSections(
     const rect = target.getBoundingClientRect()
     const line = document.createElement('div')
     line.className = 'dcu-ws-section-drop'
-    line.style.top = `${before ? rect.top : rect.bottom}px`
+    line.style.top = `${(before ? rect.top : rect.bottom) - 6}px`
     line.style.left = `${rect.left}px`
     line.style.right = `${Math.max(0, window.innerWidth - rect.right)}px`
     document.body.appendChild(line)

@@ -116,31 +116,46 @@ export const SIDEBAR_CSS = `
   cursor: grabbing !important;
 }
 
-/* 拖拽放置指示线 */
-.dcu-sb-row[data-drag-over="before"]::before {
-  content: "";
-  position: absolute;
-  top: -1px;
-  left: 6px;
-  right: 6px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--dsw-alias-brand-primary, #4176e6);
-  pointer-events: none;
-  z-index: 10;
-}
-
+/*
+ * 拖拽放置指示线：完全照搬宿主工作区树的落点线画法
+ * （12px 高的带子里，左端一个 5x7 的箭头 + 从 x=4 起、高 2px 的横线，颜色用宿主 business 状态色）。
+ * 这样侧栏导航和工作区树的落点线是同一个视觉语言，不再是两种粗细/两种颜色。
+ */
+.dcu-sb-row[data-drag-over="before"]::before,
 .dcu-sb-row[data-drag-over="after"]::after {
   content: "";
   position: absolute;
-  bottom: -1px;
-  left: 6px;
-  right: 6px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--dsw-alias-brand-primary, #4176e6);
+  left: 0;
+  right: 0;
+  height: 12px;
   pointer-events: none;
   z-index: 10;
+  background:
+    linear-gradient(
+        55deg,
+        transparent calc(50% - 1px),
+        var(--dsw-alias-state-business-primary, var(--dsw-alias-brand-primary, #4176e6)) calc(50% - 1px) calc(50% + 1px),
+        transparent calc(50% + 1px)
+      )
+      0 0 / 5px 7px no-repeat,
+    linear-gradient(
+        125deg,
+        transparent calc(50% - 1px),
+        var(--dsw-alias-state-business-primary, var(--dsw-alias-brand-primary, #4176e6)) calc(50% - 1px) calc(50% + 1px),
+        transparent calc(50% + 1px)
+      )
+      0 5px / 5px 7px no-repeat,
+    linear-gradient(var(--dsw-alias-state-business-primary, var(--dsw-alias-brand-primary, #4176e6)) 0 0) 4px 5px /
+      calc(100% - 4px) 2px no-repeat;
+}
+
+/* 12px 的带子里，横线落在第 5~7px，所以上移 6px 让横线正好压在行边界上。 */
+.dcu-sb-row[data-drag-over="before"]::before {
+  top: -6px;
+}
+
+.dcu-sb-row[data-drag-over="after"]::after {
+  bottom: -6px;
 }
 
 .dcu-sb-row[data-drag-over="onto"] {
