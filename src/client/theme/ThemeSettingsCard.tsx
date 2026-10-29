@@ -53,7 +53,7 @@ html[data-dsh-glass] .dcu-section-card {
   -webkit-backdrop-filter: none !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
-body:not([data-ds-dark-theme]) html[data-dsh-glass] .dcu-section-card {
+html[data-dsh-glass] body:not([data-ds-dark-theme]) .dcu-section-card {
   background: var(--dsw-alias-bg-layer-2, #ffffff) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }

@@ -97,6 +97,8 @@ export function isSubPluginDisabledOnDisk(id: string, homeDir?: string, ctx?: Co
         if (idRegex.test(block)) {
           if (/(?:^|\s)disabled:\s*true(?:\s|$)/m.test(block)) return true
           if (/(?:^|\s)disabled:\s*false(?:\s|$)/m.test(block)) return false
+          // 目标 id 明确存在于当前条目且未声明 disabled: true 时，确认为未停用，直接返回 false，避免落入跨条目正则误伤
+          return false
         }
       }
       // 2. 兜底支持嵌套 insert 块中的定义

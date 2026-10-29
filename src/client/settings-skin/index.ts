@@ -225,7 +225,9 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
   width: 100% !important;
 }
 
-.dcu-settings-back-btn {
+.dcu-settings-back-btn,
+button.dcu-settings-back-btn,
+[data-shortcut-modal="settings"] nav button.dcu-settings-back-btn {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -243,7 +245,9 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
   transition: color 0.12s ease, background 0.12s ease !important;
 }
 
-.dcu-settings-back-btn:hover {
+.dcu-settings-back-btn:hover,
+button.dcu-settings-back-btn:hover,
+[data-shortcut-modal="settings"] nav button.dcu-settings-back-btn:hover {
   background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.06)) !important;
   color: var(--dsw-alias-label-primary, #ffffff) !important;
 }
@@ -746,7 +750,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="optio
   position: absolute !important;
   top: 0 !important;
   left: 0 !important;
-  right: 0 !important;
+  right: 12px !important;
   margin: 0 !important;
   height: 56px !important;
   min-height: 56px !important;
@@ -1077,13 +1081,8 @@ export function observeSettingsSkin(_ctx?: Context): () => void {
     }
   }
 
-  // 1. 启动时立即预装样式（零延迟，避免打开弹层时从 800x800 小窗闪烁到全屏）
+  // 1. 启动时异步同步状态（受启用门控保护，停用态绝不预先注入样式或装饰 DOM）
   if (typeof document !== 'undefined') {
-    installSettingsSkin(document)
-    const existingModal = document.querySelector<HTMLElement>('[data-shortcut-modal="settings"]')
-    if (existingModal) {
-      cleanDecorator = decorateSettingsNav(existingModal)
-    }
     void sync()
   }
 
@@ -1095,10 +1094,12 @@ export function observeSettingsSkin(_ctx?: Context): () => void {
             ? node
             : node.querySelector<HTMLElement>('[data-shortcut-modal="settings"]')
           if (modal) {
-            // 确保样式预装，并同步执行装饰器，彻底消除等待网络请求导致的 1-2 秒小窗卡顿
-            installSettingsSkin(document)
-            cleanDecorator?.()
-            cleanDecorator = decorateSettingsNav(modal)
+            // 严格受启用状态门控：仅在已确认启用时才预装并装饰，停用态绝不提前注入样式
+            if (cachedSkinEnabledResult === true) {
+              installSettingsSkin(document)
+              cleanDecorator?.()
+              cleanDecorator = decorateSettingsNav(modal)
+            }
             void sync()
             return
           }

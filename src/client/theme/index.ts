@@ -268,16 +268,6 @@ export function changeGlass(options: {
 
 let globalCheckAndSync: (() => Promise<void>) | undefined
 
-/** 供外部（如关于页或弹窗交互）主动触发主题启用状态探活与同步 */
-export async function syncThemeState(): Promise<void> {
-  if (globalCheckAndSync) {
-    await globalCheckAndSync()
-  } else {
-    const enabled = await checkThemeEnabled()
-    setThemeSubPluginEnabled(enabled)
-  }
-}
-
 /**
  * 挂载并观察主题与外观增强：
  * - 注册全部 6 套内置主题至 ThemeRuntime；
@@ -300,11 +290,26 @@ export function observeTheme(ctx: ClientContext): () => void {
     }
   }
 
+  const applyCurrentState = (syncRuntime = true): void => {
+    if (disposed || !isThemeSubPluginEnabled()) return
+    const state = getThemeSettingsState()
+
+    // 1. 同步玻璃质感与排版模式
+    applyGlassSettings({
+      enabled: state.glassEnabled,
+      mode: state.glassMode,
+      preset: state.glassPreset,
+      glow: state.glassGlow,
+    })
+
+    // 2. 同步主题配色（受控同步宿主 ThemeRuntime）
+    applyThemeToDocument(state.themeOption, globalThemeRuntime ?? theme, syncRuntime)
+  }
+
   // 注册全部 6 套主题（4 套 Catppuccin + 2 套 Codex）
   if (theme) {
     registerThemesOnRuntime(theme)
-    const state = getThemeSettingsState()
-    applyThemeToDocument(state.themeOption, theme, true)
+    applyCurrentState(false)
   } else {
     // 服务注册时序兜底：当宿主 theme 服务稍晚就绪时自动补齐注册与状态同步
     let retries = 0
@@ -318,8 +323,7 @@ export function observeTheme(ctx: ClientContext): () => void {
         clearInterval(timer)
         globalThemeRuntime = lateTheme
         registerThemesOnRuntime(lateTheme)
-        const state = getThemeSettingsState()
-        applyThemeToDocument(state.themeOption, lateTheme, true)
+        applyCurrentState(false)
       } else if (++retries >= 100) {
         clearInterval(timer)
         console.warn('[codex-ui:theme] host theme service not ready after 5s polling, continuing with DOM-only fallback')
@@ -329,22 +333,6 @@ export function observeTheme(ctx: ClientContext): () => void {
   }
 
   let healTimer: ReturnType<typeof setInterval> | undefined
-
-  const applyCurrentState = (syncRuntime = true): void => {
-    if (disposed || !isThemeSubPluginEnabled()) return
-    const state = getThemeSettingsState()
-
-    // 1. 同步玻璃质感与排版模式
-    applyGlassSettings({
-      enabled: state.glassEnabled,
-      mode: state.glassMode,
-      preset: state.glassPreset,
-      glow: state.glassGlow,
-    })
-
-    // 2. 同步主题配色（首帧启动即同步宿主 ThemeRuntime）
-    applyThemeToDocument(state.themeOption, globalThemeRuntime ?? theme, syncRuntime)
-  }
 
   // 探活检查与自愈同步机制：
   // 1. 当服务端显式停用或端点未就绪时，fail-closed 回退官方原生，并彻底清除 190 个自定义 Token；
@@ -380,18 +368,8 @@ export function observeTheme(ctx: ClientContext): () => void {
         }, 3000)
       }
 
-      // 安全尝试将宿主主题还原为系统偏好，任何异常均安全捕获不阻断
-      try {
-        const curThemeRuntime = theme ?? globalThemeRuntime ?? (ctx.get('theme') as ThemeRuntime | undefined)
-        if (curThemeRuntime && typeof curThemeRuntime.setTheme === 'function') {
-          const cur = curThemeRuntime.getTheme?.()?.active?.id
-          if (ALL_BUILTIN_THEMES.some((t) => t.id === cur)) {
-            curThemeRuntime.setTheme('system')
-          }
-        }
-      } catch {
-        // 宿主 theme 抛错时安全忽略，不阻断自愈
-      }
+      // 严禁在此处调用 setTheme('system')！
+      // 宿主 setTheme 会经 settings 作用域写入持久化存储，绝不能在停用态静默篡改用户的全局偏好设置。
       return
     }
 
@@ -401,6 +379,7 @@ export function observeTheme(ctx: ClientContext): () => void {
     }
     // 翻转启用标记并广播，由 subscribeThemeSettings 自动触发状态恢复与 UI 重渲染
     setThemeSubPluginEnabled(true)
+    applyCurrentState(true)
   }
 
   globalCheckAndSync = checkAndSync

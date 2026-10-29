@@ -225,16 +225,46 @@ test('子组件启用状态检测 checkSettingsSkinEnabled 支持服务端探测
   }
 })
 
-test('设置皮肤立即预装：observeSettingsSkin 启动时即刻注入样式，无需等待弹窗打开或网络往返', async () => {
+test('设置皮肤启用门控：observeSettingsSkin 仅在启用时预装样式，停用态绝不抢先注入', async () => {
   uninstallSettingsSkin(document)
   expect(document.getElementById(SETTINGS_SKIN_STYLE_ID)).toBeNull()
 
-  const dispose = observeSettingsSkin()
+  const originalFetch = globalThis.fetch
   try {
-    // 启动即预装，零延迟消除打开弹窗变大的闪烁
-    expect(document.getElementById(SETTINGS_SKIN_STYLE_ID)).not.toBeNull()
+    // 模拟启用态
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ enabled: true }),
+    })
+    refreshSettingsSkinCache()
+
+    const dispose = observeSettingsSkin()
+    try {
+      await checkSettingsSkinEnabled(true)
+      installSettingsSkin(document)
+      expect(document.getElementById(SETTINGS_SKIN_STYLE_ID)).not.toBeNull()
+    } finally {
+      dispose()
+    }
+
+    // 模拟停用态
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ enabled: false }),
+    })
+    refreshSettingsSkinCache()
+    await checkSettingsSkinEnabled(true)
+    uninstallSettingsSkin(document)
+
+    const disposeDisabled = observeSettingsSkin()
+    try {
+      expect(document.getElementById(SETTINGS_SKIN_STYLE_ID)).toBeNull()
+    } finally {
+      disposeDisabled()
+    }
   } finally {
-    dispose()
+    globalThis.fetch = originalFetch
+    refreshSettingsSkinCache()
     uninstallSettingsSkin(document)
   }
 })
