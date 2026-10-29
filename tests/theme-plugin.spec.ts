@@ -23,6 +23,7 @@ import {
   GLASS_PRESETS,
   getThemeSettingsState,
   refreshThemeSettingsSnapshot,
+  restoreNativeThemePresentation,
   setThemeSubPluginEnabled,
   observeTheme,
   setGlassEnabled,
@@ -432,6 +433,22 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(fakeRuntime.setTheme).not.toHaveBeenCalled()
     expect(document.documentElement.style.colorScheme).toBe('dark')
     expect(document.documentElement.getAttribute('data-ds-theme-source')).toBe('dark')
+    expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
+  })
+
+  it('restoreNativeThemePresentation 契约防护：当宿主偏好为自定义深色主题（如 codex-dark）时，必须按 active.colorScheme 恢复且属性值合法', () => {
+    const fakeRuntime = {
+      register: vi.fn(),
+      getTheme: vi.fn(() => ({
+        preference: 'codex-dark',
+        active: { id: 'codex-dark', colorScheme: 'dark' as const },
+      })),
+      setTheme: vi.fn(),
+    }
+
+    restoreNativeThemePresentation(fakeRuntime as never)
+    expect(document.documentElement.dataset.dsThemeSource).toBe('dark')
+    expect(document.documentElement.style.colorScheme).toBe('dark')
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
   })
 
