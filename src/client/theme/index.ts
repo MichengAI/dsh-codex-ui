@@ -58,6 +58,46 @@ function tolerantRegistration(run: () => (() => void) | void): () => void {
 let lastAppliedTokens: string[] = []
 let hasAppliedCustomTheme = false
 
+export const THEME_SURFACE_STYLE_ID = 'dsh-codex-ui-theme-surface-style'
+
+/**
+ * 确保注入消除插件页等场景色差的全局表面样式
+ */
+export function ensureThemeSurfaceStyles(doc: Document = typeof document !== 'undefined' ? document : (undefined as unknown as Document)): void {
+  if (!doc) return
+  let tag = doc.getElementById(THEME_SURFACE_STYLE_ID) as HTMLStyleElement | null
+  if (!tag) {
+    tag = doc.createElement('style')
+    tag.id = THEME_SURFACE_STYLE_ID
+    tag.textContent = `
+/* 彻底消除插件管理页顶栏与全局背景之间的色差：静止态保持背景透明，与全局背景底色与渐变自然融为一体；仅在滚动时呈现微透遮罩与磨砂 */
+[data-plugin-bar]:before {
+  background: transparent !important;
+  transition: background 0.15s ease !important;
+}
+
+[data-plugin-bar][data-scrolled]:before,
+[data-plugin-bar][data-compact]:before {
+  background: var(--dsw-alias-bg-base) !important;
+}
+
+[data-dsh-glass] [data-plugin-bar][data-scrolled]:before,
+[data-dsh-glass] [data-plugin-bar][data-compact]:before {
+  background: color-mix(in srgb, var(--dsh-glass-ground, var(--dsw-alias-bg-base)) 85%, transparent) !important;
+  backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+}
+`
+    doc.head.appendChild(tag)
+  }
+}
+
+export function removeThemeSurfaceStyles(doc: Document = typeof document !== 'undefined' ? document : (undefined as unknown as Document)): void {
+  if (!doc) return
+  const tag = doc.getElementById(THEME_SURFACE_STYLE_ID)
+  if (tag) tag.remove()
+}
+
 /**
  * 将指定主题精准映射并深度应用到真实 DOM（双重保险，彻底压制并覆盖官方亮暗限制）
  */
@@ -70,6 +110,7 @@ export function applyThemeToDocument(
 
   // 物理熔断守卫：当主题子插件被停用时，绝不向 DOM 注入任何 Token，并清理已存在的残留
   if (!isThemeSubPluginEnabled()) {
+    removeThemeSurfaceStyles()
     for (const name of lastAppliedTokens) {
       document.body.style.removeProperty(name)
     }
@@ -80,6 +121,7 @@ export function applyThemeToDocument(
   const runtime = themeRuntime ?? globalThemeRuntime
 
   if (themeOption === 'stock') {
+    removeThemeSurfaceStyles()
     // 1. 清理自定义 Token 注入
     for (const name of lastAppliedTokens) {
       document.body.style.removeProperty(name)
@@ -112,6 +154,7 @@ export function applyThemeToDocument(
   if (!targetTheme) return
 
   hasAppliedCustomTheme = true
+  ensureThemeSurfaceStyles()
 
   // 1. 同步通知 ThemeRuntime（首帧启动不阻塞，用户交互时即时同步）
   if (syncRuntime && runtime && typeof runtime.setTheme === 'function') {

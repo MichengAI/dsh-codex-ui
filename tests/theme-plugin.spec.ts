@@ -512,4 +512,15 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
       setThemeSubPluginEnabled(true)
     }
   })
+
+  it('确保注入并清理消除插件页顶栏色差的全局表面样式', () => {
+    applyThemeToDocument('codex-dark')
+    const tag = document.getElementById('dsh-codex-ui-theme-surface-style')
+    expect(tag).not.toBeNull()
+    expect(tag?.textContent).toContain('[data-plugin-bar]:before')
+    expect(tag?.textContent).toContain('background: transparent !important')
+
+    applyThemeToDocument('stock')
+    expect(document.getElementById('dsh-codex-ui-theme-surface-style')).toBeNull()
+  })
 })

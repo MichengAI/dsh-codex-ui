@@ -26,6 +26,21 @@ export const GLASS_COMPAT_ATTRIBUTE = 'data-dsh-glass-compat'
 
 const STYLE_TAG_ID = 'dsh-codex-ui-glass-style'
 
+const GLASS_EXTRA_CSS = `
+/* 插件页顶栏色差彻底消除：静止态保持背景透明，与全局背景底色与渐变自然融为一体；滚动时呈现磨砂效果 */
+[data-dsh-glass] [data-plugin-bar]:before {
+  background: transparent !important;
+  transition: background 0.15s ease !important;
+}
+
+[data-dsh-glass] [data-plugin-bar][data-scrolled]:before,
+[data-dsh-glass] [data-plugin-bar][data-compact]:before {
+  background: color-mix(in srgb, var(--dsh-glass-ground, var(--dsw-alias-bg-base)) 85%, transparent) !important;
+  backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+}
+`
+
 let styleTag: HTMLStyleElement | null = null
 let seamDisposer: (() => void) | undefined
 
@@ -54,7 +69,7 @@ export function applyGlassSettings(options: {
     if (!styleTag) {
       styleTag = document.createElement('style')
       styleTag.id = STYLE_TAG_ID
-      styleTag.textContent = GLASS_CSS_TEXT
+      styleTag.textContent = GLASS_CSS_TEXT + GLASS_EXTRA_CSS
     }
   }
   if (!styleTag.isConnected) {

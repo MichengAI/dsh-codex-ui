@@ -580,6 +580,7 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [
   max-width: var(--dcu-settings-nav-width, 280px) !important;
   background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #121214)) !important;
   border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  border-bottom: none !important;
   padding: 16px 12px 12px 12px !important;
   margin: 0 !important;
   height: auto !important;
@@ -595,6 +596,7 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [
   max-width: var(--dcu-settings-nav-width, 280px) !important;
   background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #121214)) !important;
   border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  border-top: none !important;
   padding: 0 12px 24px !important;
   margin: 0 !important;
   overflow-y: auto !important;
@@ -706,6 +708,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="optio
   background: var(--dsh-glass-card, var(--dsw-alias-bg-layer-1)) !important;
   backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
   -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
 }
 
 html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > nav {
@@ -721,7 +724,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="optio
   background: var(--dsh-glass-card, var(--dsw-alias-bg-layer-1)) !important;
   backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
   -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
-  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)) !important;
 }
 
 html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] {
