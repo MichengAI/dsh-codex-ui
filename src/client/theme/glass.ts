@@ -26,7 +26,8 @@ export const GLASS_COMPAT_ATTRIBUTE = 'data-dsh-glass-compat'
 
 const STYLE_TAG_ID = 'dsh-codex-ui-glass-style'
 
-const GLASS_EXTRA_CSS = `
+/** 玻璃层追加样式（拼在生成 CSS 之后，同特异性下后者胜出）；导出以便契约测试断言 */
+export const GLASS_EXTRA_CSS = `
 /* 插件页顶栏色差彻底消除：静止与滚动吸顶均保持底板透明，与全局背景底色与渐变自然融为一体；吸顶时呈现纯净磨砂与细线悬浮效果 */
 [data-dsh-glass] [data-plugin-bar]:before,
 [data-dsh-glass] [class*="pageBar"]:before {
@@ -80,6 +81,39 @@ const GLASS_EXTRA_CSS = `
   background: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+/* 输入框座舱遮挡（Issue #69）：玻璃层把宿主 composerSeat 的原生 36px 渐变底板覆盖成了透明，
+   向上回看历史时正文会直接穿过输入卡片与底部 dock 区域；参考插件那条 dock 遮罩带又因色差被移除，
+   于是两层遮挡同时缺失。这里补回遮挡，拆成「座舱底板 + 上沿渐隐带」两段。
+   关键做法：底板不是拿一个近似色去铺，而是把全局底盘那三层渐变原样复制、并用 background-attachment: fixed
+   钉到视口上，于是座舱区域画出来的颜色与页面底色逐像素一致（实测 RGB 通道差 0），既彻底挡住正文，
+   又不会像纯色底板那样与渐变底盘产生横向色差。
+   渐隐带用 mask 淡出同一块底盘，同样不会出现色带；高度 16px 是因为实测最后一条消息底部与座舱顶部
+   正好留白 16px，渐隐带只覆盖这段空白，滚到底时不会把最后一条消息一起淡掉。 */
+[data-dsh-glass] [data-phase=active] [class*="composerSeat"][class*="composerSeat"],
+[data-dsh-glass] [data-content-phase=active] [class*="composerSeat"][class*="composerSeat"] {
+  --dsh-glass-seat-ground:
+    radial-gradient(58% 46% at 18% 6%, color-mix(in srgb, var(--dsw-alias-brand-primary-new-colorprimary-new-color) calc(12% * var(--dsh-glass-ambience) * var(--dsh-glass-glow,0)), transparent), transparent 68%),
+    radial-gradient(48% 42% at 86% 14%, color-mix(in srgb, var(--dsw-alias-state-success-tertiary) calc(10% * var(--dsh-glass-ambience) * var(--dsh-glass-glow,0)), transparent), transparent 62%),
+    linear-gradient(165deg, color-mix(in srgb, var(--dsh-glass-ground), var(--dsh-glass-wash-tint) calc(var(--dsh-glass-wash-mix) * var(--dsh-glass-ambience))) 0%, var(--dsh-glass-ground) 55%, color-mix(in srgb, var(--dsh-glass-ground), #000 calc(5% * var(--dsh-glass-ambience))) 100%);
+  background: var(--dsh-glass-seat-ground);
+  background-attachment: fixed;
+}
+
+[data-dsh-glass] [data-phase=active] [class*="composerSeat"][class*="composerSeat"]::before,
+[data-dsh-glass] [data-content-phase=active] [class*="composerSeat"][class*="composerSeat"]::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 100%;
+  height: 16px;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--dsh-glass-seat-ground);
+  background-attachment: fixed;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 100%);
 }
 `
 
