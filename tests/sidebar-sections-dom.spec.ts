@@ -1,0 +1,719 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  MENU_ITEM_ATTR,
+  SECTION_HEADER_ATTR,
+  collectProjectBlocks,
+  findWorkspaceList,
+  observeWorkspaceSections,
+} from '../src/client/sidebar/sections/index.ts'
+import { DEFAULT_SECTION_ID, PINNED_SECTION_ID } from '../src/client/sidebar/sections/model.ts'
+import { flushSectionsSave, setSectionsTransport } from '../src/client/sidebar/sections/store.ts'
+
+/** 宿主列表夹具：`.list > .groupSection > [data-row-key]`，与 rc.3 的实际结构一致。 */
+function mountFixture(ids: readonly string[]): HTMLElement {
+  const list = document.createElement('div')
+  list.className = 'list'
+  list.setAttribute('role', 'tree')
+  for (const id of ids) {
+    // 与宿主 0.2.1-rc.3 一致：list > groupSection > span > 项目行。
+    const group = document.createElement('div')
+    group.className = 'groupSection'
+    group.setAttribute('data-dcu-test-group', id)
+    const row = document.createElement('div')
+    row.setAttribute('data-row-key', `workspace:${id}`)
+    row.setAttribute('role', 'treeitem')
+    row.textContent = id
+    // 与宿主一致：操作区里第一颗是 ··· 菜单，第二颗是新建会话。
+    const actions = document.createElement('span')
+    actions.className = 'xyz_rowActions'
+    const menuButton = document.createElement('button')
+    menuButton.type = 'button'
+    menuButton.setAttribute('aria-label', `${id} 操作`)
+    menuButton.textContent = '···'
+    const newSessionButton = document.createElement('button')
+    newSessionButton.type = 'button'
+    newSessionButton.setAttribute('aria-label', `${id} 新建会话`)
+    newSessionButton.textContent = '+'
+    actions.appendChild(menuButton)
+    actions.appendChild(newSessionButton)
+    row.appendChild(actions)
+    const wrapper = document.createElement('span')
+    wrapper.className = 'rowWrapper'
+    wrapper.appendChild(row)
+    group.appendChild(wrapper)
+    list.appendChild(group)
+  }
+
+  // 真实宿主外面还套着「区块标题 + 列表区」：插件只认这一层里的树，
+  // 夹具必须还原它，否则会被当成频道/定时页签的树而跳过。
+  const region = document.createElement('div')
+  region.className = 'mockBrowser'
+  const header = document.createElement('div')
+  header.className = 'mock_sectionHeader'
+  const label = document.createElement('span')
+  label.className = 'mock_sectionLabel'
+  label.textContent = '工作区'
+  const headerActions = document.createElement('span')
+  headerActions.className = 'mock_headerActions'
+  for (const name of ['视图选项', '添加工作区']) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.setAttribute('aria-label', name)
+    headerActions.appendChild(button)
+  }
+  header.appendChild(label)
+  header.appendChild(headerActions)
+  const area = document.createElement('div')
+  area.className = 'mock_listArea'
+  area.appendChild(list)
+  region.appendChild(header)
+  region.appendChild(area)
+  document.body.appendChild(region)
+  return list
+}
+
+/** 假 workspaces 服务：insertBefore 同时重排 DOM，模拟宿主落库后的重渲染。 */
+function fakeWorkspaces(order: string[]) {
+  const state = { order: order.slice() }
+  const service = {
+    list: {
+      getSnapshot: () => ({ items: state.order.map(workspaceId => ({ workspaceId })) }),
+      subscribe: vi.fn(() => () => {}),
+    },
+    insertBefore: vi.fn(async (workspaceId: string, beforeWorkspaceId?: string) => {
+      const list = findWorkspaceList(document)
+      state.order = state.order.filter(id => id !== workspaceId)
+      const at = beforeWorkspaceId === undefined ? state.order.length : state.order.indexOf(beforeWorkspaceId)
+      state.order.splice(at === -1 ? state.order.length : at, 0, workspaceId)
+      if (list !== undefined) {
+        // 按新顺序把分组块依次搬过去，模拟宿主重排（块是 list 的直接子级）。
+        const blocks = new Map(collectProjectBlocks(document, list).map(item => [item.workspaceId, item.block]))
+        state.order.forEach(id => {
+          const block = blocks.get(id)
+          if (block !== undefined) list.appendChild(block)
+        })
+      }
+      return {}
+    }),
+  }
+  return { service, state }
+}
+
+/** 假宿主存储：分区文档现在由宿主接口持有，测试用它替代 localStorage。 */
+let hostDocument: string | null = null
+const seedSections = (document: unknown): void => {
+  hostDocument = JSON.stringify(document)
+}
+interface StoredSection {
+  id: string
+  name: string
+  ids: string[]
+}
+
+const readHostSections = (): { sections: StoredSection[] } => {
+  const parsed = JSON.parse(hostDocument ?? '{}') as { sections?: StoredSection[] }
+  return { sections: parsed.sections ?? [] }
+}
+
+/** 从假宿主文档里取出某个分区；断言失败时给出可读信息，而不是 undefined 崩掉。 */
+const hostSection = (id: string): StoredSection => {
+  const found = readHostSections().sections.find(section => section.id === id)
+  if (found === undefined) throw new Error(`宿主文档里没有分区 ${id}：${hostDocument ?? 'null'}`)
+  return found
+}
+
+const headers = (): HTMLElement[] =>
+  Array.from(document.querySelectorAll<HTMLElement>(`[${SECTION_HEADER_ATTR}]`))
+
+const headerIdsInDomOrder = (): string[] =>
+  headers().map(header => header.getAttribute(SECTION_HEADER_ATTR) ?? '')
+
+const blockIdsInDomOrder = (): string[] =>
+  Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]')).map(row =>
+    (row.getAttribute('data-row-key') ?? '').slice('workspace:'.length),
+  )
+
+const waitForSync = async (times = 6): Promise<void> => {
+  for (let i = 0; i < times; i += 1) {
+    await new Promise<void>(resolve => {
+      window.requestAnimationFrame(() => resolve())
+    })
+    await Promise.resolve()
+  }
+  // 分区文档现在是「合并 350ms 后写宿主」，断言前先把待写内容刷出去。
+  await flushSectionsSave()
+}
+
+describe('工作区分区：DOM 层', () => {
+  let dispose: (() => void) | undefined
+
+  beforeEach(() => {
+    document.body.innerHTML = ''
+    localStorage.clear()
+    hostDocument = null
+    setSectionsTransport({
+      load: async () => hostDocument,
+      save: async body => {
+        hostDocument = body
+        return true
+      },
+    })
+  })
+
+  afterEach(() => {
+    dispose?.()
+    dispose = undefined
+    setSectionsTransport(undefined)
+    document.body.innerHTML = ''
+    localStorage.clear()
+    vi.restoreAllMocks()
+  })
+
+  const mount = (ids: string[], ctxExtra: Record<string, unknown> = {}) => {
+    const fake = fakeWorkspaces(ids)
+    const ctx = {
+      get: (name: string) => (name === 'workspaces' ? fake.service : undefined),
+      ...ctxExtra,
+    }
+    dispose = observeWorkspaceSections(ctx as never)
+    return fake
+  }
+
+  it('首次同步把未归类的工作区全部落进兜底分区，并渲染两个内置标题', async () => {
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+    expect(headerIdsInDomOrder()).toEqual([PINNED_SECTION_ID, DEFAULT_SECTION_ID])
+expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
+  })
+
+  it('标题按分区成员的位置插入，顺序与分区一致', async () => {
+    seedSections({
+        sections: [
+          { id: PINNED_SECTION_ID, name: '置顶', ids: ['b'] },
+          { id: 's1', name: '客户项目', ids: ['c'] },
+          { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a'] },
+        ],
+      })
+    mountFixture(['a', 'b', 'c'])
+    mount(['a', 'b', 'c'])
+    await waitForSync()
+    // 宿主顺序被写成 b,c,a；标题各自贴在自己第一个分组块前。
+    expect(blockIdsInDomOrder()).toEqual(['b', 'c', 'a'])
+    expect(headerIdsInDomOrder()).toEqual([PINNED_SECTION_ID, 's1', DEFAULT_SECTION_ID])
+  })
+
+  it('空分区把标题插在下一个分区之前，而不是被挤到列表末尾', async () => {
+    seedSections({
+        sections: [
+          { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+          { id: 's1', name: '客户项目', ids: ['b'] },
+          { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a'] },
+        ],
+      })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+    expect(headerIdsInDomOrder()).toEqual([PINNED_SECTION_ID, 's1', DEFAULT_SECTION_ID])
+  })
+
+  it('顺序已一致时不再写宿主', async () => {
+    seedSections({
+        sections: [
+          { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+          { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b'] },
+        ],
+      })
+    mountFixture(['a', 'b'])
+    const fake = mount(['a', 'b'])
+    await waitForSync()
+    expect(fake.service.insertBefore).not.toHaveBeenCalled()
+  })
+
+
+  it('用户在原生树上拖动项目后，归属跟着新位置更新（不需要我们写顺序）', async () => {
+    seedSections({
+        sections: [
+          { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+          { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b', 'c'] },
+        ],
+      })
+    mountFixture(['a', 'b', 'c'])
+    const fake = mount(['a', 'b', 'c'])
+    await waitForSync()
+    const callsBefore = fake.service.insertBefore.mock.calls.length
+
+    // 模拟用户把 c 拖到最上面：宿主自行重排 DOM，我们只观察结果。
+    const list = document.querySelector<HTMLElement>('.list')!
+    const groups = new Map<string, HTMLElement>()
+    for (const row of Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))) {
+      groups.set((row.getAttribute('data-row-key') ?? '').slice('workspace:'.length), row.parentElement as HTMLElement)
+    }
+    for (const id of ['c', 'a', 'b']) list.appendChild(groups.get(id)!)
+    await waitForSync(10)
+
+    const pinned = hostSection(PINNED_SECTION_ID)
+    const fallback = hostSection(DEFAULT_SECTION_ID)
+    expect(pinned.ids).toEqual(['c', 'a'])
+    expect(fallback.ids).toEqual(['b'])
+    // 顺序已经是用户拖出来的样子，不应再写宿主。
+    expect(fake.service.insertBefore.mock.calls.length).toBe(callsBefore)
+  })
+
+  it('卸载后标题、菜单与存储写入全部撤销', async () => {
+    mountFixture(['a'])
+    mount(['a'])
+    await waitForSync()
+    expect(headers()).toHaveLength(2)
+    dispose?.()
+    dispose = undefined
+    expect(headers()).toHaveLength(0)
+    expect(document.querySelector(`.dcu-ws-section-menu`)).toBeNull()
+  })
+
+  it('collectProjectBlocks 与 findWorkspaceList 能定位宿主结构', () => {
+    const list = mountFixture(['a', 'b'])
+    expect(findWorkspaceList(document)).toBe(list)
+    expect(collectProjectBlocks(document).map(block => block.workspaceId)).toEqual(['a', 'b'])
+    // 分组块必须落在 list 的直接子级上，标题才有地方插。
+    expect(collectProjectBlocks(document)[0]!.block.parentElement).toBe(list)
+  })
+
+  it('标题是列表的直接子节点，并且紧贴各自的分组块', async () => {
+    seedSections({
+        sections: [
+          { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+          { id: 's1', name: '客户项目', ids: ['b'] },
+          { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a'] },
+        ],
+      })
+    const list = mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+    const headers = Array.from(list.children).filter(child => child.hasAttribute(SECTION_HEADER_ATTR))
+    expect(headers.map(node => node.getAttribute(SECTION_HEADER_ATTR))).toEqual([
+      PINNED_SECTION_ID,
+      's1',
+      DEFAULT_SECTION_ID,
+    ])
+    const blockOf = (id: string): Element => {
+      const group = list.querySelector(`[data-dcu-test-group="${id}"]`)
+      expect(group).not.toBeNull()
+      return group as Element
+    }
+    // 标题必须排在它的分组块之前（文档序），这是「贴住分区」的判据。
+    const precedes = (header: Element, block: Element): boolean =>
+      (header.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+    expect(precedes(headers[1]!, blockOf('b'))).toBe(true)
+    expect(precedes(headers[2]!, blockOf('a'))).toBe(true)
+    expect(precedes(headers[0]!, blockOf('b'))).toBe(true)
+  })
+
+  it('点击项目行菜单按钮后，在宿主菜单顶部追加「置顶」「分区」两行', async () => {
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    // 宿主菜单：role=menu > 每条一行 div > button[role=menuitem](图标 span + 文案 span)
+    const menu = document.createElement('div')
+    menu.setAttribute('role', 'menu')
+    const hostRow = document.createElement('div')
+    hostRow.className = 'hostRow'
+    const hostItem = document.createElement('button')
+    hostItem.type = 'button'
+    hostItem.setAttribute('role', 'menuitem')
+    hostItem.className = 'hostItem'
+    const hostIcon = document.createElement('span')
+    hostIcon.className = 'hostIcon'
+    hostIcon.innerHTML = '<svg></svg>'
+    const hostLabel = document.createElement('span')
+    hostLabel.className = 'hostLabel'
+    hostLabel.textContent = '重命名'
+    hostItem.append(hostIcon, hostLabel)
+    hostRow.appendChild(hostItem)
+    menu.appendChild(hostRow)
+    document.body.appendChild(menu)
+
+    document.querySelector<HTMLButtonElement>('button[aria-label="a 操作"]')!.click()
+    await new Promise<void>(resolve => {
+      window.setTimeout(resolve, 0)
+    })
+
+    // MENU_ITEM_ATTR 打在按钮上；行容器是宿主的 wrapper div。
+    const injected = Array.from(menu.querySelectorAll<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`))
+    expect(injected).toHaveLength(2)
+    expect(menu.children).toHaveLength(3)
+    expect(menu.children[2]).toBe(hostRow)
+    expect(menu.children[0]!.querySelector(`[${MENU_ITEM_ATTR}]`)).toBe(injected[0])
+    expect(menu.children[1]!.querySelector(`[${MENU_ITEM_ATTR}]`)).toBe(injected[1])
+
+    const [pinButton, sectionButton] = injected as [HTMLButtonElement, HTMLButtonElement]
+    // 整行克隆宿主的类名与结构，样式因此与「重命名」完全一致。
+    expect(pinButton.parentElement?.className).toBe('hostRow')
+    expect(pinButton.className).toBe('hostItem')
+    expect(pinButton.querySelector('span')?.innerHTML).toContain('svg')
+    expect(pinButton.querySelectorAll('span')[1]?.textContent).toBe('置顶')
+    expect(sectionButton.querySelectorAll('span')[1]?.textContent).toBe('分区')
+    expect(hostItem.textContent).toBe('重命名')
+  })
+
+  it('菜单里的「置顶」行能把项目移进内置置顶分区', async () => {
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    const menu = document.createElement('div')
+    menu.setAttribute('role', 'menu')
+    const hostRow = document.createElement('div')
+    hostRow.className = 'hostRow'
+    const hostItem = document.createElement('button')
+    hostItem.setAttribute('role', 'menuitem')
+    hostItem.className = 'hostItem'
+    const hostIcon = document.createElement('span')
+    hostIcon.innerHTML = '<svg></svg>'
+    const hostLabel = document.createElement('span')
+    hostLabel.textContent = '重命名'
+    hostItem.append(hostIcon, hostLabel)
+    hostRow.appendChild(hostItem)
+    menu.appendChild(hostRow)
+    document.body.appendChild(menu)
+
+    document.querySelector<HTMLButtonElement>('button[aria-label="a 操作"]')!.click()
+    await new Promise<void>(resolve => {
+      window.setTimeout(resolve, 0)
+    })
+    const pinButton = document.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!
+    expect(pinButton.textContent).toContain('置顶')
+    pinButton.click()
+    await waitForSync()
+
+    const pinned = hostSection(PINNED_SECTION_ID)
+    expect(pinned.ids).toEqual(['a'])
+  })
+
+  it('点同一行的「新建会话」按钮不会注入菜单项', async () => {
+    mountFixture(['a'])
+    mount(['a'])
+    await waitForSync()
+    const menu = document.createElement('div')
+    menu.setAttribute('role', 'menu')
+    document.body.appendChild(menu)
+    document.querySelector<HTMLButtonElement>('button[aria-label="a 新建会话"]')!.click()
+    await new Promise<void>(resolve => {
+      window.setTimeout(resolve, 0)
+    })
+    expect(document.querySelector(`[${MENU_ITEM_ATTR}]`)).toBeNull()
+  })
+  it('频道/定时页签里的树（不在工作区块内）不插分区标题', async () => {
+    // 只有 list，外面没有「区块标题 + 操作按钮」这一层，等同于其它页签的列表。
+    const stray = document.createElement('div')
+    stray.className = 'list'
+    stray.setAttribute('role', 'tree')
+    const group = document.createElement('div')
+    group.className = 'groupSection'
+    const row = document.createElement('div')
+    row.setAttribute('data-row-key', 'workspace:x')
+    row.textContent = 'x'
+    group.appendChild(row)
+    stray.appendChild(group)
+    document.body.appendChild(stray)
+
+    mount(['x'])
+    await waitForSync()
+    expect(headers()).toHaveLength(0)
+  })
+
+  it('未分组桶归属于「项目」分区：跟着缩进并跟着折叠', async () => {
+    const list = mountFixture(['a'])
+    // 宿主把未归类的工作区放在 `workspace:`（空 id）这个桶里。
+    const ungrouped = document.createElement('div')
+    ungrouped.className = 'groupSection'
+    const row = document.createElement('div')
+    row.setAttribute('data-row-key', 'workspace:')
+    row.textContent = '未分组'
+    ungrouped.appendChild(row)
+    list.appendChild(ungrouped)
+
+    mount(['a'])
+    await waitForSync()
+    expect(ungrouped.getAttribute('data-dcu-section-member')).toBe(DEFAULT_SECTION_ID)
+
+    const defaultHeader = headers().find(header => header.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+    defaultHeader.click()
+    await waitForSync()
+    expect(ungrouped.getAttribute('data-dcu-section-hidden')).toBe('true')
+  })
+
+  it('内置分区有 ···（只提供「新建分区」），且不可拖动', async () => {
+    mountFixture(['a'])
+    mount(['a'])
+    await waitForSync()
+    for (const id of [PINNED_SECTION_ID, DEFAULT_SECTION_ID]) {
+      const header = headers().find(item => item.getAttribute(SECTION_HEADER_ATTR) === id)!
+      expect(header.draggable).toBe(false)
+      const button = header.querySelector<HTMLElement>('.dcu-ws-section-actions button')
+      expect(button).not.toBeNull()
+      button!.click()
+      await waitForSync(2)
+      const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+      const labels = Array.from(panel.querySelectorAll('button')).map(item => item.textContent?.trim())
+      // 内置分区不给改名、不给移除，只留「新建分区」入口。
+      expect(labels).toEqual(['新建分区'])
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+      await waitForSync(2)
+    }
+  })
+
+  it('分区菜单右边缘贴住「···」右边缘，向左展开', async () => {
+    seedSections({
+        sections: [
+          { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+          { id: 's1', name: '测试分区', ids: ['a'] },
+          { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+        ],
+      })
+    mountFixture(['a'])
+    mount(['a'])
+    await waitForSync()
+
+    const custom = headers().find(header => header.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+    const button = custom.querySelector<HTMLElement>('.dcu-ws-section-actions button')!
+    button.click()
+    await waitForSync(2)
+
+    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    expect(panel).not.toBeNull()
+    const menu = panel.getBoundingClientRect()
+    const anchor = button.getBoundingClientRect()
+    // 允许 1px 的取整误差。
+    expect(Math.abs(menu.right - anchor.right)).toBeLessThanOrEqual(1)
+  })
+  it('项目行上的拖动不再由插件接管（落点线交给宿主）', async () => {
+    mountFixture(['a', 'b', 'c'])
+    mount(['a', 'b', 'c'])
+    await waitForSync()
+
+    const dataTransfer = { dropEffect: '', effectAllowed: '', setData: () => {}, getData: () => '' }
+    const drag = (type: string, clientY: number): Event => {
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer })
+      Object.defineProperty(event, 'clientY', { value: clientY })
+      return event
+    }
+    const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))
+    const rect = { top: 100, bottom: 132, height: 32, left: 0, right: 120, width: 120, x: 0, y: 100, toJSON: () => ({}) }
+    vi.spyOn(rows[2]!, 'getBoundingClientRect').mockReturnValue(rect as DOMRect)
+
+    rows[0]!.dispatchEvent(drag('dragstart', rect.top))
+    const over = drag('dragover', rect.bottom - 1)
+    rows[2]!.dispatchEvent(over)
+    // 不 preventDefault、不画自己的线：宿主原生落点线与落位逻辑全程接管。
+    expect(over.defaultPrevented).toBe(false)
+    expect(document.querySelector('.dcu-ws-section-drop')).toBeNull()
+    expect(document.body.classList.contains('dcu-project-drag')).toBe(false)
+    document.dispatchEvent(drag('dragend', rect.bottom - 1))
+  })
+
+  it('菜单里选自定义分区后，项目真的移动到那个分区（不是只写存储）', async () => {
+    seedSections({
+        sections: [
+          { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+          { id: 's1', name: '客户项目', ids: [] },
+          { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a', 'b', 'c'] },
+        ],
+      })
+    mountFixture(['a', 'b', 'c'])
+    mount(['a', 'b', 'c'])
+    await waitForSync()
+    expect(blockIdsInDomOrder()).toEqual(['a', 'b', 'c'])
+
+    // 宿主菜单：role=menu > 行 > button[role=menuitem](图标 + 文案)
+    const menu = document.createElement('div')
+    menu.setAttribute('role', 'menu')
+    const hostRow = document.createElement('div')
+    const hostItem = document.createElement('button')
+    hostItem.type = 'button'
+    hostItem.setAttribute('role', 'menuitem')
+    const icon = document.createElement('span')
+    icon.innerHTML = '<svg></svg>'
+    const label = document.createElement('span')
+    label.textContent = '重命名'
+    hostItem.append(icon, label)
+    hostRow.appendChild(hostItem)
+    menu.appendChild(hostRow)
+    document.body.appendChild(menu)
+
+    // 打开「c」这一行的菜单，点我们注入的「分区」，再选自定义分区。
+    document.querySelector<HTMLButtonElement>('button[aria-label="c 操作"]')!.click()
+    await new Promise<void>(resolve => {
+      window.setTimeout(resolve, 0)
+    })
+    const sectionButton = Array.from(document.querySelectorAll<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)).find(
+      button => button.textContent?.includes('分区'),
+    )!
+    sectionButton.click()
+    await waitForSync(2)
+
+    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    const target = Array.from(panel.querySelectorAll<HTMLButtonElement>('button')).find(
+      button => button.textContent?.trim() === '客户项目',
+    )!
+    target.click()
+    await waitForSync(12)
+
+    // 自定义分区在「项目」之前，所以成员整体前置：c 排到最前面。
+    expect(blockIdsInDomOrder()).toEqual(['c', 'a', 'b'])
+    const custom = hostSection('s1')
+    expect(custom.ids).toEqual(['c'])
+    // 标题顺序仍按分区顺序。
+    expect(headerIdsInDomOrder()).toEqual([PINNED_SECTION_ID, 's1', DEFAULT_SECTION_ID])
+  })
+  it('连续两次改归属不会互相打断（写入串行，最终以最后一次为准）', async () => {
+    seedSections({
+        sections: [
+          { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+          { id: 's1', name: '客户项目', ids: [] },
+          { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a', 'b', 'c'] },
+        ],
+      })
+    mountFixture(['a', 'b', 'c'])
+    mount(['a', 'b', 'c'])
+    await waitForSync()
+
+    const hostMenu = () => {
+      const existing = document.querySelector('[role="menu"]')
+      if (existing !== null) return existing
+      const menu = document.createElement('div')
+      menu.setAttribute('role', 'menu')
+      const row = document.createElement('div')
+      const item = document.createElement('button')
+      item.type = 'button'
+      item.setAttribute('role', 'menuitem')
+      const icon = document.createElement('span')
+      icon.innerHTML = '<svg></svg>'
+      const label = document.createElement('span')
+      label.textContent = '重命名'
+      item.append(icon, label)
+      row.appendChild(item)
+      menu.appendChild(row)
+      document.body.appendChild(menu)
+      return menu
+    }
+
+    const assignTo = async (workspaceLabel: string): Promise<void> => {
+      hostMenu()
+      const menu = document.querySelector('[role="menu"]')!
+      // 每次都重新开一次宿主菜单，模拟用户两次操作
+      document.querySelector<HTMLButtonElement>(`button[aria-label="${workspaceLabel} 操作"]`)!.click()
+      await new Promise<void>(resolve => {
+        window.setTimeout(resolve, 0)
+      })
+      const sectionButton = Array.from(menu.querySelectorAll<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)).find(
+        button => button.textContent?.includes('分区'),
+      )
+      if (sectionButton === undefined) return
+      sectionButton.click()
+      await waitForSync(2)
+      const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')
+      const target = Array.from(panel?.querySelectorAll<HTMLButtonElement>('button') ?? []).find(
+        button => button.textContent?.trim() === '客户项目',
+      )
+      target?.click()
+    }
+
+    await assignTo('c')
+    await assignTo('b')
+    await waitForSync(14)
+
+    // 两次都进了自定义分区，且顺序按最后一次落点收敛，没有被第一次的写入打断。
+    const custom = hostSection('s1')
+    expect(custom.ids.slice().sort()).toEqual(['b', 'c'])
+    const order = blockIdsInDomOrder()
+    expect(order.filter(id => id === 'b' || id === 'c')).toEqual(custom.ids)
+  })
+  it('空分区也能接住拖进来的项目（落在分区标题上）', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a', 'b'] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+    expect(hostSection(PINNED_SECTION_ID).ids).toEqual([])
+
+    const pinnedHeader = headers().find(header => header.getAttribute(SECTION_HEADER_ATTR) === PINNED_SECTION_ID)!
+    const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))
+    const source = rows[1]!
+    const dataTransfer = { dropEffect: '', effectAllowed: '', setData: () => {}, getData: () => '' }
+    const drag = (type: string, target: Element): Event => {
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer })
+      Object.defineProperty(event, 'clientY', { value: 0 })
+      Object.defineProperty(event, 'target', { value: target })
+      return event
+    }
+
+    source.dispatchEvent(Object.assign(new Event('dragstart', { bubbles: true }), {}))
+    // 直接命中分区标题：空分区没有项目行，只能从这里落进去。
+    pinnedHeader.dispatchEvent(drag('dragover', pinnedHeader))
+    expect(pinnedHeader.getAttribute('data-dcu-drop-target')).toBe('true')
+    expect(document.querySelector('.dcu-ws-section-drop')).not.toBeNull()
+
+    pinnedHeader.dispatchEvent(drag('drop', pinnedHeader))
+    await waitForSync(12)
+
+    expect(hostSection(PINNED_SECTION_ID).ids).toEqual(['b'])
+    expect(blockIdsInDomOrder()).toEqual(['b', 'a'])
+    expect(pinnedHeader.hasAttribute('data-dcu-drop-target')).toBe(false)
+  })
+
+  it('把一个项目移到别的分区只写一次宿主顺序（不再整表重写）', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '客户项目', ids: [] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a', 'b', 'c'] },
+      ],
+    })
+    mountFixture(['a', 'b', 'c'])
+    const fake = mount(['a', 'b', 'c'])
+    await waitForSync()
+    fake.service.insertBefore.mockClear()
+
+    const menu = document.createElement('div')
+    menu.setAttribute('role', 'menu')
+    const hostRow = document.createElement('div')
+    const hostItem = document.createElement('button')
+    hostItem.type = 'button'
+    hostItem.setAttribute('role', 'menuitem')
+    const icon = document.createElement('span')
+    icon.innerHTML = '<svg></svg>'
+    const label = document.createElement('span')
+    label.textContent = '重命名'
+    hostItem.append(icon, label)
+    hostRow.appendChild(hostItem)
+    menu.appendChild(hostRow)
+    document.body.appendChild(menu)
+
+    document.querySelector<HTMLButtonElement>('button[aria-label="c 操作"]')!.click()
+    await new Promise<void>(resolve => {
+      window.setTimeout(resolve, 0)
+    })
+    const sectionButton = Array.from(document.querySelectorAll<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)).find(
+      button => button.textContent?.includes('分区'),
+    )!
+    sectionButton.click()
+    await waitForSync(2)
+    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    Array.from(panel.querySelectorAll<HTMLButtonElement>('button'))
+      .find(button => button.textContent?.trim() === '客户项目')!
+      .click()
+    await waitForSync(12)
+
+    // 一次移动 = 一次 insertBefore；整表重写会写出 3 次，宿主就要重渲染 3 次（卡顿来源）。
+    expect(fake.service.insertBefore.mock.calls.length).toBeLessThanOrEqual(1)
+    expect(hostSection('s1').ids).toEqual(['c'])
+  })
+})

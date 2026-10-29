@@ -3,6 +3,13 @@ import type { Context } from '@deepseek-ai/cordis'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
 import { canRequestParentReload, dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, resolveDependencyRuntime, scheduleParentPluginReload, updateAllDependencies } from './dependency-manager.ts'
 import { hostServices } from './host-services.ts'
+import {
+  SectionsDocumentError,
+  SECTIONS_STORE_MAX_BYTES,
+  readSectionsDocument,
+  validateSectionsDocument,
+  writeSectionsDocument,
+} from './sections-store.ts'
 
 const dependenciesEndpoint = CODEX_UI_API_ENDPOINTS.dependencies
 
@@ -150,9 +157,64 @@ export function apply(ctx: Context): void {
         }
       },
     })
+    /**
+     * 工作区分区：结构与归属由宿主落盘（当前 profile 的 plugin-data 下），浏览器只留折叠这类视图偏好。
+     * 对齐 Codex：`thread_sections` + `threads.thread_section_id` 在宿主，折叠状态在客户端。
+     */
+    const disposeSections = host.webServer.register({
+      kind: 'exact',
+      path: CODEX_UI_API_ENDPOINTS.sections,
+      handler: async (request, response) => {
+        if (!authenticateBusinessRequest(ctx, request, response)) return
+        const json = (status: number, body: unknown): void => {
+          response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+          response.end(JSON.stringify(body))
+        }
+        try {
+          if (request.method === 'GET') {
+            const document = readSectionsDocument(ctx)
+            json(200, document ?? { version: 1, sections: [] })
+            return
+          }
+          if (request.method !== 'POST' && request.method !== 'PUT') {
+            response.writeHead(405)
+            response.end()
+            return
+          }
+          const body = await readRequestBody(request, SECTIONS_STORE_MAX_BYTES)
+          if (body.trim() === '') {
+            json(400, { error: '缺少分区数据。' })
+            return
+          }
+          let parsed: unknown
+          try {
+            parsed = JSON.parse(body)
+          } catch {
+            json(400, { error: '分区数据不是合法 JSON。' })
+            return
+          }
+          const document = validateSectionsDocument(parsed)
+          writeSectionsDocument(ctx, document)
+          json(200, { ok: true, sections: document.sections.length })
+        } catch (error) {
+          if (error instanceof SectionsDocumentError) {
+            json(400, { error: error.message })
+            return
+          }
+          if (error instanceof RequestBodyTooLargeError) {
+            json(413, { error: '分区数据过大。' })
+            return
+          }
+          ctx.logger.warn('sections endpoint failed: %s', error)
+          json(503, { error: '分区存储暂不可用。' })
+        }
+      },
+    })
+
     return () => {
       disposeDependencyInstaller()
       disposeDependencies()
+      disposeSections?.()
     }
   }, 'michengai-codex-ui: catalogs')
 }

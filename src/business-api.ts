@@ -5,5 +5,6 @@ export const CODEX_UI_API_ENDPOINTS = Object.freeze({
   settingsSkin: `${CODEX_UI_API_BASE}/settings-skin`,
   composer: `${CODEX_UI_API_BASE}/composer`,
   sidebar: `${CODEX_UI_API_BASE}/sidebar`,
+  sections: `${CODEX_UI_API_BASE}/sections`,
   theme: `${CODEX_UI_API_BASE}/theme`,
 })

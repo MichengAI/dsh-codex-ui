@@ -7,9 +7,11 @@ import { Context } from '@deepseek-ai/cordis'
 import { HostConnectionService } from '@deepseek-ai/dsh-client-connection'
 
 const dependenciesPath = '/api/michengai/dsh-codex-ui/dependencies'
+const sectionsPath = '/api/michengai/dsh-codex-ui/sections'
 
 const expectedPaths = [
   dependenciesPath,
+  sectionsPath,
 ]
 const oldPrefix = '/api/michengai/codex-ui/'
 
@@ -112,14 +114,17 @@ try {
   assert.deepEqual([...routes.keys()].sort(), expectedPaths.slice().sort())
   assert.equal([...routes.keys()].some(path => path.startsWith(oldPrefix)), false)
 
-  for (const [path, method] of [
+  const authorizedCalls = [
     [dependenciesPath, 'GET'],
-  ] as const) {
+    [sectionsPath, 'GET'],
+    [sectionsPath, 'POST'],
+  ] as const
+  for (const [path, method] of authorizedCalls) {
     const response = await invoke(path, method)
     assert.equal(response.status, 401, `${path} 必须拒绝未登录请求`)
     assert.equal(response.headers?.['cache-control'], 'no-store')
   }
-  assert.equal(authenticationCalls, expectedPaths.length)
+  assert.equal(authenticationCalls, authorizedCalls.length)
   assert.deepEqual((authenticatedRequests[0] as ReturnType<typeof createRequest>).headers, createRequest('GET').headers, 'Host、Origin 和其他请求头必须原样交给宿主认证')
   assert.equal((authenticatedRequests[0] as ReturnType<typeof createRequest>).url, expectedPaths[0])
 

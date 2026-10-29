@@ -11,7 +11,8 @@ import { en, NS, zh } from './locales.ts'
 import { observeSettingsSkin } from './settings-skin/index.ts'
 import { observeSettingsNavIcon } from './settings-nav-icon.ts'
 import { observeComposerEnhancements } from './composer/index.tsx'
-import { observeSidebarNav } from './sidebar/index.ts'
+import { observeSidebarNav, checkSidebarEnabled } from './sidebar/index.ts'
+import { observeWorkspaceSections } from './sidebar/sections/index.ts'
 import { observeTheme } from './theme/index.ts'
 
 export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTriggers', 'layout', 'uiWorkspace']
@@ -23,6 +24,27 @@ export function apply(ctx: ClientContext): void {
 
   ctx.effect(() => observeTheme(ctx), 'michengai-codex-ui: theme & appearance')
   ctx.effect(() => observeSidebarNav(ctx), 'michengai-codex-ui: sidebar navigation')
+  // 工作区分区随侧栏子插件一起启停：探活失败（子插件被停用或 Host 路由缺失）时不注入任何标题。
+  ctx.effect(() => {
+    let stop: (() => void) | undefined
+    let cancelled = false
+    void checkSidebarEnabled().then(enabled => {
+      if (cancelled || !enabled) return
+      const translate = (key: string, fallback?: string): string => {
+        try {
+          const value = (t as unknown as (name: string) => string)(key)
+          return typeof value === 'string' && value !== '' && value !== key ? value : (fallback ?? key)
+        } catch {
+          return fallback ?? key
+        }
+      }
+      stop = observeWorkspaceSections(ctx, translate)
+    })
+    return () => {
+      cancelled = true
+      stop?.()
+    }
+  }, 'michengai-codex-ui: workspace sections')
   ctx.effect(() => observeComposerEnhancements(ctx), 'michengai-codex-ui: composer enhancements')
   ctx.effect(() => observeSettingsSkin(), 'michengai-codex-ui: official settings skin')
   ctx.effect(() => observeSettingsNavIcon(() => t('about.nav')), 'michengai-codex-ui: settings nav icon')
