@@ -42,9 +42,17 @@ test('座舱上沿必须有 16px 渐隐带，且靠 mask 淡出同一块底盘',
   expect(GLASS_EXTRA_CSS).toContain('mask-image: linear-gradient(180deg, transparent 0, #000 100%)')
 })
 
-test('云母浮动顶栏同样要补实底，正文不得透过悬浮顶栏显示', () => {
-  expect(GLASS_EXTRA_CSS).toContain('[data-dsh-glass-float] [data-phase] header:not([class*="headerBlank"])')
-  // 顶栏与座舱必须共用同一块「复制底盘 + 固定到视口」的背景，才能都做到无色差
+test('云母浮动顶栏：正文必须在顶栏区域内淡出，且不得改动顶栏自身外观', () => {
+  // 用滚动容器的 mask 让内容在顶栏区域淡出：顶部 88px 全透明，88→108px 渐入
+  expect(GLASS_EXTRA_CSS).toContain('[data-dsh-glass-float] [data-phase=active] [data-conversation-scroll]')
+  expect(GLASS_EXTRA_CSS).toContain(
+    'mask-image: linear-gradient(180deg, transparent 0, transparent 88px, #000 108px)',
+  )
+  // 不允许通过给顶栏铺不透明底色来遮挡：那会盖掉顶栏自己的边框、阴影与磨砂质感
+  expect(GLASS_EXTRA_CSS).not.toMatch(
+    /\[data-dsh-glass-float\] \[data-phase\][^{]*header[^{]*\{[^}]*background:/,
+  )
+  // 座舱与顶栏共用的底盘变量必须仍存在（座舱底板用）
   expect(GLASS_EXTRA_CSS).toContain('var(--dsh-glass-ground-layers)')
   expect(GLASS_EXTRA_CSS).toContain('[data-dsh-glass] body {')
 })

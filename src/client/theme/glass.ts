@@ -120,12 +120,15 @@ export const GLASS_EXTRA_CSS = `
   mask-image: linear-gradient(180deg, transparent 0, #000 100%);
 }
 
-/* 云母浮动顶栏同一缺陷：顶栏底色只有 52% × frost（clear 预设仅 8.3%）、blur 为 0，
-   而浮动排版又用 margin-top:-95px / padding-top:107px 故意让正文从顶栏下方穿过，
-   于是正文与「加载更早」之类的胶囊会直接透过顶栏显示。这里沿用座舱同一手法补实底。 */
-[data-dsh-glass-float] [data-phase] header:not([class*="headerBlank"]) {
-  background: var(--dsh-glass-ground-layers);
-  background-attachment: fixed;
+/* 云母浮动顶栏同一缺陷：浮动排版把滚动内容上提 95px，让它从顶栏下方穿过（padding-top:107px 只保证
+   滚到顶部时内容起始于顶栏下方）。而顶栏底色只有 52% × frost（clear 预设仅 8.3%）、blur 为 0，
+   于是正文在「窗口顶部 12px 留白」「20px 圆角切角」「顶栏本体」三处都会透出来。
+   做法：不动顶栏本身（边框、阴影、磨砂全部保留），而是让滚动内容在顶栏区域内淡出 ——
+   滚动容器顶部 88px 内完全透明、88→108px 渐入。这个区间正好是顶栏（底边 97px）与顶部留白，
+   而滚到顶部时该区间本就是 padding 空白（内容从 107px 开始），不会淡化任何正文。 */
+[data-dsh-glass-float] [data-phase=active] [data-conversation-scroll] {
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, transparent 88px, #000 108px);
+  mask-image: linear-gradient(180deg, transparent 0, transparent 88px, #000 108px);
 }
 `
 
