@@ -145,7 +145,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"] {
 }
 
 /* 左侧导航悬浮岛：与首页侧边栏严格对齐几何形态、12px外边距、16px圆角与微高光 */
-html[data-dsh-glass-float] [data-shortcut-modal="settings"] > nav {
+html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > nav {
   box-sizing: border-box !important;
   width: calc(var(--dcu-settings-nav-width, 280px) - 24px) !important;
   min-width: calc(var(--dcu-settings-nav-width, 280px) - 24px) !important;
@@ -591,7 +591,7 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [
   width: var(--dcu-settings-nav-width, 280px) !important;
   min-width: var(--dcu-settings-nav-width, 280px) !important;
   max-width: var(--dcu-settings-nav-width, 280px) !important;
-  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #121214)) !important;
+  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #18181b)) !important;
   border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
   border-bottom: none !important;
   padding: 16px 12px 12px 12px !important;
@@ -607,7 +607,7 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [
   width: var(--dcu-settings-nav-width, 280px) !important;
   min-width: var(--dcu-settings-nav-width, 280px) !important;
   max-width: var(--dcu-settings-nav-width, 280px) !important;
-  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #121214)) !important;
+  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #18181b)) !important;
   border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
   border-top: none !important;
   padding: 0 12px 24px !important;
@@ -718,10 +718,10 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="optio
   border-top: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
   border-bottom: none !important;
   border-radius: 16px 16px 0 0 !important;
-  background: var(--dsh-glass-card, var(--dsw-alias-bg-layer-1)) !important;
-  backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
-  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #18181b)) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
 }
 
 html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > nav {
@@ -734,9 +734,9 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="optio
   border-bottom: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
   border-top: none !important;
   border-radius: 0 0 16px 16px !important;
-  background: var(--dsh-glass-card, var(--dsw-alias-bg-layer-1)) !important;
-  backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
-  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #18181b)) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)) !important;
 }
 
