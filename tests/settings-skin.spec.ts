@@ -183,7 +183,7 @@ test('设置顶部搜索框对齐宿主原生 Input 规范与拉平布局', () =
   // 不得手绘清除按钮
   expect(SETTINGS_SKIN_CSS).not.toContain('.dcu-settings-search-clear')
   // 标题栏不得内缩 2px，必须拉平基线
-  expect(SETTINGS_SKIN_CSS).toContain('.dcu-settings-nav-header-top {\n  display: flex !important;\n  align-items: center !important;\n  gap: 10px !important;\n  height: 28px !important;\n  padding: 0 !important;\n}')
+  expect(SETTINGS_SKIN_CSS).toContain('.dcu-settings-nav-header-top {\n  display: flex !important;\n  align-items: center !important;\n  gap: 10px !important;\n  height: 28px !important;\n  padding: 0 !important;\n  width: 100% !important;\n}')
   // 必须使用宿主原生 Input 的圆角 token
   expect(SETTINGS_SKIN_CSS).toContain('var(--dsw-radius-md')
 })

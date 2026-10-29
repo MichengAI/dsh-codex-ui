@@ -100,7 +100,8 @@ html[data-dsh-glass]:not([data-dsh-glass-float]) [data-shortcut-modal="settings"
   -webkit-backdrop-filter: none !important;
 }
 
-html[data-dsh-glass]:not([data-dsh-glass-float]) [data-shortcut-modal="settings"] > nav {
+html[data-dsh-glass]:not([data-dsh-glass-float]) [data-shortcut-modal="settings"] > nav,
+html[data-dsh-glass]:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="navTitle"] {
   background: color-mix(
     in srgb,
     var(--dsw-specific-sidebar-fill, #181825) 85%,
@@ -201,6 +202,13 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
   flex: none !important;
 }
 
+/* 彻底隐藏宿主原生的 settings.header 插槽内容，杜绝旧版宿主中原生“设置”文本复活并被挤到右边竖排折行 */
+[data-shortcut-modal="settings"] [data-slot="settings.header"],
+[data-shortcut-modal="settings"] > nav > :first-child > :not(.dcu-settings-nav-header-root),
+[data-shortcut-modal="settings"] [class*="navTitle"] > :not(.dcu-settings-nav-header-root) {
+  display: none !important;
+}
+
 .dcu-settings-nav-header-root {
   display: flex !important;
   flex-direction: column !important;
@@ -215,6 +223,7 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
   gap: 10px !important;
   height: 28px !important;
   padding: 0 !important;
+  width: 100% !important;
 }
 
 .dcu-settings-back-btn {
@@ -222,7 +231,10 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
   align-items: center !important;
   justify-content: center !important;
   width: 28px !important;
+  min-width: 28px !important;
+  max-width: 28px !important;
   height: 28px !important;
+  flex: none !important;
   border-radius: var(--dsw-radius-sm, 6px) !important;
   background: transparent !important;
   border: none !important;
@@ -244,6 +256,8 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
   color: var(--dsw-alias-label-primary, #ffffff) !important;
   letter-spacing: -0.01em !important;
   user-select: none !important;
+  white-space: nowrap !important;
+  flex: 1 1 auto !important;
 }
 
 /* 搜索框容器与宿主原生 Input 规范对齐 */
@@ -889,7 +903,11 @@ export function decorateSettingsNav(panelEl: HTMLElement): () => void {
   if (navHeader && !navHeader.querySelector('.dcu-settings-nav-header-root')) {
     const originalChildren = Array.from(navHeader.childNodes)
     originalChildren.forEach(child => {
-      if (child instanceof HTMLElement) child.style.display = 'none'
+      if (child instanceof HTMLElement) {
+        child.style.display = 'none'
+      } else if (child.nodeType === 3) {
+        child.textContent = ''
+      }
     })
 
     const headerRoot = document.createElement('div')
