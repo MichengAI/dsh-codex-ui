@@ -495,7 +495,7 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(panel.style.top).toBe('128px')
   })
 
-  it('项目行上的拖动始终画出清晰的落点横线（与顶部侧栏完全同款），落位仍由宿主接管', async () => {
+  it('项目行上的拖动由宿主原生画线（插件不自绘第二条线，彻底杜绝重叠双线）', async () => {
     mountFixture(['a', 'b', 'c'])
     mount(['a', 'b', 'c'])
     await waitForSync()
@@ -513,25 +513,13 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
 
     rows[0]!.dispatchEvent(drag('dragstart', rect.top))
 
-    // 拖到行下半区：落点线画在行底部
-    const overBottom = drag('dragover', rect.bottom - 2)
-    rows[2]!.dispatchEvent(overBottom)
-    expect(overBottom.defaultPrevented).toBe(false)
-    const lineBottom = document.querySelector<HTMLElement>('.dcu-ws-section-drop')
-    expect(lineBottom).not.toBeNull()
-    expect(lineBottom!.style.top).toBe(`${rect.bottom - 6}px`)
-    expect(lineBottom!.style.left).toBe('10px')
-    expect(lineBottom!.style.width).toBe('120px')
+    // 拖到行上：插件不画任何第二条线，完全交给宿主
+    const over = drag('dragover', rect.bottom - 2)
+    rows[2]!.dispatchEvent(over)
+    expect(over.defaultPrevented).toBe(false)
+    expect(document.querySelector('.dcu-ws-section-drop')).toBeNull()
 
-    // 拖到行上半区：落点线切到行顶部
-    const overTop = drag('dragover', rect.top + 2)
-    rows[2]!.dispatchEvent(overTop)
-    expect(overTop.defaultPrevented).toBe(false)
-    const lineTop = document.querySelector<HTMLElement>('.dcu-ws-section-drop')
-    expect(lineTop).not.toBeNull()
-    expect(lineTop!.style.top).toBe(`${rect.top - 6}px`)
-
-    // 拖动结束：落点线立即清理
+    // 拖动结束
     document.dispatchEvent(drag('dragend', rect.bottom - 1))
     expect(document.querySelector('.dcu-ws-section-drop')).toBeNull()
   })

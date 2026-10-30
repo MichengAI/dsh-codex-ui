@@ -94,11 +94,14 @@ const SECTIONS_CSS = `
 .dcu-ws-section-action:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.16))}
 .dcu-ws-section.dcu-dragging{opacity:.4}
 [data-sidebar-collapsed='true'] .dcu-ws-section{display:none !important}
-/* 提升宿主可能存在的指示线 z-index，防止被项目行 hover 灰底遮挡 */
+/* 1. 宿主项目行原生的落点线浮在最顶层（不会被项目行 hover 灰底遮挡） */
 [class*="workspaceDropBefore"]::before,
 [class*="workspaceDropAfter"]::after,
 [class*="dropBefore"]::before,
 [class*="dropAfter"]::after{z-index:20 !important}
+/* 2. 隐藏宿主列表最顶部的指示线（「置顶」分区固定在列表最顶部，项目绝不能拖到置顶标题上方；
+      宿主在没有我们分区时顶部是第一个项目，而现在顶部是置顶标题，宿主画在列表顶部的线会导致上下双线） */
+[class*="listTopDropIndicator"]{display:none !important}
 .dcu-ws-section-drop{position:fixed;height:12px;pointer-events:none;z-index:40;background:linear-gradient(55deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 0 / 5px 7px no-repeat,linear-gradient(125deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 5px / 5px 7px no-repeat,linear-gradient(var(--dsw-alias-state-business-primary,#4f8cff) 0 0) 4px 5px / calc(100% - 4px) 2px no-repeat}
 .dcu-ws-section-menu{position:fixed;z-index:1000;min-width:184px;max-width:280px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:4px;display:flex;flex-direction:column;gap:2px;border:none;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-menu-surface-fill,var(--dsw-alias-surface-overlay,#1e1e22));backdrop-filter:var(--dsw-menu-backdrop-filter,blur(40px) saturate(150%));-webkit-backdrop-filter:var(--dsw-menu-backdrop-filter,blur(40px) saturate(150%));box-shadow:var(--dsw-elevation-prominent,0 6px 20px rgba(0,0,0,.45));color:var(--dsw-alias-label-primary,#ededed)}
 /* 父菜单与二级菜单之间有一小段空隙：铺一条透明桥，指针穿过去时不会触发离开事件。 */
@@ -968,26 +971,6 @@ export function observeWorkspaceSections(
     return target.closest<HTMLElement>(`.${HEADER_CLASS}`)
   }
 
-  /**
-   * 宿主这次有没有真的把落点线画出来。
-   *
-   * 不能只看「文档里有没有 dropBefore / dropAfter 类名」：RC 宿主给项目行也挂了这个类，
-   * 但它的 CSS 只为会话行定义了 `:before/:after` 指示线 —— 有类名却没线。
-   * 按类名判断会让插件误判「宿主在画」，于是自己也不画，整个拖动过程没有任何反馈。
-   * 这里直接看伪元素上有没有宿主那套渐变指示线。
-   */
-  function hostDrawsDropLine(): boolean {
-    for (const element of Array.from(
-      document.querySelectorAll<HTMLElement>('[class*="dropBefore"],[class*="dropAfter"]'),
-    )) {
-      for (const pseudo of ['::before', '::after']) {
-        const style = getComputedStyle(element, pseudo)
-        if (style.content === 'none' || style.content === 'normal' || style.content === '') continue
-        if (style.backgroundImage.includes('linear-gradient')) return true
-      }
-    }
-    return false
-  }
 
   function onProjectDragOver(event: DragEvent): void {
     if (draggingProject === undefined) return
@@ -1004,19 +987,12 @@ export function observeWorkspaceSections(
       return
     }
 
-    // 2) 落在项目行上：落位仍然完全交给宿主（我们不拦事件、不改顺序），
-    //    但宿主要是不画线（RC 就是），由我们补一条同款指示线，否则拖动全程没有任何反馈。
+    // 2) 落在项目行上：宿主通过 CSS 提升后的 `workspaceDropBefore` / `workspaceDropAfter`
+    //    自会画出一条完美的蓝色指示线；插件完全不自绘任何第二条线，彻底杜绝两条线重叠！
     if (projectDrop?.kind === 'section') {
       projectDrop = undefined
       clearDropLine()
     }
-    const row = rowFromEvent(event)
-    if (row === null) {
-      clearDropLine()
-      return
-    }
-    const rect = row.getBoundingClientRect()
-    showDropLine(row, event.clientY < rect.top + rect.height / 2)
   }
 
   function onProjectDrop(event: DragEvent): void {
