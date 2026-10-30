@@ -969,9 +969,15 @@ export function observeWorkspaceSections(
     return target.closest<HTMLElement>(`.${HEADER_CLASS}`)
   }
 
+  /** 宿主自己有没有在画落点线（新版宿主会画，RC 的项目行不画）。 */
+  function hostDrawsDropLine(): boolean {
+    return document.querySelector('[class*="dropBefore"],[class*="dropAfter"]') !== null
+  }
+
   function onProjectDragOver(event: DragEvent): void {
-    // 落在分区标题上：整块作为落点（空分区没有项目行，这是它唯一的入口）。
-    // 其余情况（在项目行上）完全不插手——落点线、判定、落位都交给宿主自己那套。
+    if (draggingProject === undefined) return
+
+    // 1) 落在分区标题上：整块作为落点（空分区没有项目行，这是它唯一的入口）。
     const header = rowFromEvent(event) === null ? headerFromEvent(event) : null
     const sectionId = header?.getAttribute(SECTION_HEADER_ATTR) ?? null
     if (header !== null && sectionId !== null) {
@@ -982,10 +988,24 @@ export function observeWorkspaceSections(
       showSectionDrop(header)
       return
     }
+
+    // 2) 落在项目行上：落位仍然完全交给宿主（我们不拦事件、不改顺序），
+    //    但宿主要是不画线（RC 就是），由我们补一条同款指示线，否则拖动全程没有任何反馈。
     if (projectDrop?.kind === 'section') {
       projectDrop = undefined
       clearDropLine()
     }
+    const row = rowFromEvent(event)
+    if (row === null) {
+      clearDropLine()
+      return
+    }
+    if (hostDrawsDropLine()) {
+      clearDropLine()
+      return
+    }
+    const rect = row.getBoundingClientRect()
+    showDropLine(row, event.clientY < rect.top + rect.height / 2)
   }
 
   function onProjectDrop(event: DragEvent): void {
@@ -1051,6 +1071,7 @@ export function observeWorkspaceSections(
   // 事件挂在 document 上，避免列表节点被宿主重建后失效。
   document.addEventListener('dragstart', onProjectDragStart, true)
   document.addEventListener('dragend', finishProjectDrag, true)
+  document.addEventListener('dragover', onProjectDragOver, true)
   document.addEventListener('dragover', onSectionDragOver, true)
   document.addEventListener('drop', onSectionDrop, true)
   document.addEventListener('dragend', () => {
@@ -1596,6 +1617,7 @@ export function observeWorkspaceSections(
     unsubscribe?.()
     document.removeEventListener('dragstart', onProjectDragStart, true)
     document.removeEventListener('dragend', finishProjectDrag, true)
+    document.removeEventListener('dragover', onProjectDragOver, true)
     document.removeEventListener('dragover', onSectionDragOver, true)
     document.removeEventListener('drop', onSectionDrop, true)
     closeSectionMenu()

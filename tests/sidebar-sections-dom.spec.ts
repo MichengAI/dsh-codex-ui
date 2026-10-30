@@ -514,10 +514,19 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     rows[0]!.dispatchEvent(drag('dragstart', rect.top))
     const over = drag('dragover', rect.bottom - 1)
     rows[2]!.dispatchEvent(over)
-    // 不 preventDefault、不画自己的线：宿主原生落点线与落位逻辑全程接管。
+    // 落位仍然交给宿主（不 preventDefault），但宿主不画线时插件补一条，保证有反馈。
     expect(over.defaultPrevented).toBe(false)
+    const line = document.querySelector<HTMLElement>('.dcu-ws-section-drop')
+    expect(line).not.toBeNull()
+    expect(line!.style.top).toBe(`${rect.bottom - 6}px`)
+
+    // 宿主自己已经在画线（有 dropBefore / dropAfter 元素）时，插件让位、不画第二条。
+    const hostIndicator = document.createElement('div')
+    hostIndicator.className = 'YDXeBa_sessionRow YDXeBa_dropBefore'
+    rows[2]!.parentElement!.appendChild(hostIndicator)
+    rows[2]!.dispatchEvent(drag('dragover', rect.bottom - 1))
     expect(document.querySelector('.dcu-ws-section-drop')).toBeNull()
-    expect(document.body.classList.contains('dcu-project-drag')).toBe(false)
+    hostIndicator.remove()
     document.dispatchEvent(drag('dragend', rect.bottom - 1))
   })
 
