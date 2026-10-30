@@ -495,6 +495,37 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(panel.style.top).toBe('128px')
   })
 
+  it('拖到分区标题上时，body 被标记，宿主下方残留的工作区落点线被压制隐藏', async () => {
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    const dataTransfer = { dropEffect: '', effectAllowed: '', setData: () => {}, getData: () => '' }
+    const drag = (type: string, clientY: number): Event => {
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer })
+      Object.defineProperty(event, 'clientY', { value: clientY })
+      return event
+    }
+    const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))
+    const defHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+
+    // 模拟拖动项目
+    rows[0]!.dispatchEvent(drag('dragstart', 100))
+
+    // 拖到分区标题上
+    const overHeader = drag('dragover', 50)
+    defHeader.dispatchEvent(overHeader)
+    expect(overHeader.defaultPrevented).toBe(true)
+    expect(defHeader.getAttribute('data-dcu-drop-target')).toBe('true')
+    expect(document.body.getAttribute('data-dcu-dragging-section-target')).toBe('true')
+
+    // 拖动结束：标记全部清理
+    document.dispatchEvent(drag('dragend', 50))
+    expect(defHeader.getAttribute('data-dcu-drop-target')).toBeNull()
+    expect(document.body.getAttribute('data-dcu-dragging-section-target')).toBeNull()
+  })
+
   it('项目行上的拖动由宿主原生画线（插件不自绘第二条线，彻底杜绝重叠双线）', async () => {
     mountFixture(['a', 'b', 'c'])
     mount(['a', 'b', 'c'])

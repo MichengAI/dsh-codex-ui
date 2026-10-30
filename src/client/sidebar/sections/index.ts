@@ -102,6 +102,12 @@ const SECTIONS_CSS = `
 /* 2. 隐藏宿主列表最顶部的指示线（「置顶」分区固定在列表最顶部，项目绝不能拖到置顶标题上方；
       宿主在没有我们分区时顶部是第一个项目，而现在顶部是置顶标题，宿主画在列表顶部的线会导致上下双线） */
 [class*="listTopDropIndicator"]{display:none !important}
+/* 3. 当拖动悬停在某个分区标题上（准备归入该分区）时，强制隐藏宿主在下方工作区上残留的任何落点线，
+      绝不允许悬停在上方分组时、下方分组又冒出一条线！ */
+[data-dcu-dragging-section-target='true'] [class*='workspaceDropBefore']::before,
+[data-dcu-dragging-section-target='true'] [class*='workspaceDropAfter']::after,
+:has([data-dcu-drop-target='true']) [class*='workspaceDropBefore']::before,
+:has([data-dcu-drop-target='true']) [class*='workspaceDropAfter']::after{display:none !important}
 .dcu-ws-section-drop{position:fixed;height:12px;pointer-events:none;z-index:40;background:linear-gradient(55deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 0 / 5px 7px no-repeat,linear-gradient(125deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 5px / 5px 7px no-repeat,linear-gradient(var(--dsw-alias-state-business-primary,#4f8cff) 0 0) 4px 5px / calc(100% - 4px) 2px no-repeat}
 .dcu-ws-section-menu{position:fixed;z-index:1000;min-width:184px;max-width:280px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:4px;display:flex;flex-direction:column;gap:2px;border:none;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-menu-surface-fill,var(--dsw-alias-surface-overlay,#1e1e22));backdrop-filter:var(--dsw-menu-backdrop-filter,blur(40px) saturate(150%));-webkit-backdrop-filter:var(--dsw-menu-backdrop-filter,blur(40px) saturate(150%));box-shadow:var(--dsw-elevation-prominent,0 6px 20px rgba(0,0,0,.45));color:var(--dsw-alias-label-primary,#ededed)}
 /* 父菜单与二级菜单之间有一小段空隙：铺一条透明桥，指针穿过去时不会触发离开事件。 */
@@ -573,6 +579,7 @@ export function observeWorkspaceSections(
   function clearDropLine(): void {
     dropLine?.remove()
     dropLine = undefined
+    document.body.removeAttribute('data-dcu-dragging-section-target')
     for (const header of headers.values()) header.removeAttribute('data-dcu-drop-target')
   }
 
@@ -581,10 +588,12 @@ export function observeWorkspaceSections(
    *
    * 这里**不画线**：拖动项目时宿主自己会画一条落点线，我们再画一条就会同屏出现两条
    * （不同落点位置还会让鼠标在两行之间来回跳）。落点用标题高亮表达，线只保留宿主那一条。
+   * 同时标记 body，确保宿主在下方可能残留的工作区落点线被彻底压制隐藏。
    */
   function showSectionDrop(header: HTMLElement): void {
     clearDropLine()
     header.setAttribute('data-dcu-drop-target', 'true')
+    document.body.setAttribute('data-dcu-dragging-section-target', 'true')
   }
 
   /** 把标题按分区顺序放到各自第一个分组块前面；空分区贴着下一个分区显示。 */
@@ -1612,6 +1621,7 @@ export function observeWorkspaceSections(
     void flushSectionsSave()
     for (const header of headers.values()) header.remove()
     headers.clear()
+    document.body.removeAttribute('data-dcu-dragging-section-target')
     for (const block of Array.from(document.querySelectorAll<HTMLElement>('[data-dcu-section-member]'))) {
       block.removeAttribute('data-dcu-section-member')
       block.removeAttribute('data-dcu-section-hidden')
