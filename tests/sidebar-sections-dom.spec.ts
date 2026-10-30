@@ -495,7 +495,7 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(panel.style.top).toBe('128px')
   })
 
-  it('拖到分区标题上时，body 被标记，宿主下方残留的工作区落点线被压制隐藏', async () => {
+  it('拖到分区标题上时，标题高亮，且直接清除下方工作区上残留的宿主落点类名', async () => {
     mountFixture(['a', 'b'])
     mount(['a', 'b'])
     await waitForSync()
@@ -510,20 +510,24 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))
     const defHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
 
+    // 模拟之前在第二行停留，宿主挂上了落点类名
+    rows[1]!.parentElement!.className = 'groupSection bhn1Oq_workspaceDropBefore'
+
     // 模拟拖动项目
     rows[0]!.dispatchEvent(drag('dragstart', 100))
 
-    // 拖到分区标题上
+    // 鼠标滑入分区标题
     const overHeader = drag('dragover', 50)
     defHeader.dispatchEvent(overHeader)
     expect(overHeader.defaultPrevented).toBe(true)
     expect(defHeader.getAttribute('data-dcu-drop-target')).toBe('true')
-    expect(document.body.getAttribute('data-dcu-dragging-section-target')).toBe('true')
 
-    // 拖动结束：标记全部清理
+    // 关键：第二行上的宿主残留类名已被干净清除，不会在下方分组留线
+    expect(rows[1]!.parentElement!.className).not.toContain('workspaceDropBefore')
+
+    // 拖动结束：标题高亮清理
     document.dispatchEvent(drag('dragend', 50))
     expect(defHeader.getAttribute('data-dcu-drop-target')).toBeNull()
-    expect(document.body.getAttribute('data-dcu-dragging-section-target')).toBeNull()
   })
 
   it('项目行上的拖动由宿主原生画线（插件不自绘第二条线，彻底杜绝重叠双线）', async () => {
@@ -852,6 +856,51 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
 
     expect(def.getAttribute('data-open')).toBe('true')
     expect(document.querySelectorAll('[data-dcu-section-hidden="true"]').length).toBe(0)
+  })
+
+  it('把项目拖入展开的分组标题时，当场进入目标分区并立即显示（不需收缩展开）', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '客户项目', ids: [] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a', 'b'] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    const dataTransfer = { dropEffect: '', effectAllowed: '', setData: () => {}, getData: () => '' }
+    const drag = (type: string, clientY: number): Event => {
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer })
+      Object.defineProperty(event, 'clientY', { value: clientY })
+      return event
+    }
+    const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))
+    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+
+    // 假设 a 原本带有收缩内联样式（比如曾经收起过）
+    const aBlock = rows[0]!.closest<HTMLElement>('.groupSection')!
+    aBlock.style.maxHeight = '0px'
+    aBlock.style.overflow = 'hidden'
+    aBlock.style.opacity = '0'
+
+    // 拖动 a 到 s1 标题上并释放
+    rows[0]!.dispatchEvent(drag('dragstart', 100))
+    s1Header.dispatchEvent(drag('dragover', 50))
+    s1Header.dispatchEvent(drag('drop', 50))
+    await waitForSync()
+
+    // 验证：a 已归入 s1 分区
+    const s1 = hostSection('s1')
+    expect(s1?.ids).toContain('a')
+
+    // 验证：因为 s1 处于展开态（默认 open="true"），a 的所有内联高度限制和 hidden 被当场清除，立即自然呈现！
+    expect(aBlock.getAttribute('data-dcu-section-hidden')).toBeNull()
+    expect(aBlock.style.maxHeight).toBe('')
+    expect(aBlock.style.overflow).toBe('')
+    expect(aBlock.style.opacity).toBe('')
   })
 
   it('展开一个分区后再展开另一个，先展开的不会回弹、也不残留内联高度', async () => {
