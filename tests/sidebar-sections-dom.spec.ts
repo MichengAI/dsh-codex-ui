@@ -836,17 +836,60 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(hostSection(DEFAULT_SECTION_ID).ids).toContain('a')
   })
 
-  it('项目行上的 dragstart 在捕获阶段被彻底拦截（无法发起拖拽，彻底禁止跨分区拖拽）', async () => {
+  it('同分区内部的项目拖拽排序正常放行（dragstart 不被拦截，保留原生拖拽排序）', async () => {
     mountFixture(['a', 'b'])
     mount(['a', 'b'])
     await waitForSync()
 
-    const row = document.querySelector<HTMLElement>('[data-row-key="workspace:a"]')!
-    const event = new Event('dragstart', { bubbles: true, cancelable: true })
-    row.dispatchEvent(event)
+    const rowA = document.querySelector<HTMLElement>('[data-row-key="workspace:a"]')!
+    const startEvent = new Event('dragstart', { bubbles: true, cancelable: true })
+    rowA.dispatchEvent(startEvent)
 
-    // 验证：事件被 preventDefault，阻止浏览器启动拖拽
-    expect(event.defaultPrevented).toBe(true)
+    // 验证：dragstart 绝不被阻止，宿主原生同分区拖拽排序完全正常
+    expect(startEvent.defaultPrevented).toBe(false)
+
+    // 悬停在同分区的 b 上：放行
+    const rowB = document.querySelector<HTMLElement>('[data-row-key="workspace:b"]')!
+    const overEvent = new Event('dragover', { bubbles: true, cancelable: true })
+    rowB.dispatchEvent(overEvent)
+    expect(overEvent.defaultPrevented).toBe(false)
+  })
+
+  it('跨分区拖拽与悬停在分区标题上时被严格拦截（禁止跨分区放置，转移全靠菜单）', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b'] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    // 从默认项目 b 发起拖拽
+    const rowB = document.querySelector<HTMLElement>('[data-row-key="workspace:b"]')!
+    const startEvent = new Event('dragstart', { bubbles: true, cancelable: true })
+    rowB.dispatchEvent(startEvent)
+
+    // 1. 试图悬停在分区标题上：被阻止
+    const pinnedHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === PINNED_SECTION_ID)!
+    const overHeader = new Event('dragover', { bubbles: true, cancelable: true })
+    pinnedHeader.dispatchEvent(overHeader)
+    expect(overHeader.defaultPrevented).toBe(true)
+
+    // 2. 试图悬停在不同分区（置顶）的项目 a 上：被阻止
+    const rowA = document.querySelector<HTMLElement>('[data-row-key="workspace:a"]')!
+    const overForeign = new Event('dragover', { bubbles: true, cancelable: true })
+    rowA.dispatchEvent(overForeign)
+    expect(overForeign.defaultPrevented).toBe(true)
+
+    // 3. 试图落在不同分区的项目 a 上：被阻止
+    const dropForeign = new Event('drop', { bubbles: true, cancelable: true })
+    rowA.dispatchEvent(dropForeign)
+    expect(dropForeign.defaultPrevented).toBe(true)
+
+    // 拖拽结束
+    document.dispatchEvent(new Event('dragend', { bubbles: true, cancelable: true }))
   })
 
   it('通过菜单把项目移入展开的分组时，当场进入目标分区并立即显示（不需收缩展开）', async () => {

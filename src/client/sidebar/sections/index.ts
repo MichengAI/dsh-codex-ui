@@ -861,20 +861,89 @@ export function observeWorkspaceSections(
   )
 
   /**
-   * 彻底禁用工作区行的拖拽：全靠菜单操作。
+   * 保留项目之间的原生拖拽排序，同时严格禁止跨分区拖拽（跨分区转移全靠菜单操作）。
    *
-   * 在捕获阶段拦截宿主在工作区行上发起的 HTML5 拖拽，彻底杜绝跨分区拖拽、
-   * 时序错位以及拖拽带来的落点线和回弹问题。
+   * 1. 同分区内部：完全放行宿主原生的拖拽排序事件，顺序变化由 reconcileHostOrder 自动持久化。
+   * 2. 跨分区或分区标题：在捕获阶段拦截 dragover 与 drop，显示禁止符号，阻止跨分区落点。
    */
+  let draggingWorkspaceId: string | undefined
+  let draggingSectionId: string | undefined
+
   function onWorkspaceDragStart(event: DragEvent): void {
     const target = event.target
-    if (target instanceof Element && target.closest('[data-row-key^="workspace:"]') !== null) {
+    if (!(target instanceof Element)) return
+    const row = target.closest<HTMLElement>('[data-row-key^="workspace:"]')
+    if (row === null) return
+    const key = row.getAttribute('data-row-key') ?? ''
+    const workspaceId = key.slice('workspace:'.length)
+    if (!workspaceId) return
+
+    draggingWorkspaceId = workspaceId
+    draggingSectionId = sectionOf(state, workspaceId)
+    // 注意：不阻止 dragstart！保留宿主原生的同分区项目拖拽排序功能！
+  }
+
+  function onWorkspaceDragOver(event: DragEvent): void {
+    if (draggingWorkspaceId === undefined || draggingSectionId === undefined) return
+    const target = event.target
+    if (!(target instanceof Element)) return
+
+    // 1. 悬停在分区标题上：禁止作为落点
+    if (target.closest(`.${HEADER_CLASS}`) !== null) {
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
       event.preventDefault()
       event.stopPropagation()
+      return
+    }
+
+    // 2. 悬停在项目行上：若跨分区，禁止作为落点（跨分区移动全靠菜单操作）
+    const targetRow = target.closest<HTMLElement>('[data-row-key^="workspace:"]')
+    if (targetRow !== null) {
+      const key = targetRow.getAttribute('data-row-key') ?? ''
+      const targetWorkspaceId = key.slice('workspace:'.length)
+      const targetSectionId = sectionOf(state, targetWorkspaceId)
+      if (targetSectionId !== draggingSectionId) {
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
+        event.preventDefault()
+        event.stopPropagation()
+      }
     }
   }
 
+  function onWorkspaceDrop(event: DragEvent): void {
+    if (draggingWorkspaceId === undefined || draggingSectionId === undefined) return
+    const target = event.target
+    if (!(target instanceof Element)) return
+
+    // 落在分区标题上：直接拦截
+    if (target.closest(`.${HEADER_CLASS}`) !== null) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
+
+    // 落在不同分区的项目行上：直接拦截
+    const targetRow = target.closest<HTMLElement>('[data-row-key^="workspace:"]')
+    if (targetRow !== null) {
+      const key = targetRow.getAttribute('data-row-key') ?? ''
+      const targetWorkspaceId = key.slice('workspace:'.length)
+      const targetSectionId = sectionOf(state, targetWorkspaceId)
+      if (targetSectionId !== draggingSectionId) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    }
+  }
+
+  function onWorkspaceDragEnd(): void {
+    draggingWorkspaceId = undefined
+    draggingSectionId = undefined
+  }
+
   document.addEventListener('dragstart', onWorkspaceDragStart, true)
+  document.addEventListener('dragover', onWorkspaceDragOver, true)
+  document.addEventListener('drop', onWorkspaceDrop, true)
+  document.addEventListener('dragend', onWorkspaceDragEnd, true)
 
   /* ── 项目菜单扩展 ── */
 
@@ -1407,6 +1476,9 @@ export function observeWorkspaceSections(
     if (rafId !== 0) window.cancelAnimationFrame(rafId)
     observer?.disconnect()
     document.removeEventListener('dragstart', onWorkspaceDragStart, true)
+    document.removeEventListener('dragover', onWorkspaceDragOver, true)
+    document.removeEventListener('drop', onWorkspaceDrop, true)
+    document.removeEventListener('dragend', onWorkspaceDragEnd, true)
     unsubscribe?.()
 
     closeSectionMenu()
