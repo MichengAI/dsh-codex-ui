@@ -747,25 +747,60 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(document.querySelectorAll('[data-dcu-section-hidden="true"]').length).toBe(0)
     expect(document.querySelectorAll('[data-dcu-section-hidden="collapsing"]').length).toBe(0)
   })
-  it('展开箭头是手绘的一对三角：收起显示向右、展开显示向下', async () => {
+  it('「分区」二级菜单不再列出项目当前所在的分区', async () => {
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    const menu = document.createElement('div')
+    menu.setAttribute('role', 'menu')
+    const hostRow = document.createElement('div')
+    hostRow.className = 'hostRow'
+    const hostItem = document.createElement('button')
+    hostItem.setAttribute('role', 'menuitem')
+    hostItem.className = 'hostItem'
+    const hostIcon = document.createElement('span')
+    hostIcon.innerHTML = '<svg></svg>'
+    const hostLabel = document.createElement('span')
+    hostLabel.textContent = '重命名'
+    hostItem.append(hostIcon, hostLabel)
+    hostRow.appendChild(hostItem)
+    menu.appendChild(hostRow)
+    document.body.appendChild(menu)
+
+    document.querySelector<HTMLButtonElement>('button[aria-label="a 操作"]')!.click()
+    await new Promise<void>(resolve => {
+      window.setTimeout(resolve, 0)
+    })
+    const sectionButton = Array.from(document.querySelectorAll<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)).find(
+      button => (button.textContent ?? '') === '分区',
+    )!
+    expect(sectionButton).toBeDefined()
+    sectionButton.click()
+    await new Promise<void>(resolve => {
+      window.setTimeout(resolve, 0)
+    })
+
+    const panel = document.querySelector('.dcu-ws-section-menu')!
+    const labels = Array.from(panel.querySelectorAll('button')).map(button => (button.textContent ?? '').trim())
+    // a 默认待在「项目」分区：目标列表里不该再出现它自己，只留「置顶」和「新建分区」。
+    expect(labels).toEqual(['置顶', '新建分区'])
+  })
+
+  it('展开箭头复用宿主项目行那颗三角（16×20 slot 内 14px，展开旋转 90°）', async () => {
     mountFixture(['a'])
     mount(['a'])
     await waitForSync()
     const header = headers().find(item => item.getAttribute(SECTION_HEADER_ATTR) === PINNED_SECTION_ID)!
     const chevron = header.querySelector('.dcu-ws-section-chevron')!
-    const right = chevron.querySelector('.dcu-chevron-right')!
-    const down = chevron.querySelector('.dcu-chevron-down')!
-    expect(right).not.toBeNull()
-    expect(down).not.toBeNull()
-
-    // 默认是展开态：向下三角可见、向右三角隐藏。
+    // 宿主项目行的 slot 是 16×20，箭头是 IconTriangleRightFill14，展开时整体 rotate(90deg)。
+    expect(chevron).not.toBeNull()
+    // 和宿主项目行同构：16×20 的 slot，里面是 14px 的实心三角 sprite 引用。
+    expect(getComputedStyle(chevron).width).toBe('16px')
+    expect(getComputedStyle(chevron).height).toBe('20px')
+    const svg = chevron.querySelector('svg')!
+    expect(svg.getAttribute('width')).toBe('14')
+    expect(svg.querySelector('use')!.getAttribute('href')).toBe('#dsw-icon-triangle-right-fill-regular')
     expect(header.getAttribute('data-open')).toBe('true')
-    expect(getComputedStyle(right).opacity).toBe('0')
-    expect(getComputedStyle(down).opacity).toBe('1')
-
-    // 收起态：换成向右三角。
-    header.setAttribute('data-open', 'false')
-    expect(getComputedStyle(right).opacity).toBe('1')
-    expect(getComputedStyle(down).opacity).toBe('0')
   })
 })
