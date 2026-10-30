@@ -258,24 +258,28 @@ export function observeWorkspaceSections(
   let activeUpdate: SectionsUpdate | undefined
   let writeGen = 0
   let waitNotice: HTMLElement | undefined
+  let noticeTimer: number | undefined
 
   const clearWriteWait = (): void => {
     writeGen += 1
+    if (noticeTimer !== undefined) window.clearTimeout(noticeTimer)
+    noticeTimer = undefined
     waitNotice?.remove()
     waitNotice = undefined
   }
 
   const showAbortedNotice = (): void => {
     if (disposed || list?.parentElement === null || list === undefined) return
-    waitNotice?.remove()
+    clearWriteWait()
     waitNotice = document.createElement('div')
     waitNotice.setAttribute('data-dcu-sections-wait', 'aborted')
     waitNotice.setAttribute('role', 'alert')
-    waitNotice.textContent = text('sections.writeAborted', '工作区移动超时未完成，已自动撤销。')
+    waitNotice.textContent = text('sections.writeAborted', '工作区移动未完成，已自动撤销。')
     waitNotice.style.cssText = 'padding: 8px 12px; font-size: 12px; color: var(--dsw-alias-text-danger, #ef4444);'
     list.parentElement.insertBefore(waitNotice, list)
     const notice = waitNotice
-    window.setTimeout(() => {
+    noticeTimer = window.setTimeout(() => {
+      noticeTimer = undefined
       if (waitNotice === notice) {
         notice.remove()
         waitNotice = undefined
