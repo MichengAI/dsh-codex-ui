@@ -892,22 +892,31 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(overHeader.defaultPrevented).toBe(false) // 规范语义：不 preventDefault 即禁止放置
     expect(overHeader.isStopped).toBe(true)
 
-    // 2. 试图悬停在不同分区（置顶）的项目 a 上：同样设为 none，不 preventDefault，并阻断向宿主传递
+    // 2. 试图悬停在不同分区（置顶）的项目 a 上：设为 none，不 preventDefault，并阻断向宿主传递
     const rowA = document.querySelector<HTMLElement>('[data-row-key="workspace:a"]')!
     const overForeign = createDragEvent('dragover')
     rowA.dispatchEvent(overForeign)
     expect(overForeign.dataTransfer?.dropEffect).toBe('none')
     expect(overForeign.defaultPrevented).toBe(false)
     expect(overForeign.isStopped).toBe(true)
+    // 验证：body 打上 data-dcu-drag-blocked 标记，纯 CSS 隐藏宿主落点线
+    expect(document.body.hasAttribute('data-dcu-drag-blocked')).toBe(true)
+
+    // 移回同分区（默认项目 b）：标记自动摘除，宿主落点线自然恢复，零 DOM className 篡改
+    const overSame = createDragEvent('dragover')
+    rowB.dispatchEvent(overSame)
+    expect(document.body.hasAttribute('data-dcu-drag-blocked')).toBe(false)
 
     // 3. 试图落在不同分区的项目 a 上：直接 preventDefault + stopPropagation 拦截丢弃
     const dropForeign = createDragEvent('drop')
     rowA.dispatchEvent(dropForeign)
     expect(dropForeign.defaultPrevented).toBe(true)
     expect(dropForeign.isStopped).toBe(true)
+    expect(document.body.hasAttribute('data-dcu-drag-blocked')).toBe(false)
 
     // 拖拽结束
     document.dispatchEvent(createDragEvent('dragend'))
+    expect(document.body.hasAttribute('data-dcu-drag-blocked')).toBe(false)
   })
 
   it('dispose() 时彻底解绑全部 document 级事件监听器，避免多次启停时内存与全局点击泄漏', async () => {
@@ -916,12 +925,30 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     await waitForSync()
     expect(document.querySelector(`[${SECTION_HEADER_ATTR}]`)).not.toBeNull()
 
-    // 模拟 dispose
+    // 监测 document.removeEventListener
+    const spy = vi.spyOn(document, 'removeEventListener')
+
+    // 执行 dispose
     dispose?.()
     dispose = undefined
 
     // 验证：卸载后 headers 集合被清空，DOM 标题被清理
     expect(document.querySelector(`[${SECTION_HEADER_ATTR}]`)).toBeNull()
+
+    // 验证：8 个全局监听器全部执行了具名解绑（真哨兵断言！）
+    const removedEvents = spy.mock.calls.map(call => call[0])
+    expect(removedEvents).toContain('dragstart')
+    expect(removedEvents).toContain('dragover')
+    expect(removedEvents).toContain('drop')
+    expect(removedEvents).toContain('dragend')
+    expect(removedEvents).toContain('keydown')
+    expect(removedEvents).toContain('pointerdown')
+    expect(removedEvents).toContain('click')
+
+    expect(spy).toHaveBeenCalledWith('keydown', expect.any(Function), true)
+    expect(spy).toHaveBeenCalledWith('pointerdown', expect.any(Function), true)
+    expect(spy).toHaveBeenCalledWith('click', expect.any(Function), true)
+    expect(spy).toHaveBeenCalledWith('dragstart', expect.any(Function), true)
   })
 
   it('通过菜单把项目移入展开的分组时，当场进入目标分区并立即显示（不需收缩展开）', async () => {

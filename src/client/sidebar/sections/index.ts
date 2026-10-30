@@ -100,6 +100,11 @@ const SECTIONS_CSS = `
 .dcu-ws-section-menu button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.08))}
 .dcu-ws-section-menu button[aria-current='true']{color:var(--dsw-alias-state-business-primary,#4176e6)}
 .dcu-ws-section[data-dcu-section-fixed='true']{cursor:default}
+/* 跨分区拖拽拦截时以 CSS 隐藏宿主落点线，绝不侵入修改宿主 React 的 DOM className；移回合法区自然恢复 */
+body[data-dcu-drag-blocked='true'] [class*="workspaceDropBefore"]::before,
+body[data-dcu-drag-blocked='true'] [class*="workspaceDropAfter"]::after,
+body[data-dcu-drag-blocked='true'] [class*="dropBefore"]::before,
+body[data-dcu-drag-blocked='true'] [class*="dropAfter"]::after{display:none !important}
 
 `
 
@@ -862,13 +867,20 @@ export function observeWorkspaceSections(
   let draggingWorkspaceId: string | undefined
   let draggingSectionId: string | undefined
 
-  /** 清理可能因拖过不同分区而残留在宿主行上的落点类名。 */
-  function clearHostDropIndicators(): void {
-    for (const el of Array.from(document.querySelectorAll<HTMLElement>('[class*="workspaceDropBefore"], [class*="workspaceDropAfter"]'))) {
-      el.className = el.className
-        .replace(/\S*workspaceDropBefore\S*/g, '')
-        .replace(/\S*workspaceDropAfter\S*/g, '')
-        .trim()
+  /**
+   * 跨分区拖拽拦截时切换 body 标记。
+   * 由 CSS 控制宿主伪元素显隐，完全不触碰宿主 DOM className，
+   * 移回同分区时落点线瞬时自然恢复，且避免 60Hz 遍历整个 DOM 树。
+   */
+  function setDragBlocked(blocked: boolean): void {
+    if (blocked) {
+      if (!document.body.hasAttribute('data-dcu-drag-blocked')) {
+        document.body.setAttribute('data-dcu-drag-blocked', 'true')
+      }
+    } else {
+      if (document.body.hasAttribute('data-dcu-drag-blocked')) {
+        document.body.removeAttribute('data-dcu-drag-blocked')
+      }
     }
   }
 
@@ -895,7 +907,7 @@ export function observeWorkspaceSections(
     // HTML5 规范中：不调用 preventDefault() 即代表禁止放下；dropEffect 设为 none，并阻断向宿主传递。
     if (target.closest(`.${HEADER_CLASS}`) !== null) {
       if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
-      clearHostDropIndicators()
+      setDragBlocked(true)
       event.stopPropagation()
       return
     }
@@ -908,21 +920,24 @@ export function observeWorkspaceSections(
       const targetSectionId = sectionOf(state, targetWorkspaceId)
       if (targetSectionId !== draggingSectionId) {
         if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
-        clearHostDropIndicators()
+        setDragBlocked(true)
         // 关键：绝对不调用 preventDefault()！不 preventDefault 浏览器即判定不可放置！
         event.stopPropagation()
+      } else {
+        // 同分区合法放置区：恢复显示落点线
+        setDragBlocked(false)
       }
     }
   }
 
   function onWorkspaceDrop(event: DragEvent): void {
+    setDragBlocked(false)
     if (draggingWorkspaceId === undefined || draggingSectionId === undefined) return
     const target = event.target
     if (!(target instanceof Element)) return
 
     // 落在分区标题上：直接丢弃拦截
     if (target.closest(`.${HEADER_CLASS}`) !== null) {
-      clearHostDropIndicators()
       event.preventDefault()
       event.stopPropagation()
       return
@@ -935,7 +950,6 @@ export function observeWorkspaceSections(
       const targetWorkspaceId = key.slice('workspace:'.length)
       const targetSectionId = sectionOf(state, targetWorkspaceId)
       if (targetSectionId !== draggingSectionId) {
-        clearHostDropIndicators()
         event.preventDefault()
         event.stopPropagation()
       }
@@ -943,7 +957,7 @@ export function observeWorkspaceSections(
   }
 
   function onWorkspaceDragEnd(): void {
-    clearHostDropIndicators()
+    setDragBlocked(false)
     draggingWorkspaceId = undefined
     draggingSectionId = undefined
   }
@@ -1490,6 +1504,7 @@ export function observeWorkspaceSections(
     for (const header of headers.values()) header.remove()
     headers.clear()
     document.body.removeAttribute('data-dcu-dragging-section-target')
+    document.body.removeAttribute('data-dcu-drag-blocked')
     for (const block of Array.from(document.querySelectorAll<HTMLElement>('[data-dcu-section-member]'))) {
       block.removeAttribute('data-dcu-section-member')
       block.removeAttribute('data-dcu-section-hidden')
