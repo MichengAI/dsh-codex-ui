@@ -94,7 +94,12 @@ const SECTIONS_CSS = `
 .dcu-ws-section-action:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.16))}
 .dcu-ws-section.dcu-dragging{opacity:.4}
 [data-sidebar-collapsed='true'] .dcu-ws-section{display:none !important}
-.dcu-ws-section-drop{position:fixed;left:8px;right:8px;height:12px;pointer-events:none;z-index:40;background:linear-gradient(55deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 0 / 5px 7px no-repeat,linear-gradient(125deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 5px / 5px 7px no-repeat,linear-gradient(var(--dsw-alias-state-business-primary,#4f8cff) 0 0) 4px 5px / calc(100% - 4px) 2px no-repeat}
+/* 提升宿主可能存在的指示线 z-index，防止被项目行 hover 灰底遮挡 */
+[class*="workspaceDropBefore"]::before,
+[class*="workspaceDropAfter"]::after,
+[class*="dropBefore"]::before,
+[class*="dropAfter"]::after{z-index:20 !important}
+.dcu-ws-section-drop{position:fixed;height:12px;pointer-events:none;z-index:40;background:linear-gradient(55deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 0 / 5px 7px no-repeat,linear-gradient(125deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 5px / 5px 7px no-repeat,linear-gradient(var(--dsw-alias-state-business-primary,#4f8cff) 0 0) 4px 5px / calc(100% - 4px) 2px no-repeat}
 .dcu-ws-section-menu{position:fixed;z-index:1000;min-width:184px;max-width:280px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:4px;display:flex;flex-direction:column;gap:2px;border:none;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-menu-surface-fill,var(--dsw-alias-surface-overlay,#1e1e22));backdrop-filter:var(--dsw-menu-backdrop-filter,blur(40px) saturate(150%));-webkit-backdrop-filter:var(--dsw-menu-backdrop-filter,blur(40px) saturate(150%));box-shadow:var(--dsw-elevation-prominent,0 6px 20px rgba(0,0,0,.45));color:var(--dsw-alias-label-primary,#ededed)}
 /* 父菜单与二级菜单之间有一小段空隙：铺一条透明桥，指针穿过去时不会触发离开事件。 */
 .dcu-ws-section-menu[data-flyout='true']::before{content:'';position:absolute;top:0;bottom:0;left:-6px;width:8px}
@@ -456,10 +461,14 @@ export function observeWorkspaceSections(
   }
 
   function toggleSection(sectionId: string): void {
-    const collapse = collapsed[sectionId] !== true
-    collapsed = { ...collapsed, [sectionId]: collapse }
-    persistCollapsed()
     const header = headers.get(sectionId)
+    // 纯粹以当前 DOM 真实显示状态为准：
+    // 若当前是 'false'（收起态），点击 100% 是【展开】（collapse = false）；
+    // 绝不能按内存 map 猜测，否则初始状态偏差会导致点击后反而执行收起。
+    const currentlyClosed = header?.dataset.open === 'false'
+    const collapse = !currentlyClosed
+    collapsed[sectionId] = collapse
+    persistCollapsed()
     if (header !== undefined) header.dataset.open = collapse ? 'false' : 'true'
     animateSectionMembers(sectionId, collapse)
     scheduleSync()
@@ -483,17 +492,15 @@ export function observeWorkspaceSections(
       document.querySelectorAll<HTMLElement>(`[data-dcu-section-member="${sectionId}"]`),
     )
     if (blocks.length === 0) return
-    // 每次动画带一个代号：宿主重渲染、用户连点都会让上一轮的超时回调过期，过期就不能再改状态。
     const generation = (animationGeneration.get(sectionId) ?? 0) + 1
     animationGeneration.set(sectionId, generation)
     animatingSections.add(sectionId)
-    const saved = blocks.map(block => block.style.cssText)
-    let animate = true
+
     for (const block of blocks) {
       if (!block.isConnected) continue
-      block.removeAttribute('data-dcu-section-hidden')
-      block.style.overflow = 'hidden'
       if (collapse) {
+        block.removeAttribute('data-dcu-section-hidden')
+        block.style.overflow = 'hidden'
         const height = block.offsetHeight
         block.style.maxHeight = `${height}px`
         block.style.opacity = '1'
@@ -501,37 +508,29 @@ export function observeWorkspaceSections(
         block.style.maxHeight = '0px'
         block.style.opacity = '0'
       } else {
-        // 先回到自然高度量一次（宿主块可能带 content-visibility，scrollHeight 会读成 0），
-        // 再压到 0 起动画；量不到高度就干脆不做动画，直接显示。
-        block.style.maxHeight = ''
-        void block.offsetHeight
-        const natural = Math.max(block.offsetHeight, block.scrollHeight)
-        if (natural <= 0) {
-          animate = false
-          block.style.maxHeight = ''
-          block.style.opacity = '1'
-          continue
-        }
-        block.style.maxHeight = '0px'
-        block.style.opacity = '0'
-        void block.offsetHeight
-        block.style.maxHeight = `${natural}px`
-        block.style.opacity = '1'
+        // 展开：直接解除 hidden 并剥离所有限制，内容自然呈现，
+        // 彻底根除因高度测量不准、动画竞态或过期回调导致的「自动回弹/收起」。
+        block.removeAttribute('data-dcu-section-hidden')
+        block.style.removeProperty('max-height')
+        block.style.removeProperty('overflow')
+        block.style.removeProperty('opacity')
       }
     }
+
+    if (!collapse) {
+      animatingSections.delete(sectionId)
+      scheduleSync()
+      return
+    }
+
     window.setTimeout(() => {
-      // 这一轮已被更新的一轮取代（用户连点 / 状态变化），直接放弃收尾。
       if (animationGeneration.get(sectionId) !== generation) return
-      blocks.forEach((block, index) => {
+      blocks.forEach(block => {
         if (!block.isConnected) return
-        block.style.cssText = saved[index] ?? ''
-        if (!animate) {
-          block.removeAttribute('data-dcu-section-hidden')
-          return
-        }
-        if (collapse) block.setAttribute('data-dcu-section-hidden', 'true')
-        // 展开结束再兜底清一次：期间若有任何逻辑重新打上 hidden，这里纠正回来。
-        else block.removeAttribute('data-dcu-section-hidden')
+        block.style.removeProperty('max-height')
+        block.style.removeProperty('overflow')
+        block.style.removeProperty('opacity')
+        block.setAttribute('data-dcu-section-hidden', 'true')
       })
       animatingSections.delete(sectionId)
       scheduleSync()
@@ -930,7 +929,7 @@ export function observeWorkspaceSections(
     line.className = 'dcu-ws-section-drop'
     line.style.top = `${(before ? rect.top : rect.bottom) - 6}px`
     line.style.left = `${rect.left}px`
-    line.style.right = `${Math.max(0, window.innerWidth - rect.right)}px`
+    line.style.width = `${rect.width}px`
     document.body.appendChild(line)
     dropLine = line
   }
@@ -969,9 +968,25 @@ export function observeWorkspaceSections(
     return target.closest<HTMLElement>(`.${HEADER_CLASS}`)
   }
 
-  /** 宿主自己有没有在画落点线（新版宿主会画，RC 的项目行不画）。 */
+  /**
+   * 宿主这次有没有真的把落点线画出来。
+   *
+   * 不能只看「文档里有没有 dropBefore / dropAfter 类名」：RC 宿主给项目行也挂了这个类，
+   * 但它的 CSS 只为会话行定义了 `:before/:after` 指示线 —— 有类名却没线。
+   * 按类名判断会让插件误判「宿主在画」，于是自己也不画，整个拖动过程没有任何反馈。
+   * 这里直接看伪元素上有没有宿主那套渐变指示线。
+   */
   function hostDrawsDropLine(): boolean {
-    return document.querySelector('[class*="dropBefore"],[class*="dropAfter"]') !== null
+    for (const element of Array.from(
+      document.querySelectorAll<HTMLElement>('[class*="dropBefore"],[class*="dropAfter"]'),
+    )) {
+      for (const pseudo of ['::before', '::after']) {
+        const style = getComputedStyle(element, pseudo)
+        if (style.content === 'none' || style.content === 'normal' || style.content === '') continue
+        if (style.backgroundImage.includes('linear-gradient')) return true
+      }
+    }
+    return false
   }
 
   function onProjectDragOver(event: DragEvent): void {
@@ -997,10 +1012,6 @@ export function observeWorkspaceSections(
     }
     const row = rowFromEvent(event)
     if (row === null) {
-      clearDropLine()
-      return
-    }
-    if (hostDrawsDropLine()) {
       clearDropLine()
       return
     }

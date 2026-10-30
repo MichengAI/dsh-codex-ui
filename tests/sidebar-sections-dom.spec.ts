@@ -495,7 +495,7 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(panel.style.top).toBe('128px')
   })
 
-  it('项目行上的拖动不再由插件接管（落点线交给宿主）', async () => {
+  it('项目行上的拖动始终画出清晰的落点横线（与顶部侧栏完全同款），落位仍由宿主接管', async () => {
     mountFixture(['a', 'b', 'c'])
     mount(['a', 'b', 'c'])
     await waitForSync()
@@ -508,26 +508,32 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
       return event
     }
     const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))
-    const rect = { top: 100, bottom: 132, height: 32, left: 0, right: 120, width: 120, x: 0, y: 100, toJSON: () => ({}) }
+    const rect = { top: 100, bottom: 132, height: 32, left: 10, right: 130, width: 120, x: 10, y: 100, toJSON: () => ({}) }
     vi.spyOn(rows[2]!, 'getBoundingClientRect').mockReturnValue(rect as DOMRect)
 
     rows[0]!.dispatchEvent(drag('dragstart', rect.top))
-    const over = drag('dragover', rect.bottom - 1)
-    rows[2]!.dispatchEvent(over)
-    // 落位仍然交给宿主（不 preventDefault），但宿主不画线时插件补一条，保证有反馈。
-    expect(over.defaultPrevented).toBe(false)
-    const line = document.querySelector<HTMLElement>('.dcu-ws-section-drop')
-    expect(line).not.toBeNull()
-    expect(line!.style.top).toBe(`${rect.bottom - 6}px`)
 
-    // 宿主自己已经在画线（有 dropBefore / dropAfter 元素）时，插件让位、不画第二条。
-    const hostIndicator = document.createElement('div')
-    hostIndicator.className = 'YDXeBa_sessionRow YDXeBa_dropBefore'
-    rows[2]!.parentElement!.appendChild(hostIndicator)
-    rows[2]!.dispatchEvent(drag('dragover', rect.bottom - 1))
-    expect(document.querySelector('.dcu-ws-section-drop')).toBeNull()
-    hostIndicator.remove()
+    // 拖到行下半区：落点线画在行底部
+    const overBottom = drag('dragover', rect.bottom - 2)
+    rows[2]!.dispatchEvent(overBottom)
+    expect(overBottom.defaultPrevented).toBe(false)
+    const lineBottom = document.querySelector<HTMLElement>('.dcu-ws-section-drop')
+    expect(lineBottom).not.toBeNull()
+    expect(lineBottom!.style.top).toBe(`${rect.bottom - 6}px`)
+    expect(lineBottom!.style.left).toBe('10px')
+    expect(lineBottom!.style.width).toBe('120px')
+
+    // 拖到行上半区：落点线切到行顶部
+    const overTop = drag('dragover', rect.top + 2)
+    rows[2]!.dispatchEvent(overTop)
+    expect(overTop.defaultPrevented).toBe(false)
+    const lineTop = document.querySelector<HTMLElement>('.dcu-ws-section-drop')
+    expect(lineTop).not.toBeNull()
+    expect(lineTop!.style.top).toBe(`${rect.top - 6}px`)
+
+    // 拖动结束：落点线立即清理
     document.dispatchEvent(drag('dragend', rect.bottom - 1))
+    expect(document.querySelector('.dcu-ws-section-drop')).toBeNull()
   })
 
   it('菜单里选自定义分区后，项目真的移动到那个分区（不是只写存储）', async () => {
@@ -827,6 +833,48 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
 
     expect(def.getAttribute('data-open')).toBe('true')
     expect(document.querySelectorAll('[data-dcu-section-hidden="true"]').length).toBe(0)
+  })
+
+  it('展开一个分区后再展开另一个，先展开的不会回弹、也不残留内联高度', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '客户项目', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b', 'c'] },
+      ],
+    })
+    mountFixture(['a', 'b', 'c'])
+    mount(['a', 'b', 'c'])
+    await waitForSync()
+    const settle = async (): Promise<void> => {
+      await new Promise<void>(resolve => {
+        window.setTimeout(resolve, 320)
+      })
+      await waitForSync()
+    }
+    const headerOf = (id: string): HTMLElement =>
+      headers().find(header => header.getAttribute(SECTION_HEADER_ATTR) === id)!
+
+    // 先把两个分区都收起
+    headerOf('s1').click()
+    await settle()
+    headerOf(DEFAULT_SECTION_ID).click()
+    await settle()
+
+    // 紧挨着展开两块：上一轮动画还没收尾就发起下一轮
+    headerOf('s1').click()
+    headerOf(DEFAULT_SECTION_ID).click()
+    await settle()
+    await settle()
+
+    expect(headerOf('s1').getAttribute('data-open')).toBe('true')
+    expect(headerOf(DEFAULT_SECTION_ID).getAttribute('data-open')).toBe('true')
+    expect(document.querySelectorAll('[data-dcu-section-hidden="true"]').length).toBe(0)
+    // 关键：不能把过期的 max-height / overflow 留在块上（那会让内容回弹、还会裁掉落点线）
+    for (const block of Array.from(document.querySelectorAll<HTMLElement>('[data-dcu-section-member]'))) {
+      expect(block.style.maxHeight).toBe('')
+      expect(block.style.overflow).toBe('')
+    }
   })
 
   it('展开箭头用宿主项目行同一个 slot 尺寸，状态由 data-open 驱动', async () => {
