@@ -321,38 +321,16 @@ export function observeWorkspaceSections(
    * `reconcileHostOrder` 会按位置把归属反推回去，用户看到的就是「点了没反应」。
    * 这里直接把目标顺序记成意图，等宿主追平之前不做反推。
    */
-  /**
-   * 同步乐观 DOM 重排：0ms 立即在物理 DOM 树中把项目移到目标分区位置。
-   * 彻底杜绝选了分区后卡在老分区、产生旧位置残留的问题。
-   */
-  function optimisticReorder(desired: readonly string[]): void {
-    const rootList = list ?? findWorkspaceList(document)
-    if (rootList === undefined) return
-    const blocks = collectProjectBlocks(rootList, rootList)
-    if (blocks.length === 0) return
-
-    const byId = new Map<string, HTMLElement>()
-    for (const item of blocks) {
-      byId.set(item.workspaceId, item.block)
-    }
-
-    for (const id of desired) {
-      const block = byId.get(id)
-      if (block !== undefined && block.parentElement === rootList) {
-        rootList.appendChild(block)
-      }
-    }
-
-    placeHeaders(collectProjectBlocks(rootList, rootList))
-  }
   function commitExplicit(next: SectionsState): void {
     state = next
     persist()
     const desired = flattenSections(next)
     intentOrder = desired
     suppressReconcile = 6
-    // 0ms 瞬间乐观重排 DOM 节点与标题，杜绝旧分区残留与延迟！
-    optimisticReorder(desired)
+    // 立即刷新分区标题与成员归属标记，由宿主 FLIP 平滑动画完成节点位移，绝不在 DOM 中粗暴倒腾节点产生反弹！
+    if (list !== undefined) {
+      placeHeaders(collectProjectBlocks(list, list))
+    }
     void applyOrder(desired)
     scheduleSync()
   }
@@ -486,19 +464,16 @@ export function observeWorkspaceSections(
         block.style.maxHeight = '0px'
         block.style.opacity = '0'
       } else {
-        // 展开：直接解除 hidden 并剥离所有限制，内容自然呈现，
-        // 彻底根除因高度测量不准、动画竞态或过期回调导致的「自动回弹/收起」。
+        // 展开动效：从 0px 丝滑过渡拉伸到目标内容高度，透明度淡入
         block.removeAttribute('data-dcu-section-hidden')
-        block.style.removeProperty('max-height')
-        block.style.removeProperty('overflow')
-        block.style.removeProperty('opacity')
+        block.style.overflow = 'hidden'
+        block.style.maxHeight = '0px'
+        block.style.opacity = '0'
+        void block.offsetHeight
+        const targetHeight = Math.max(block.scrollHeight, block.offsetHeight || 40)
+        block.style.maxHeight = `${targetHeight}px`
+        block.style.opacity = '1'
       }
-    }
-
-    if (!collapse) {
-      animatingSections.delete(sectionId)
-      scheduleSync()
-      return
     }
 
     window.setTimeout(() => {
@@ -508,11 +483,15 @@ export function observeWorkspaceSections(
         block.style.removeProperty('max-height')
         block.style.removeProperty('overflow')
         block.style.removeProperty('opacity')
-        block.setAttribute('data-dcu-section-hidden', 'true')
+        if (collapse) {
+          block.setAttribute('data-dcu-section-hidden', 'true')
+        } else {
+          block.removeAttribute('data-dcu-section-hidden')
+        }
       })
       animatingSections.delete(sectionId)
       scheduleSync()
-    }, SECTION_ANIM_MS + 20)
+    }, SECTION_ANIM_MS + 30)
   }
 
   function readCollapsed(): Record<string, boolean> {
@@ -549,31 +528,41 @@ export function observeWorkspaceSections(
       return { id: section.id, name: section.name, block }
     })
 
-    // 从后往前插：后面的分区先就位，前面的分区就能把「下一个分区标题」当作参照点，
-    // 空分区也不会被挤到列表末尾。
-    for (let index = entries.length - 1; index >= 0; index -= 1) {
+    // 单向顺序插放：置顶固定在列表最顶端，后续分区标题严格按照分区定义单调向下排列。
+    // 绝不因成员在 DOM 中短暂错位而将分区标题颠倒拉扯，彻底消除「弹来弹去」的根源！
+    let prevHeader: HTMLElement | undefined
+    for (let index = 0; index < entries.length; index += 1) {
       const entry = entries[index]!
       const header = ensureHeader(entry.id, entry.name)
-      let reference: Node | null = entry.block ?? null
-      if (reference === null) {
-        for (let ahead = index + 1; ahead < entries.length; ahead += 1) {
-          const laterHeader = headers.get(entries[ahead]!.id)
-          if (laterHeader !== undefined && laterHeader.isConnected) {
-            reference = laterHeader
-            break
-          }
-          const laterBlock = entries[ahead]!.block
-          if (laterBlock !== undefined) {
-            reference = laterBlock
-            break
+      
+      if (index === 0) {
+        // 第一个分区（置顶）：绝对固定在列表最顶部，稳若泰山
+        if (target.firstChild !== header) {
+          target.insertBefore(header, target.firstChild)
+        }
+      } else {
+        // 后续分区：定位在它自己的第一个成员之前；如果成员尚未排入或为空，贴在上一个分区尾部
+        let reference: Node | null = entry.block ?? null
+        // 保证 reference 必须位于 prevHeader 之后
+        if (reference !== null && prevHeader !== undefined) {
+          if ((prevHeader.compareDocumentPosition(reference) & Node.DOCUMENT_POSITION_FOLLOWING) === 0) {
+            reference = null
           }
         }
+        if (reference !== null) {
+          if (header.nextElementSibling !== reference) {
+            target.insertBefore(header, reference)
+          }
+        } else if (prevHeader !== undefined) {
+          // 紧随上一个分区之后
+          if (header.previousElementSibling !== prevHeader) {
+            target.insertBefore(header, prevHeader.nextElementSibling)
+          }
+        } else {
+          target.appendChild(header)
+        }
       }
-      if (reference === null) {
-        if (header.parentElement !== target) target.appendChild(header)
-      } else if (header.nextElementSibling !== reference) {
-        target.insertBefore(header, reference)
-      }
+      prevHeader = header
     }
 
     // 成员块打标记：CSS 据此做缩进（层级）与折叠隐藏。
