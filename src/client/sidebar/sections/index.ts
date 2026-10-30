@@ -885,6 +885,7 @@ export function observeWorkspaceSections(
   }
 
   function onWorkspaceDragStart(event: DragEvent): void {
+    setDragBlocked(false)
     const target = event.target
     if (!(target instanceof Element)) return
     const row = target.closest<HTMLElement>('[data-row-key^="workspace:"]')

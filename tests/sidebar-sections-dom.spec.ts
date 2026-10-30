@@ -879,10 +879,14 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
       return event as DragEvent & { isStopped: boolean }
     }
 
-    // 从默认项目 b 发起拖拽
+    // 模拟上一轮拖拽异常结束残留了 blocked 属性
+    document.body.setAttribute('data-dcu-drag-blocked', 'true')
+
+    // 从默认项目 b 发起拖拽：验证 dragstart 立刻主动防御性复位该属性
     const rowB = document.querySelector<HTMLElement>('[data-row-key="workspace:b"]')!
     const startEvent = createDragEvent('dragstart')
     rowB.dispatchEvent(startEvent)
+    expect(document.body.hasAttribute('data-dcu-drag-blocked')).toBe(false)
 
     // 1. 试图悬停在分区标题上：HTML5 规范设定 dropEffect='none'，不 preventDefault（即不可放置），并 stopPropagation 阻断宿主
     const pinnedHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === PINNED_SECTION_ID)!
