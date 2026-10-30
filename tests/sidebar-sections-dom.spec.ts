@@ -848,11 +848,13 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     // 验证：dragstart 绝不被阻止，宿主原生同分区拖拽排序完全正常
     expect(startEvent.defaultPrevented).toBe(false)
 
-    // 悬停在同分区的 b 上：放行
+    // 悬停在同分区的 b 上：主动 preventDefault 并设 move，彻底消灭禁止图标 🚫
     const rowB = document.querySelector<HTMLElement>('[data-row-key="workspace:b"]')!
-    const overEvent = new Event('dragover', { bubbles: true, cancelable: true })
+    const overEvent = new Event('dragover', { bubbles: true, cancelable: true }) as any
+    overEvent.dataTransfer = { dropEffect: 'none' }
     rowB.dispatchEvent(overEvent)
-    expect(overEvent.defaultPrevented).toBe(false)
+    expect(overEvent.defaultPrevented).toBe(true)
+    expect(overEvent.dataTransfer.dropEffect).toBe('move')
   })
 
   it('跨分区拖拽与悬停在分区标题上时被严格拦截（符合 HTML5 规范 dropEffect=none，且阻断向宿主传递）', async () => {

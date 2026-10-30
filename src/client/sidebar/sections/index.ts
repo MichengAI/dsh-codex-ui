@@ -965,7 +965,6 @@ export function observeWorkspaceSections(
     if (!(target instanceof Element)) return
 
     // 1. 悬停在分区标题上：禁止作为落点。
-    // HTML5 规范中：不调用 preventDefault() 即代表禁止放下；dropEffect 设为 none，并阻断向宿主传递。
     if (target.closest(`.${HEADER_CLASS}`) !== null) {
       if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
       setDragBlocked(true)
@@ -973,19 +972,32 @@ export function observeWorkspaceSections(
       return
     }
 
-    // 2. 悬停在项目行上：若跨分区，禁止作为落点（跨分区移动全靠菜单操作）。
+    // 2. 识别目标工作区（直接命中项目行，或命中项目内部展开的会话/间隙）
+    let targetWorkspaceId: string | undefined
     const targetRow = target.closest<HTMLElement>('[data-row-key^="workspace:"]')
     if (targetRow !== null) {
       const key = targetRow.getAttribute('data-row-key') ?? ''
-      const targetWorkspaceId = key.slice('workspace:'.length)
+      targetWorkspaceId = key.slice('workspace:'.length)
+    } else {
+      const groupSection = target.closest<HTMLElement>('[class*="groupSection"]')
+      const rowInGroup = groupSection?.querySelector<HTMLElement>('[data-row-key^="workspace:"]')
+      if (rowInGroup) {
+        const key = rowInGroup.getAttribute('data-row-key') ?? ''
+        targetWorkspaceId = key.slice('workspace:'.length)
+      }
+    }
+
+    if (targetWorkspaceId !== undefined && targetWorkspaceId !== '') {
       const targetSectionId = sectionOf(state, targetWorkspaceId)
       if (targetSectionId !== draggingSectionId) {
+        // 跨分区：禁止作为落点（跨分区移动全靠菜单操作）
         if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
         setDragBlocked(true)
-        // 关键：绝对不调用 preventDefault()！不 preventDefault 浏览器即判定不可放置！
         event.stopPropagation()
       } else {
-        // 同分区合法放置区：恢复显示落点线
+        // 同分区合法排序区：主动 preventDefault 并设 move，彻底消灭怪异禁止图标 🚫！
+        event.preventDefault()
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
         setDragBlocked(false)
       }
     }
