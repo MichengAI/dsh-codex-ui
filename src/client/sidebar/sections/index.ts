@@ -23,12 +23,10 @@ import {
   deleteSection,
   flattenSections,
   isBuiltinSection,
-  moveSection,
   normalizeSections,
   parseSections,
   reconcileHostOrder,
   renameSection,
-  sortSectionMembers,
   sectionOf,
   serializeSections,
   type SectionsState,
@@ -380,8 +378,9 @@ export function observeWorkspaceSections(
       }
     })
 
- headers.set(sectionId, header)
-    return header  }
+    headers.set(sectionId, header)
+    return header
+  }
 
   /** 分区标题右侧的 `···`：直接克隆宿主项目行的原生图标按钮，样式与宿主完全一致。 */
   function buildHeaderActionButton(sectionId: string, name: string): HTMLElement {
@@ -505,10 +504,9 @@ export function observeWorkspaceSections(
   }
 
   /** 上一次算对齐时的（标题数+列宽）组合，避免每帧量 rect。 */
-  /** 上一次算对齐时的（标题数+列宽）组合，避免每帧量 rect。 */
   let lastAlignKey = ''
 
-    /** 把标题按分区顺序放到各自第一个分组块前面；空分区贴着下一个分区显示。 */
+  /** 把标题按分区顺序放到各自第一个分组块前面；空分区贴着下一个分区显示。 */
   function placeHeaders(blocks: readonly ProjectBlock[]): void {
     if (blocks.length === 0) return
     const target = blocks[0]!.block.parentElement
@@ -841,24 +839,19 @@ export function observeWorkspaceSections(
     input.addEventListener('blur', () => finish(true))
   }
 
-  document.addEventListener(
-    'keydown',
-    event => {
-      if (event.key !== 'Escape' || menuHost === undefined) return
-      closeSectionMenu()
-    },
-    true,
-  )
+  function onKeydownToCloseSectionMenu(event: KeyboardEvent): void {
+    if (event.key !== 'Escape' || menuHost === undefined) return
+    closeSectionMenu()
+  }
 
-  document.addEventListener(
-    'pointerdown',
-    event => {
-      if (menuHost === undefined) return
-      if (event.target instanceof Node && menuHost.contains(event.target)) return
-      closeSectionMenu()
-    },
-    true,
-  )
+  function onPointerdownToCloseSectionMenu(event: PointerEvent): void {
+    if (menuHost === undefined) return
+    if (event.target instanceof Node && menuHost.contains(event.target)) return
+    closeSectionMenu()
+  }
+
+  document.addEventListener('keydown', onKeydownToCloseSectionMenu, true)
+  document.addEventListener('pointerdown', onPointerdownToCloseSectionMenu, true)
 
   /**
    * 保留项目之间的原生拖拽排序，同时严格禁止跨分区拖拽（跨分区转移全靠菜单操作）。
@@ -868,6 +861,16 @@ export function observeWorkspaceSections(
    */
   let draggingWorkspaceId: string | undefined
   let draggingSectionId: string | undefined
+
+  /** 清理可能因拖过不同分区而残留在宿主行上的落点类名。 */
+  function clearHostDropIndicators(): void {
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>('[class*="workspaceDropBefore"], [class*="workspaceDropAfter"]'))) {
+      el.className = el.className
+        .replace(/\S*workspaceDropBefore\S*/g, '')
+        .replace(/\S*workspaceDropAfter\S*/g, '')
+        .trim()
+    }
+  }
 
   function onWorkspaceDragStart(event: DragEvent): void {
     const target = event.target
@@ -888,15 +891,16 @@ export function observeWorkspaceSections(
     const target = event.target
     if (!(target instanceof Element)) return
 
-    // 1. 悬停在分区标题上：禁止作为落点
+    // 1. 悬停在分区标题上：禁止作为落点。
+    // HTML5 规范中：不调用 preventDefault() 即代表禁止放下；dropEffect 设为 none，并阻断向宿主传递。
     if (target.closest(`.${HEADER_CLASS}`) !== null) {
       if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
-      event.preventDefault()
+      clearHostDropIndicators()
       event.stopPropagation()
       return
     }
 
-    // 2. 悬停在项目行上：若跨分区，禁止作为落点（跨分区移动全靠菜单操作）
+    // 2. 悬停在项目行上：若跨分区，禁止作为落点（跨分区移动全靠菜单操作）。
     const targetRow = target.closest<HTMLElement>('[data-row-key^="workspace:"]')
     if (targetRow !== null) {
       const key = targetRow.getAttribute('data-row-key') ?? ''
@@ -904,7 +908,8 @@ export function observeWorkspaceSections(
       const targetSectionId = sectionOf(state, targetWorkspaceId)
       if (targetSectionId !== draggingSectionId) {
         if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
-        event.preventDefault()
+        clearHostDropIndicators()
+        // 关键：绝对不调用 preventDefault()！不 preventDefault 浏览器即判定不可放置！
         event.stopPropagation()
       }
     }
@@ -915,20 +920,22 @@ export function observeWorkspaceSections(
     const target = event.target
     if (!(target instanceof Element)) return
 
-    // 落在分区标题上：直接拦截
+    // 落在分区标题上：直接丢弃拦截
     if (target.closest(`.${HEADER_CLASS}`) !== null) {
+      clearHostDropIndicators()
       event.preventDefault()
       event.stopPropagation()
       return
     }
 
-    // 落在不同分区的项目行上：直接拦截
+    // 落在不同分区的项目行上：直接丢弃拦截
     const targetRow = target.closest<HTMLElement>('[data-row-key^="workspace:"]')
     if (targetRow !== null) {
       const key = targetRow.getAttribute('data-row-key') ?? ''
       const targetWorkspaceId = key.slice('workspace:'.length)
       const targetSectionId = sectionOf(state, targetWorkspaceId)
       if (targetSectionId !== draggingSectionId) {
+        clearHostDropIndicators()
         event.preventDefault()
         event.stopPropagation()
       }
@@ -936,6 +943,7 @@ export function observeWorkspaceSections(
   }
 
   function onWorkspaceDragEnd(): void {
+    clearHostDropIndicators()
     draggingWorkspaceId = undefined
     draggingSectionId = undefined
   }
@@ -978,12 +986,16 @@ export function observeWorkspaceSections(
     injectMenuEntry()
   }
 
-  document.addEventListener('pointerdown', event => {
+  function onPointerdownToPrepareMenu(event: PointerEvent): void {
     if (event.target instanceof Element) prepareMenuInjection(event.target)
-  }, true)
-  document.addEventListener('click', event => {
+  }
+
+  function onClickToPrepareMenu(event: MouseEvent): void {
     if (event.target instanceof Element) prepareMenuInjection(event.target)
-  }, true)
+  }
+
+  document.addEventListener('pointerdown', onPointerdownToPrepareMenu, true)
+  document.addEventListener('click', onClickToPrepareMenu, true)
 
   /**
    * 用宿主自己的图标组件渲染出静态 SVG。
@@ -1273,7 +1285,8 @@ export function observeWorkspaceSections(
         }
       }
     } catch {
-      // 宿主拒绝（工作区被并发删除等）时保持现状，下一次同步会重试。
+      // 宿主拒绝（工作区被并发删除等）时清空意图，避免无限次死循环重试。
+      intentOrder = undefined
     } finally {
       applying = false
       pendingOrder = undefined
@@ -1452,19 +1465,6 @@ export function observeWorkspaceSections(
     window.clearInterval(boot)
     scheduleSync()
   }, 200)
-  // 预热图标缓存：菜单项图标由宿主原语渲染，首次渲染要几十毫秒；提前渲染好，
-  // 用户点开菜单时就只剩拼 DOM 的成本。
-  for (const name of [
-    'IconPinOutlineRegular',
-    'IconPinFillRegular',
-    'IconChecklistOutlineRegular',
-    'IconTriangleRightFill14',
-    'IconEditOutlineRegular',
-    'IconCloseOutlineRegular',
-    'IconPlusOutlineRegular',
-    'IconCheckOutlineRegular',
-  ]) {
-  }
   void loadStateFromHost()
   scheduleSync()
 
@@ -1479,6 +1479,10 @@ export function observeWorkspaceSections(
     document.removeEventListener('dragover', onWorkspaceDragOver, true)
     document.removeEventListener('drop', onWorkspaceDrop, true)
     document.removeEventListener('dragend', onWorkspaceDragEnd, true)
+    document.removeEventListener('keydown', onKeydownToCloseSectionMenu, true)
+    document.removeEventListener('pointerdown', onPointerdownToCloseSectionMenu, true)
+    document.removeEventListener('pointerdown', onPointerdownToPrepareMenu, true)
+    document.removeEventListener('click', onClickToPrepareMenu, true)
     unsubscribe?.()
 
     closeSectionMenu()

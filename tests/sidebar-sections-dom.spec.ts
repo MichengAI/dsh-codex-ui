@@ -855,7 +855,7 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(overEvent.defaultPrevented).toBe(false)
   })
 
-  it('跨分区拖拽与悬停在分区标题上时被严格拦截（禁止跨分区放置，转移全靠菜单）', async () => {
+  it('跨分区拖拽与悬停在分区标题上时被严格拦截（符合 HTML5 规范 dropEffect=none，且阻断向宿主传递）', async () => {
     seedSections({
       sections: [
         { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
@@ -866,30 +866,62 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     mount(['a', 'b'])
     await waitForSync()
 
+    function createDragEvent(type: string) {
+      const event = new Event(type, { bubbles: true, cancelable: true }) as any
+      event.dataTransfer = { dropEffect: 'move' }
+      let stopped = false
+      const origStop = event.stopPropagation.bind(event)
+      event.stopPropagation = () => {
+        stopped = true
+        origStop()
+      }
+      Object.defineProperty(event, 'isStopped', { get: () => stopped })
+      return event as DragEvent & { isStopped: boolean }
+    }
+
     // 从默认项目 b 发起拖拽
     const rowB = document.querySelector<HTMLElement>('[data-row-key="workspace:b"]')!
-    const startEvent = new Event('dragstart', { bubbles: true, cancelable: true })
+    const startEvent = createDragEvent('dragstart')
     rowB.dispatchEvent(startEvent)
 
-    // 1. 试图悬停在分区标题上：被阻止
+    // 1. 试图悬停在分区标题上：HTML5 规范设定 dropEffect='none'，不 preventDefault（即不可放置），并 stopPropagation 阻断宿主
     const pinnedHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === PINNED_SECTION_ID)!
-    const overHeader = new Event('dragover', { bubbles: true, cancelable: true })
+    const overHeader = createDragEvent('dragover')
     pinnedHeader.dispatchEvent(overHeader)
-    expect(overHeader.defaultPrevented).toBe(true)
+    expect(overHeader.dataTransfer?.dropEffect).toBe('none')
+    expect(overHeader.defaultPrevented).toBe(false) // 规范语义：不 preventDefault 即禁止放置
+    expect(overHeader.isStopped).toBe(true)
 
-    // 2. 试图悬停在不同分区（置顶）的项目 a 上：被阻止
+    // 2. 试图悬停在不同分区（置顶）的项目 a 上：同样设为 none，不 preventDefault，并阻断向宿主传递
     const rowA = document.querySelector<HTMLElement>('[data-row-key="workspace:a"]')!
-    const overForeign = new Event('dragover', { bubbles: true, cancelable: true })
+    const overForeign = createDragEvent('dragover')
     rowA.dispatchEvent(overForeign)
-    expect(overForeign.defaultPrevented).toBe(true)
+    expect(overForeign.dataTransfer?.dropEffect).toBe('none')
+    expect(overForeign.defaultPrevented).toBe(false)
+    expect(overForeign.isStopped).toBe(true)
 
-    // 3. 试图落在不同分区的项目 a 上：被阻止
-    const dropForeign = new Event('drop', { bubbles: true, cancelable: true })
+    // 3. 试图落在不同分区的项目 a 上：直接 preventDefault + stopPropagation 拦截丢弃
+    const dropForeign = createDragEvent('drop')
     rowA.dispatchEvent(dropForeign)
     expect(dropForeign.defaultPrevented).toBe(true)
+    expect(dropForeign.isStopped).toBe(true)
 
     // 拖拽结束
-    document.dispatchEvent(new Event('dragend', { bubbles: true, cancelable: true }))
+    document.dispatchEvent(createDragEvent('dragend'))
+  })
+
+  it('dispose() 时彻底解绑全部 document 级事件监听器，避免多次启停时内存与全局点击泄漏', async () => {
+    mountFixture(['a'])
+    mount(['a'])
+    await waitForSync()
+    expect(document.querySelector(`[${SECTION_HEADER_ATTR}]`)).not.toBeNull()
+
+    // 模拟 dispose
+    dispose?.()
+    dispose = undefined
+
+    // 验证：卸载后 headers 集合被清空，DOM 标题被清理
+    expect(document.querySelector(`[${SECTION_HEADER_ATTR}]`)).toBeNull()
   })
 
   it('通过菜单把项目移入展开的分组时，当场进入目标分区并立即显示（不需收缩展开）', async () => {

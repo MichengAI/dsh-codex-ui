@@ -348,11 +348,3 @@ function rebuild(
   }
   return next
 }
-
-/** 分区摊平后是否与宿主顺序完全一致。 */
-function isContiguous(sections: readonly WorkspaceSection[], order: readonly string[]): boolean {
-  const flat: string[] = []
-  for (const section of sections) flat.push(...section.ids)
-  if (flat.length !== order.length) return false
-  return flat.every((id, index) => id === order[index])
-}
