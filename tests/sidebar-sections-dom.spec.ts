@@ -530,7 +530,7 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(defHeader.getAttribute('data-dcu-drop-target')).toBeNull()
   })
 
-  it('项目行上的拖动由宿主原生画线（插件不自绘第二条线，彻底杜绝重叠双线）', async () => {
+  it('项目行上的拖动瞬时（0ms）显示落点指示线，且宿主落点线已被 CSS 屏蔽杜绝双线', async () => {
     mountFixture(['a', 'b', 'c'])
     mount(['a', 'b', 'c'])
     await waitForSync()
@@ -548,15 +548,20 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
 
     rows[0]!.dispatchEvent(drag('dragstart', rect.top))
 
-    // 拖到行上：插件不画任何第二条线，完全交给宿主
+    // 拖到行下半区：落点线瞬时显示在行底部
     const over = drag('dragover', rect.bottom - 2)
     rows[2]!.dispatchEvent(over)
-    expect(over.defaultPrevented).toBe(false)
-    expect(document.querySelector('.dcu-ws-section-drop')).toBeNull()
+    expect(over.defaultPrevented).toBe(true)
+    const line = document.querySelector<HTMLElement>('.dcu-ws-section-drop')
+    expect(line).not.toBeNull()
+    expect(line!.style.display).toBe('block')
+    expect(line!.style.top).toBe(`${rect.bottom - 6}px`)
+    expect(line!.style.left).toBe('10px')
+    expect(line!.style.width).toBe('120px')
 
-    // 拖动结束
+    // 拖动结束：落点线隐藏
     document.dispatchEvent(drag('dragend', rect.bottom - 1))
-    expect(document.querySelector('.dcu-ws-section-drop')).toBeNull()
+    expect(line!.style.display).toBe('none')
   })
 
   it('菜单里选自定义分区后，项目真的移动到那个分区（不是只写存储）', async () => {

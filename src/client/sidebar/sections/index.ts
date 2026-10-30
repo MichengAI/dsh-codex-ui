@@ -94,14 +94,13 @@ const SECTIONS_CSS = `
 .dcu-ws-section-action:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.16))}
 .dcu-ws-section.dcu-dragging{opacity:.4}
 [data-sidebar-collapsed='true'] .dcu-ws-section{display:none !important}
-/* 1. 宿主项目行原生的落点线浮在最顶层（不会被项目行 hover 灰底遮挡） */
+/* 宿主自身的落点线和顶线全部隐藏，由插件以 z-index: 9999 自绘唯一、瞬时（0ms）、不重叠的落点线 */
 [class*="workspaceDropBefore"]::before,
 [class*="workspaceDropAfter"]::after,
 [class*="dropBefore"]::before,
-[class*="dropAfter"]::after{z-index:20 !important}
-/* 2. 隐藏宿主列表最顶部的指示线（「置顶」分区固定在列表最顶部，项目绝不能拖到置顶标题上方） */
+[class*="dropAfter"]::after,
 [class*="listTopDropIndicator"]{display:none !important}
-.dcu-ws-section-drop{position:fixed;height:12px;pointer-events:none;z-index:40;background:linear-gradient(55deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 0 / 5px 7px no-repeat,linear-gradient(125deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 5px / 5px 7px no-repeat,linear-gradient(var(--dsw-alias-state-business-primary,#4f8cff) 0 0) 4px 5px / calc(100% - 4px) 2px no-repeat}
+.dcu-ws-section-drop{position:fixed;height:12px;pointer-events:none;z-index:9999;background:linear-gradient(55deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 0 / 5px 7px no-repeat,linear-gradient(125deg,transparent calc(50% - 1px),var(--dsw-alias-state-business-primary,#4f8cff) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)) 0 5px / 5px 7px no-repeat,linear-gradient(var(--dsw-alias-state-business-primary,#4f8cff) 0 0) 4px 5px / calc(100% - 4px) 2px no-repeat}
 .dcu-ws-section-menu{position:fixed;z-index:1000;min-width:184px;max-width:280px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:4px;display:flex;flex-direction:column;gap:2px;border:none;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-menu-surface-fill,var(--dsw-alias-surface-overlay,#1e1e22));backdrop-filter:var(--dsw-menu-backdrop-filter,blur(40px) saturate(150%));-webkit-backdrop-filter:var(--dsw-menu-backdrop-filter,blur(40px) saturate(150%));box-shadow:var(--dsw-elevation-prominent,0 6px 20px rgba(0,0,0,.45));color:var(--dsw-alias-label-primary,#ededed)}
 /* 父菜单与二级菜单之间有一小段空隙：铺一条透明桥，指针穿过去时不会触发离开事件。 */
 .dcu-ws-section-menu[data-flyout='true']::before{content:'';position:absolute;top:0;bottom:0;left:-6px;width:8px}
@@ -571,18 +570,30 @@ export function observeWorkspaceSections(
   let projectRowHover: { targetId: string; row: HTMLElement; before: boolean } | undefined
   let dropLine: HTMLElement | undefined
 
+  function ensureDropLine(): HTMLElement {
+    if (dropLine && dropLine.isConnected) return dropLine
+    const line = document.createElement('div')
+    line.className = 'dcu-ws-section-drop'
+    line.style.display = 'none'
+    document.body.appendChild(line)
+    dropLine = line
+    return line
+  }
+
+  function showDropLine(target: HTMLElement, before: boolean): void {
+    const rect = target.getBoundingClientRect()
+    const line = ensureDropLine()
+    line.style.display = 'block'
+    line.style.top = `${(before ? rect.top : rect.bottom) - 6}px`
+    line.style.left = `${rect.left}px`
+    line.style.width = `${rect.width}px`
+  }
+
   function clearDropLine(): void {
-    dropLine?.remove()
-    dropLine = undefined
+    if (dropLine) dropLine.style.display = 'none'
     for (const header of headers.values()) header.removeAttribute('data-dcu-drop-target')
   }
 
-  /**
-   * 拖拽悬停在分区标题上时：
-   * 1. 标题本身高亮（作为空分区或整个分区的落点提示）；
-   * 2. 清除 DOM 里任何项目行上残留的宿主落点类名（因为鼠标移到标题上中断了宿主对工作区的 dragleave），
-   *    彻底杜绝悬停在上方标题时、下方项目行还留着一条横线！
-   */
   function showSectionDrop(header: HTMLElement): void {
     clearDropLine()
     header.setAttribute('data-dcu-drop-target', 'true')
@@ -941,18 +952,6 @@ export function observeWorkspaceSections(
 
   /* ── 分区拖拽 ── */
 
-  function showDropLine(target: HTMLElement, before: boolean): void {
-    clearDropLine()
-    const rect = target.getBoundingClientRect()
-    const line = document.createElement('div')
-    line.className = 'dcu-ws-section-drop'
-    line.style.top = `${(before ? rect.top : rect.bottom) - 6}px`
-    line.style.left = `${rect.left}px`
-    line.style.width = `${rect.width}px`
-    document.body.appendChild(line)
-    dropLine = line
-  }
-
   function rowFromEvent(event: DragEvent): HTMLElement | null {
     const target = event.target
     if (!(target instanceof Element)) return null
@@ -988,6 +987,7 @@ export function observeWorkspaceSections(
    */
   function onDragOver(event: DragEvent): void {
     if (draggingProject !== undefined) {
+      // 1. 悬停在分区标题上：标题高亮，清除指示横线
       const header = headerFromEvent(event)
       const sectionId = header?.getAttribute(SECTION_HEADER_ATTR)
       if (header !== null && sectionId !== null && sectionId !== undefined) {
@@ -998,21 +998,27 @@ export function observeWorkspaceSections(
         showSectionDrop(header)
         return
       }
-      if (projectDrop !== undefined) {
-        projectDrop = undefined
-        clearDropLine()
-      }
+
+      // 2. 悬停在项目行上：瞬时（0ms）显示落点指示横线
       const row = rowFromEvent(event)
       if (row !== null) {
         const id = workspaceIdOfRow(row)
         if (id !== undefined && id !== draggingProject) {
+          event.preventDefault()
+          if (event.dataTransfer !== null) event.dataTransfer.dropEffect = 'move'
+          projectDrop = undefined
           const rect = row.getBoundingClientRect()
-          projectRowHover = {
-            targetId: id,
-            row,
-            before: event.clientY < rect.top + rect.height / 2,
-          }
+          const before = event.clientY < rect.top + rect.height / 2
+          projectRowHover = { targetId: id, row, before }
+          showDropLine(row, before)
+          return
         }
+      }
+
+      if (projectDrop !== undefined || projectRowHover !== undefined) {
+        projectDrop = undefined
+        projectRowHover = undefined
+        clearDropLine()
       }
       return
     }
@@ -1029,6 +1035,7 @@ export function observeWorkspaceSections(
   function onDrop(event: DragEvent): void {
     if (draggingProject !== undefined) {
       const moving = draggingProject
+      clearDropLine()
 
       // ── 场景 1：投放到分区标题上（包括空分区） ──
       if (projectDrop?.kind === 'section') {
@@ -1037,14 +1044,17 @@ export function observeWorkspaceSections(
         event.preventDefault()
         event.stopPropagation()
 
+        // 1. 同步更新状态与本地存储
+        const assigned = assignWorkspace(state, moving, targetSectionId)
+        state = assigned
+        persist()
+
+        // 2. 同步执行乐观 DOM 移动
         const targetHeader = headers.get(targetSectionId)
         const container = list ?? targetHeader?.parentElement
         const allBlocks = collectProjectBlocks(container ?? document, container as HTMLElement)
         const movedBlock = allBlocks.find(b => b.workspaceId === moving)?.block
 
-        // 核心突破：同步乐观 DOM 移动！
-        // 鼠标松开的当帧直接把 DOM 节点移入目标分区位置，绝不等后台 IPC 往返！
-        // 这样浏览器看到节点已经在目标位置，绝不会执行任何“先回弹一下再跳过去”的视觉倒退！
         if (movedBlock && targetHeader && container) {
           const nextHeader = (() => {
             const index = state.sections.findIndex(s => s.id === targetSectionId)
@@ -1073,45 +1083,62 @@ export function observeWorkspaceSections(
           }
         }
 
-        const assigned = assignWorkspace(state, moving, targetSectionId)
-        if (assigned !== state) {
-          state = assigned
-          persist()
-          const desired = flattenSections(state)
-          intentOrder = desired
-          suppressReconcile = 6
-          void applyOrder(desired)
-          scheduleSync()
-        }
+        // 3. 驱动宿主持久化顺序
+        const desired = flattenSections(state)
+        intentOrder = desired
+        suppressReconcile = 10
+        void applyOrder(desired)
+        scheduleSync()
         return
       }
 
-      // ── 场景 2：投放到项目行之间 ──
+      // ── 场景 2：投放到具体项目行之间 ──
       if (projectRowHover !== undefined) {
         const hover = projectRowHover
-        const container = list ?? hover.row.closest<HTMLElement>('.list') ?? undefined
-        const blocks = collectProjectBlocks(container ?? document, container)
-        const movingBlock = blocks.find(b => b.workspaceId === moving)?.block
-        const targetBlock = blocks.find(b => b.workspaceId === hover.targetId)?.block
+        finishProjectDrag()
+        event.preventDefault()
+        event.stopPropagation()
 
-        // 同步乐观 DOM 移动：当场插入到目标行的前/后
+        const targetSectionId = sectionOf(state, hover.targetId) ?? DEFAULT_SECTION_ID
+        const targetSection = state.sections.find(s => s.id === targetSectionId)
+        const targetIdx = targetSection ? targetSection.ids.indexOf(hover.targetId) : -1
+        const insertIdx = targetIdx === -1 ? undefined : (hover.before ? targetIdx : targetIdx + 1)
+
+        // 1. 同步更新状态并落盘
+        const assigned = assignWorkspace(state, moving, targetSectionId, insertIdx)
+        state = assigned
+        persist()
+
+        // 2. 同步执行乐观 DOM 移动
+        const container = list ?? hover.row.closest<HTMLElement>('.list') ?? undefined
+        const allBlocks = collectProjectBlocks(container ?? document, container)
+        const movingBlock = allBlocks.find(b => b.workspaceId === moving)?.block
+        const targetBlock = allBlocks.find(b => b.workspaceId === hover.targetId)?.block
+
         if (movingBlock && targetBlock && targetBlock.parentElement) {
           const anchor = hover.before ? targetBlock : targetBlock.nextSibling
           if (anchor !== movingBlock) {
             targetBlock.parentElement.insertBefore(movingBlock, anchor)
           }
-          const targetSectionId = targetBlock.getAttribute('data-dcu-section-member')
-          if (targetSectionId) {
-            movingBlock.setAttribute('data-dcu-section-member', targetSectionId)
-            const th = headers.get(targetSectionId)
-            if (th?.dataset.open !== 'false') {
-              movingBlock.removeAttribute('data-dcu-section-hidden')
-              movingBlock.style.removeProperty('max-height')
-              movingBlock.style.removeProperty('overflow')
-              movingBlock.style.removeProperty('opacity')
-            }
+          movingBlock.setAttribute('data-dcu-section-member', targetSectionId)
+          const th = headers.get(targetSectionId)
+          if (th?.dataset.open === 'false') {
+            movingBlock.setAttribute('data-dcu-section-hidden', 'true')
+          } else {
+            movingBlock.removeAttribute('data-dcu-section-hidden')
+            movingBlock.style.removeProperty('max-height')
+            movingBlock.style.removeProperty('overflow')
+            movingBlock.style.removeProperty('opacity')
           }
         }
+
+        // 3. 驱动宿主持久化顺序
+        const desired = flattenSections(state)
+        intentOrder = desired
+        suppressReconcile = 10
+        void applyOrder(desired)
+        scheduleSync()
+        return
       }
 
       finishProjectDrag()
@@ -1441,7 +1468,11 @@ export function observeWorkspaceSections(
        */
       const deadline = Date.now() + 4000
       for (let pass = 0; pass < desired.length && Date.now() < deadline; pass += 1) {
-        const current = domOrder()
+        const hostOrder = (): string[] => {
+          const listIds = knownIds()
+          return listIds.length > 0 ? listIds : domOrder()
+        }
+        const current = hostOrder()
         if (sameOrder(current, desired)) break
 
         // 单次移动最常见：直接找出被移动的那一项，一次 insertBefore 就够（宿主只重排一次，FLIP 动画正常）。
@@ -1474,7 +1505,7 @@ export function observeWorkspaceSections(
         // 否则会在宿主还没重排时误判「仍然错位」而重复写同一项。
         for (let frame = 0; frame < 12; frame += 1) {
           await new Promise<void>(resolve => window.requestAnimationFrame(() => resolve()))
-          if (domOrder().indexOf(moving) === desired.indexOf(moving)) break
+          if (hostOrder().indexOf(moving) === desired.indexOf(moving)) break
         }
       }
     } catch {
