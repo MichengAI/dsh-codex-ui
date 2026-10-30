@@ -378,6 +378,96 @@ describe('工作区分区：DOM 层', () => {
     expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['d', 'a', 'b', 'c'])
   })
 
+  it('宿主列表无变化时，反复 DOM 更新不会重复保存分区文档', async () => {
+    const saved = vi.fn(async (body: string) => { hostDocument = body; return true })
+    setSectionsTransport({ load: async () => hostDocument, save: saved })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+    saved.mockClear()
+    document.body.appendChild(document.createElement('span'))
+    await waitForSync()
+    document.body.appendChild(document.createElement('span'))
+    await waitForSync()
+    expect(saved).not.toHaveBeenCalled()
+  })
+
+  it('宿主仅展示部分项目时仍能完成分区操作，隐藏项目归属不丢失', async () => {
+    mountFixture(['a', 'b', 'c'])
+    const fake = mount(['a', 'b', 'c'])
+    await waitForSync()
+    document.querySelector('[data-dcu-test-group="b"]')!.remove()
+    await waitForSync()
+    ;(await openWorkspaceMenu('c')).querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    await waitForSync()
+    expect(fake.service.insertBefore.mock.calls).toEqual([['c', 'a']])
+    expect(hostSection(PINNED_SECTION_ID).ids).toEqual(['c'])
+    expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
+    expect(document.querySelector('[data-dcu-test-group="c"]')!.getAttribute('data-dcu-section-member')).toBe(PINNED_SECTION_ID)
+  })
+
+  it('宿主写入超过 20 秒未返回时安全放弃并回滚，不锁死后续队列', async () => {
+    mountFixture(['a', 'b', 'c'])
+    const fake = mount(['a', 'b', 'c'])
+    await waitForSync()
+    let releaseLate!: () => void
+    fake.service.insertBefore.mockImplementationOnce(async () => {
+      await new Promise<void>(resolve => { releaseLate = resolve })
+      return {}
+    })
+    const menu = await openWorkspaceMenu('c')
+    vi.useFakeTimers()
+    try {
+      menu.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+      await vi.advanceTimersByTimeAsync(8100)
+      expect(document.querySelector('[data-dcu-sections-wait]')?.textContent).toContain('尚未完成')
+      // 达到 20s 逃生时间
+      await vi.advanceTimersByTimeAsync(12000)
+      expect(document.querySelector('[data-dcu-sections-wait]')).toBeNull()
+      // 确认未提交的置顶意图被回滚
+      expect(hostSection(PINNED_SECTION_ID).ids).toEqual([])
+      // 此时发起新操作，队列未被锁死，可以正常进行
+      fake.service.insertBefore.mockImplementationOnce(async (workspaceId, beforeWorkspaceId) => {
+        return fakeWorkspaces(['a', 'b', 'c']).service.insertBefore(workspaceId, beforeWorkspaceId)
+      })
+      const secondMenu = await openWorkspaceMenu('b')
+      secondMenu.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+      await vi.advanceTimersByTimeAsync(100)
+      expect(fake.service.insertBefore).toHaveBeenCalledTimes(2)
+      // 迟到的第一次请求终于返回，但不应干扰当前状态
+      releaseLate()
+      await vi.advanceTimersByTimeAsync(100)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('宿主写入长时间未返回时显示等待提示，不并发重发；迟到完成后继续队列', async () => {
+    mountFixture(['a', 'b', 'c'])
+    const fake = mount(['a', 'b', 'c'])
+    await waitForSync()
+    const move = fake.service.insertBefore.getMockImplementation()!
+    let release!: () => void
+    fake.service.insertBefore.mockImplementationOnce(async (...args) => {
+      await move(...args)
+      await new Promise<void>(resolve => { release = resolve })
+      return {}
+    })
+    const menu = await openWorkspaceMenu('c')
+    vi.useFakeTimers()
+    try {
+      menu.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+      await vi.advanceTimersByTimeAsync(8100)
+      expect(document.querySelector('[data-dcu-sections-wait]')?.textContent).toContain('尚未完成')
+      expect(fake.service.insertBefore.mock.calls).toEqual([['c', 'a']])
+      release()
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(document.querySelector('[data-dcu-sections-wait]')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('首次同步把未归类的工作区全部落进兜底分区，并渲染两个内置标题', async () => {
     mountFixture(['a', 'b'])
     mount(['a', 'b'])

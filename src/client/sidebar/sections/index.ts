@@ -256,6 +256,45 @@ export function observeWorkspaceSections(
     motion?: SectionLayoutMotion
   }
   let activeUpdate: SectionsUpdate | undefined
+  let writeGen = 0
+  let waitNotice: HTMLElement | undefined
+
+  const clearWriteWait = (): void => {
+    writeGen += 1
+    waitNotice?.remove()
+    waitNotice = undefined
+  }
+
+  const insertWorkspace = async (service: WorkspacesLike, workspaceId: string, beforeWorkspaceId?: string): Promise<void> => {
+    const curGen = ++writeGen
+    const timer = window.setTimeout(() => {
+      if (disposed || writeGen !== curGen || list?.parentElement === null || list === undefined) return
+      waitNotice?.remove()
+      waitNotice = document.createElement('div')
+      waitNotice.setAttribute('data-dcu-sections-wait', '')
+      waitNotice.setAttribute('role', 'status')
+      waitNotice.textContent = text('sections.writePending', '工作区移动尚未完成，后续操作正在等待宿主响应。')
+      waitNotice.style.cssText = 'padding: 8px 12px; font-size: 12px; color: var(--dsw-alias-text-secondary, inherit);'
+      list.parentElement.insertBefore(waitNotice, list)
+    }, 8000)
+
+    try {
+      await Promise.race([
+        service.insertBefore(workspaceId, beforeWorkspaceId),
+        new Promise<never>((_, reject) => {
+          window.setTimeout(() => {
+            if (writeGen === curGen) reject(new Error('宿主响应超时 (20s)'))
+          }, 20000)
+        }),
+      ])
+    } finally {
+      window.clearTimeout(timer)
+      if (writeGen === curGen) {
+        waitNotice?.remove()
+        waitNotice = undefined
+      }
+    }
+  }
   const updates: SectionsUpdate[] = []
   let committedState = state
   let wired = false
@@ -1347,7 +1386,7 @@ export function observeWorkspaceSections(
       const desired = flattenSections(update.next)
       for (const move of planWorkspaceMoves(knownIds(), desired, update.workspaceIds)) {
         if (disposed || activeUpdate !== update) return
-        await service.insertBefore(move.workspaceId, move.beforeWorkspaceId)
+        await insertWorkspace(service, move.workspaceId, move.beforeWorkspaceId)
       }
       if (disposed || activeUpdate !== update) return
       update.rpcDone = true
@@ -1420,7 +1459,7 @@ export function observeWorkspaceSections(
       const ids = knownIds()
       const update = activeUpdate
       if (update !== undefined) {
-        if (update.rpcDone && sameOrder(ids, order)) {
+        if (update.rpcDone && sameVisibleOrder(ids, order)) {
           const normalized = withHostWorkspaces(update.next, ids)
           if (!sameOrder(flattenSections(normalized), flattenSections(update.next))) {
             const original = new Set(flattenSections(update.next))
@@ -1436,7 +1475,7 @@ export function observeWorkspaceSections(
               if (service === undefined) throw new Error('工作区服务未就绪')
               update.rpcDone = false
               void (async () => {
-                for (const move of moves) await service.insertBefore(move.workspaceId, move.beforeWorkspaceId)
+                for (const move of moves) await insertWorkspace(service, move.workspaceId, move.beforeWorkspaceId)
                 if (activeUpdate !== update || disposed) return
                 update.rpcDone = true
                 scheduleSync()
@@ -1454,7 +1493,7 @@ export function observeWorkspaceSections(
         }
         const desired = flattenSections(update.next)
         // 服务快照与 DOM 必须同时追平。中间序列不参与标题定位，也不反向覆盖菜单意图。
-        if (!sameOrder(ids, desired) || !sameOrder(order, desired)) return
+        if (!sameOrder(ids, desired) || !sameVisibleOrder(desired, order)) return
         if (!update.layoutDone) {
           update.layoutDone = true
           const layout = (): void => placeHeaders(collectProjectBlocks(list!, list), update.next)
@@ -1468,6 +1507,7 @@ export function observeWorkspaceSections(
         }
         if (update.rpcDone && update.motionDone) {
           committedState = update.next
+          state = update.next
           persist(committedState)
           activeUpdate = undefined
           startNextUpdate()
@@ -1475,7 +1515,8 @@ export function observeWorkspaceSections(
         return
       }
       // React 还没提交快照对应的行时保持当前布局，等 MutationObserver 再来。
-      if (!sameOrder(ids, order) || order.length === 0) return
+      if (!sameVisibleOrder(ids, order) || order.length === 0) return
+      const before = serializeSections(state)
       state = normalizeSections(state, ids)
       if (!baselineSet) {
         baselineSet = true
@@ -1483,20 +1524,26 @@ export function observeWorkspaceSections(
           if (sectionOf(state, id) === undefined) state = assignWorkspace(state, id, DEFAULT_SECTION_ID)
         }
         committedState = state
-        if (!sameOrder(flattenSections(state), order)) {
+        if (!sameOrder(flattenSections(state), ids)) {
           commitExplicit(state)
           return
         }
       } else {
         // 空闲时只采纳宿主的分区内顺序；原生拖拽不需要再写一次宿主。
-        state = reconcileHostOrder(state, order).state
+        state = reconcileHostOrder(state, ids).state
       }
       committedState = state
-      persist()
+      if (serializeSections(state) !== before) persist()
       placeHeaders(collectProjectBlocks(list, list))
     } finally {
       syncing = false
     }
+  }
+
+  /** 可见行必须是快照的有序子集；未渲染的项目仍由完整快照维护。 */
+  function sameVisibleOrder(all: readonly string[], visible: readonly string[]): boolean {
+    const shown = new Set(visible)
+    return shown.size === visible.length && sameOrder(all.filter(id => shown.has(id)), visible)
   }
 
   /** 两个顺序是否逐项一致。 */
@@ -1567,6 +1614,7 @@ export function observeWorkspaceSections(
     window.clearInterval(boot)
     if (rafId !== 0) window.cancelAnimationFrame(rafId)
     observer?.disconnect()
+    clearWriteWait()
     updates.length = 0
     activeUpdate?.motion?.dispose()
     activeUpdate = undefined
