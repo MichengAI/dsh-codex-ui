@@ -802,6 +802,53 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(document.querySelectorAll('[data-dcu-section-hidden="true"]').length).toBe(0)
   })
 
+  it('点击「移除分区」后，该分区标题当场从 DOM 中立刻消失（0ms），成员回流到默认分区', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '临时分区', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b'] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+    expect(s1Header).toBeDefined()
+
+    // 打开 s1 的标题 ··· 菜单
+    const actionsBtn = s1Header.querySelector<HTMLElement>('.dcu-ws-section-actions button')!
+    actionsBtn.click()
+    await waitForSync()
+
+    const panel = document.querySelector('.dcu-ws-section-menu')!
+    const removeBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '移除分区')!
+    expect(removeBtn).toBeDefined()
+
+    // 点击移除分区：标题必须当场在同步帧被从 DOM 移除
+    removeBtn.click()
+    expect(document.querySelector(`[${SECTION_HEADER_ATTR}="s1"]`)).toBeNull()
+    expect(headers().some(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')).toBe(false)
+
+    await waitForSync()
+    // a 成员自动回流到默认「项目」分区
+    expect(hostSection(DEFAULT_SECTION_ID).ids).toContain('a')
+  })
+
+  it('项目行上的 dragstart 在捕获阶段被彻底拦截（无法发起拖拽，彻底禁止跨分区拖拽）', async () => {
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    const row = document.querySelector<HTMLElement>('[data-row-key="workspace:a"]')!
+    const event = new Event('dragstart', { bubbles: true, cancelable: true })
+    row.dispatchEvent(event)
+
+    // 验证：事件被 preventDefault，阻止浏览器启动拖拽
+    expect(event.defaultPrevented).toBe(true)
+  })
+
   it('通过菜单把项目移入展开的分组时，当场进入目标分区并立即显示（不需收缩展开）', async () => {
     seedSections({
       sections: [

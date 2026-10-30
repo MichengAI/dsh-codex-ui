@@ -748,6 +748,10 @@ export function observeWorkspaceSections(
         icon: iconClose(),
         onSelect: () => {
           closeSectionMenu()
+          // 同步移除 DOM 标题节点并清理映射，点击当场立刻消失，绝不等待下一帧
+          const header = headers.get(sectionId)
+          header?.remove()
+          headers.delete(sectionId)
           commitExplicit(deleteSection(state, sectionId))
         },
       })
@@ -855,6 +859,22 @@ export function observeWorkspaceSections(
     },
     true,
   )
+
+  /**
+   * 彻底禁用工作区行的拖拽：全靠菜单操作。
+   *
+   * 在捕获阶段拦截宿主在工作区行上发起的 HTML5 拖拽，彻底杜绝跨分区拖拽、
+   * 时序错位以及拖拽带来的落点线和回弹问题。
+   */
+  function onWorkspaceDragStart(event: DragEvent): void {
+    const target = event.target
+    if (target instanceof Element && target.closest('[data-row-key^="workspace:"]') !== null) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+  }
+
+  document.addEventListener('dragstart', onWorkspaceDragStart, true)
 
   /* ── 项目菜单扩展 ── */
 
@@ -1386,6 +1406,7 @@ export function observeWorkspaceSections(
     window.clearInterval(boot)
     if (rafId !== 0) window.cancelAnimationFrame(rafId)
     observer?.disconnect()
+    document.removeEventListener('dragstart', onWorkspaceDragStart, true)
     unsubscribe?.()
 
     closeSectionMenu()
