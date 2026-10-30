@@ -295,53 +295,40 @@ export function reconcileHostOrder(
   state: SectionsState,
   order: readonly string[],
 ): { state: SectionsState; changed: boolean } {
-  const previous = flattenSections(state)
+  // 1. 已有项目的归属完全以 state 现有记录为准（用户显式拖拽与菜单操作才是权威事实源），
+  //    绝对不根据平铺序列里的邻居去“猜测”归属，彻底根除“拖进新分区后把对方一个项目交换回来”的 Bug！
   const assignments = new Map<string, string>()
   for (const section of state.sections) {
     for (const id of section.ids) assignments.set(id, section.id)
   }
 
-  const known = new Set(order)
-  const moved = findMovedItem(
-    previous.filter(id => known.has(id)),
-    order,
-  )
-  if (moved === undefined) {
-    // 不是「单项移动」的差异（例如宿主批量变更、工作区新增/删除）：只补未记录项，保持既有归属，
-    // 由调用方把旧顺序写回宿主，不做会破坏分区的猜测。
-    let changed = false
-    for (const id of order) {
-      if (!assignments.has(id)) {
-        assignments.set(id, DEFAULT_SECTION_ID)
-        changed = true
-      }
+  // 2. 只有新出现且未记录的项（例如新创建的工作区），才默认进入兜底分区
+  let added = false
+  for (const id of order) {
+    if (!assignments.has(id)) {
+      assignments.set(id, DEFAULT_SECTION_ID)
+      added = true
     }
-    if (!changed) return { state, changed: false }
-    return { state: { sections: rebuild(state.sections, order, assignments) }, changed: true }
   }
 
-  const index = order.indexOf(moved)
-  let target: string | undefined
-  for (let i = index - 1; i >= 0 && target === undefined; i -= 1) {
-    target = assignments.get(order[i]!)
-  }
-  for (let i = index + 1; i < order.length && target === undefined; i += 1) {
-    target = assignments.get(order[i]!)
-  }
-  assignments.set(moved, target ?? DEFAULT_SECTION_ID)
+  // 3. 各分区内部成员按宿主出现的真实顺序排列，并自动过滤掉已删除项
+  const sections = state.sections.map(section => {
+    const ids = order.filter(id => assignments.get(id) === section.id)
+    return {
+      id: section.id,
+      name: section.name,
+      ids,
+    }
+  })
 
-  const sections = rebuild(state.sections, order, assignments)
   const changed =
-    sections.length !== state.sections.length ||
-    sections.some((section, index2) => {
-      const before = state.sections[index2]
-      return (
-        before === undefined ||
-        before.id !== section.id ||
-        before.ids.length !== section.ids.length ||
-        before.ids.some((id, i) => id !== section.ids[i])
-      )
+    added ||
+    sections.some((section, index) => {
+      const before = state.sections[index]
+      if (before === undefined || before.ids.length !== section.ids.length) return true
+      return before.ids.some((id, i) => id !== section.ids[i])
     })
+
   return { state: { sections }, changed }
 }
 

@@ -1475,27 +1475,18 @@ export function observeWorkspaceSections(
         const current = hostOrder()
         if (sameOrder(current, desired)) break
 
-        // 单次移动最常见：直接找出被移动的那一项，一次 insertBefore 就够（宿主只重排一次，FLIP 动画正常）。
-        const moved = findMovedItem(current, desired)
-        let moving: string | undefined
-        let anchor: string | undefined
-        if (moved !== undefined) {
-          moving = moved
-          const target = desired.indexOf(moved)
-          anchor = desired[target + 1]
-        } else {
-          // 多处同时变化（例如删除分区后成员并入兜底）：取第一处错位，把目标项插到当前占位项之前。
-          let at = -1
-          for (let i = 0; i < desired.length; i += 1) {
-            if (current[i] !== desired[i]) {
-              at = i
-              break
-            }
+        // 直接取第一处不匹配的位置：将期望的项直接插在当前占位项之前。
+        // 绝不使用启发式猜测（findMovedItem 会在双向距离相同时挑错项，导致把目标分区里的已有项目交换走）！
+        let at = -1
+        for (let i = 0; i < desired.length; i += 1) {
+          if (current[i] !== desired[i]) {
+            at = i
+            break
           }
-          moving = desired[at]
-          anchor = current[at]
         }
-        if (moving === undefined) break
+        if (at === -1) break
+        const moving = desired[at]!
+        const anchor = current[at]
 
         await Promise.race([
           Promise.resolve(service.insertBefore(moving, anchor)),

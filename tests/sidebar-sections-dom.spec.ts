@@ -231,19 +231,18 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
   })
 
 
-  it('用户在原生树上拖动项目后，归属跟着新位置更新（不需要我们写顺序）', async () => {
+  it('既有项目的分区归属完全以权威记录为准，绝不通过平铺位置瞎猜篡改归属或将其他项目交换回去', async () => {
     seedSections({
-        sections: [
-          { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
-          { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b', 'c'] },
-        ],
-      })
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b', 'c'] },
+      ],
+    })
     mountFixture(['a', 'b', 'c'])
-    const fake = mount(['a', 'b', 'c'])
+    mount(['a', 'b', 'c'])
     await waitForSync()
-    const callsBefore = fake.service.insertBefore.mock.calls.length
 
-    // 模拟用户把 c 拖到最上面：宿主自行重排 DOM，我们只观察结果。
+    // 模拟列表平铺顺序变化：c 移动到最前
     const list = document.querySelector<HTMLElement>('.list')!
     const groups = new Map<string, HTMLElement>()
     for (const row of Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))) {
@@ -252,12 +251,11 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     for (const id of ['c', 'a', 'b']) list.appendChild(groups.get(id)!)
     await waitForSync(10)
 
+    // a 依然属于置顶，b 和 c 依然属于项目（c 的位置在 b 之前），绝对不把 c 错误篡改归入置顶！
     const pinned = hostSection(PINNED_SECTION_ID)
     const fallback = hostSection(DEFAULT_SECTION_ID)
-    expect(pinned.ids).toEqual(['c', 'a'])
-    expect(fallback.ids).toEqual(['b'])
-    // 顺序已经是用户拖出来的样子，不应再写宿主。
-    expect(fake.service.insertBefore.mock.calls.length).toBe(callsBefore)
+    expect(pinned.ids).toEqual(['a'])
+    expect(fallback.ids).toEqual(['c', 'b'])
   })
 
   it('卸载后标题、菜单与存储写入全部撤销', async () => {

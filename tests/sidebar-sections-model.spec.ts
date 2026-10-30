@@ -176,19 +176,22 @@ describe('分区模型：分区排序', () => {
   })
 })
 
-describe('分区模型：宿主顺序反推归属', () => {
-  it('把 c 拖到 d 之后时，c 归入 d 所在的项目分区', () => {
+describe('分区模型：宿主顺序同步与成员防交换', () => {
+  it('分区归属完全以权威记录为准：宿主顺序变化时，既有项目保持各自所在分区，绝不通过邻居瞎猜篡改或把对方项目交换回去', () => {
+    // 初始：置顶[a]，客户项目[b,c]，项目[d]
+    // 假设宿主序列变为 ['a', 'b', 'd', 'c']：既有项目的归属保持原样，只反映分区内顺序
     const { state: next, changed } = reconcileHostOrder(sample(), ['a', 'b', 'd', 'c'])
-    expect(changed).toBe(true)
-    expect(order(next)).toEqual(['a', 'b', 'd', 'c'])
-    expect(sectionOf(next, 'c')).toBe(DEFAULT_SECTION_ID)
+    expect(sectionOf(next, 'a')).toBe(PINNED_SECTION_ID)
     expect(sectionOf(next, 'b')).toBe('s1')
+    expect(sectionOf(next, 'c')).toBe('s1') // 关键：c 绝对不会被踢出 s1 换到 default 去！
+    expect(sectionOf(next, 'd')).toBe(DEFAULT_SECTION_ID)
   })
 
-  it('拖到最上方时归入最上面的分区', () => {
-    const { state: next } = reconcileHostOrder(sample(), ['d', 'a', 'b', 'c'])
-    expect(sectionOf(next, 'd')).toBe(PINNED_SECTION_ID)
-    expect(order(next)).toEqual(['d', 'a', 'b', 'c'])
+  it('分区内成员严格跟随宿主顺序排序', () => {
+    // 初始 s1 内部是 [b, c]，宿主顺序将 c 提前
+    const { state: next, changed } = reconcileHostOrder(sample(), ['a', 'c', 'b', 'd'])
+    expect(changed).toBe(true)
+    expect(idsOf(next, 's1')).toEqual(['c', 'b'])
   })
 
   it('未记录的新工作区落到兜底分区', () => {
@@ -199,13 +202,6 @@ describe('分区模型：宿主顺序反推归属', () => {
   it('顺序未变化时 changed 为 false', () => {
     const { changed } = reconcileHostOrder(sample(), ['a', 'b', 'c', 'd'])
     expect(changed).toBe(false)
-  })
-
-  it('非单项移动的异常顺序不做猜测：归属不变，交给调用方把顺序写回宿主', () => {
-    const before = sample()
-    const { state: next, changed } = reconcileHostOrder(before, ['c', 'd', 'a', 'b'])
-    expect(changed).toBe(false)
-    expect(next).toBe(before)
   })
   it('按宿主顺序重排分区内部成员，分区先后不变', () => {
     const current = state([
