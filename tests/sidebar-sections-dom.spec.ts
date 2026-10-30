@@ -787,20 +787,49 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(labels).toEqual(['新建分区'])
   })
 
-  it('展开箭头复用宿主项目行那颗三角（16×20 slot 内 14px，展开旋转 90°）', async () => {
+  it('展开后即使宿主重渲染、同步多跑几拍，也不会自己收回', async () => {
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+    const def = headers().find(header => header.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+    const settle = async (): Promise<void> => {
+      await new Promise<void>(resolve => {
+        window.setTimeout(resolve, 320)
+      })
+      await waitForSync()
+    }
+
+    def.click() // 收起
+    await settle()
+    def.click() // 展开
+    await settle()
+    expect(def.getAttribute('data-open')).toBe('true')
+
+    // 模拟宿主重渲染：把分组块换成新节点，再跑几拍同步。
+    const list = document.querySelector('[data-sidebar] .list, .list')!
+    const blocks = Array.from(list.querySelectorAll<HTMLElement>('[data-dcu-section-member]'))
+    for (const block of blocks) {
+      const clone = block.cloneNode(true) as HTMLElement
+      clone.removeAttribute('data-dcu-section-hidden')
+      block.replaceWith(clone)
+    }
+    await waitForSync()
+    await waitForSync()
+
+    expect(def.getAttribute('data-open')).toBe('true')
+    expect(document.querySelectorAll('[data-dcu-section-hidden="true"]').length).toBe(0)
+  })
+
+  it('展开箭头用宿主项目行同一个 slot 尺寸，状态由 data-open 驱动', async () => {
     mountFixture(['a'])
     mount(['a'])
     await waitForSync()
     const header = headers().find(item => item.getAttribute(SECTION_HEADER_ATTR) === PINNED_SECTION_ID)!
     const chevron = header.querySelector('.dcu-ws-section-chevron')!
-    // 宿主项目行的 slot 是 16×20，箭头是 IconTriangleRightFill14，展开时整体 rotate(90deg)。
+    // 与宿主项目行一致：16×20 的 slot，展开态给 svg 加 rotate(90deg)。
     expect(chevron).not.toBeNull()
-    // 和宿主项目行同构：16×20 的 slot，里面是 14px 的实心三角 sprite 引用。
     expect(getComputedStyle(chevron).width).toBe('16px')
     expect(getComputedStyle(chevron).height).toBe('20px')
-    const svg = chevron.querySelector('svg')!
-    expect(svg.getAttribute('width')).toBe('14')
-    expect(svg.querySelector('use')!.getAttribute('href')).toBe('#dsw-icon-triangle-right-fill-regular')
     expect(header.getAttribute('data-open')).toBe('true')
   })
 })

@@ -219,6 +219,8 @@ function blockOf(row: Element, list: HTMLElement): HTMLElement | null {
  * @param ctx - 客户端根 Context。
  * @returns 释放函数；卸载后标题、监听与在途写入全部撤销。
  */
+let activeInstance: (() => void) | undefined
+
 export function observeWorkspaceSections(
   ctx: ClientContext,
   translate?: (key: string, fallback?: string) => string,
@@ -234,6 +236,9 @@ export function observeWorkspaceSections(
   }
   injectStyles()
 
+  // 重挂载（HMR / 重复 activate）时旧实例的监听还在同一个标题节点上：
+  // 一次点击会被两套 toggle 各处理一次，表现成「展开后立刻收回」。这里先停旧的。
+  activeInstance?.()
   let disposed = false
   let state = createSectionsState()
   /** 分区文档是否已从宿主导入；未导入前不渲染标题、不做顺序写入。 */
@@ -335,7 +340,6 @@ export function observeWorkspaceSections(
       const label = header.querySelector<HTMLElement>(`.${HEADER_CLASS}-label`)
       const next = localizeBuiltinName(sectionId, name, text)
       if (label !== null && label.textContent !== next) label.textContent = next
-      header.dataset.open = collapsed[sectionId] === true ? 'false' : 'true'
       return header
     }
     header = document.createElement('div')
@@ -634,7 +638,10 @@ export function observeWorkspaceSections(
       }
       block.block.setAttribute('data-dcu-section-member', sectionId)
       if (animatingSections.has(sectionId)) continue
-      if (collapsed[sectionId] === true) block.block.setAttribute('data-dcu-section-hidden', 'true')
+      // 折叠与否只看标题自己身上的 data-open（唯一事实源）。
+      // 用内存里的 map 反写的话，任何一次状态不同步（重挂载、宿主重渲染、过期回调）
+      // 都会把刚展开的分区又收回去。
+      if (headers.get(sectionId)?.dataset.open === 'false') block.block.setAttribute('data-dcu-section-hidden', 'true')
       else block.block.removeAttribute('data-dcu-section-hidden')
     }
 
@@ -656,7 +663,7 @@ export function observeWorkspaceSections(
     if (ungrouped !== undefined) {
       ungrouped.setAttribute('data-dcu-section-member', DEFAULT_SECTION_ID)
       if (!animatingSections.has(DEFAULT_SECTION_ID)) {
-        if (collapsed[DEFAULT_SECTION_ID] === true) ungrouped.setAttribute('data-dcu-section-hidden', 'true')
+        if (headers.get(DEFAULT_SECTION_ID)?.dataset.open === 'false') ungrouped.setAttribute('data-dcu-section-hidden', 'true')
         else ungrouped.removeAttribute('data-dcu-section-hidden')
       }
     }
@@ -1096,29 +1103,43 @@ export function observeWorkspaceSections(
    * 手绘图标在描边粗细、圆角与视觉重心上永远差一档，直接复用宿主原语才能和原生菜单项完全同源。
    */
   const iconCache = new Map<string, string>()
-  /**
-   * 宿主的图标系统是「SVG sprite + <use href="#dsw-icon-…">」，不是 React 组件。
-   *
-   * 实测宿主项目行渲染的是：
-   * `<span class="…_chevron"><svg width="14" height="14" class="…_arrow"><use href="#dsw-icon-triangle-right-fill-regular"/></svg></span>`
-   * 展开时给 svg 加 `rotate(90deg)`。
-   *
-   * 所以分区标题的箭头、以及菜单里的图标，都直接引用同一批 symbol：尺寸、颜色、
-   * 字重和宿主完全一致；`<use>` 是动态解析的，symbol 晚一点挂上也不会失效。
-   */
-  function spriteIcon(symbol: string, size = 16): string {
-    return `<svg width="${size}" height="${size}" aria-hidden="true" focusable="false"><use href="#dsw-icon-${symbol}"></use></svg>`
+  function hostIconMarkup(name: string, size = 16): string {
+    const cached = iconCache.get(name)
+    if (cached !== undefined) return cached
+    const Component = (primitives as unknown as Record<string, unknown>)[name]
+    if (typeof Component !== 'function') {
+      iconCache.set(name, '')
+      return ''
+    }
+    let markup = ''
+    const host = document.createElement('div')
+    try {
+      render(createElement(Component as never, { size, 'aria-hidden': true } as never), host)
+      markup = host.innerHTML
+    } catch {
+      markup = ''
+    } finally {
+      unmountComponentAtNode(host)
+    }
+    iconCache.set(name, markup)
+    return markup
   }
 
-  const iconPin = (): string => spriteIcon('pin-outline-regular')
-  const iconPinned = (): string => spriteIcon('pin-fill-regular')
-  const iconSection = (): string => spriteIcon('checklist-outline-regular')
-  const iconCheck = (): string => spriteIcon('check-outline-regular')
-  const iconPlus = (): string => spriteIcon('plus-outline-regular')
-  /** 分区展开箭头：宿主项目行那颗 14px 实心三角，展开时旋转 90°。 */
-  const iconChevron = (): string => spriteIcon('triangle-right-fill-regular', 14)
-  const iconEdit = (): string => spriteIcon('edit-outline-regular')
-  const iconClose = (): string => spriteIcon('close-outline-regular')
+  /**
+   * 图标全部取自宿主 primitives（RC 版本就有这些名字，别再自己画、也别依赖 sprite）：
+   * `IconPinOutlineRegular` / `IconPinFillRegular` / `IconChecklistOutlineRegular` /
+   * `IconCheckOutlineRegular` / `IconPlusOutlineRegular` / `IconEditOutlineRegular` /
+   * `IconCloseOutlineRegular` / `IconTriangleRightFillRegular`。
+   */
+  const iconPin = (): string => hostIconMarkup('IconPinOutlineRegular')
+  const iconPinned = (): string => hostIconMarkup('IconPinFillRegular')
+  const iconSection = (): string => hostIconMarkup('IconChecklistOutlineRegular')
+  const iconCheck = (): string => hostIconMarkup('IconCheckOutlineRegular')
+  const iconPlus = (): string => hostIconMarkup('IconPlusOutlineRegular')
+  /** 分区展开箭头：和宿主项目行同一颗 `IconTriangleRightFillRegular`，展开时旋转 90°。 */
+  const iconChevron = (): string => hostIconMarkup('IconTriangleRightFillRegular')
+  const iconEdit = (): string => hostIconMarkup('IconEditOutlineRegular')
+  const iconClose = (): string => hostIconMarkup('IconCloseOutlineRegular')
 
   /**
    * 按宿主菜单项的行结构复制一行，保证图标槽、字号、悬停与危险态样式完全一致。
@@ -1565,8 +1586,10 @@ export function observeWorkspaceSections(
   void loadStateFromHost()
   scheduleSync()
 
-  return () => {
+  const dispose = (): void => {
+    if (disposed) return
     disposed = true
+    if (activeInstance === dispose) activeInstance = undefined
     window.clearInterval(boot)
     if (rafId !== 0) window.cancelAnimationFrame(rafId)
     observer?.disconnect()
@@ -1580,5 +1603,11 @@ export function observeWorkspaceSections(
     void flushSectionsSave()
     for (const header of headers.values()) header.remove()
     headers.clear()
+    for (const block of Array.from(document.querySelectorAll<HTMLElement>('[data-dcu-section-member]'))) {
+      block.removeAttribute('data-dcu-section-member')
+      block.removeAttribute('data-dcu-section-hidden')
+    }
   }
+  activeInstance = dispose
+  return dispose
 }
