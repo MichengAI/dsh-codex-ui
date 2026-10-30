@@ -356,30 +356,3 @@ function isContiguous(sections: readonly WorkspaceSection[], order: readonly str
   if (flat.length !== order.length) return false
   return flat.every((id, index) => id === order[index])
 }
-
-/**
- * 找出把 `previous` 变成 `next` 时移动的那一项。
- *
- * 逐个把候选元素从两侧序列里摘掉，若剩余部分完全一致，该候选就是「移动项」。
- * 多个候选同时成立时取位移最大者（用户真正拖动的那一项通常跨越最远）。
- * 无法判定时返回 `undefined`，由调用方按锚点分段兜底。
- */
-export function findMovedItem(previous: readonly string[], next: readonly string[]): string | undefined {
-  if (previous.length !== next.length || previous.length === 0) return undefined
-  const same = previous.every((id, index) => id === next[index])
-  if (same) return undefined
-
-  let best: { id: string; distance: number } | undefined
-  for (let i = 0; i < previous.length; i += 1) {
-    const candidate = previous[i]!
-    const target = next.indexOf(candidate)
-    if (target === -1) continue
-    const restPrev = previous.slice(0, i).concat(previous.slice(i + 1))
-    const restNext = next.slice(0, target).concat(next.slice(target + 1))
-    if (restPrev.length !== restNext.length) continue
-    if (!restPrev.every((id, index) => id === restNext[index])) continue
-    const distance = Math.abs(i - target)
-    if (best === undefined || distance > best.distance) best = { id: candidate, distance }
-  }
-  return best?.id
-}

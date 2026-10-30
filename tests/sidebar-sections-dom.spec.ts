@@ -493,73 +493,15 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(panel.style.top).toBe('128px')
   })
 
-  it('拖到分区标题上时，标题高亮，且直接清除下方工作区上残留的宿主落点类名', async () => {
+  it('所有分区标题均不可拖动，分区转移完全通过菜单确定性操作', async () => {
     mountFixture(['a', 'b'])
     mount(['a', 'b'])
     await waitForSync()
-
-    const dataTransfer = { dropEffect: '', effectAllowed: '', setData: () => {}, getData: () => '' }
-    const drag = (type: string, clientY: number): Event => {
-      const event = new Event(type, { bubbles: true, cancelable: true })
-      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer })
-      Object.defineProperty(event, 'clientY', { value: clientY })
-      return event
+    for (const h of headers()) {
+      expect(h.draggable).toBe(false)
     }
-    const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))
-    const defHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
-
-    // 模拟之前在第二行停留，宿主挂上了落点类名
-    rows[1]!.parentElement!.className = 'groupSection bhn1Oq_workspaceDropBefore'
-
-    // 模拟拖动项目
-    rows[0]!.dispatchEvent(drag('dragstart', 100))
-
-    // 鼠标滑入分区标题
-    const overHeader = drag('dragover', 50)
-    defHeader.dispatchEvent(overHeader)
-    expect(overHeader.defaultPrevented).toBe(true)
-    expect(defHeader.getAttribute('data-dcu-drop-target')).toBe('true')
-
-    // 关键：第二行上的宿主残留类名已被干净清除，不会在下方分组留线
-    expect(rows[1]!.parentElement!.className).not.toContain('workspaceDropBefore')
-
-    // 拖动结束：标题高亮清理
-    document.dispatchEvent(drag('dragend', 50))
-    expect(defHeader.getAttribute('data-dcu-drop-target')).toBeNull()
-  })
-
-  it('项目行上的拖动瞬时（0ms）显示落点指示线，且宿主落点线已被 CSS 屏蔽杜绝双线', async () => {
-    mountFixture(['a', 'b', 'c'])
-    mount(['a', 'b', 'c'])
-    await waitForSync()
-
-    const dataTransfer = { dropEffect: '', effectAllowed: '', setData: () => {}, getData: () => '' }
-    const drag = (type: string, clientY: number): Event => {
-      const event = new Event(type, { bubbles: true, cancelable: true })
-      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer })
-      Object.defineProperty(event, 'clientY', { value: clientY })
-      return event
-    }
-    const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))
-    const rect = { top: 100, bottom: 132, height: 32, left: 10, right: 130, width: 120, x: 10, y: 100, toJSON: () => ({}) }
-    vi.spyOn(rows[2]!, 'getBoundingClientRect').mockReturnValue(rect as DOMRect)
-
-    rows[0]!.dispatchEvent(drag('dragstart', rect.top))
-
-    // 拖到行下半区：落点线瞬时显示在行底部
-    const over = drag('dragover', rect.bottom - 2)
-    rows[2]!.dispatchEvent(over)
-    expect(over.defaultPrevented).toBe(true)
-    const line = document.querySelector<HTMLElement>('.dcu-ws-section-drop')
-    expect(line).not.toBeNull()
-    expect(line!.style.display).toBe('block')
-    expect(line!.style.top).toBe(`${rect.bottom - 6}px`)
-    expect(line!.style.left).toBe('10px')
-    expect(line!.style.width).toBe('120px')
-
-    // 拖动结束：落点线隐藏
-    document.dispatchEvent(drag('dragend', rect.bottom - 1))
-    expect(line!.style.display).toBe('none')
+    // 文档上不再有悬挂的拖拽指示线容器
+    expect(document.querySelector('.dcu-ws-section-drop')).toBeNull()
   })
 
   it('菜单里选自定义分区后，项目真的移动到那个分区（不是只写存储）', async () => {
@@ -679,7 +621,7 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     const order = blockIdsInDomOrder()
     expect(order.filter(id => id === 'b' || id === 'c')).toEqual(custom.ids)
   })
-  it('空分区也能接住拖进来的项目（落在分区标题上）', async () => {
+  it('空分区通过菜单直接移入（确定性操作，无拖拽歧义）', async () => {
     seedSections({
       sections: [
         { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
@@ -691,31 +633,30 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     await waitForSync()
     expect(hostSection(PINNED_SECTION_ID).ids).toEqual([])
 
-    const pinnedHeader = headers().find(header => header.getAttribute(SECTION_HEADER_ATTR) === PINNED_SECTION_ID)!
-    const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))
-    const source = rows[1]!
-    const dataTransfer = { dropEffect: '', effectAllowed: '', setData: () => {}, getData: () => '' }
-    const drag = (type: string, target: Element): Event => {
-      const event = new Event(type, { bubbles: true, cancelable: true })
-      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer })
-      Object.defineProperty(event, 'clientY', { value: 0 })
-      Object.defineProperty(event, 'target', { value: target })
-      return event
-    }
+    // 打开 b 的菜单并点击置顶
+    const menu = document.createElement('div')
+    menu.setAttribute('role', 'menu')
+    const hostRow = document.createElement('div')
+    hostRow.className = 'hostRow'
+    const hostItem = document.createElement('button')
+    hostItem.setAttribute('role', 'menuitem')
+    const hostIcon = document.createElement('span')
+    hostIcon.innerHTML = '<svg></svg>'
+    const hostLabel = document.createElement('span')
+    hostLabel.textContent = '重命名'
+    hostItem.append(hostIcon, hostLabel)
+    hostRow.appendChild(hostItem)
+    menu.appendChild(hostRow)
+    document.body.appendChild(menu)
 
-    source.dispatchEvent(Object.assign(new Event('dragstart', { bubbles: true }), {}))
-    // 直接命中分区标题：空分区没有项目行，只能从这里落进去。
-    pinnedHeader.dispatchEvent(drag('dragover', pinnedHeader))
-    expect(pinnedHeader.getAttribute('data-dcu-drop-target')).toBe('true')
-    // 落点只靠标题高亮表达，插件不再自己画线（否则会和宿主的线同屏两条）。
-    expect(document.querySelector('.dcu-ws-section-drop')).toBeNull()
-
-    pinnedHeader.dispatchEvent(drag('drop', pinnedHeader))
-    await waitForSync(12)
+    document.querySelector<HTMLButtonElement>('button[aria-label="b 操作"]')!.click()
+    await new Promise<void>(resolve => setTimeout(resolve, 0))
+    const pinBtn = document.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!
+    pinBtn.click()
+    await waitForSync()
 
     expect(hostSection(PINNED_SECTION_ID).ids).toEqual(['b'])
     expect(blockIdsInDomOrder()).toEqual(['b', 'a'])
-    expect(pinnedHeader.hasAttribute('data-dcu-drop-target')).toBe(false)
   })
 
   it('把一个项目移到别的分区只写一次宿主顺序（不再整表重写）', async () => {
@@ -861,7 +802,7 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(document.querySelectorAll('[data-dcu-section-hidden="true"]').length).toBe(0)
   })
 
-  it('把项目拖入展开的分组标题时，当场进入目标分区并立即显示（不需收缩展开）', async () => {
+  it('通过菜单把项目移入展开的分组时，当场进入目标分区并立即显示（不需收缩展开）', async () => {
     seedSections({
       sections: [
         { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
@@ -873,33 +814,46 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     mount(['a', 'b'])
     await waitForSync()
 
-    const dataTransfer = { dropEffect: '', effectAllowed: '', setData: () => {}, getData: () => '' }
-    const drag = (type: string, clientY: number): Event => {
-      const event = new Event(type, { bubbles: true, cancelable: true })
-      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer })
-      Object.defineProperty(event, 'clientY', { value: clientY })
-      return event
-    }
     const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))
-    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
-
-    // 假设 a 原本带有收缩内联样式（比如曾经收起过）
     const aBlock = rows[0]!.closest<HTMLElement>('.groupSection')!
     aBlock.style.maxHeight = '0px'
     aBlock.style.overflow = 'hidden'
     aBlock.style.opacity = '0'
 
-    // 拖动 a 到 s1 标题上并释放
-    rows[0]!.dispatchEvent(drag('dragstart', 100))
-    s1Header.dispatchEvent(drag('dragover', 50))
-    s1Header.dispatchEvent(drag('drop', 50))
+    // 模拟菜单操作：移入 s1
+    const menu = document.createElement('div')
+    menu.setAttribute('role', 'menu')
+    const hostRow = document.createElement('div')
+    hostRow.className = 'hostRow'
+    const hostItem = document.createElement('button')
+    hostItem.setAttribute('role', 'menuitem')
+    const hostIcon = document.createElement('span')
+    hostIcon.innerHTML = '<svg></svg>'
+    const hostLabel = document.createElement('span')
+    hostLabel.textContent = '重命名'
+    hostItem.append(hostIcon, hostLabel)
+    hostRow.appendChild(hostItem)
+    menu.appendChild(hostRow)
+    document.body.appendChild(menu)
+
+    document.querySelector<HTMLButtonElement>('button[aria-label="a 操作"]')!.click()
+    await new Promise<void>(resolve => setTimeout(resolve, 0))
+    const secBtn = Array.from(document.querySelectorAll<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)).find(
+      button => (button.textContent ?? '') === '分区',
+    )!
+    secBtn.click()
+    await new Promise<void>(resolve => setTimeout(resolve, 0))
+
+    const panel = document.querySelector('.dcu-ws-section-menu')!
+    const targetBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '客户项目')!
+    targetBtn.click()
     await waitForSync()
 
     // 验证：a 已归入 s1 分区
     const s1 = hostSection('s1')
     expect(s1?.ids).toContain('a')
 
-    // 验证：因为 s1 处于展开态（默认 open="true"），a 的所有内联高度限制和 hidden 被当场清除，立即自然呈现！
+    // 验证：展开态下所有内联高度限制和 hidden 被清除，当场自然呈现
     expect(aBlock.getAttribute('data-dcu-section-hidden')).toBeNull()
     expect(aBlock.style.maxHeight).toBe('')
     expect(aBlock.style.overflow).toBe('')
