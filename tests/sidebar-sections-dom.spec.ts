@@ -423,9 +423,12 @@ describe('工作区分区：DOM 层', () => {
       expect(document.querySelector('[data-dcu-sections-wait]')?.textContent).toContain('尚未完成')
       // 达到 20s 逃生时间
       await vi.advanceTimersByTimeAsync(12000)
-      expect(document.querySelector('[data-dcu-sections-wait]')).toBeNull()
+      expect(document.querySelector('[data-dcu-sections-wait="aborted"]')?.textContent).toContain('已自动撤销')
       // 确认未提交的置顶意图被回滚
       expect(hostSection(PINNED_SECTION_ID).ids).toEqual([])
+      // 4s 后告警提示自动消失
+      await vi.advanceTimersByTimeAsync(4100)
+      expect(document.querySelector('[data-dcu-sections-wait]')).toBeNull()
       // 此时发起新操作，队列未被锁死，可以正常进行
       fake.service.insertBefore.mockImplementationOnce(async (workspaceId, beforeWorkspaceId) => {
         return fakeWorkspaces(['a', 'b', 'c']).service.insertBefore(workspaceId, beforeWorkspaceId)

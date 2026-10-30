@@ -265,9 +265,27 @@ export function observeWorkspaceSections(
     waitNotice = undefined
   }
 
+  const showAbortedNotice = (): void => {
+    if (disposed || list?.parentElement === null || list === undefined) return
+    waitNotice?.remove()
+    waitNotice = document.createElement('div')
+    waitNotice.setAttribute('data-dcu-sections-wait', 'aborted')
+    waitNotice.setAttribute('role', 'alert')
+    waitNotice.textContent = text('sections.writeAborted', '工作区移动超时未完成，已自动撤销。')
+    waitNotice.style.cssText = 'padding: 8px 12px; font-size: 12px; color: var(--dsw-alias-text-danger, #ef4444);'
+    list.parentElement.insertBefore(waitNotice, list)
+    const notice = waitNotice
+    window.setTimeout(() => {
+      if (waitNotice === notice) {
+        notice.remove()
+        waitNotice = undefined
+      }
+    }, 4000)
+  }
+
   const insertWorkspace = async (service: WorkspacesLike, workspaceId: string, beforeWorkspaceId?: string): Promise<void> => {
     const curGen = ++writeGen
-    const timer = window.setTimeout(() => {
+    const timer8s = window.setTimeout(() => {
       if (disposed || writeGen !== curGen || list?.parentElement === null || list === undefined) return
       waitNotice?.remove()
       waitNotice = document.createElement('div')
@@ -278,17 +296,19 @@ export function observeWorkspaceSections(
       list.parentElement.insertBefore(waitNotice, list)
     }, 8000)
 
+    let timer20s: number | undefined
     try {
       await Promise.race([
         service.insertBefore(workspaceId, beforeWorkspaceId),
         new Promise<never>((_, reject) => {
-          window.setTimeout(() => {
+          timer20s = window.setTimeout(() => {
             if (writeGen === curGen) reject(new Error('宿主响应超时 (20s)'))
           }, 20000)
         }),
       ])
     } finally {
-      window.clearTimeout(timer)
+      window.clearTimeout(timer8s)
+      if (timer20s !== undefined) window.clearTimeout(timer20s)
       if (writeGen === curGen) {
         waitNotice?.remove()
         waitNotice = undefined
@@ -1396,6 +1416,7 @@ export function observeWorkspaceSections(
       if (disposed || activeUpdate !== update) return
       // 不把失败意图保存，也不无限重试；后续菜单操作可从最后确认的归属重新开始。
       console.warn('[codex-ui:sections] 工作区移动失败，已撤销未确认的分区操作。')
+      showAbortedNotice()
       updates.length = 0
       update.motion?.dispose()
       activeUpdate = undefined
