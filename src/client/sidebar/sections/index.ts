@@ -1281,9 +1281,13 @@ export function observeWorkspaceSections(
     const workspaceId = assigningWorkspaceId
     if (workspaceId === undefined) return
     const current = sectionOf(state, workspaceId)
-    // 已经在里面的分区不用再列出来（Codex 移动项目时也是这样），只列可移动到的目标。
+    /**
+     * 只列「能移动过去」的目标：
+     * - 当前所在的分区不列（移到自己那儿没意义）；
+     * - 置顶也不列——父菜单里已经有独立的一行「置顶 / 取消置顶」，重复出现只会让人犹豫。
+     */
     const items: Array<{ label: string; icon: string; onSelect: () => void }> = state.sections
-      .filter(section => section.id !== current)
+      .filter(section => section.id !== current && section.id !== PINNED_SECTION_ID)
       .map(section => ({
         label: section.name,
         icon: '',

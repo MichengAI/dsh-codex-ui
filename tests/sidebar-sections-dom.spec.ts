@@ -783,8 +783,8 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
 
     const panel = document.querySelector('.dcu-ws-section-menu')!
     const labels = Array.from(panel.querySelectorAll('button')).map(button => (button.textContent ?? '').trim())
-    // a 默认待在「项目」分区：目标列表里不该再出现它自己，只留「置顶」和「新建分区」。
-    expect(labels).toEqual(['置顶', '新建分区'])
+    // a 默认待在「项目」分区：既不该出现它自己，也不该出现「置顶」（父菜单已有独立一行）。
+    expect(labels).toEqual(['新建分区'])
   })
 
   it('展开箭头复用宿主项目行那颗三角（16×20 slot 内 14px，展开旋转 90°）', async () => {
