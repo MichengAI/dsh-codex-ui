@@ -2,13 +2,10 @@
 
 ## 2.0.6 (2026-10-30)
 
-- **Workspace Sections and Pinning Management (#70)**:
-  - Introduce a lightweight, non-intrusive workspace sectioning and pinning system that fully preserves the official native workspace tree lifecycle and in-section drag-and-drop reordering;
-  - Support workspace pinning/unpinning, custom sections creation, section renaming, and removal, with persistent state stored in the host's `plugin-data/`;
-  - Driven by explicit move transactions with synchronized three-phase layout (host snapshot, DOM tree, and smooth motion animations), preventing bounce, visual jitter, and ghost residues during section moves;
-  - Add robust failure and delay tolerance: 8-second pending status feedback and 20-second safety timeout rollback to prevent concurrency conflicts and queue deadlocks;
-  - Support partial workspace list projections (such as the archive-only filter) via ordered subset validation, preventing synchronization hangs during view transitions;
-  - Fix menu item label truncation and spurious \"Settings\" text leakage when cloning host menu rows with shortcut slots.
+- **Workspace Pinning and Custom Sections (#70)**:
+  - Add "Pin" and "Section" options to the workspace context menu, allowing you to keep key projects at the top of the sidebar or organize them into custom sections;
+  - Support creating, renaming, and removing custom sections directly from section headers;
+  - Fully preserve native drag-and-drop reordering within each section.
 
 ## 2.0.5 (2026-10-29)
 
