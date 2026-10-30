@@ -653,27 +653,82 @@ export function observeWorkspaceSections(
     flyoutFrom?: HTMLElement,
   ): void {
     closeSectionMenu()
-    const panel = document.createElement('div')
-    panel.className = MENU_CLASS
-    panel.setAttribute('role', 'menu')
+
+    const parentMenu =
+      flyoutFrom?.isConnected === true ? flyoutFrom : anchor.closest<HTMLElement>('[role="menu"]')
+
+    let panel: HTMLElement
+    let viewport: HTMLElement
+
+    if (parentMenu !== null && parentMenu !== undefined) {
+      // 100% 按照宿主一级菜单结构克隆外壳（保留 data-menu-material="translucent" 与原生类名）
+      panel = parentMenu.cloneNode(false) as HTMLElement
+      panel.classList.add(MENU_CLASS)
+
+      // 克隆宿主菜单的 material 磨砂层（如有）
+      const material = parentMenu.querySelector<HTMLElement>('[class*="material"]')
+      if (material !== null) {
+        panel.appendChild(material.cloneNode(true))
+      }
+
+      // 克隆宿主菜单的 viewport 视口层（如有）
+      const vp = parentMenu.querySelector<HTMLElement>('[role="presentation"], [class*="viewport"]')
+      if (vp !== null) {
+        viewport = vp.cloneNode(false) as HTMLElement
+        panel.appendChild(viewport)
+      } else {
+        viewport = panel
+      }
+    } else if (hostMenuShellTemplate !== undefined) {
+      panel = hostMenuShellTemplate.cloneNode(false) as HTMLElement
+      panel.classList.add(MENU_CLASS)
+      if (hostMenuViewportTemplate !== undefined) {
+        viewport = hostMenuViewportTemplate.cloneNode(false) as HTMLElement
+        panel.appendChild(viewport)
+      } else {
+        viewport = panel
+      }
+    } else {
+      panel = document.createElement('div')
+      panel.className = MENU_CLASS
+      panel.setAttribute('role', 'menu')
+      viewport = panel
+    }
+
+    // 获取行模板：优先直接从 parentMenu 中取真实的宿主行克隆
+    const sampleRow =
+      parentMenu?.querySelector<HTMLElement>('[class*="itemWrap"]') ?? hostMenuRowTemplate
+    const sampleRef =
+      sampleRow?.querySelector<HTMLButtonElement>('button[role="menuitem"]') ?? undefined
 
     for (const item of items) {
-      const button = document.createElement('button')
-      button.type = 'button'
-      button.setAttribute('role', 'menuitem')
-      const icon = document.createElement('span')
-      icon.className = `${MENU_CLASS}-icon`
-      icon.innerHTML = item.icon
-      const label = document.createElement('span')
-      label.className = `${MENU_CLASS}-label`
-      label.textContent = item.label
-      button.append(icon, label)
-      button.addEventListener('click', event => {
-        event.preventDefault()
-        event.stopPropagation()
-        item.onSelect()
-      })
-      panel.appendChild(button)
+      const row = buildMenuRow(sampleRef, item.icon, item.label, '', sampleRow)
+      if (row !== null) {
+        const btn = row.querySelector('button')
+        btn?.addEventListener('click', event => {
+          event.preventDefault()
+          event.stopPropagation()
+          item.onSelect()
+        })
+        viewport.appendChild(row)
+      } else {
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.setAttribute('role', 'menuitem')
+        const icon = document.createElement('span')
+        icon.className = `${MENU_CLASS}-icon`
+        icon.innerHTML = item.icon
+        const label = document.createElement('span')
+        label.className = `${MENU_CLASS}-label`
+        label.textContent = item.label
+        button.append(icon, label)
+        button.addEventListener('click', event => {
+          event.preventDefault()
+          event.stopPropagation()
+          item.onSelect()
+        })
+        viewport.appendChild(button)
+      }
     }
 
     let leaveTimer: number | undefined
@@ -691,18 +746,18 @@ export function observeWorkspaceSections(
       }, 180)
     })
 
-    document.body.appendChild(panel)
-    // 先变成 fixed 再量尺寸：块级 div 挂在 body 下会撑满整行，量出来的宽度没有意义。
-    panel.style.left = '0px'
-    panel.style.top = '0px'
-    const rect = anchor.getBoundingClientRect()
-    const width = panel.offsetWidth || 196
-    const height = panel.offsetHeight || 120
-    const parentMenu =
-      flyoutFrom?.isConnected === true ? flyoutFrom : anchor.closest<HTMLElement>('[role="menu"]')
+    panel.addEventListener('pointerdown', event => event.stopPropagation())
+    panel.addEventListener('mousedown', event => event.stopPropagation())
+
     if (parentMenu !== null && parentMenu !== undefined) {
-      // 二级菜单：贴着父菜单右侧、与所点那一行顶部对齐；右侧不够就翻到左边。
+      // 挂入父菜单内部：杜绝 pointerleave 导致父菜单消失
+      parentMenu.appendChild(panel)
       panel.dataset.flyout = 'true'
+      panel.style.left = '0px'
+      panel.style.top = '0px'
+      const rect = anchor.getBoundingClientRect()
+      const width = panel.offsetWidth || 196
+      const height = panel.offsetHeight || 120
       const parentRect = parentMenu.getBoundingClientRect()
       let left = parentRect.right + 2
       if (left + width > window.innerWidth - 10) left = Math.max(10, parentRect.left - width - 4)
@@ -715,7 +770,12 @@ export function observeWorkspaceSections(
       panel.style.left = `${left}px`
       panel.style.top = `${top}px`
     } else {
-      // 独立菜单（分区标题的 ···）：和宿主自己的行菜单一致——左边缘贴在触发按钮上、向右展开。
+      document.body.appendChild(panel)
+      panel.style.left = '0px'
+      panel.style.top = '0px'
+      const rect = anchor.getBoundingClientRect()
+      const width = panel.offsetWidth || 196
+      const height = panel.offsetHeight || 120
       panel.style.left = `${Math.max(8, Math.min(rect.left + 4, window.innerWidth - width - 8))}px`
       panel.style.top = `${Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - height - 8))}px`
     }
@@ -1065,6 +1125,7 @@ export function observeWorkspaceSections(
     label: string,
     attribute: string,
     template?: HTMLElement,
+    tailIcon?: string,
   ): HTMLElement | null {
     const wrapper = template ?? reference?.parentElement
     if (wrapper === undefined || wrapper === null) return null
@@ -1084,6 +1145,15 @@ export function observeWorkspaceSections(
     if (iconSlot === undefined || labelSlot === undefined || iconSlot === labelSlot) return null
     iconSlot.innerHTML = icon
     labelSlot.textContent = label
+    if (tailIcon !== undefined && tailIcon !== '') {
+      const tail = document.createElement('span')
+      tail.style.marginLeft = 'auto'
+      tail.style.opacity = '0.65'
+      tail.style.display = 'inline-flex'
+      tail.style.alignItems = 'center'
+      tail.innerHTML = tailIcon
+      button.appendChild(tail)
+    }
     return row
   }
 
@@ -1135,7 +1205,7 @@ export function observeWorkspaceSections(
     const pinned = sectionOf(state, workspaceId) === PINNED_SECTION_ID
 
     const pinRow = buildMenuRow(reference, pinned ? iconPinned() : iconPin(), text(pinned ? 'sections.unpin' : 'sections.pin', pinned ? '取消置顶' : '置顶'), MENU_ITEM_ATTR, hostMenuRowTemplate)
-    const sectionRow = buildMenuRow(reference, iconSection(), text('sections.menu', '分区'), MENU_ITEM_ATTR, hostMenuRowTemplate)
+    const sectionRow = buildMenuRow(reference, iconSection(), text('sections.menu', '分区'), MENU_ITEM_ATTR, hostMenuRowTemplate, '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12L10 8L6 4"/></svg>')
 
     /**
      * 插到宿主菜单行所在的同一个父亲里、紧挨在第一条宿主行之前。
@@ -1225,7 +1295,7 @@ export function observeWorkspaceSections(
       .filter(section => section.id !== current && section.id !== PINNED_SECTION_ID)
       .map(section => ({
         label: section.name,
-        icon: '',
+        icon: iconSection(),
         onSelect: () => {
           closeSectionMenu()
           closeMenusByEscape()
