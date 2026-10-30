@@ -31,6 +31,8 @@ import {
   serializeSections,
   type SectionsState,
 } from './model.ts'
+import { SectionLayoutMotion } from './motion.ts'
+import { planWorkspaceMoves } from './order.ts'
 import { flushSectionsSave, loadSectionsDocument, scheduleSectionsSave } from './store.ts'
 
 /** 分区标题行的标记属性，样式与测试都靠它定位。 */
@@ -243,15 +245,19 @@ export function observeWorkspaceSections(
   /** 分区文档是否已从宿主导入；未导入前不渲染标题、不做顺序写入。 */
   let sectionsLoaded = false
   let list: HTMLElement | undefined
-  let applying = false
   let baselineSet = false
-  let pendingOrder: string[] | undefined
-  let queuedOrder: string[] | undefined
-  /** 本次批量写入的起始时间：卡死时用来兜底解封。 */
-  let applyingSince = 0
-  let suppressReconcile = 0
-  /** 用户显式操作的权威顺序；宿主顺序追平后清空。 */
-  let intentOrder: string[] | undefined
+  /** 菜单意图排队；一次写入同时等待服务确认与 DOM 到位，不用计帧猜测。 */
+  interface SectionsUpdate {
+    next: SectionsState
+    workspaceIds?: readonly string[]
+    rpcDone: boolean
+    layoutDone?: boolean
+    motionDone?: boolean
+    motion?: SectionLayoutMotion
+  }
+  let activeUpdate: SectionsUpdate | undefined
+  const updates: SectionsUpdate[] = []
+  let committedState = state
   let wired = false
   let syncing = false
   let rafId = 0
@@ -298,41 +304,27 @@ export function observeWorkspaceSections(
     }
     const parsed = parseSections(raw)
     state = normalizeSections(parsed ?? { sections: [] })
+    committedState = state
     sectionsLoaded = true
     scheduleSync()
   }
 
   /** 分区文档写回宿主；失败不阻塞界面，下一次用户操作会再触发保存。 */
-  function persist(): void {
+  function persist(value: SectionsState = state): void {
     if (!sectionsLoaded) return
-    scheduleSectionsSave(serializeSections(state))
+    scheduleSectionsSave(serializeSections(value))
   }
 
   function commit(next: SectionsState): void {
-    state = next
-    persist()
-    scheduleSync()
+    commitExplicit(next, [])
   }
 
-  /**
-   * 用户显式改归属（菜单选分区、拖动落位）后的提交。
-   *
-   * 只 persist + scheduleSync 是不够的：下一拍同步看到 DOM 还是老顺序，
-   * `reconcileHostOrder` 会按位置把归属反推回去，用户看到的就是「点了没反应」。
-   * 这里直接把目标顺序记成意图，等宿主追平之前不做反推。
-   */
-  function commitExplicit(next: SectionsState): void {
+  /** 保留显式移动身份；在宿主确认且真实列表到位之前，不提前修改标题和折叠标记。 */
+  function commitExplicit(next: SectionsState, workspaceIds?: readonly string[]): void {
+    if (disposed) return
     state = next
-    persist()
-    const desired = flattenSections(next)
-    intentOrder = desired
-    suppressReconcile = 6
-    // 立即刷新分区标题与成员归属标记，由宿主 FLIP 平滑动画完成节点位移，绝不在 DOM 中粗暴倒腾节点产生反弹！
-    if (list !== undefined) {
-      placeHeaders(collectProjectBlocks(list, list))
-    }
-    void applyOrder(desired)
-    scheduleSync()
+    updates.push({ next, workspaceIds, rpcDone: false })
+    startNextUpdate()
   }
 
   /* ── 标题渲染 ── */
@@ -517,57 +509,33 @@ export function observeWorkspaceSections(
   let lastAlignKey = ''
 
   /** 把标题按分区顺序放到各自第一个分组块前面；空分区贴着下一个分区显示。 */
-  function placeHeaders(blocks: readonly ProjectBlock[]): void {
+  function placeHeaders(blocks: readonly ProjectBlock[], layoutState: SectionsState = state): void {
     if (blocks.length === 0) return
     const target = blocks[0]!.block.parentElement
     if (target === null) return
 
-    const entries = state.sections.map(section => {
-      const firstId = section.ids.find(id => blocks.some(block => block.workspaceId === id))
-      const block = firstId === undefined ? undefined : blocks.find(item => item.workspaceId === firstId)?.block
-      return { id: section.id, name: section.name, block }
-    })
-
-    // 单向顺序插放：置顶固定在列表最顶端，后续分区标题严格按照分区定义单调向下排列。
-    // 绝不因成员在 DOM 中短暂错位而将分区标题颠倒拉扯，彻底消除「弹来弹去」的根源！
-    let prevHeader: HTMLElement | undefined
-    for (let index = 0; index < entries.length; index += 1) {
-      const entry = entries[index]!
-      const header = ensureHeader(entry.id, entry.name)
-      
-      if (index === 0) {
-        // 第一个分区（置顶）：绝对固定在列表最顶部，稳若泰山
-        if (target.firstChild !== header) {
-          target.insertBefore(header, target.firstChild)
-        }
-      } else {
-        // 后续分区：定位在它自己的第一个成员之前；如果成员尚未排入或为空，贴在上一个分区尾部
-        let reference: Node | null = entry.block ?? null
-        // 保证 reference 必须位于 prevHeader 之后
-        if (reference !== null && prevHeader !== undefined) {
-          if ((prevHeader.compareDocumentPosition(reference) & Node.DOCUMENT_POSITION_FOLLOWING) === 0) {
-            reference = null
-          }
-        }
-        if (reference !== null) {
-          if (header.nextElementSibling !== reference) {
-            target.insertBefore(header, reference)
-          }
-        } else if (prevHeader !== undefined) {
-          // 紧随上一个分区之后
-          if (header.previousElementSibling !== prevHeader) {
-            target.insertBefore(header, prevHeader.nextElementSibling)
-          }
-        } else {
-          target.appendChild(header)
-        }
+    // 未分组桶是默认分区的末端成员，也可以充当空默认分区的标题锚点。
+    const ungrouped = Array.from(list?.querySelectorAll('[data-row-key="workspace:"]') ?? [])
+      .map(row => (row instanceof HTMLElement ? blockOf(row, list!) : null))
+      .find((block): block is HTMLElement => block !== null)
+    const byId = new Map(blocks.map(item => [item.workspaceId, item.block]))
+    let reference: Element | null = null
+    // 从后向前确定边界：有成员贴自己的首项，空分区贴下一个标题；绝不插到上一区成员之前。
+    for (let index = layoutState.sections.length - 1; index >= 0; index -= 1) {
+      const section = layoutState.sections[index]!
+      const first = section.ids.map(id => byId.get(id)).find(block => block !== undefined)
+      if (first !== undefined) reference = first
+      else if (section.id === DEFAULT_SECTION_ID && ungrouped !== undefined) reference = ungrouped
+      const header = ensureHeader(section.id, section.name)
+      if (header.parentElement !== target || header.nextElementSibling !== reference) {
+        target.insertBefore(header, reference)
       }
-      prevHeader = header
+      reference = header
     }
 
     // 成员块打标记：CSS 据此做缩进（层级）与折叠隐藏。
     const memberOf = new Map<string, string>()
-    for (const section of state.sections) {
+    for (const section of layoutState.sections) {
       for (const id of section.ids) memberOf.set(id, section.id)
     }
     for (const block of blocks) {
@@ -596,17 +564,14 @@ export function observeWorkspaceSections(
     // 对齐只在与上次不同的宽度/标题数量下重算：每个同步拍都量一次 rect 会在拖动时反复触发布局。
     const alignKey = `${headers.size}:${list?.clientWidth ?? 0}`
     const label = document.querySelector<HTMLElement>('[class*="sectionLabel"]')
-    const firstHeader = headers.get(state.sections[0]?.id ?? PINNED_SECTION_ID)
+    const firstHeader = headers.get(layoutState.sections[0]?.id ?? PINNED_SECTION_ID)
     if (label !== null && firstHeader !== undefined && alignKey !== lastAlignKey) {
       lastAlignKey = alignKey
       const lead = Math.max(0, Math.round(label.getBoundingClientRect().left - firstHeader.getBoundingClientRect().left))
       for (const header of headers.values()) header.style.setProperty('--dcu-section-lead', `${lead}px`)
     }
 
-    // 未分组桶（`data-row-key="workspace:"`）属于「项目」分区：跟着缩进、跟着折叠，但不参与顺序写入。
-    const ungrouped = Array.from(list?.querySelectorAll('[data-row-key="workspace:"]') ?? [])
-      .map(row => (row instanceof HTMLElement ? blockOf(row, list!) : null))
-      .find((block): block is HTMLElement => block !== null)
+    // 未分组桶跟随默认分区折叠，但不参与宿主工作区排序。
     if (ungrouped !== undefined) {
       ungrouped.setAttribute('data-dcu-section-member', DEFAULT_SECTION_ID)
       if (!animatingSections.has(DEFAULT_SECTION_ID)) {
@@ -621,22 +586,8 @@ export function observeWorkspaceSections(
       }
     }
 
-    // 标题顺序必须等于分区顺序：宿主顺序与本地状态短暂不一致时（首次加载、外部拖动），
-    // 「标题放在自己第一个成员前」会让置顶跑到项目后面。这里只移动标题、不动宿主分组块。
-    let cursor: Element | null = null
-    for (const section of state.sections) {
-      const header = headers.get(section.id)
-      if (header === undefined || !header.isConnected) continue
-      if (cursor === null) {
-        if (target.firstElementChild !== header) target.insertBefore(header, target.firstElementChild)
-      } else if ((cursor.compareDocumentPosition(header) & Node.DOCUMENT_POSITION_FOLLOWING) === 0) {
-        target.insertBefore(header, cursor.nextSibling)
-      }
-      cursor = header
-    }
-
     for (const [id, header] of Array.from(headers.entries())) {
-      if (!state.sections.some(section => section.id === id)) {
+      if (!layoutState.sections.some(section => section.id === id)) {
         header.remove()
         headers.delete(id)
       }
@@ -830,7 +781,7 @@ export function observeWorkspaceSections(
           const header = headers.get(sectionId)
           header?.remove()
           headers.delete(sectionId)
-          commitExplicit(deleteSection(state, sectionId))
+          commitExplicit(deleteSection(state, sectionId), section.ids)
         },
       })
     }
@@ -905,7 +856,7 @@ export function observeWorkspaceSections(
       const id = `s${Date.now().toString(36)}`
       const created = createSection(state, id, value)
       if (workspaceId === undefined) commit(created)
-      else commitExplicit(assignWorkspace(created, workspaceId, id))
+      else commitExplicit(assignWorkspace(created, workspaceId, id), [workspaceId])
     }
     input.addEventListener('keydown', event => {
       if (event.key === 'Enter') {
@@ -1279,7 +1230,7 @@ export function observeWorkspaceSections(
         event.preventDefault()
         event.stopPropagation()
         closeMenusByEscape()
-        commitExplicit(assignWorkspace(state, workspaceId, pinned ? DEFAULT_SECTION_ID : PINNED_SECTION_ID))
+        commitExplicit(assignWorkspace(state, workspaceId, pinned ? DEFAULT_SECTION_ID : PINNED_SECTION_ID), [workspaceId])
       })
       hostParent.insertBefore(pinRow, insertBeforeNode)
     }
@@ -1355,7 +1306,7 @@ export function observeWorkspaceSections(
         onSelect: () => {
           closeSectionMenu()
           closeMenusByEscape()
-          commitExplicit(assignWorkspace(state, workspaceId, section.id))
+          commitExplicit(assignWorkspace(state, workspaceId, section.id), [workspaceId])
         },
       }))
     items.push({
@@ -1372,69 +1323,47 @@ export function observeWorkspaceSections(
 
   /* ── 顺序同步 ── */
 
-  async function applyOrder(desired: readonly string[]): Promise<void> {
+  /** 新增项目进入默认分区，删除项目及时裁剪；不改变既有成员的显式归属。 */
+  function withHostWorkspaces(value: SectionsState, ids: readonly string[]): SectionsState {
+    let next = normalizeSections(value, ids)
+    for (const id of ids) {
+      if (sectionOf(next, id) === undefined) next = assignWorkspace(next, id, DEFAULT_SECTION_ID)
+    }
+    return next
+  }
+
+  /** 一次只执行一个确定的计划；请求未结束时绝不超时重发同一条写入。 */
+  function startNextUpdate(): void {
+    if (disposed || activeUpdate !== undefined) return
+    const update = updates.shift()
+    if (update === undefined) return
+    update.next = withHostWorkspaces(update.next, knownIds())
+    if (updates.length === 0) state = update.next
+    activeUpdate = update
+    if (list !== undefined) update.motion = new SectionLayoutMotion(list)
     const service = workspaces()
-    if (service === undefined) return
-    if (applying) {
-      // 已有一次写入在飞：排队，等它写完再补一次，避免两次批量写入互相打断。
-      queuedOrder = desired.slice()
-      return
-    }
-    applying = true
-    applyingSince = Date.now()
-    pendingOrder = desired.slice()
-    try {
-      /**
-       * 一次只挪一项。
-       *
-       * 以前是把整张表从后往前重写（N 次 insertBefore），宿主就重排 N 次：
-       * 每次都触发一次列表重渲染，拖动/选分区时表现为明显卡顿，FLIP 动画也被打断。
-       * 现在只找第一处错位，把那一项插到它的下一个锚点之前；宿主的乐观更新会立刻重排，
-       * 拿到的是和用户自己拖动一模一样的一次移动，动画也就正常了。
-       */
-      const deadline = Date.now() + 4000
-      for (let pass = 0; pass < desired.length && Date.now() < deadline; pass += 1) {
-        const hostOrder = (): string[] => {
-          const listIds = knownIds()
-          return listIds.length > 0 ? listIds : domOrder()
-        }
-        const current = hostOrder()
-        if (sameOrder(current, desired)) break
-
-        // 直接取第一处不匹配的位置：将期望的项直接插在当前占位项之前。
-        // 绝不使用启发式猜测（findMovedItem 会在双向距离相同时挑错项，导致把目标分区里的已有项目交换走）！
-        let at = -1
-        for (let i = 0; i < desired.length; i += 1) {
-          if (current[i] !== desired[i]) {
-            at = i
-            break
-          }
-        }
-        if (at === -1) break
-        const moving = desired[at]!
-        const anchor = current[at]
-
-        await Promise.race([
-          Promise.resolve(service.insertBefore(moving, anchor)),
-          new Promise<void>(resolve => window.setTimeout(resolve, 800)),
-        ])
-        // 等宿主把这一次重排真正渲染到 DOM（最多 12 帧），
-        // 否则会在宿主还没重排时误判「仍然错位」而重复写同一项。
-        for (let frame = 0; frame < 12; frame += 1) {
-          await new Promise<void>(resolve => window.requestAnimationFrame(() => resolve()))
-          if (hostOrder().indexOf(moving) === desired.indexOf(moving)) break
-        }
+    const write = async (): Promise<void> => {
+      if (service === undefined) throw new Error('工作区服务未就绪')
+      const desired = flattenSections(update.next)
+      for (const move of planWorkspaceMoves(knownIds(), desired, update.workspaceIds)) {
+        if (disposed || activeUpdate !== update) return
+        await service.insertBefore(move.workspaceId, move.beforeWorkspaceId)
       }
-    } catch {
-      // 宿主拒绝（工作区被并发删除等）时清空意图，避免无限次死循环重试。
-      intentOrder = undefined
-    } finally {
-      applying = false
-      pendingOrder = undefined
-      const queued = queuedOrder
-      queuedOrder = undefined
-      if (queued !== undefined && !sameOrder(queued, desired)) void applyOrder(queued)
+      if (disposed || activeUpdate !== update) return
+      update.rpcDone = true
+      syncNow()
     }
+    void write().catch(() => {
+      if (disposed || activeUpdate !== update) return
+      // 不把失败意图保存，也不无限重试；后续菜单操作可从最后确认的归属重新开始。
+      console.warn('[codex-ui:sections] 工作区移动失败，已撤销未确认的分区操作。')
+      updates.length = 0
+      update.motion?.dispose()
+      activeUpdate = undefined
+      state = committedState
+      scheduleSync()
+    })
+    scheduleSync()
   }
 
   function scheduleSync(): void {
@@ -1474,25 +1403,12 @@ export function observeWorkspaceSections(
     if (disposed || syncing) return
     cacheHostMenuTemplate()
     if (!sectionsLoaded) return
-    if (applying) {
-      // 看门狗：写入理论上有时限，万一仍被卡住，超过 12 秒就强解，别让整个插件永久哑掉。
-      if (Date.now() - applyingSince > 12000) {
-        applying = false
-        queuedOrder = undefined
-        pendingOrder = undefined
-      } else {
-        // 正在写宿主顺序：保证标题和成员标记不发生错位与残留，但不反推顺序
-        if (list !== undefined) placeHeaders(collectProjectBlocks(list, list))
-        return
-      }
-    }
     const next = findWorkspaceList(document)
     if (next === undefined) {
       detachHeaders()
       return
     }
     list = next
-    // 首次找到列表就立刻接上订阅与观察器，不等轮询：拖拽与重渲染都要实时感知。
     if (!wired) {
       wired = true
       subscribeWorkspaces()
@@ -1500,53 +1416,83 @@ export function observeWorkspaceSections(
     }
     syncing = true
     try {
-      const ids = knownIds()
-      if (ids.length > 0) state = normalizeSections(state, ids)
-
       const order = domOrder()
-      if (order.length === 0) {
-        placeHeaders(collectProjectBlocks(list, list))
+      const ids = knownIds()
+      const update = activeUpdate
+      if (update !== undefined) {
+        if (update.rpcDone && sameOrder(ids, order)) {
+          const normalized = withHostWorkspaces(update.next, ids)
+          if (!sameOrder(flattenSections(normalized), flattenSections(update.next))) {
+            const original = new Set(flattenSections(update.next))
+            update.next = reconcileHostOrder(normalized, ids).state
+            state = withHostWorkspaces(state, ids)
+            update.motion?.dispose()
+            update.motion = undefined
+            update.layoutDone = false
+            const additions = ids.filter(id => !original.has(id))
+            const moves = planWorkspaceMoves(ids, flattenSections(update.next), additions)
+            if (moves.length > 0) {
+              const service = workspaces()
+              if (service === undefined) throw new Error('工作区服务未就绪')
+              update.rpcDone = false
+              void (async () => {
+                for (const move of moves) await service.insertBefore(move.workspaceId, move.beforeWorkspaceId)
+                if (activeUpdate !== update || disposed) return
+                update.rpcDone = true
+                scheduleSync()
+              })().catch(() => {
+                console.warn('[codex-ui:sections] 同步新工作区顺序失败。')
+                if (activeUpdate !== update || disposed) return
+                updates.length = 0
+                activeUpdate = undefined
+                state = committedState
+                scheduleSync()
+              })
+              return
+            }
+          }
+        }
+        const desired = flattenSections(update.next)
+        // 服务快照与 DOM 必须同时追平。中间序列不参与标题定位，也不反向覆盖菜单意图。
+        if (!sameOrder(ids, desired) || !sameOrder(order, desired)) return
+        if (!update.layoutDone) {
+          update.layoutDone = true
+          const layout = (): void => placeHeaders(collectProjectBlocks(list!, list), update.next)
+          const finished = update.motion?.play(layout)
+          if (finished === undefined) layout()
+          void (finished ?? Promise.resolve()).then(() => {
+            if (disposed || activeUpdate !== update) return
+            update.motionDone = true
+            syncNow()
+          })
+        }
+        if (update.rpcDone && update.motionDone) {
+          committedState = update.next
+          persist(committedState)
+          activeUpdate = undefined
+          startNextUpdate()
+        }
         return
       }
-
-      // 正在把顺序写回宿主：等宿主重排完成再判定，避免把在途写入误判成用户拖动。
-      if (pendingOrder !== undefined) {
-        if (!sameOrder(order, pendingOrder)) {
-          placeHeaders(collectProjectBlocks(list, list))
+      // React 还没提交快照对应的行时保持当前布局，等 MutationObserver 再来。
+      if (!sameOrder(ids, order) || order.length === 0) return
+      state = normalizeSections(state, ids)
+      if (!baselineSet) {
+        baselineSet = true
+        for (const id of ids) {
+          if (sectionOf(state, id) === undefined) state = assignWorkspace(state, id, DEFAULT_SECTION_ID)
+        }
+        committedState = state
+        if (!sameOrder(flattenSections(state), order)) {
+          commitExplicit(state)
           return
         }
-        pendingOrder = undefined
+      } else {
+        // 空闲时只采纳宿主的分区内顺序；原生拖拽不需要再写一次宿主。
+        state = reconcileHostOrder(state, order).state
       }
-
-      if (!baselineSet) {
-        // 首次同步：本地分类是权威，宿主的旧顺序不能把用户的归属冲掉；
-        // 全新安装（本地没有任何成员）时则采纳宿主顺序，全部落进兜底分区。
-        baselineSet = true
-        if (flattenSections(state).length === 0) {
-          const { state: adopted } = reconcileHostOrder(state, order)
-          state = adopted
-          persist()
-        } else if (!sameOrder(flattenSections(state), order)) {
-          if (!applying) void applyOrder(flattenSections(state))
-        }
-      } else if (intentOrder !== undefined) {
-        // 用户刚显式指定过归属：以意图为准，宿主没追平就继续写，绝不反推。
-        if (sameOrder(order, intentOrder)) intentOrder = undefined
-        else if (!applying) void applyOrder(intentOrder)
-      } else if (suppressReconcile > 0) {
-        // 刚写完宿主，给宿主一到两拍把重渲染补齐；这段窗口里不把差异当成用户拖动。
-        suppressReconcile -= 1
-      } else if (!applying) {
-        // 之后的顺序变化一定来自用户拖动：只重判被拖动那一项，再把顺序对齐。
-        const { state: reconciled, changed } = reconcileHostOrder(state, order)
-        if (changed) {
-          state = reconciled
-          persist()
-        }
-        const desired = flattenSections(state)
-        if (!sameOrder(desired, order)) void applyOrder(desired)
-      }
-
+      committedState = state
+      persist()
       placeHeaders(collectProjectBlocks(list, list))
     } finally {
       syncing = false
@@ -1585,7 +1531,11 @@ export function observeWorkspaceSections(
           break
         }
       }
-      if (touched) scheduleSync()
+      if (touched) {
+        // 宿主已提交 DOM 时在绘制前完成分区布局，不能再晚一帧补标题。
+        if (activeUpdate !== undefined) syncNow()
+        else scheduleSync()
+      }
     })
     observer.observe(document.body, { childList: true, subtree: true })
   }
@@ -1617,6 +1567,9 @@ export function observeWorkspaceSections(
     window.clearInterval(boot)
     if (rafId !== 0) window.cancelAnimationFrame(rafId)
     observer?.disconnect()
+    updates.length = 0
+    activeUpdate?.motion?.dispose()
+    activeUpdate = undefined
     document.removeEventListener('dragstart', onWorkspaceDragStart, true)
     document.removeEventListener('dragover', onWorkspaceDragOver, true)
     document.removeEventListener('drop', onWorkspaceDrop, true)

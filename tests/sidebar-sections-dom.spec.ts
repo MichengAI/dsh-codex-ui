@@ -179,6 +179,205 @@ describe('工作区分区：DOM 层', () => {
     return fake
   }
 
+  /** 每次重建宿主菜单，避免上一次注入的项目上下文被夹具复用。 */
+  const openWorkspaceMenu = async (id: string): Promise<HTMLElement> => {
+    document.querySelectorAll('[role="menu"]').forEach(menu => menu.remove())
+    const menu = document.createElement('div')
+    menu.setAttribute('role', 'menu')
+    menu.innerHTML = '<div><button role="menuitem"><span><svg></svg></span><span>重命名</span></button></div>'
+    document.body.appendChild(menu)
+    document.querySelector<HTMLButtonElement>(`button[aria-label="${id} 操作"]`)!.click()
+    await Promise.resolve()
+    return menu
+  }
+
+  it('取消置顶到末尾只移动选中的项目一次，不搬动途中的其他项目', async () => {
+    seedSections({ sections: [
+      { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+      { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b', 'c', 'd'] },
+    ] })
+    mountFixture(['a', 'b', 'c', 'd'])
+    const fake = mount(['a', 'b', 'c', 'd'])
+    await waitForSync()
+    fake.service.insertBefore.mockClear()
+    const menu = await openWorkspaceMenu('a')
+    menu.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    await waitForSync()
+    expect(fake.service.insertBefore.mock.calls).toEqual([['a', undefined]])
+    expect(blockIdsInDomOrder()).toEqual(['b', 'c', 'd', 'a'])
+  })
+
+  it('宿主快照先到而 DOM 尚未提交时，不提前移动标题或改成员归属', async () => {
+    seedSections({ sections: [
+      { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+      { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b', 'c'] },
+    ] })
+    const list = mountFixture(['a', 'b', 'c'])
+    let order = ['a', 'b', 'c']
+    let resolveWrite!: () => void
+    const service = {
+      list: { getSnapshot: () => ({ items: order.map(workspaceId => ({ workspaceId })) }), subscribe: () => () => {} },
+      insertBefore: vi.fn(() => new Promise<void>(resolve => { resolveWrite = resolve })),
+    }
+    dispose = observeWorkspaceSections({ get: () => service } as never)
+    await waitForSync()
+    const before = list.innerHTML
+    const menu = await openWorkspaceMenu('a')
+    menu.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    expect(list.innerHTML).toBe(before)
+    // 快照到达不等于 React 已完成 DOM 提交；期间菜单/其它树变动也不能触发重排。
+    order = ['b', 'c', 'a']
+    document.body.appendChild(document.createElement('span'))
+    await waitForSync()
+    expect(list.innerHTML).toBe(before)
+    expect(service.insertBefore.mock.calls).toEqual([['a', undefined]])
+    // 模拟宿主只移动选中块，随后才确认写请求。
+    list.appendChild(list.querySelector('[data-dcu-test-group="a"]')!)
+    await waitForSync()
+    expect(list.querySelector('[data-dcu-test-group="a"]')!.getAttribute('data-dcu-section-member')).toBe(DEFAULT_SECTION_ID)
+    resolveWrite()
+    await waitForSync()
+    expect(hostSection(PINNED_SECTION_ID).ids).toEqual([])
+    expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['b', 'c', 'a'])
+  })
+
+  it('空分区位于上一区全部成员之后，重复同步不产生标题搬动', async () => {
+    seedSections({ sections: [
+      { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+      { id: 's1', name: '空分区', ids: [] },
+      { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b'] },
+    ] })
+    const list = mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+    const layout = () => Array.from(list.children).map(el => el.getAttribute(SECTION_HEADER_ATTR) ?? el.getAttribute('data-dcu-test-group'))
+    expect(layout()).toEqual([PINNED_SECTION_ID, 'a', 's1', DEFAULT_SECTION_ID, 'b'])
+    const insert = vi.spyOn(list, 'insertBefore')
+    document.body.appendChild(document.createElement('span'))
+    await waitForSync()
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('宿主 DOM 提交后在下一绘制帧之前完成标题归位，而非再等一帧', async () => {
+    seedSections({ sections: [
+      { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+      { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a', 'b', 'c'] },
+    ] })
+    const list = mountFixture(['a', 'b', 'c'])
+    const fake = mount(['a', 'b', 'c'])
+    await waitForSync()
+    const menu = await openWorkspaceMenu('c')
+    const frames: FrameRequestCallback[] = []
+    const move = fake.service.insertBefore.getMockImplementation()!
+    fake.service.insertBefore.mockImplementation((...args) => {
+      void move(...args)
+      return new Promise(() => {})
+    })
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => { frames.push(callback); return frames.length })
+    menu.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    // MutationObserver 与 Promise 微任务已完成，但不运行任何 rAF。
+    await Promise.resolve()
+    await Promise.resolve()
+    const layout = Array.from(list.children).map(el => el.getAttribute(SECTION_HEADER_ATTR) ?? el.getAttribute('data-dcu-test-group'))
+    expect(fake.service.insertBefore.mock.calls).toEqual([['c', 'a']])
+    expect(layout).toEqual([PINNED_SECTION_ID, 'c', DEFAULT_SECTION_ID, 'a', 'b'])
+  })
+
+  it('分区事务只在最终布局上播放一次块位移，不叠加宿主行位移', async () => {
+    seedSections({ sections: [
+      { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+      { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a', 'b', 'c'] },
+    ] })
+    const list = mountFixture(['a', 'b', 'c'])
+    const fake = mount(['a', 'b', 'c'])
+    await waitForSync()
+    const c = list.querySelector<HTMLElement>('[data-dcu-test-group="c"]')!
+    const cancelHost = vi.fn()
+    const hostAnimation = { effect: { getKeyframes: () => [{ transform: 'translateY(40px)' }, { transform: 'none' }] }, cancel: cancelHost }
+    const row = c.querySelector<HTMLElement>('[data-row-key]')!
+    Object.defineProperty(row, 'getAnimations', { configurable: true, value: () => [hostAnimation] })
+    vi.spyOn(c, 'getBoundingClientRect').mockImplementation(() => ({
+      top: Array.from(list.children).indexOf(c) * 40, left: 0, width: 200, height: 40,
+    } as DOMRect))
+    const animate = vi.fn(() => ({ finished: Promise.resolve(), cancel: vi.fn() }))
+    Object.defineProperty(c, 'animate', { configurable: true, value: animate })
+    const menu = await openWorkspaceMenu('c')
+    menu.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    await waitForSync()
+    expect(cancelHost).toHaveBeenCalledTimes(1)
+    expect(animate).toHaveBeenCalledTimes(1)
+    expect(fake.service.insertBefore.mock.calls).toEqual([['c', 'a']])
+    document.body.appendChild(document.createElement('span'))
+    await waitForSync()
+    expect(animate).toHaveBeenCalledTimes(1)
+  })
+
+  it('连续置顶再取消置顶按操作身份串行，不让第二次写入抢跑', async () => {
+    mountFixture(['a', 'b', 'c'])
+    const fake = mount(['a', 'b', 'c'])
+    await waitForSync()
+    const move = fake.service.insertBefore.getMockImplementation()!
+    let release!: () => void
+    fake.service.insertBefore.mockImplementationOnce(async (...args) => {
+      await move(...args)
+      await new Promise<void>(resolve => { release = resolve })
+      return {}
+    })
+    ;(await openWorkspaceMenu('c')).querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    await waitForSync()
+    ;(await openWorkspaceMenu('c')).querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    await waitForSync()
+    expect(fake.service.insertBefore.mock.calls).toEqual([['c', 'a']])
+    release()
+    await waitForSync()
+    expect(fake.service.insertBefore.mock.calls).toEqual([['c', 'a'], ['c', undefined]])
+    expect(blockIdsInDomOrder()).toEqual(['a', 'b', 'c'])
+    expect(hostSection(PINNED_SECTION_ID).ids).toEqual([])
+  })
+
+  it('写入拒绝后撤销未确认意图，后续操作仍可成功且不自动重发', async () => {
+    mountFixture(['a', 'b', 'c'])
+    const fake = mount(['a', 'b', 'c'])
+    await waitForSync()
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    fake.service.insertBefore.mockRejectedValueOnce(new Error('拒绝移动'))
+    ;(await openWorkspaceMenu('c')).querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    await waitForSync()
+    expect(fake.service.insertBefore).toHaveBeenCalledTimes(1)
+    expect(hostSection(PINNED_SECTION_ID).ids).toEqual([])
+    expect(warning).toHaveBeenCalled()
+    ;(await openWorkspaceMenu('c')).querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    await waitForSync()
+    expect(fake.service.insertBefore.mock.calls).toEqual([['c', 'a'], ['c', 'a']])
+    expect(hostSection(PINNED_SECTION_ID).ids).toEqual(['c'])
+  })
+
+  it('写入期间新增项目不会让旧目标顺序永久阻塞后续分区操作', async () => {
+    const list = mountFixture(['a', 'b', 'c'])
+    const fake = mount(['a', 'b', 'c'])
+    await waitForSync()
+    const move = fake.service.insertBefore.getMockImplementation()!
+    let release!: () => void
+    fake.service.insertBefore.mockImplementationOnce(async (...args) => {
+      await move(...args)
+      await new Promise<void>(resolve => { release = resolve })
+      return {}
+    })
+    ;(await openWorkspaceMenu('c')).querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    await waitForSync()
+    fake.state.order.unshift('d')
+    const d = list.querySelector<HTMLElement>('[data-dcu-test-group="b"]')!.cloneNode(true) as HTMLElement
+    d.setAttribute('data-dcu-test-group', 'd')
+    d.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:d')
+    list.insertBefore(d, list.firstChild)
+    release()
+    await waitForSync()
+    ;(await openWorkspaceMenu('c')).querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    await waitForSync()
+    expect(fake.service.insertBefore.mock.calls).toEqual([['c', 'a'], ['d', 'a'], ['c', undefined]])
+    expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['d', 'a', 'b', 'c'])
+  })
+
   it('首次同步把未归类的工作区全部落进兜底分区，并渲染两个内置标题', async () => {
     mountFixture(['a', 'b'])
     mount(['a', 'b'])
@@ -239,16 +438,14 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
       ],
     })
     mountFixture(['a', 'b', 'c'])
-    mount(['a', 'b', 'c'])
+    const fake = mount(['a', 'b', 'c'])
     await waitForSync()
 
-    // 模拟列表平铺顺序变化：c 移动到最前
+    // 同时发布快照与完整工作区块，模拟宿主外部更新，而非拆散原生树节点。
     const list = document.querySelector<HTMLElement>('.list')!
-    const groups = new Map<string, HTMLElement>()
-    for (const row of Array.from(document.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))) {
-      groups.set((row.getAttribute('data-row-key') ?? '').slice('workspace:'.length), row.parentElement as HTMLElement)
-    }
-    for (const id of ['c', 'a', 'b']) list.appendChild(groups.get(id)!)
+    const groups = new Map(collectProjectBlocks(document, list).map(item => [item.workspaceId, item.block]))
+    fake.state.order = ['c', 'a', 'b']
+    for (const id of fake.state.order) list.appendChild(groups.get(id)!)
     await waitForSync(10)
 
     // a 依然属于置顶，b 和 c 依然属于项目（c 的位置在 b 之前），绝对不把 c 错误篡改归入置顶！
