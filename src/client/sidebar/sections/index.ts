@@ -567,6 +567,8 @@ export function observeWorkspaceSections(
     | { kind: 'workspace'; id: string; before: boolean }
     | { kind: 'section'; sectionId: string }
   let projectDrop: ProjectDrop | undefined
+  /** 记录最后一次悬停的项目行及落点方位，供释放时执行同步乐观 DOM 移动，杜绝回弹。 */
+  let projectRowHover: { targetId: string; row: HTMLElement; before: boolean } | undefined
   let dropLine: HTMLElement | undefined
 
   function clearDropLine(): void {
@@ -968,6 +970,7 @@ export function observeWorkspaceSections(
   function finishProjectDrag(): void {
     draggingProject = undefined
     projectDrop = undefined
+    projectRowHover = undefined
     clearDropLine()
   }
 
@@ -991,12 +994,25 @@ export function observeWorkspaceSections(
         event.preventDefault()
         if (event.dataTransfer !== null) event.dataTransfer.dropEffect = 'move'
         projectDrop = { kind: 'section', sectionId }
+        projectRowHover = undefined
         showSectionDrop(header)
         return
       }
       if (projectDrop !== undefined) {
         projectDrop = undefined
         clearDropLine()
+      }
+      const row = rowFromEvent(event)
+      if (row !== null) {
+        const id = workspaceIdOfRow(row)
+        if (id !== undefined && id !== draggingProject) {
+          const rect = row.getBoundingClientRect()
+          projectRowHover = {
+            targetId: id,
+            row,
+            before: event.clientY < rect.top + rect.height / 2,
+          }
+        }
       }
       return
     }
@@ -1012,12 +1028,51 @@ export function observeWorkspaceSections(
 
   function onDrop(event: DragEvent): void {
     if (draggingProject !== undefined) {
+      const moving = draggingProject
+
+      // ── 场景 1：投放到分区标题上（包括空分区） ──
       if (projectDrop?.kind === 'section') {
-        const moving = draggingProject
         const targetSectionId = projectDrop.sectionId
         finishProjectDrag()
         event.preventDefault()
         event.stopPropagation()
+
+        const targetHeader = headers.get(targetSectionId)
+        const container = list ?? targetHeader?.parentElement
+        const allBlocks = collectProjectBlocks(container ?? document, container as HTMLElement)
+        const movedBlock = allBlocks.find(b => b.workspaceId === moving)?.block
+
+        // 核心突破：同步乐观 DOM 移动！
+        // 鼠标松开的当帧直接把 DOM 节点移入目标分区位置，绝不等后台 IPC 往返！
+        // 这样浏览器看到节点已经在目标位置，绝不会执行任何“先回弹一下再跳过去”的视觉倒退！
+        if (movedBlock && targetHeader && container) {
+          const nextHeader = (() => {
+            const index = state.sections.findIndex(s => s.id === targetSectionId)
+            for (let i = index + 1; i < state.sections.length; i += 1) {
+              const h = headers.get(state.sections[i]!.id)
+              if (h && h.isConnected) return h
+            }
+            return null
+          })()
+          const memberBlocks = allBlocks.filter(
+            b => state.sections.find(s => s.id === targetSectionId)?.ids.includes(b.workspaceId) && b.workspaceId !== moving,
+          )
+          const insertAnchor = memberBlocks.length > 0
+            ? memberBlocks[memberBlocks.length - 1]!.block.nextSibling
+            : (nextHeader ?? targetHeader.nextSibling)
+          container.insertBefore(movedBlock, insertAnchor)
+
+          movedBlock.setAttribute('data-dcu-section-member', targetSectionId)
+          if (targetHeader.dataset.open === 'false') {
+            movedBlock.setAttribute('data-dcu-section-hidden', 'true')
+          } else {
+            movedBlock.removeAttribute('data-dcu-section-hidden')
+            movedBlock.style.removeProperty('max-height')
+            movedBlock.style.removeProperty('overflow')
+            movedBlock.style.removeProperty('opacity')
+          }
+        }
+
         const assigned = assignWorkspace(state, moving, targetSectionId)
         if (assigned !== state) {
           state = assigned
@@ -1026,18 +1081,39 @@ export function observeWorkspaceSections(
           intentOrder = desired
           suppressReconcile = 6
           void applyOrder(desired)
-          // 若目标分区处于展开态，立即剥离该被移动块的限制，当场可见
-          const movedBlock = collectProjectBlocks(list ?? document, list).find(b => b.workspaceId === moving)?.block
-          if (movedBlock && headers.get(targetSectionId)?.dataset.open !== 'false') {
-            movedBlock.removeAttribute('data-dcu-section-hidden')
-            movedBlock.style.removeProperty('max-height')
-            movedBlock.style.removeProperty('overflow')
-            movedBlock.style.removeProperty('opacity')
-          }
           scheduleSync()
         }
         return
       }
+
+      // ── 场景 2：投放到项目行之间 ──
+      if (projectRowHover !== undefined) {
+        const hover = projectRowHover
+        const container = list ?? hover.row.closest<HTMLElement>('.list') ?? undefined
+        const blocks = collectProjectBlocks(container ?? document, container)
+        const movingBlock = blocks.find(b => b.workspaceId === moving)?.block
+        const targetBlock = blocks.find(b => b.workspaceId === hover.targetId)?.block
+
+        // 同步乐观 DOM 移动：当场插入到目标行的前/后
+        if (movingBlock && targetBlock && targetBlock.parentElement) {
+          const anchor = hover.before ? targetBlock : targetBlock.nextSibling
+          if (anchor !== movingBlock) {
+            targetBlock.parentElement.insertBefore(movingBlock, anchor)
+          }
+          const targetSectionId = targetBlock.getAttribute('data-dcu-section-member')
+          if (targetSectionId) {
+            movingBlock.setAttribute('data-dcu-section-member', targetSectionId)
+            const th = headers.get(targetSectionId)
+            if (th?.dataset.open !== 'false') {
+              movingBlock.removeAttribute('data-dcu-section-hidden')
+              movingBlock.style.removeProperty('max-height')
+              movingBlock.style.removeProperty('overflow')
+              movingBlock.style.removeProperty('opacity')
+            }
+          }
+        }
+      }
+
       finishProjectDrag()
       return
     }
