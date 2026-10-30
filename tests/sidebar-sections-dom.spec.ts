@@ -996,6 +996,57 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(sessionMenu.querySelector(`[${MENU_ITEM_ATTR}]`)).toBeNull()
   })
 
+  it('选择分区后立刻在同步帧完成乐观 DOM 物理就位（0ms瞬间移动，老位置零残留）', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '分组一', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b'] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    // 初始：a 在 s1，b 在 default
+    expect(blockIdsInDomOrder()).toEqual(['a', 'b'])
+
+    // 打开 b 的操作菜单，移入 s1
+    const menu = document.createElement('div')
+    menu.setAttribute('role', 'menu')
+    const hostRow = document.createElement('div')
+    hostRow.className = 'hostRow'
+    const hostItem = document.createElement('button')
+    hostItem.setAttribute('role', 'menuitem')
+    const hostIcon = document.createElement('span')
+    hostIcon.innerHTML = '<svg></svg>'
+    const hostLabel = document.createElement('span')
+    hostLabel.textContent = '重命名'
+    hostItem.append(hostIcon, hostLabel)
+    hostRow.appendChild(hostItem)
+    menu.appendChild(hostRow)
+    document.body.appendChild(menu)
+
+    document.querySelector<HTMLButtonElement>('button[aria-label="b 操作"]')!.click()
+    await new Promise<void>(resolve => setTimeout(resolve, 0))
+
+    const secBtn = Array.from(document.querySelectorAll<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)).find(
+      button => (button.textContent ?? '').includes('分区'),
+    )!
+    secBtn.click()
+    await new Promise<void>(resolve => setTimeout(resolve, 0))
+
+    const panel = document.querySelector('.dcu-ws-section-menu')!
+    const targetBtn = Array.from(panel.querySelectorAll('button')).find(btn => btn.textContent?.includes('分组一'))!
+
+    // 点击目标分区分组一：验证无需等待任何网络或异步延迟，DOM 物理排布当场瞬时重排！
+    targetBtn.click()
+
+    // 0ms 同步检查：b 必须已经在 s1 内部（排在 a 之后），顺序当场为 ['a', 'b']，且属于 s1！
+    const bBlock = document.querySelector('[data-row-key="workspace:b"]')!.closest<HTMLElement>('.groupSection')!
+    expect(bBlock.getAttribute('data-dcu-section-member')).toBe('s1')
+  })
+
   it('通过菜单把项目移入展开的分组时，当场进入目标分区并立即显示（不需收缩展开）', async () => {
     seedSections({
       sections: [

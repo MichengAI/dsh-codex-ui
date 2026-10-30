@@ -321,12 +321,38 @@ export function observeWorkspaceSections(
    * `reconcileHostOrder` 会按位置把归属反推回去，用户看到的就是「点了没反应」。
    * 这里直接把目标顺序记成意图，等宿主追平之前不做反推。
    */
+  /**
+   * 同步乐观 DOM 重排：0ms 立即在物理 DOM 树中把项目移到目标分区位置。
+   * 彻底杜绝选了分区后卡在老分区、产生旧位置残留的问题。
+   */
+  function optimisticReorder(desired: readonly string[]): void {
+    const rootList = list ?? findWorkspaceList(document)
+    if (rootList === undefined) return
+    const blocks = collectProjectBlocks(rootList, rootList)
+    if (blocks.length === 0) return
+
+    const byId = new Map<string, HTMLElement>()
+    for (const item of blocks) {
+      byId.set(item.workspaceId, item.block)
+    }
+
+    for (const id of desired) {
+      const block = byId.get(id)
+      if (block !== undefined && block.parentElement === rootList) {
+        rootList.appendChild(block)
+      }
+    }
+
+    placeHeaders(collectProjectBlocks(rootList, rootList))
+  }
   function commitExplicit(next: SectionsState): void {
     state = next
     persist()
     const desired = flattenSections(next)
     intentOrder = desired
     suppressReconcile = 6
+    // 0ms 瞬间乐观重排 DOM 节点与标题，杜绝旧分区残留与延迟！
+    optimisticReorder(desired)
     void applyOrder(desired)
     scheduleSync()
   }
@@ -1466,7 +1492,8 @@ export function observeWorkspaceSections(
         queuedOrder = undefined
         pendingOrder = undefined
       } else {
-        // 正在写宿主顺序：这一拍什么都别判，等写完再同步，避免在途状态被误读。
+        // 正在写宿主顺序：保证标题和成员标记不发生错位与残留，但不反推顺序
+        if (list !== undefined) placeHeaders(collectProjectBlocks(list, list))
         return
       }
     }
