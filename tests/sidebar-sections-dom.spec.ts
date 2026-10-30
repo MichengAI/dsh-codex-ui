@@ -392,6 +392,44 @@ describe('工作区分区：DOM 层', () => {
     expect(saved).not.toHaveBeenCalled()
   })
 
+  it('克隆带快捷键槽的宿主菜单项时，不会把快捷键槽误当作文本槽造成文字错位', () => {
+    // 模拟宿主带快捷键的菜单项结构：icon + label("设置") + shortcut("Ctrl+S")
+    const wrapper = document.createElement('div')
+    wrapper.className = 'host-item-wrap'
+    const button = document.createElement('button')
+    button.setAttribute('role', 'menuitem')
+    const iconSpan = document.createElement('span')
+    iconSpan.className = 'host-itemIcon'
+    iconSpan.innerHTML = '<svg></svg>'
+    const labelSpan = document.createElement('span')
+    labelSpan.className = 'host-itemLabel'
+    labelSpan.textContent = '设置'
+    const shortcutSpan = document.createElement('span')
+    shortcutSpan.className = 'host-shortcut'
+    shortcutSpan.innerHTML = '<span>Ctrl+,</span>'
+    button.append(iconSpan, labelSpan, shortcutSpan)
+    wrapper.appendChild(button)
+
+    // openHostPanel 内部会用 buildMenuRow 克隆
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    const menu = document.createElement('div')
+    menu.setAttribute('role', 'menu')
+    menu.appendChild(wrapper)
+    document.body.appendChild(menu)
+
+    const btn = document.querySelector<HTMLButtonElement>('button[aria-label="a 操作"]')
+    btn?.click()
+
+    const pinnedItem = Array.from(document.querySelectorAll('[role="menuitem"]')).find(
+      el => el.textContent?.includes('置顶')
+    )
+    expect(pinnedItem).toBeDefined()
+    // 关键断言：绝对不能残留“设置”字样！
+    expect(pinnedItem?.textContent).not.toContain('设置')
+    expect(pinnedItem?.querySelector('[class*="shortcut"]')).toBeNull()
+  })
+
   it('宿主仅展示部分项目时仍能完成分区操作，隐藏项目归属不丢失', async () => {
     mountFixture(['a', 'b', 'c'])
     const fake = mount(['a', 'b', 'c'])

@@ -1192,10 +1192,21 @@ export function observeWorkspaceSections(
     button.style.opacity = ''
     button.style.cursor = ''
     if (attribute !== '') button.setAttribute(attribute, 'true')
+    // 宿主菜单项若包含快捷键槽（如 [class*="shortcut"]），克隆时必须先移除，
+    // 否则最后一个 span 会是快捷键槽（带 margin-left: auto），导致真正的文案残留变成“设置 [空白] 置顶”！
+    button.querySelectorAll('[class*="shortcut"], [aria-keyshortcuts]').forEach(el => el.remove())
     const spans = Array.from(button.querySelectorAll(':scope > span'))
     const iconSlot = spans[0]
-    const labelSlot = spans[spans.length - 1]
+    // 优先取宿主标准的 itemLabel，不存在时退化取除 icon 外的文本 span
+    const labelSlot =
+      button.querySelector<HTMLElement>('[class*="itemLabel"], [class*="label"]') ??
+      spans.slice(1).find(span => span.children.length === 0 || span.textContent !== '') ??
+      spans[spans.length - 1]
     if (iconSlot === undefined || labelSlot === undefined || iconSlot === labelSlot) return null
+    // 清理除 iconSlot 和 labelSlot 之外的任何多余 span 残留
+    spans.forEach(span => {
+      if (span !== iconSlot && span !== labelSlot) span.remove()
+    })
     iconSlot.innerHTML = icon
     labelSlot.textContent = label
     if (tailIcon !== undefined && tailIcon !== '') {
@@ -1450,7 +1461,10 @@ export function observeWorkspaceSections(
       return
     }
     const menu = Array.from(document.querySelectorAll<HTMLElement>('[role="menu"]')).find(
-      item => item.querySelector('button[role="menuitem"]') !== null && !isOwnPanel(item),
+      item =>
+        item.querySelector('button[role="menuitem"]') !== null &&
+        !isOwnPanel(item) &&
+        item.closest('[data-shortcut-modal="settings"]') === null,
     )
     const reference = menu?.querySelector<HTMLButtonElement>('button[role="menuitem"]')
     const wrapper = reference?.parentElement
