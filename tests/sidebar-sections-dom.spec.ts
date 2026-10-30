@@ -957,6 +957,45 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(spy).toHaveBeenCalledWith('dragstart', expect.any(Function), true)
   })
 
+  it('会话行的操作菜单绝对不被注入「置顶」与「分区」（该功能专属项目文件夹）', async () => {
+    mountFixture(['a'])
+    mount(['a'])
+    await waitForSync()
+
+    // 1. 模拟先打开一次工作区菜单（产生过 assigningWorkspaceId）
+    document.querySelector<HTMLButtonElement>('button[aria-label="a 操作"]')!.click()
+    await new Promise<void>(resolve => setTimeout(resolve, 10))
+
+    // 2. 模拟关闭工作区菜单后，打开一个会话操作菜单（包含会话特有文本「置顶会话」「归档会话」）
+    const sessionMenu = document.createElement('div')
+    sessionMenu.setAttribute('role', 'menu')
+    const hostRow = document.createElement('div')
+    hostRow.className = 'hostRow'
+    const hostItem = document.createElement('button')
+    hostItem.setAttribute('role', 'menuitem')
+    const hostLabel = document.createElement('span')
+    hostLabel.textContent = '置顶会话'
+    hostItem.append(hostLabel)
+    hostRow.appendChild(hostItem)
+    sessionMenu.appendChild(hostRow)
+
+    // 模拟点击会话行内部
+    const sessionRow = document.createElement('div')
+    sessionRow.setAttribute('data-row-key', 'session:s1')
+    const sessionBtn = document.createElement('button')
+    sessionRow.appendChild(sessionBtn)
+    document.body.appendChild(sessionRow)
+    sessionBtn.click()
+    await new Promise<void>(resolve => setTimeout(resolve, 0))
+
+    // 挂载会话菜单
+    document.body.appendChild(sessionMenu)
+    await new Promise<void>(resolve => setTimeout(resolve, 50))
+
+    // 验证：会话菜单内绝对没有任何插件注入的工作区选项！此选项专属项目文件夹！
+    expect(sessionMenu.querySelector(`[${MENU_ITEM_ATTR}]`)).toBeNull()
+  })
+
   it('通过菜单把项目移入展开的分组时，当场进入目标分区并立即显示（不需收缩展开）', async () => {
     seedSections({
       sections: [

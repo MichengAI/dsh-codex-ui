@@ -1065,10 +1065,22 @@ export function observeWorkspaceSections(
    * 键盘回车没有 pointerdown，所以保留 click 兜底。
    */
   function prepareMenuInjection(target: Element): void {
+    // 如果点击的是菜单内部（如在菜单里点击「分区」或「置顶」），保留当前工作区 ID，绝不清空！
+    if (target.closest('[role="menu"]') !== null) return
+
+    // 若点击的是会话行的操作按钮或其它非工作区元素，立刻清空目标，绝对不误注入会话菜单！
+    if (target.closest('[data-row-key^="session:"]') !== null) {
+      assigningWorkspaceId = undefined
+      return
+    }
     const row = projectRowOfMenuButton(target)
-    if (row === null) return
+    if (row === null) {
+      // 点击处不是工作区操作按钮，清空目标
+      assigningWorkspaceId = undefined
+      return
+    }
     const id = workspaceIdOfRow(row)
-    if (id !== undefined) assigningWorkspaceId = id
+    assigningWorkspaceId = id
     // 菜单可能已经挂上了（pointerdown 与 click 之间），立刻同步试一次；没有就交给 body 观察器。
     injectMenuEntry()
   }
@@ -1171,6 +1183,7 @@ export function observeWorkspaceSections(
 
   function injectMenuEntry(attempt = 0): void {
     if (disposed) return
+    if (assigningWorkspaceId === undefined) return
     if (document.querySelector(`[${MENU_ITEM_ATTR}]`) !== null) return
     // 任意一个已渲染出行的菜单都算候选；宿主把菜单外壳与菜单项分两拍挂上来，
     // 所以「外壳在、行还没渲染」也要能用缓存模板立刻注入，否则用户会看到菜单先出来、置顶晚到。
@@ -1181,6 +1194,22 @@ export function observeWorkspaceSections(
     const menu = rendered[rendered.length - 1] ?? (hostMenuRowTemplate === undefined ? undefined : menus[menus.length - 1])
     if (menu === undefined) {
       if (attempt < 6) window.setTimeout(() => injectMenuEntry(attempt + 1), 20)
+      return
+    }
+
+    // 严密防线：若候选菜单包含「置顶会话」「分叉会话」「删除会话」「Session ID」等会话特有操作，
+    // 判定为会话菜单，绝对不注入置顶与分区！此选项专属项目文件夹。
+    const menuItemsText = Array.from(menu.querySelectorAll('button[role="menuitem"]'))
+      .map(b => b.textContent ?? '')
+      .join(' ')
+    if (
+      menuItemsText.includes('置顶会话') ||
+      menuItemsText.includes('分叉会话') ||
+      menuItemsText.includes('删除会话') ||
+      menuItemsText.includes('Session ID') ||
+      menuItemsText.includes('移动到工作区')
+    ) {
+      assigningWorkspaceId = undefined
       return
     }
     const reference = Array.from(menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find(
