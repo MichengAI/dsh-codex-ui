@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.6 (2026-10-30)
+
+- **Workspace Sections and Pinning Management (#70)**:
+  - Introduce a lightweight, non-intrusive workspace sectioning and pinning system that fully preserves the official native workspace tree lifecycle and in-section drag-and-drop reordering;
+  - Support workspace pinning/unpinning, custom sections creation, section renaming, and removal, with persistent state stored in the host's `plugin-data/`;
+  - Driven by explicit move transactions with synchronized three-phase layout (host snapshot, DOM tree, and smooth motion animations), preventing bounce, visual jitter, and ghost residues during section moves;
+  - Add robust failure and delay tolerance: 8-second pending status feedback and 20-second safety timeout rollback to prevent concurrency conflicts and queue deadlocks;
+  - Support partial workspace list projections (such as the archive-only filter) via ordered subset validation, preventing synchronization hangs during view transitions;
+  - Fix menu item label truncation and spurious \"Settings\" text leakage when cloning host menu rows with shortcut slots.
+
 ## 2.0.5 (2026-10-29)
 
 - **Fix Chat History Bleeding Through Composer (#69)**: Restore an opaque ground-aligned occlusion base and smooth top fade for the composer seat in glass and mica modes, eliminating text overlap and visual clutter where scrolled messages bled through the input card and status dock, while ensuring the last message remains fully legible when scrolled to the bottom.
