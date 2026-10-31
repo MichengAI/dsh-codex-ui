@@ -1,10 +1,11 @@
-import { afterEach, expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 import { applyGlassSettings, disposeGlassMode, GLASS_EXTRA_CSS } from '../src/client/theme/glass.ts'
 import { GLASS_CSS_TEXT } from '../src/client/theme/glass-css.gen.ts'
-import { ensureThemeSurfaceStyles, removeThemeSurfaceStyles, THEME_SURFACE_STYLE_ID } from '../src/client/theme/index.ts'
+import { changeTheme, ensureThemeSurfaceStyles, observeTheme, removeThemeSurfaceStyles, THEME_SURFACE_STYLE_ID } from '../src/client/theme/index.ts'
 
 afterEach(() => {
   disposeGlassMode()
+  removeThemeSurfaceStyles()
 })
 
 /** 玻璃层注入的样式标签文本（生成 CSS + 追加 CSS） */
@@ -80,7 +81,7 @@ test('底部 dock 遮罩带保持移除，不得回退成参考插件的矩形�
   )
 })
 
-test('指令面板加浓与磨砂：必须声明 [data-trigger-menu] 提浓规则防止文字穿透（Issue #72）', () => {
+test('指令面板加浓与磨砂：必须声明 [data-trigger-menu] 提浓规则防止文字穿透（Issue #72）', async () => {
   // 1. glass.ts 玻璃追加样式守卫
   expect(GLASS_EXTRA_CSS).toContain('[data-trigger-menu]')
   expect(GLASS_EXTRA_CSS).toContain('--dsw-menu-surface-fill: color-mix(in srgb, var(--dsw-alias-bg-layer-2, #1e1e2e) 88%, transparent) !important;')
@@ -95,8 +96,44 @@ test('指令面板加浓与磨砂：必须声明 [data-trigger-menu] 提浓规�
   expect(surfaceTag?.textContent).toContain('--dsw-menu-surface-fill: color-mix(in srgb, var(--dsw-alias-bg-layer-2, #1e1e2e) 88%, transparent) !important;')
   expect(surfaceTag?.textContent).toContain('--dsw-menu-backdrop-filter: blur(24px) saturate(140%) !important;')
 
-  // 3. 停用时必须能彻底移除
-  removeThemeSurfaceStyles()
-  expect(document.getElementById(THEME_SURFACE_STYLE_ID)).toBeNull()
+  // 3. 停用时通过真实生命周期 checkAndSync 必须彻底清除 DOM 上的 surface 标签（严格差分变异守卫）
+  // 设置自选主题，将 hasAppliedCustomTheme 标志置为 true 且在 DOM 插入 surface 标签
+  changeTheme('codex-dark')
+  expect(document.getElementById(THEME_SURFACE_STYLE_ID)).not.toBeNull()
+
+  let mockPluginEnabled = true
+  const originalFetch = globalThis.fetch
+  try {
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve({
+        ok: mockPluginEnabled,
+        status: mockPluginEnabled ? 200 : 404,
+        json: () => Promise.resolve({ enabled: mockPluginEnabled }),
+      }),
+    )
+
+    const dummyCtx = {
+      on: vi.fn(),
+      get: vi.fn().mockReturnValue(undefined),
+      set: vi.fn(),
+      effect: vi.fn().mockReturnValue(() => {}),
+    }
+
+    const disposeObserve = observeTheme(dummyCtx as never)
+    await new Promise((r) => setTimeout(r, 60))
+    // 启用状态下 surface 标签依然存在
+    expect(document.getElementById(THEME_SURFACE_STYLE_ID)).not.toBeNull()
+
+    // 模拟子插件在宿主管理中被用户停用，触发窗口 focus 同步
+    mockPluginEnabled = false
+    window.dispatchEvent(new Event('focus'))
+    await new Promise((r) => setTimeout(r, 60))
+
+    // 此时 checkAndSync 必须彻底移除 surface 标签（若生产代码删去清理调用，此行必红）
+    expect(document.getElementById(THEME_SURFACE_STYLE_ID)).toBeNull()
+    disposeObserve()
+  } finally {
+    globalThis.fetch = originalFetch
+  }
 })
 

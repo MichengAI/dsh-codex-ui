@@ -179,13 +179,6 @@ html[data-dsh-glass] body:not([data-ds-dark-theme]) .dcu-section-card {
   min-width: 140px;
   flex: 1;
 }
-.dcu-theme-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
 .dcu-theme-row-title {
   font-size: 13px;
   font-weight: 500;
@@ -204,6 +197,7 @@ html[data-dsh-glass] body:not([data-ds-dark-theme]) .dcu-section-card {
   border: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.06));
   border-radius: 8px;
 }
+.dcu-theme-row,
 .dcu-theme-sub-row {
   display: flex;
   align-items: center;
