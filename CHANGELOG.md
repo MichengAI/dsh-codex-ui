@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.7 (2026-10-31)
+
+- **Fix Slash Command Palette Ghost Text Transparency (#72)**: Enhanced surface opacity to 88% and applied 24px backdrop blur to the slash trigger command palette (`[data-trigger-menu]`), eliminating overlapping ghost text and visual clutter when selecting commands over long conversation text.
+- **Restore Glassmorphism Master Switch**: Restored the master toggle for "Glassmorphism & Mica" in Appearance Settings, allowing users to fold all frosted glass decorations and cleanly fall back to native solid colors when preferred.
+
 ## 2.0.6 (2026-10-30)
 
 - **Workspace Pinning and Custom Sections (#70)**:
