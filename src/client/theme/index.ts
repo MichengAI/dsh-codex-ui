@@ -376,6 +376,7 @@ export function observeTheme(ctx: ClientContext): () => void {
     if (!enabled) {
       setThemeSubPluginEnabled(false)
       disposeGlassMode()
+      removeThemeSurfaceStyles()
       for (const name of lastAppliedTokens) {
         document.body.style.removeProperty(name)
       }

@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from 'vitest'
 import { applyGlassSettings, disposeGlassMode, GLASS_EXTRA_CSS } from '../src/client/theme/glass.ts'
 import { GLASS_CSS_TEXT } from '../src/client/theme/glass-css.gen.ts'
+import { ensureThemeSurfaceStyles, removeThemeSurfaceStyles, THEME_SURFACE_STYLE_ID } from '../src/client/theme/index.ts'
 
 afterEach(() => {
   disposeGlassMode()
@@ -80,9 +81,22 @@ test('底部 dock 遮罩带保持移除，不得回退成参考插件的矩形�
 })
 
 test('指令面板加浓与磨砂：必须声明 [data-trigger-menu] 提浓规则防止文字穿透（Issue #72）', () => {
+  // 1. glass.ts 玻璃追加样式守卫
   expect(GLASS_EXTRA_CSS).toContain('[data-trigger-menu]')
   expect(GLASS_EXTRA_CSS).toContain('--dsw-menu-surface-fill: color-mix(in srgb, var(--dsw-alias-bg-layer-2, #1e1e2e) 88%, transparent) !important;')
   expect(GLASS_EXTRA_CSS).toContain('--dsw-menu-backdrop-filter: blur(24px) saturate(140%) !important;')
   expect(GLASS_EXTRA_CSS).toContain('[data-dsh-glass] [data-trigger-menu]')
+
+  // 2. index.ts 全局主题表面样式守卫（双哨兵）
+  ensureThemeSurfaceStyles()
+  const surfaceTag = document.getElementById(THEME_SURFACE_STYLE_ID)
+  expect(surfaceTag).not.toBeNull()
+  expect(surfaceTag?.textContent).toContain('[data-trigger-menu]')
+  expect(surfaceTag?.textContent).toContain('--dsw-menu-surface-fill: color-mix(in srgb, var(--dsw-alias-bg-layer-2, #1e1e2e) 88%, transparent) !important;')
+  expect(surfaceTag?.textContent).toContain('--dsw-menu-backdrop-filter: blur(24px) saturate(140%) !important;')
+
+  // 3. 停用时必须能彻底移除
+  removeThemeSurfaceStyles()
+  expect(document.getElementById(THEME_SURFACE_STYLE_ID)).toBeNull()
 })
 
