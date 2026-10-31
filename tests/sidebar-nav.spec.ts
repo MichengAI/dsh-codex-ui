@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SidebarNav } from '../src/client/sidebar/SidebarNav.tsx'
 import { observeSidebarNav, checkSidebarEnabled } from '../src/client/sidebar/index.ts'
-import { SIDEBAR_ACTIVE_ATTR } from '../src/client/sidebar/styles.ts'
+import { SIDEBAR_ACTIVE_ATTR, SIDEBAR_CSS } from '../src/client/sidebar/styles.ts'
 import { SIDEBAR_LAYOUT_KEY, type SidebarLayout } from '../src/client/sidebar/layout.ts'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
@@ -562,6 +562,16 @@ describe('SidebarNav 组件与交互测试', () => {
 
     hostBtn.remove()
     root.unmount()
+  })
+
+  it('侧栏菜单行光标样式对齐宿主原生 pointer，仅在拖拽中（data-dragging）展示 grabbing', () => {
+    // 基础行样式包含 cursor: pointer
+    expect(SIDEBAR_CSS).toMatch(/\.dcu-sb-row\s*\{[^}]*cursor:\s*pointer;/s)
+    // 不外显 grab 到静态 [draggable="true"] 或 :active
+    expect(SIDEBAR_CSS).not.toMatch(/\.dcu-sb-row\[draggable="true"\]\s*\{[^}]*cursor:\s*grab;/s)
+    expect(SIDEBAR_CSS).not.toMatch(/\.dcu-sb-row\[draggable="true"\]:active\s*\{[^}]*cursor:\s*grabbing;/s)
+    // 仅在真实拖拽中 [data-dragging="true"] 呈现 grabbing
+    expect(SIDEBAR_CSS).toMatch(/\.dcu-sb-row\[data-dragging="true"\]\s*\{[^}]*cursor:\s*grabbing/s)
   })
 })
 

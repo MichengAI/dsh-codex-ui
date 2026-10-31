@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.8 (2026-10-31)
+
+- **Align Sidebar Menu Item Cursor Interaction (#73)**: Removed the default `grab` hand cursor on draggable sidebar items to match the host application's standard click pointer (`pointer`), displaying the grabbing cursor only during active drag-and-drop reordering.
+
 ## 2.0.7 (2026-10-31)
 
 - **Fix Slash Command Palette Ghost Text Transparency (#72)**: Enhanced surface opacity to 88% and applied 24px backdrop blur to the slash trigger command palette (`[data-trigger-menu]`), eliminating overlapping ghost text and visual clutter when selecting commands over long conversation text.

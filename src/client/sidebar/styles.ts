@@ -85,14 +85,6 @@ export const SIDEBAR_CSS = `
   -webkit-app-region: no-drag !important;
 }
 
-.dcu-sb-row[draggable="true"] {
-  cursor: grab;
-}
-
-.dcu-sb-row[draggable="true"]:active {
-  cursor: grabbing;
-}
-
 /* 鼠标悬停胶囊态：对齐宿主交互 hover 底色 */
 .dcu-sb-row:hover {
   background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.08));
