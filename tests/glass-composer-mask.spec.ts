@@ -78,3 +78,11 @@ test('底部 dock 遮罩带保持移除，不得回退成参考插件的矩形�
     /\[data-dsh-glass\] \[data-composer-dock\]:before\s*\{[^}]*display: none !important/,
   )
 })
+
+test('指令面板加浓与磨砂：必须声明 [data-trigger-menu] 提浓规则防止文字穿透（Issue #72）', () => {
+  expect(GLASS_EXTRA_CSS).toContain('[data-trigger-menu]')
+  expect(GLASS_EXTRA_CSS).toContain('--dsw-menu-surface-fill: color-mix(in srgb, var(--dsw-alias-bg-layer-2, #1e1e2e) 88%, transparent) !important;')
+  expect(GLASS_EXTRA_CSS).toContain('--dsw-menu-backdrop-filter: blur(24px) saturate(140%) !important;')
+  expect(GLASS_EXTRA_CSS).toContain('[data-dsh-glass] [data-trigger-menu]')
+})
+

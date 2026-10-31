@@ -133,6 +133,20 @@ export const GLASS_EXTRA_CSS = `
   -webkit-mask-image: linear-gradient(180deg, transparent 0, transparent 96px, #000 106px);
   mask-image: linear-gradient(180deg, transparent 0, transparent 96px, #000 106px);
 }
+
+/* 斜杠指令/快捷指令候选面板（[data-trigger-menu] / Issue #72）：
+   该菜单悬浮在输入卡片上方、直接压在滚动消息正文与代码块上。
+   通用菜单 raised 填充（约 45%~58%）在密集文字流上无法有效阻断文字穿透（幽灵字叠字）。
+   对齐参考插件模型菜单加浓规范，将表面材质提浓至 layer-2 @ 88% 并强化磨砂与边缘描边，同时同步渐隐阴影。 */
+[data-trigger-menu] {
+  --dsw-menu-surface-fill: color-mix(in srgb, var(--dsw-alias-bg-layer-2, #1e1e2e) 88%, transparent) !important;
+  --dsw-specific-menu: color-mix(in srgb, var(--dsw-alias-bg-layer-2, #1e1e2e) 88%, transparent) !important;
+  --dsw-menu-backdrop-filter: blur(24px) saturate(140%) !important;
+}
+[data-dsh-glass] [data-trigger-menu] {
+  outline: 1px solid var(--dsh-glass-rim-soft, rgba(255, 255, 255, 0.12));
+  outline-offset: -1px;
+}
 `
 
 let styleTag: HTMLStyleElement | null = null

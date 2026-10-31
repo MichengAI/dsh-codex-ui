@@ -179,6 +179,13 @@ html[data-dsh-glass] body:not([data-ds-dark-theme]) .dcu-section-card {
   min-width: 140px;
   flex: 1;
 }
+.dcu-theme-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
 .dcu-theme-row-title {
   font-size: 13px;
   font-weight: 500;
@@ -259,64 +266,81 @@ export function ThemeSettingsCard({ t }: ThemeSettingsCardProps): React.JSX.Elem
         </div>
       </div>
 
-      {/* 排版模式与材质预设：直接常驻展示，无需多余主开关 */}
-      <div className="dcu-theme-sub-group">
-        {/* 排版模式：原版排版在前，云母效果在后 */}
-        <div className="dcu-theme-sub-row">
-          <div className="dcu-theme-row-label">
-            <span className="dcu-theme-row-title">{t('theme.mode')}</span>
-            <span className="dcu-theme-row-hint">{t('theme.modeHint')}</span>
-          </div>
-          <SegmentedControl<GlassMode>
-            id="codex-ui-glass-mode"
-            label={t('theme.mode')}
-            value={state.glassMode}
-            options={[
-              { value: 'compat', label: t('theme.modeCompat') },
-              { value: 'mica', label: t('theme.modeMica') },
-            ]}
-            onChange={(nextMode) => {
-              changeGlass({ mode: nextMode, enabled: true })
-            }}
-          />
+      {/* 玻璃质感主开关 */}
+      <div className="dcu-theme-row">
+        <div className="dcu-theme-row-label">
+          <span className="dcu-theme-row-title">{t('theme.glassEnable')}</span>
+          <span className="dcu-theme-row-hint">{t('theme.glassHint')}</span>
         </div>
-
-        {/* 材质预设 */}
-        <div className="dcu-theme-sub-row">
-          <div className="dcu-theme-row-label">
-            <span className="dcu-theme-row-title">{t('theme.glassPreset')}</span>
-            <span className="dcu-theme-row-hint">{t('theme.glassPresetHint')}</span>
-          </div>
-          <SegmentedControl<GlassPreset>
-            id="codex-ui-glass-preset"
-            label={t('theme.glassPreset')}
-            value={state.glassPreset}
-            options={[
-              { value: 'clear', label: t('theme.presetClear') },
-              { value: 'standard', label: t('theme.presetStandard') },
-              { value: 'frosted', label: t('theme.presetFrosted') },
-            ]}
-            onChange={(nextPreset) => {
-              changeGlass({ preset: nextPreset, enabled: true })
-            }}
-          />
-        </div>
-
-        {/* 地面光斑（反射光晕）：在渐变地面上叠加柔光反射斑 */}
-        <div className="dcu-theme-sub-row">
-          <div className="dcu-theme-row-label">
-            <span className="dcu-theme-row-title">{t('theme.glassGlow')}</span>
-            <span className="dcu-theme-row-hint">{t('theme.glassGlowHint')}</span>
-          </div>
-          <Switch
-            label={t('theme.glassGlow')}
-            checked={state.glassGlow}
-            onChange={(nextGlow) => {
-              changeGlass({ glow: nextGlow, enabled: true })
-            }}
-          />
-        </div>
+        <Switch
+          label={t('theme.glassEnable')}
+          checked={state.glassEnabled}
+          onChange={(checked) => {
+            changeGlass({ enabled: checked })
+          }}
+        />
       </div>
+
+      {/* 排版模式与材质预设：玻璃质感开启时展示 */}
+      {state.glassEnabled && (
+        <div className="dcu-theme-sub-group">
+          {/* 排版模式：原版排版在前，云母效果在后 */}
+          <div className="dcu-theme-sub-row">
+            <div className="dcu-theme-row-label">
+              <span className="dcu-theme-row-title">{t('theme.mode')}</span>
+              <span className="dcu-theme-row-hint">{t('theme.modeHint')}</span>
+            </div>
+            <SegmentedControl<GlassMode>
+              id="codex-ui-glass-mode"
+              label={t('theme.mode')}
+              value={state.glassMode}
+              options={[
+                { value: 'compat', label: t('theme.modeCompat') },
+                { value: 'mica', label: t('theme.modeMica') },
+              ]}
+              onChange={(nextMode) => {
+                changeGlass({ mode: nextMode, enabled: true })
+              }}
+            />
+          </div>
+
+          {/* 材质预设 */}
+          <div className="dcu-theme-sub-row">
+            <div className="dcu-theme-row-label">
+              <span className="dcu-theme-row-title">{t('theme.glassPreset')}</span>
+              <span className="dcu-theme-row-hint">{t('theme.glassPresetHint')}</span>
+            </div>
+            <SegmentedControl<GlassPreset>
+              id="codex-ui-glass-preset"
+              label={t('theme.glassPreset')}
+              value={state.glassPreset}
+              options={[
+                { value: 'clear', label: t('theme.presetClear') },
+                { value: 'standard', label: t('theme.presetStandard') },
+                { value: 'frosted', label: t('theme.presetFrosted') },
+              ]}
+              onChange={(nextPreset) => {
+                changeGlass({ preset: nextPreset, enabled: true })
+              }}
+            />
+          </div>
+
+          {/* 地面光斑（反射光晕）：在渐变地面上叠加柔光反射斑 */}
+          <div className="dcu-theme-sub-row">
+            <div className="dcu-theme-row-label">
+              <span className="dcu-theme-row-title">{t('theme.glassGlow')}</span>
+              <span className="dcu-theme-row-hint">{t('theme.glassGlowHint')}</span>
+            </div>
+            <Switch
+              label={t('theme.glassGlow')}
+              checked={state.glassGlow}
+              onChange={(nextGlow) => {
+                changeGlass({ glow: nextGlow, enabled: true })
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -124,6 +124,14 @@ export function ensureThemeSurfaceStyles(doc: Document = typeof document !== 'un
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+/* 斜杠指令/快捷指令候选面板（[data-trigger-menu] / Issue #72）：
+   在选用自定义主题时，无论是否开启毛玻璃，提升面板材质浓度，杜绝悬浮在消息流上时的字叠字穿透 */
+[data-trigger-menu] {
+  --dsw-menu-surface-fill: color-mix(in srgb, var(--dsw-alias-bg-layer-2, #1e1e2e) 88%, transparent) !important;
+  --dsw-specific-menu: color-mix(in srgb, var(--dsw-alias-bg-layer-2, #1e1e2e) 88%, transparent) !important;
+  --dsw-menu-backdrop-filter: blur(24px) saturate(140%) !important;
+}
 `
     doc.head.appendChild(tag)
   }

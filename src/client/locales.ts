@@ -167,6 +167,8 @@ export const zh = {
   'theme.presetClear': '清透 (高透光)',
   'theme.presetStandard': '标准 (适中)',
   'theme.presetFrosted': '磨砂 (强虚化)',
+  'theme.glassEnable': '玻璃质感与云母外观',
+  'theme.glassHint': '启用毛玻璃与背景微透质感。关闭后回退至原生纯色，不进行背景虚化与浮动卡片修饰',
   'theme.glassGlow': '地面光斑',
   'theme.glassGlowHint': '在渐变地面上叠加两枚柔光反射斑。开启后主页与背景会有漫反射光晕',
 } as const
@@ -335,6 +337,8 @@ export const en: Record<keyof typeof zh, string> = {
   'theme.presetClear': 'Clear',
   'theme.presetStandard': 'Standard',
   'theme.presetFrosted': 'Frosted',
+  'theme.glassEnable': 'Glassmorphism & Mica',
+  'theme.glassHint': 'Enable frosted glassmorphism and subtle background translucency. Turning it off restores solid native colors without blur or floating cards',
   'theme.glassGlow': 'Ground glows',
   'theme.glassGlowHint': 'Adds soft radial glows on top of the gradient ground. Turning it on brightens the top-left corner',
 }
