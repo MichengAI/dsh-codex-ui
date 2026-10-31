@@ -137,3 +137,17 @@ test('指令面板加浓与磨砂：必须声明 [data-trigger-menu] 提浓规�
   }
 })
 
+test('右侧栏全屏与平铺玻璃：不得在布局壳或其内部 panel 上挂载导致层叠上下文冲突的 backdrop-filter', () => {
+  // 1. 生成 CSS 中不得再向 [data-sidebar-right-panel] 或其内部 panel 添加 backdrop-filter
+  expect(GLASS_CSS_TEXT).not.toContain(
+    '[data-dsh-glass-compat] [data-sidebar-right-panel][data-sidebar-right-open]',
+  )
+  expect(GLASS_CSS_TEXT).not.toContain(
+    '[data-sidebar-right-panel][data-sidebar-right-open] [class*="panel"]',
+  )
+  // 2. 注入后的样式表同样不得包含该污染规则
+  applyGlassSettings({ enabled: true, mode: 'compat', preset: 'standard' })
+  const css = injectedCss()
+  expect(css).not.toContain('[data-sidebar-right-panel][data-sidebar-right-open]')
+})
+
