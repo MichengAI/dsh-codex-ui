@@ -121,9 +121,11 @@ export function observeComposerEnhancements(ctx: Context): () => void {
       for (const clean of cleaners.reverse()) {
         try { clean() } catch { /* ignore */ }
       }
-      // 深度清理 DOM 中残留的建议卡片与手柄，确保彻底回退
+      // 深度清理 DOM 中自建的原生手柄，确保彻底回退
+      // 注意：.dcu-home-suggestions 是 React Portal 挂载的节点，其生命周期由 React 完全托管。
+      // unregisterSuggestions() 会触发 React 卸载 portal，严禁在此手动 el.remove()，
+      // 否则会导致 React 在提交卸载阶段因 parentNode 为空而抛出 NotFoundError (Issue #74)。
       if (typeof document !== 'undefined') {
-        document.querySelectorAll('.dcu-home-suggestions').forEach(el => el.remove())
         document.querySelectorAll('[data-dcu-width-handle]').forEach(el => el.remove())
       }
     }

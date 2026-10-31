@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.9 (2026-10-31)
+
+- **Fix Conversation Blank Screen on Model Switch (#74)**: Resolved an issue where switching models on a new conversation welcome screen crashed the conversation view into a permanent blank screen. Safely delegate suggestion card lifecycle to React portal unmounting rather than directly removing the DOM node.
+
 ## 2.0.8 (2026-10-31)
 
 - **Align Sidebar Menu Item Cursor Interaction (#73)**: Removed the default `grab` hand cursor on draggable sidebar items to match the host application's standard click pointer (`pointer`), displaying the grabbing cursor only during active drag-and-drop reordering.

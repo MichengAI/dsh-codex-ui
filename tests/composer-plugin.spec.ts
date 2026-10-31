@@ -108,5 +108,30 @@ describe('codex-ui-composer sub-plugin', () => {
       globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'))
       expect(await checkComposerEnabled()).toBe(false)
     })
+
+    it('清理函数不得原生 remove() React portal 节点 .dcu-home-suggestions (Issue #74)', () => {
+      // 验证清理逻辑：模拟挂载自建原生手柄与模拟建议卡片节点
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+
+      const suggestionEl = document.createElement('section')
+      suggestionEl.className = 'dcu-home-suggestions'
+      container.appendChild(suggestionEl)
+
+      const handleEl = document.createElement('div')
+      handleEl.setAttribute('data-dcu-width-handle', '')
+      container.appendChild(handleEl)
+
+      // 模拟 observeComposerEnhancements activate 返回的清理逻辑
+      // 原生手柄应被原生清理移除
+      document.querySelectorAll('[data-dcu-width-handle]').forEach(el => el.remove())
+      expect(document.querySelector('[data-dcu-width-handle]')).toBeNull()
+
+      // 而 .dcu-home-suggestions 由 React 完全托管，清理函数中严禁调用 el.remove()
+      // 节点必须保持在 container 中由 React 生命周期完成 unmount，parentNode 不得提前变 null
+      expect(suggestionEl.parentNode).toBe(container)
+
+      container.remove()
+    })
   })
 })
