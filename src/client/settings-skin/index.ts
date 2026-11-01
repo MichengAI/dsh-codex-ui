@@ -1487,8 +1487,42 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     pointer-events: auto !important;
   }
 
+  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: var(--dsw-alias-bg-base, #151517) !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: none !important;
+    flex: none !important;
+  }
+
   /* 右侧设置内容区：普通模式平铺紧贴，云母模式下复刻首页右侧 16px 圆角大卡片独立悬浮岛 */
-  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2),
+  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2) {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    overflow-y: auto !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    padding-top: 20px !important;
+    padding-bottom: 40px !important;
+    padding-inline: 20px !important;
+    box-sizing: border-box !important;
+  }
+
   html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] {
     margin: 0 !important;
     border-radius: 0 !important;
