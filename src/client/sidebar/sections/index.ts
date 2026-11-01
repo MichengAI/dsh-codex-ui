@@ -574,11 +574,15 @@ export function observeWorkspaceSections(
   /** 把标题按分区顺序放到各自第一个分组块前面；空分区贴着下一个分区显示。 */
   function placeHeaders(blocks: readonly ProjectBlock[], layoutState: SectionsState = state): void {
     if (blocks.length === 0) {
-      // 当全部工作区被删空时，及时清理残留的空置顶标题
+      // 当全部工作区被删空时，及时清理残留的空置顶标题并复位折叠状态
       const stalePinned = headers.get(PINNED_SECTION_ID)
       if (stalePinned !== undefined) {
         stalePinned.remove()
         headers.delete(PINNED_SECTION_ID)
+        if (collapsed[PINNED_SECTION_ID] === true) {
+          delete collapsed[PINNED_SECTION_ID]
+          persistCollapsed()
+        }
       }
       return
     }

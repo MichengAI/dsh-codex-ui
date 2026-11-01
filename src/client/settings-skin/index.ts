@@ -764,7 +764,7 @@ html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-c
   border-radius: 0 !important;
   border: none !important;
   border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
-  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  border-bottom: none !important;
   background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #18181b)) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -1266,7 +1266,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     border-radius: 0 !important;
     border: none !important;
     border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
-    border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+    border-bottom: none !important;
     background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #18181b)) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
@@ -1517,7 +1517,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     overflow-y: auto !important;
     flex: 1 1 auto !important;
     min-height: 0 !important;
-    padding-top: 20px !important;
+    padding-top: 28px !important;
     padding-bottom: 40px !important;
     padding-inline: 20px !important;
     box-sizing: border-box !important;
@@ -1532,7 +1532,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     overflow-y: auto !important;
     height: 100% !important;
     max-height: 100% !important;
-    padding-top: calc(56px + 20px) !important;
+    padding-top: calc(56px + 28px) !important;
     padding-bottom: 40px !important;
     padding-inline: 20px !important;
     box-sizing: border-box !important;
