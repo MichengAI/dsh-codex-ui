@@ -333,6 +333,11 @@ test('SETTINGS_SKIN_CSS 包含新版平铺 Grid 4 块布局映射规则，杜绝
   expect(SETTINGS_SKIN_CSS).toContain('> [class*=\"navTitle\"]')
   expect(SETTINGS_SKIN_CSS).toContain('> [class*=\"header\"]')
   expect(SETTINGS_SKIN_CSS).toContain('> [class*=\"options\"]')
+  // 守护规则：平铺 Grid 宿主下绝对定位 Header 的偏移必须为 left: 0，杜绝与第二列产生 80px 错位
+  expect(SETTINGS_SKIN_CSS).toContain('left: 0 !important;\n    right: 0 !important;')
+  // 守护规则：折叠与窄屏媒体块下子选择器必须严格限制在旧版宿主（:not(:has(> [class*="options"]))），防止误穿透平铺宿主
+  expect(SETTINGS_SKIN_CSS).toContain('[data-shortcut-modal=\"settings\"][data-sidebar-collapsed]:not(:has(> [class*=\"options\"])) > nav > :first-child')
+  expect(SETTINGS_SKIN_CSS).toContain('[data-shortcut-modal=\"settings\"]:not(:has(> [class*=\"options\"])) > nav > :first-child')
 })
 
 test('isHostSidebarCollapsed 准确探测宿主首页侧栏折叠状态', () => {
