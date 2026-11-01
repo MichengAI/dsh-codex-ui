@@ -726,22 +726,105 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="optio
   padding-inline: 36px !important;
 }
 
-/* 无论窗口 <=768px 还是处于收起态 [data-sidebar-collapsed]，均完整复刻宿主首页云母悬浮 56px 导轨 */
+/* 无论窗口 <=768px 还是处于收起态 [data-sidebar-collapsed]，结构尺寸均收敛为 56px 导轨 */
 [data-shortcut-modal="settings"][data-sidebar-collapsed],
 html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed],
 html[data-dsh-glass] [data-shortcut-modal="settings"][data-sidebar-collapsed] {
   --dcu-settings-nav-width: 56px !important;
 }
 
-[data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]),
-html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]),
-html[data-dsh-glass] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) {
+[data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) {
+  grid-template-columns: 56px minmax(0, 1fr) !important;
+}
+
+/* --- 普通纯色原生模式（未开启云母）下的收起态：与普通展开态完全一致，平铺紧贴，0 外边距、0 圆角、0 磨砂、0 阴影 --- */
+html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) {
+  gap: 0 !important;
+  padding: 0 !important;
+  background: var(--dsw-alias-bg-base, #151517) !important;
+}
+
+html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="navTitle"] {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  box-sizing: border-box !important;
+  width: 56px !important;
+  min-width: 56px !important;
+  max-width: 56px !important;
+  padding: 14px 0 10px 0 !important;
+  margin: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #18181b)) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  flex: none !important;
+}
+
+html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed] > nav {
+  box-sizing: border-box !important;
+  width: 56px !important;
+  min-width: 56px !important;
+  max-width: 56px !important;
+  margin: 0 !important;
+  padding: 12px 0 16px !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #18181b)) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 0 !important;
+}
+
+html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav),
+html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="options"] {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: var(--dsw-alias-bg-base, #151517) !important;
+  overflow-y: auto !important;
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+/* 浅色普通模式下的收起态高对比度平铺底板 */
+html:not([data-dsh-glass-float]) body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"][data-sidebar-collapsed] > nav,
+html:not([data-dsh-glass-float]) html[data-ds-theme-source="light"] [data-shortcut-modal="settings"][data-sidebar-collapsed] > nav,
+html:not([data-dsh-glass-float]) body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="navTitle"],
+html:not([data-dsh-glass-float]) html[data-ds-theme-source="light"] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="navTitle"] {
+  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #f3f3f4)) !important;
+  border-right: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)) !important;
+}
+
+html:not([data-dsh-glass-float]) body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav),
+html:not([data-dsh-glass-float]) html[data-ds-theme-source="light"] [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav),
+html:not([data-dsh-glass-float]) body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="options"],
+html:not([data-dsh-glass-float]) html[data-ds-theme-source="light"] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="options"] {
+  background: var(--dsw-alias-bg-base, #ffffff) !important;
+}
+
+/* --- 仅在开启云母悬浮模式（html[data-dsh-glass-float]）下，才启用 12px 悬浮双岛、16px 圆角大卡片与磨砂投影 --- */
+html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) {
   grid-template-columns: 56px minmax(0, 1fr) !important;
   gap: 0 12px !important;
   padding: 8px 12px 12px 12px !important;
 }
 
-[data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="navTitle"],
 html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="navTitle"] {
   grid-column: 1 !important;
   grid-row: 1 !important;
@@ -762,8 +845,6 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
   flex: none !important;
 }
 
-/* 旧版/标准嵌套结构：整个 nav 自身就是唯一的单层悬浮岛，内部绝不允许画任何边框或背景！ */
-[data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > nav,
 html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > nav {
   box-sizing: border-box !important;
   width: 56px !important;
@@ -785,6 +866,64 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
   flex-direction: column !important;
   align-items: center !important;
   gap: 0 !important;
+}
+
+html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > nav {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  box-sizing: border-box !important;
+  width: 56px !important;
+  min-width: 56px !important;
+  max-width: 56px !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  padding: 0 0 16px !important;
+  flex: none !important;
+  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-top: none !important;
+  border-radius: 0 0 16px 16px !important;
+  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)) !important;
+  background: var(--dsh-glass-card, var(--dsw-specific-sidebar-fill, #18181b)) !important;
+  backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav) {
+  margin: 8px 12px 12px 0 !important;
+  border-radius: 16px !important;
+  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  background: var(--dsw-alias-bg-layer-1) !important;
+  overflow-y: auto !important;
+  height: calc(100% - 20px) !important;
+}
+
+html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="options"] {
+  grid-column: 2 !important;
+  grid-row: 1 / -1 !important;
+  box-sizing: border-box !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  padding-top: calc(52px + 20px) !important;
+  padding-bottom: 40px !important;
+  padding-inline: 20px !important;
+  margin: 0 !important;
+  border-radius: 16px !important;
+  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  background: var(--dsw-alias-bg-layer-1) !important;
+  height: 100% !important;
+  max-height: 100% !important;
 }
 
 [data-shortcut-modal="settings"][data-sidebar-collapsed] nav::-webkit-scrollbar,
@@ -939,7 +1078,30 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
   flex: none !important;
 }
 
-[data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="header"],
+/* 顶栏操作区（配置文件与关闭按钮）：普通模式下紧贴顶部，无圆角无投影 */
+html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="header"] {
+  grid-column: 2 !important;
+  grid-row: 1 / -1 !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  padding: 0 20px !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  background: var(--dsw-alias-bg-base, #151517) !important;
+  z-index: 10 !important;
+}
+
+html:not([data-dsh-glass-float]) body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="header"],
+html:not([data-dsh-glass-float]) html[data-ds-theme-source="light"] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="header"] {
+  background: var(--dsw-alias-bg-base, #ffffff) !important;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)) !important;
+}
+
 html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="header"] {
   grid-column: 2 !important;
   grid-row: 1 / -1 !important;
@@ -1017,8 +1179,18 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     box-sizing: border-box !important;
   }
 
-  /* 4 块 Grid 布局映射：完美对齐首页悬浮双岛体系（左 56px 悬浮导轨，间距 12px，右侧满宽卡片） */
-  [data-shortcut-modal="settings"]:has(> [class*="options"]),
+  /* 4 块 Grid 布局映射：普通模式紧贴平铺，仅在云母模式下启用悬浮双岛与外层边距 */
+  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:has(> [class*="options"]) {
+    display: grid !important;
+    grid-template-columns: 56px minmax(0, 1fr) !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
+    position: fixed !important;
+    inset: 0 !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    background: var(--dsw-alias-bg-base, #151517) !important;
+  }
+
   html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]),
   html[data-dsh-glass] [data-shortcut-modal="settings"]:has(> [class*="options"]) {
     display: grid !important;
@@ -1030,8 +1202,29 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     padding: 8px 12px 12px 12px !important;
   }
 
-  /* 左侧顶部区：收缩为 56px 居中圆角磨砂卡片，完整对齐首页云母卡片 */
-  [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="navTitle"],
+  /* 左侧顶部区：普通模式下平铺实色无圆角，云母模式下为圆角磨砂卡片 */
+  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="navTitle"] {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    box-sizing: border-box !important;
+    width: 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+    padding: 14px 0 10px 0 !important;
+    margin: 0 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+    border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+    background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #18181b)) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    flex: none !important;
+  }
+
   html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="navTitle"] {
     grid-column: 1 !important;
     grid-row: 1 !important;
@@ -1127,9 +1320,37 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     display: none !important;
   }
 
-  /* 左侧导航栏：整列死锁为 56px 导轨，完整对齐首页云母磨砂圆角与下投影 */
-  [data-shortcut-modal="settings"] > nav,
-  [data-shortcut-modal="settings"]:has(> [class*="options"]) > nav,
+  /* 左侧导航栏：普通模式下平铺实色无圆角无投影，云母模式下完整对齐首页云母磨砂圆角与下投影 */
+  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"] > nav,
+  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > nav {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    box-sizing: border-box !important;
+    width: 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 0 16px !important;
+    flex: none !important;
+    border: none !important;
+    border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #18181b)) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  html[data-dsh-glass-float] [data-shortcut-modal="settings"] > nav,
   html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > nav,
   html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > nav {
     grid-column: 1 !important;
@@ -1213,8 +1434,26 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     z-index: 10 !important;
   }
 
-  /* 右侧设置内容区：完整复刻首页右侧 16px 圆角大卡片独立悬浮岛 */
-  [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav),
+  /* 右侧设置内容区：普通模式平铺紧贴，云母模式下复刻首页右侧 16px 圆角大卡片独立悬浮岛 */
+  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav),
+  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: var(--dsw-alias-bg-base, #151517) !important;
+    overflow-y: auto !important;
+    height: 100% !important;
+    max-height: 100% !important;
+  }
+
+  html:not([data-dsh-glass-float]) body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav),
+  html:not([data-dsh-glass-float]) html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav),
+  html:not([data-dsh-glass-float]) body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"],
+  html:not([data-dsh-glass-float]) html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] {
+    background: var(--dsw-alias-bg-base, #ffffff) !important;
+  }
+
   html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) {
     margin: 8px 12px 12px 0 !important;
     border-radius: 16px !important;
