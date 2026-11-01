@@ -520,67 +520,6 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [
   margin-inline: auto !important;
 }
 
-@media (max-width: 640px) {
-  body > [role="presentation"]:has(> [data-shortcut-modal="settings"]) {
-    padding: 0 !important;
-  }
-
-  [data-shortcut-modal="settings"] {
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: none !important;
-    max-height: none !important;
-    border-radius: 0 !important;
-    border: none !important;
-    flex-direction: column !important;
-    padding-top: env(safe-area-inset-top, 0px) !important;
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-    padding-left: env(safe-area-inset-left, 0px) !important;
-    padding-right: env(safe-area-inset-right, 0px) !important;
-    box-sizing: border-box !important;
-  }
-
-  [data-shortcut-modal="settings"] > nav {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    gap: 10px !important;
-    padding: 12px 16px 8px !important;
-    border-right: 0 !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  }
-
-  [data-shortcut-modal="settings"] > nav > :first-child { padding-inline: 4px !important; }
-
-  [data-shortcut-modal="settings"] > nav > :nth-child(2) {
-    flex-direction: row !important;
-    overflow-x: auto !important;
-  }
-
-  [data-shortcut-modal="settings"] > nav > :nth-child(2) > button { flex: 0 0 auto !important; }
-
-  [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    overflow-y: auto !important;
-  }
-
-  [data-shortcut-modal="settings"] > div > :first-child { height: 48px !important; min-height: 48px !important; padding: 0 16px !important; }
-
-  [data-shortcut-modal="settings"] > div > :nth-child(2) { padding: 16px !important; }
-
-  [data-shortcut-modal="settings"]:has(> [class*="options"]) {
-    display: flex !important;
-    flex-direction: column !important;
-  }
-  [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="navTitle"],
-  [data-shortcut-modal="settings"]:has(> [class*="options"]) > nav {
-    width: 100% !important;
-    max-width: none !important;
-    min-width: 0 !important;
-  }
-}
-
 /* 新版宿主平铺 4 块 Grid 布局映射（0.2.1-alpha.3+），杜绝 4 列横向撕裂与多余空条 */
 [data-shortcut-modal="settings"]:has(> [class*="options"]) {
   display: grid !important;
@@ -786,6 +725,470 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="optio
   padding-bottom: 48px !important;
   padding-inline: 36px !important;
 }
+
+/* 无论窗口 <=768px 还是处于收起态 [data-sidebar-collapsed]，均完整复刻宿主首页云母悬浮 56px 导轨 */
+[data-shortcut-modal="settings"][data-sidebar-collapsed],
+html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed],
+html[data-dsh-glass] [data-shortcut-modal="settings"][data-sidebar-collapsed] {
+  --dcu-settings-nav-width: 56px !important;
+}
+
+[data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]),
+html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]),
+html[data-dsh-glass] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) {
+  grid-template-columns: 56px minmax(0, 1fr) !important;
+  gap: 0 12px !important;
+  padding: 8px 12px 12px 12px !important;
+}
+
+[data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="navTitle"],
+html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="navTitle"] {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  box-sizing: border-box !important;
+  width: 56px !important;
+  min-width: 56px !important;
+  max-width: 56px !important;
+  padding: 14px 0 10px 0 !important;
+  margin: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 16px 16px 0 0 !important;
+  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-bottom: none !important;
+  background: var(--dsh-glass-card, var(--dsw-specific-sidebar-fill, #18181b)) !important;
+  backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  flex: none !important;
+}
+
+/* 旧版/标准嵌套结构：整个 nav 自身就是唯一的单层悬浮岛，内部绝不允许画任何边框或背景！ */
+[data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > nav,
+html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > nav {
+  box-sizing: border-box !important;
+  width: 56px !important;
+  min-width: 56px !important;
+  max-width: 56px !important;
+  margin: 8px 12px 12px 12px !important;
+  padding: 12px 0 16px !important;
+  border-radius: 16px !important;
+  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  background: var(--dsh-glass-card, var(--dsw-alias-bg-layer-1)) !important;
+  backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 0 !important;
+}
+
+[data-shortcut-modal="settings"][data-sidebar-collapsed] nav::-webkit-scrollbar,
+[data-shortcut-modal="settings"][data-sidebar-collapsed] [class*="navList"]::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+[data-shortcut-modal="settings"][data-sidebar-collapsed] > nav > :first-child {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 auto 10px auto !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+[data-shortcut-modal="settings"][data-sidebar-collapsed] > nav [class*="navList"],
+[data-shortcut-modal="settings"][data-sidebar-collapsed] > nav > :nth-child(2) {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 4px !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+[data-shortcut-modal="settings"][data-sidebar-collapsed] .dcu-settings-nav-header-root,
+[data-shortcut-modal="settings"][data-sidebar-collapsed] .dcu-settings-nav-header-top {
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  gap: 0 !important;
+}
+
+[data-shortcut-modal="settings"][data-sidebar-collapsed] .dcu-settings-back-btn,
+[data-shortcut-modal="settings"][data-sidebar-collapsed] button.dcu-settings-back-btn {
+  margin: 0 auto !important;
+}
+
+[data-shortcut-modal="settings"][data-sidebar-collapsed] .dcu-settings-nav-header-title,
+[data-shortcut-modal="settings"][data-sidebar-collapsed] .dcu-settings-search-wrapper,
+[data-shortcut-modal="settings"][data-sidebar-collapsed] .dcu-settings-nav-group-header,
+[data-shortcut-modal="settings"][data-sidebar-collapsed] .dcu-settings-nav-empty {
+  display: none !important;
+}
+
+[data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > nav,
+html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > nav {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  box-sizing: border-box !important;
+  width: 56px !important;
+  min-width: 56px !important;
+  max-width: 56px !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  padding: 0 0 16px !important;
+  flex: none !important;
+  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  border-top: none !important;
+  border-radius: 0 0 16px 16px !important;
+  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)) !important;
+  background: var(--dsh-glass-card, var(--dsw-specific-sidebar-fill, #18181b)) !important;
+  backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+/* 导航项按钮：纯图标居中方块，对齐宿主官方首页折叠 36x36px panelRow，绝对居中无偏移 */
+[data-shortcut-modal="settings"][data-sidebar-collapsed] nav button,
+[data-shortcut-modal="settings"][data-sidebar-collapsed] > nav > :nth-child(2) > button,
+[data-shortcut-modal="settings"][data-sidebar-collapsed] nav [class*="navCell"] {
+  box-sizing: border-box !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  max-width: 36px !important;
+  max-height: 36px !important;
+  padding: 0 !important;
+  margin: 2px auto !important;
+  gap: 0 !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  border-radius: var(--dsw-radius-md, 8px) !important;
+  flex: 0 0 36px !important;
+}
+
+/* 仅隐藏设置菜单列表中的文字标签，绝不干涉任何图标的显示规则，100%继承展开态既定图标状态！ */
+[data-shortcut-modal="settings"][data-sidebar-collapsed] nav [class*="navList"] button [class*="navLabel"],
+[data-shortcut-modal="settings"][data-sidebar-collapsed] nav button:not(.dcu-settings-back-btn) [class*="navLabel"] {
+  display: none !important;
+}
+
+/* 保护并确保返回按钮完整显示，包含其内部由宿主 Button 原语包裹的 span 图标 */
+[data-shortcut-modal="settings"][data-sidebar-collapsed] .dcu-settings-back-btn,
+[data-shortcut-modal="settings"][data-sidebar-collapsed] button.dcu-settings-back-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  margin: 0 auto 6px auto !important;
+  padding: 0 !important;
+  border-radius: var(--dsw-radius-md, 8px) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+[data-shortcut-modal="settings"][data-sidebar-collapsed] .dcu-settings-back-btn span,
+[data-shortcut-modal="settings"][data-sidebar-collapsed] .dcu-settings-back-btn svg {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* 无论官方项目还是第三方插件，每个按钮在折叠态均保持唯一的视觉中心，不强行干涉内部已隐藏的备用 svg */
+[data-shortcut-modal="settings"][data-sidebar-collapsed] nav [class*="navList"] button svg,
+[data-shortcut-modal="settings"][data-sidebar-collapsed] nav [class*="navIcon"] svg {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 18px !important;
+  height: 18px !important;
+  flex: none !important;
+}
+
+[data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="header"],
+html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="header"] {
+  grid-column: 2 !important;
+  grid-row: 1 / -1 !important;
+  position: absolute !important;
+  top: 8px !important;
+  left: calc(56px + 24px) !important;
+  right: 12px !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  padding: 0 20px !important;
+  border: 1px solid var(--dsh-glass-rim-soft, rgba(255, 255, 255, 0.08)) !important;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  border-radius: 16px 16px 0 0 !important;
+  background: var(--dsw-alias-bg-layer-1) !important;
+  z-index: 10 !important;
+}
+
+[data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav),
+html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav) {
+  margin: 8px 12px 12px 0 !important;
+  border-radius: 16px !important;
+  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  background: var(--dsw-alias-bg-layer-1) !important;
+  overflow-y: auto !important;
+  height: calc(100% - 20px) !important;
+}
+
+[data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="options"],
+html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="options"] {
+  grid-column: 2 !important;
+  grid-row: 1 / -1 !important;
+  box-sizing: border-box !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  padding-top: calc(52px + 20px) !important;
+  padding-bottom: 40px !important;
+  padding-inline: 20px !important;
+  margin: 0 !important;
+  border-radius: 16px !important;
+  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  background: var(--dsw-alias-bg-layer-1) !important;
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+/* 移动端与极窄视口响应式规范：对齐宿主官方首页 56px 图标导轨（Icon Rail）模式 */
+@media (max-width: 768px) {
+  body > [role="presentation"]:has(> [data-shortcut-modal="settings"]) {
+    padding: 0 !important;
+  }
+
+  /* 强行压制 JS 写入的行内 --dcu-settings-nav-width 变量，并将所有云母/经典模式的基准锁死为 56px */
+  [data-shortcut-modal="settings"],
+  html[data-dsh-glass-float] [data-shortcut-modal="settings"],
+  html[data-dsh-glass] [data-shortcut-modal="settings"] {
+    --dcu-settings-nav-width: 56px !important;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+    border: none !important;
+    display: flex !important;
+    flex-direction: row !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    padding-left: env(safe-area-inset-left, 0px) !important;
+    padding-right: env(safe-area-inset-right, 0px) !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 4 块 Grid 布局映射：完美对齐首页悬浮双岛体系（左 56px 悬浮导轨，间距 12px，右侧满宽卡片） */
+  [data-shortcut-modal="settings"]:has(> [class*="options"]),
+  html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]),
+  html[data-dsh-glass] [data-shortcut-modal="settings"]:has(> [class*="options"]) {
+    display: grid !important;
+    grid-template-columns: 56px minmax(0, 1fr) !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
+    position: fixed !important;
+    inset: 0 !important;
+    gap: 0 12px !important;
+    padding: 8px 12px 12px 12px !important;
+  }
+
+  /* 左侧顶部区：收缩为 56px 居中圆角磨砂卡片，完整对齐首页云母卡片 */
+  [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="navTitle"],
+  html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="navTitle"],
+  [data-shortcut-modal="settings"] > nav > :first-child {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    box-sizing: border-box !important;
+    width: 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+    padding: 14px 0 10px 0 !important;
+    margin: 0 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 16px 16px 0 0 !important;
+    border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+    border-bottom: none !important;
+    background: var(--dsh-glass-card, var(--dsw-specific-sidebar-fill, #18181b)) !important;
+    backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+    -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+    flex: none !important;
+  }
+
+  .dcu-settings-nav-header-root {
+    align-items: center !important;
+    justify-content: center !important;
+    width: 56px !important;
+    max-width: 56px !important;
+  }
+
+  .dcu-settings-nav-header-top {
+    justify-content: center !important;
+    padding: 0 !important;
+    width: 56px !important;
+    max-width: 56px !important;
+  }
+
+  .dcu-settings-nav-header-title,
+  .dcu-settings-search-wrapper,
+  .dcu-settings-nav-group-header,
+  .dcu-settings-nav-empty {
+    display: none !important;
+  }
+
+  /* 左侧导航栏：整列死锁为 56px 导轨，完整对齐首页云母磨砂圆角与下投影 */
+  [data-shortcut-modal="settings"] > nav,
+  [data-shortcut-modal="settings"]:has(> [class*="options"]) > nav,
+  html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > nav,
+  html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > nav {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    box-sizing: border-box !important;
+    width: 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 8px 16px !important;
+    flex: none !important;
+    border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+    border-top: none !important;
+    border-radius: 0 0 16px 16px !important;
+    box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)) !important;
+    background: var(--dsh-glass-card, var(--dsw-specific-sidebar-fill, #18181b)) !important;
+    backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+    -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  /* 导航项按钮：纯图标正方形居中卡片，尺寸对齐宿主 36x36px 图标导轨 */
+  [data-shortcut-modal="settings"] nav button,
+  [data-shortcut-modal="settings"] > nav > :nth-child(2) > button,
+  [data-shortcut-modal="settings"] nav [class*="navCell"] {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    max-width: 40px !important;
+    max-height: 40px !important;
+    padding: 0 !important;
+    margin: 2px auto !important;
+    justify-content: center !important;
+    align-items: center !important;
+    border-radius: var(--dsw-radius-md, 8px) !important;
+  }
+
+  /* 隐藏菜单项文字标签，保留居中图标，保护返回按钮 */
+  [data-shortcut-modal="settings"] nav [class*="navList"] button [class*="navLabel"],
+  [data-shortcut-modal="settings"] nav button:not(.dcu-settings-back-btn) [class*="navLabel"] {
+    display: none !important;
+  }
+
+  /* 移动端媒体查询下同样仅隐藏文字，不干涉图标 */
+  [data-shortcut-modal="settings"] nav [class*="navList"] button svg,
+  [data-shortcut-modal="settings"] nav [class*="navIcon"] svg {
+    margin: 0 !important;
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  /* 顶部操作区（配置文件与关闭按钮）：对齐首页悬浮大卡片的 52px 顶栏 */
+  [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"],
+  html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] {
+    grid-column: 2 !important;
+    grid-row: 1 / -1 !important;
+    position: absolute !important;
+    top: 8px !important;
+    left: calc(56px + 24px) !important;
+    right: 12px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    padding: 0 20px !important;
+    border: 1px solid var(--dsh-glass-rim-soft, rgba(255, 255, 255, 0.08)) !important;
+    border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+    border-radius: 16px 16px 0 0 !important;
+    background: var(--dsw-alias-bg-layer-1) !important;
+    z-index: 10 !important;
+  }
+
+  /* 右侧设置内容区：完整复刻首页右侧 16px 圆角大卡片独立悬浮岛 */
+  [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav),
+  html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) {
+    margin: 8px 12px 12px 0 !important;
+    border-radius: 16px !important;
+    border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+    box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+    background: var(--dsw-alias-bg-layer-1) !important;
+    overflow-y: auto !important;
+    height: calc(100% - 20px) !important;
+  }
+
+  [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"],
+  html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] {
+    grid-column: 2 !important;
+    grid-row: 1 / -1 !important;
+    box-sizing: border-box !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    padding-top: calc(52px + 20px) !important;
+    padding-bottom: 40px !important;
+    padding-inline: 20px !important;
+    margin: 0 !important;
+    border-radius: 16px !important;
+    border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
+    box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+    background: var(--dsw-alias-bg-layer-1) !important;
+    height: 100% !important;
+    max-height: 100% !important;
+  }
+
+  [data-shortcut-modal="settings"] [class*="section"],
+  [data-shortcut-modal="settings"] [class*="card"] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
 `
 
 let lastSkinCheckTime = 0
@@ -828,7 +1231,13 @@ export function refreshSettingsSkinCache(): void {
 /** 注入 Codex 1:1 设置皮肤样式 */
 export function installSettingsSkin(doc: Document = document): () => void {
   const existing = doc.getElementById(SETTINGS_SKIN_STYLE_ID)
-  if (existing !== null) return () => { existing.remove() }
+  if (existing !== null) {
+    // 若已存在但样式内容有变动，热更新其 textContent，绝不锁死旧样式
+    if (existing.textContent !== SETTINGS_SKIN_CSS) {
+      existing.textContent = SETTINGS_SKIN_CSS
+    }
+    return () => { existing.remove() }
+  }
   const style = doc.createElement('style')
   style.id = SETTINGS_SKIN_STYLE_ID
   style.textContent = SETTINGS_SKIN_CSS
@@ -907,13 +1316,42 @@ export function getHostSidebarExpandedWidth(doc: Document = document): number {
   return DEFAULT_SIDEBAR_WIDTH
 }
 
+/** 探测宿主首页侧栏是否处于折叠状态（56px 导轨或窄屏自动收起） */
+export function isHostSidebarCollapsed(doc: Document = document): boolean {
+  if (!doc) return false
+  try {
+    if (doc.querySelector('[data-sidebar-collapsed="true"], [data-sidebar-collapsed]') !== null) {
+      return true
+    }
+    const sidebarEl = doc.querySelector<HTMLElement>('[data-slot="sidebar"]')
+      ?? doc.querySelector<HTMLElement>('div[class*="sidebarCol"]')
+      ?? doc.querySelector<HTMLElement>('div[class*="hHd-Xa_root"]')
+    if (sidebarEl) {
+      const measured = sidebarEl.getBoundingClientRect?.().width
+      if (typeof measured === 'number' && Number.isFinite(measured) && measured > 0 && measured <= 64) {
+        return true
+      }
+    }
+  } catch {
+    // 忽略
+  }
+  return false
+}
+
 /**
  * 对宿主动态生成的菜单按钮执行无侵入的已知项分组与搜索过滤
  */
 export function decorateSettingsNav(panelEl: HTMLElement): () => void {
-  // 同步主侧栏展开宽度至模态框，确保侧栏无位移晃动
-  const sidebarWidth = getHostSidebarExpandedWidth(panelEl.ownerDocument || document)
-  panelEl.style.setProperty('--dcu-settings-nav-width', `${sidebarWidth}px`)
+  // 同步主侧栏展开/收起状态至模态框，确保与首页侧栏严格 1:1 对齐
+  const isCollapsed = isHostSidebarCollapsed(panelEl.ownerDocument || document)
+  if (isCollapsed) {
+    panelEl.setAttribute('data-sidebar-collapsed', 'true')
+    panelEl.style.setProperty('--dcu-settings-nav-width', '56px')
+  } else {
+    panelEl.removeAttribute('data-sidebar-collapsed')
+    const sidebarWidth = getHostSidebarExpandedWidth(panelEl.ownerDocument || document)
+    panelEl.style.setProperty('--dcu-settings-nav-width', `${sidebarWidth}px`)
+  }
 
   // 兼容新旧两版宿主结构：新版（0.2.1-alpha.3+）navTitle 与 nav 为同级兄弟节点；旧版 navTitle 是 nav 的首个子元素
   const navHeader = panelEl.querySelector<HTMLElement>(':scope > [class*="navTitle"]')
@@ -976,7 +1414,7 @@ export function decorateSettingsNav(panelEl: HTMLElement): () => void {
     navList.appendChild(emptyTip)
   }
 
-  // 4. 归类并赋 order 给宿主生成的每个 button
+  // 4. 归类并赋 order 给宿主生成的每个 button，纯通用布局
   const classifyButtons = () => {
     const buttons = navList.querySelectorAll<HTMLButtonElement>(':scope > button')
     buttons.forEach((btn, index) => {

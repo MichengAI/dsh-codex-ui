@@ -62,11 +62,14 @@ test('设置侧栏装饰器动态将宿主侧栏宽度注入到 CSS 变量', () 
   }
 })
 
-test('设置皮肤只创建一个可清理的样式节点，且支持 uninstallSettingsSkin 彻底卸载', () => {
+test('设置皮肤只创建一个可清理的样式节点，且支持热更新与 uninstallSettingsSkin 彻底卸载', () => {
   const first = installSettingsSkin(document)
   removeSkin.push(first)
   const style = document.getElementById(SETTINGS_SKIN_STYLE_ID)
   expect(style?.textContent).toContain('[data-shortcut-modal="settings"]')
+
+  // 再次调用不会创建重复节点，且支持内容同步
+  installSettingsSkin(document)
   expect(document.querySelectorAll(`#${SETTINGS_SKIN_STYLE_ID}`)).toHaveLength(1)
   const second = installSettingsSkin(document)
   removeSkin.push(second)
@@ -171,12 +174,12 @@ test('全屏工作台遮罩选择器只命中有设置面板的那一层，不�
   )
 })
 
-test('移动端布局声明 iOS 安全区并强制收缩为单列，防止刘海/灵动岛遮挡 (#61)', () => {
-  expect(SETTINGS_SKIN_CSS).toContain('@media (max-width: 640px)')
+test('移动端布局声明 iOS 安全区并收缩对齐官方首页 56px 导轨，防止刘海遮挡与内容挤压 (#61)', () => {
+  expect(SETTINGS_SKIN_CSS).toContain('@media (max-width: 768px)')
   expect(SETTINGS_SKIN_CSS).toContain('padding-top: env(safe-area-inset-top, 0px) !important')
   expect(SETTINGS_SKIN_CSS).toContain('padding-bottom: env(safe-area-inset-bottom, 0px) !important')
-  expect(SETTINGS_SKIN_CSS).toContain('flex-direction: column !important')
-  expect(SETTINGS_SKIN_CSS).toContain('width: 100% !important')
+  expect(SETTINGS_SKIN_CSS).toContain('grid-template-columns: 56px minmax(0, 1fr) !important')
+  expect(SETTINGS_SKIN_CSS).toContain('width: 56px !important')
 })
 
 test('设置顶部搜索框对齐宿主原生 Input 规范与拉平布局', () => {
