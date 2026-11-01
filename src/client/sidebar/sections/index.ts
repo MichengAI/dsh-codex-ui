@@ -589,6 +589,22 @@ export function observeWorkspaceSections(
       const first = section.ids.map(id => byId.get(id)).find(block => block !== undefined)
       if (first !== undefined) reference = first
       else if (section.id === DEFAULT_SECTION_ID && ungrouped !== undefined) reference = ungrouped
+      // 「置顶」没有成员时整行不渲染：空的置顶分区只剩一行标题，白占约 40px 高度，
+      // 用户也没有任何办法把它收走。自定义空分区必须保留标题（那是新建分区后唯一的可见入口），
+      // 所以这条只对内置置顶生效；重新置顶任意项目时标题会自动回到原位。
+      if (section.id === PINNED_SECTION_ID && section.ids.length === 0) {
+        const stale = headers.get(PINNED_SECTION_ID)
+        if (stale !== undefined) {
+          stale.remove()
+          headers.delete(PINNED_SECTION_ID)
+          // 置顶区收起状态下被清空的话，把折叠状态一并复位：下次置顶项目时应当直接可见。
+          if (collapsed[PINNED_SECTION_ID] === true) {
+            delete collapsed[PINNED_SECTION_ID]
+            persistCollapsed()
+          }
+        }
+        continue
+      }
       const header = ensureHeader(section.id, section.name)
       if (header.parentElement !== target || header.nextElementSibling !== reference) {
         target.insertBefore(header, reference)
@@ -627,7 +643,11 @@ export function observeWorkspaceSections(
     // 对齐只在与上次不同的宽度/标题数量下重算：每个同步拍都量一次 rect 会在拖动时反复触发布局。
     const alignKey = `${headers.size}:${list?.clientWidth ?? 0}`
     const label = document.querySelector<HTMLElement>('[class*="sectionLabel"]')
-    const firstHeader = headers.get(layoutState.sections[0]?.id ?? PINNED_SECTION_ID)
+    // 置顶分区为空时整行不渲染，这里必须取第一个「真实存在」的标题做基准；
+    // 否则会量到空矩形（left=0），把所有标题推到右边去。
+    const firstHeader = layoutState.sections
+      .map(section => headers.get(section.id))
+      .find((header): header is HTMLElement => header !== undefined)
     if (label !== null && firstHeader !== undefined && alignKey !== lastAlignKey) {
       lastAlignKey = alignKey
       const lead = Math.max(0, Math.round(label.getBoundingClientRect().left - firstHeader.getBoundingClientRect().left))

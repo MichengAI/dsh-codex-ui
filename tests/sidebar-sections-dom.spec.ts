@@ -509,12 +509,13 @@ describe('工作区分区：DOM 层', () => {
     }
   })
 
-  it('首次同步把未归类的工作区全部落进兜底分区，并渲染两个内置标题', async () => {
+  it('首次同步把未归类的工作区全部落进兜底分区，空的置顶分区不渲染标题', async () => {
     mountFixture(['a', 'b'])
     mount(['a', 'b'])
     await waitForSync()
-    expect(headerIdsInDomOrder()).toEqual([PINNED_SECTION_ID, DEFAULT_SECTION_ID])
-expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
+    // 没有任何置顶项目时，「置顶」标题整行都不渲染，不占侧栏高度。
+    expect(headerIdsInDomOrder()).toEqual([DEFAULT_SECTION_ID])
+    expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
   })
 
   it('标题按分区成员的位置插入，顺序与分区一致', async () => {
@@ -536,9 +537,9 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
   it('空分区把标题插在下一个分区之前，而不是被挤到列表末尾', async () => {
     seedSections({
         sections: [
-          { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
-          { id: 's1', name: '客户项目', ids: ['b'] },
-          { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a'] },
+          { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+          { id: 's1', name: '客户项目', ids: [] },
+          { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b'] },
         ],
       })
     mountFixture(['a', 'b'])
@@ -587,6 +588,10 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
   })
 
   it('卸载后标题、菜单与存储写入全部撤销', async () => {
+    seedSections({ sections: [
+      { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+      { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+    ] })
     mountFixture(['a'])
     mount(['a'])
     await waitForSync()
@@ -617,11 +622,8 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     mount(['a', 'b'])
     await waitForSync()
     const headers = Array.from(list.children).filter(child => child.hasAttribute(SECTION_HEADER_ATTR))
-    expect(headers.map(node => node.getAttribute(SECTION_HEADER_ATTR))).toEqual([
-      PINNED_SECTION_ID,
-      's1',
-      DEFAULT_SECTION_ID,
-    ])
+    // 置顶分区为空，不渲染标题；剩下两个标题各自贴住自己的分组块。
+    expect(headers.map(node => node.getAttribute(SECTION_HEADER_ATTR))).toEqual(['s1', DEFAULT_SECTION_ID])
     const blockOf = (id: string): Element => {
       const group = list.querySelector(`[data-dcu-test-group="${id}"]`)
       expect(group).not.toBeNull()
@@ -630,9 +632,8 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     // 标题必须排在它的分组块之前（文档序），这是「贴住分区」的判据。
     const precedes = (header: Element, block: Element): boolean =>
       (header.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
-    expect(precedes(headers[1]!, blockOf('b'))).toBe(true)
-    expect(precedes(headers[2]!, blockOf('a'))).toBe(true)
     expect(precedes(headers[0]!, blockOf('b'))).toBe(true)
+    expect(precedes(headers[1]!, blockOf('a'))).toBe(true)
   })
 
   it('点击项目行菜单按钮后，在宿主菜单顶部追加「置顶」「分区」两行', async () => {
@@ -775,6 +776,11 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
   })
 
   it('内置分区有 ···（只提供「新建分区」），且不可拖动', async () => {
+    // 置顶一个项目，让两个内置分区标题都真实存在（空的置顶分区不渲染标题）。
+    seedSections({ sections: [
+      { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+      { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+    ] })
     mountFixture(['a'])
     mount(['a'])
     await waitForSync()
@@ -883,8 +889,8 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(blockIdsInDomOrder()).toEqual(['c', 'a', 'b'])
     const custom = hostSection('s1')
     expect(custom.ids).toEqual(['c'])
-    // 标题顺序仍按分区顺序。
-    expect(headerIdsInDomOrder()).toEqual([PINNED_SECTION_ID, 's1', DEFAULT_SECTION_ID])
+    // 标题顺序仍按分区顺序；置顶分区为空，标题不渲染。
+    expect(headerIdsInDomOrder()).toEqual(['s1', DEFAULT_SECTION_ID])
   })
   it('连续两次改归属不会互相打断（写入串行，最终以最后一次为准）', async () => {
     seedSections({
@@ -1476,6 +1482,10 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
   })
 
   it('展开箭头用宿主项目行同一个 slot 尺寸，状态由 data-open 驱动', async () => {
+    seedSections({ sections: [
+      { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+      { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+    ] })
     mountFixture(['a'])
     mount(['a'])
     await waitForSync()
@@ -1486,5 +1496,30 @@ expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
     expect(getComputedStyle(chevron).width).toBe('16px')
     expect(getComputedStyle(chevron).height).toBe('20px')
     expect(header.getAttribute('data-open')).toBe('true')
+  })
+
+  it('空的「置顶」分区整行隐藏，置顶首个项目后标题回到最上方，取消最后一个置顶后再次隐藏', async () => {
+    seedSections({ sections: [
+      { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+      { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a', 'b'] },
+    ] })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+    expect(headerIdsInDomOrder()).toEqual([DEFAULT_SECTION_ID])
+
+    // 置顶 b：标题立刻出现在最上方，并贴着 b 的分组块。
+    const pinMenu = await openWorkspaceMenu('b')
+    pinMenu.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    await waitForSync()
+    expect(hostSection(PINNED_SECTION_ID).ids).toEqual(['b'])
+    expect(headerIdsInDomOrder()).toEqual([PINNED_SECTION_ID, DEFAULT_SECTION_ID])
+
+    // 取消置顶最后一个项目：标题重新消失，不留下空白行。
+    const unpinMenu = await openWorkspaceMenu('b')
+    unpinMenu.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    await waitForSync()
+    expect(hostSection(PINNED_SECTION_ID).ids).toEqual([])
+    expect(headerIdsInDomOrder()).toEqual([DEFAULT_SECTION_ID])
   })
 })
