@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.11 (2026-11-01)
+
+- **Decouple plain flat settings mode from mica float mode**: When mica glass is disabled, the settings modal (both expanded and collapsed) renders with seamless flat backgrounds, aligning perfectly with the home view and eliminating redundant margins, border-radius, and shadows.
+- **Eliminate duplicate top bars and parallel curved borders**: Integrated standalone about header and actions into the first feature card header, and made the host titlebar borderless and transparent, resolving button overlap and dual parallel border strokes.
+- **Normalize vertical card offsets across host architectures**: Handled both tiled Grid host (0.2.2-alpha.2+) and legacy nested Flex host (0.2.1-rc.5) geometries, harmonizing the first card baseline (y=84px) in collapsed mode and eliminating stray divider lines inside the 56px icon rail.
+- **Auto-hide empty pinned section in sidebar (#76)**: Automatically hide the pinned header when no workspaces are pinned, and reset collapsed state when all workspaces are removed.
+
 ## 2.0.10 (2026-11-01)
 
 - **Align Collapsed Settings Sidebar with Homepage 56px Icon Rail**: Replicate the host homepage collapsed sidebar design language inside the settings modal. Replace the cramped narrow view with a clean 56px floating Mica icon rail, centering icons along the vertical axis with hidden scrollbars and seamlessly integrating the back button.
