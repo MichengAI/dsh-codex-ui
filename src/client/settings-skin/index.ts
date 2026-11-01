@@ -796,7 +796,41 @@ html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-c
   gap: 0 !important;
 }
 
-html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2),
+html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav) {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: var(--dsw-alias-bg-base, #151517) !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav) > :first-child {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: none !important;
+  flex: none !important;
+}
+
+html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2) {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  overflow-y: auto !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  padding-top: 28px !important;
+  padding-bottom: 64px !important;
+  padding-inline: 48px !important;
+  box-sizing: border-box !important;
+}
+
 html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="options"] {
   margin: 0 !important;
   border-radius: 0 !important;
@@ -1135,7 +1169,6 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
   pointer-events: auto !important;
 }
 
-[data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav),
 html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav) {
   margin: 8px 12px 12px 0 !important;
   border-radius: 16px !important;
