@@ -9,6 +9,7 @@ import {
   getHostSidebarExpandedWidth,
   DEFAULT_SIDEBAR_WIDTH,
   MIN_SIDEBAR_WIDTH,
+  isHostSidebarCollapsed,
   SETTINGS_SKIN_CSS,
   SETTINGS_SKIN_STYLE_ID,
 } from '../src/client/settings-skin/index.ts'
@@ -332,4 +333,51 @@ test('SETTINGS_SKIN_CSS 包含新版平铺 Grid 4 块布局映射规则，杜绝
   expect(SETTINGS_SKIN_CSS).toContain('> [class*=\"navTitle\"]')
   expect(SETTINGS_SKIN_CSS).toContain('> [class*=\"header\"]')
   expect(SETTINGS_SKIN_CSS).toContain('> [class*=\"options\"]')
+})
+
+test('isHostSidebarCollapsed 准确探测宿主首页侧栏折叠状态', () => {
+  const container = document.createElement('div')
+  document.body.append(container)
+
+  try {
+    // 默认未折叠态
+    expect(isHostSidebarCollapsed(document)).toBe(false)
+
+    // 1. 模拟现代宿主 data-sidebar-collapsed="true"
+    const hostSidebar = document.createElement('aside')
+    hostSidebar.setAttribute('data-sidebar-collapsed', 'true')
+    container.append(hostSidebar)
+    expect(isHostSidebarCollapsed(document)).toBe(true)
+    hostSidebar.remove()
+
+    // 3. 模拟收缩为 56px / <=64px 的侧栏容器（用 getBoundingClientRect 模拟真实渲染尺寸）
+    const railSidebar = document.createElement('div')
+    railSidebar.setAttribute('data-slot', 'sidebar')
+    railSidebar.getBoundingClientRect = () => ({ width: 56, height: 800, top: 0, left: 0, bottom: 800, right: 56, x: 0, y: 0, toJSON: () => {} })
+    container.append(railSidebar)
+    expect(isHostSidebarCollapsed(document)).toBe(true)
+  } finally {
+    container.remove()
+  }
+})
+
+test('installSettingsSkin 支持动态刷新已存在 style 标签的内容（HMR防锁死）', () => {
+  const testStyleId = SETTINGS_SKIN_STYLE_ID
+  const existing = document.getElementById(testStyleId)
+  if (existing) existing.remove()
+
+  try {
+    // 预先插入一个旧版本内容的 style 标签
+    const oldStyle = document.createElement('style')
+    oldStyle.id = testStyleId
+    oldStyle.textContent = '/* old-content */'
+    document.head.append(oldStyle)
+
+    // 执行安装，断言旧 style 节点的内容被就地刷新为最新 SETTINGS_SKIN_CSS
+    installSettingsSkin(document)
+    expect(oldStyle.textContent).toBe(SETTINGS_SKIN_CSS)
+    expect(oldStyle.textContent).not.toBe('/* old-content */')
+  } finally {
+    uninstallSettingsSkin(document)
+  }
 })
