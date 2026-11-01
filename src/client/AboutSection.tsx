@@ -66,10 +66,6 @@ const endpoint = CODEX_UI_API_ENDPOINTS.dependencies
 
 const stylesheet = `
 .dcu-about{color:var(--dsw-alias-label-primary);font-family:var(--dsw-font-family);display:flex;flex-direction:column}
-.dcu-about-head{display:flex;flex-direction:column;align-items:flex-start;gap:12px;margin-bottom:20px}
-.dcu-about-title-block{display:flex;flex-direction:column;align-items:flex-start;gap:10px;width:100%}
-.dcu-about h2,.dcu-about-title{margin:0;font-size:22px;line-height:28px;font-weight:600;letter-spacing:-.4px;color:var(--dsw-alias-label-primary)}
-.dcu-about-title-row{display:flex;align-items:center;gap:8px 12px;min-width:0;flex-wrap:wrap}
 .dcu-about-feedback-links,.dcu-about-links{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .dcu-about-version{margin-left:8px;color:var(--dsw-alias-label-tertiary);font-family:inherit;font-size:12px;font-weight:500;line-height:18px;letter-spacing:0;white-space:nowrap;vertical-align:baseline}
 .dcu-subplugins-list{display:flex;flex-direction:column;gap:6px}
@@ -290,7 +286,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
   const title = (id: ManagedDependencyId): string => t(`about.dependency.${id}`)
   return <section ref={root} className="dcu-about" aria-label={t('about.nav')}>
     <style>{stylesheet}</style>
-    {/* 区域一：内置功能与子插件介绍卡片（整合原先游离在外的标题与快捷操作，消除双顶栏割裂） */}
+    {/* 区域一：内置功能与子插件介绍卡片 */}
     <div className="dcu-section-card dcu-card-features">
       <div className="dcu-section-header">
         <div className="dcu-section-title-wrap">
@@ -298,7 +294,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
             {t('about.title')}
             {selfVersion === undefined ? null : <span className="dcu-about-version">v{selfVersion}</span>}
           </h3>
-          <p className="dcu-section-desc">{t('about.features')} · {t('about.description')}</p>
+          <p className="dcu-section-desc">{t('about.description')}</p>
         </div>
         <div className="dcu-about-feedback-links dcu-about-links">
           <PrimitiveButton
@@ -330,6 +326,11 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
             {state === 'loading' ? t('about.checking') : t('about.checkUpdate')}
           </PrimitiveButton>
         </div>
+      </div>
+      <div className="dcu-section-subtitle-wrap" style={{ marginTop: '-4px', marginBottom: '4px' }}>
+        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--dsw-alias-label-secondary)' }}>
+          {t('about.features')}
+        </span>
       </div>
       <div className="dcu-subplugins-list">
         {SUB_PLUGINS.map(item => (
