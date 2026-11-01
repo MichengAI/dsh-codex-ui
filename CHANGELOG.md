@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.10 (2026-11-01)
+
+- **Align Collapsed Settings Sidebar with Homepage 56px Icon Rail**: Replicate the host homepage collapsed sidebar design language inside the settings modal. Replace the cramped narrow view with a clean 56px floating Mica icon rail, centering icons along the vertical axis with hidden scrollbars and seamlessly integrating the back button.
+- **Fix Mobile and Narrow Viewport Settings Distortion**: Adapt settings layout across responsive viewports (<=768px), eliminating character-wrapping and horizontal tearing while restoring comfortable spacing across form controls and theme segmented pickers.
+- **Pure Generic Single-Icon Rule for Third-Party Plugins**: Eliminate duplicate icon collisions (custom icon + host fallback gear) in collapsed state by isolating text labels and respecting plugin-native icon visibility without hardcoding plugin attributes.
+- **Fix Settings Header Alignment in Grid Layouts**: Align the absolute settings header with the options card container across host grid variations, removing the 80px horizontal gap and preventing nested double frosted cards.
+- **Eliminate Nested Rightbar Backdrop Filter in Glass Mode**: Remove redundant background blur from the right sidebar container in compatible glass layout, preventing background bleed-through when expanding and collapsing panels.
+
 ## 2.0.9 (2026-10-31)
 
 - **Fix Conversation Blank Screen on Model Switch (#74)**: Resolved an issue where switching models on a new conversation welcome screen crashed the conversation view into a permanent blank screen. Safely delegate suggestion card lifecycle to React portal unmounting rather than directly removing the DOM node.
