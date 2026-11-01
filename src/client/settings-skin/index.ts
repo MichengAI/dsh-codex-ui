@@ -562,7 +562,7 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [
   flex: none !important;
 }
 
-/* 顶部操作区（打开配置文件 + 关闭按钮）：整行 56px 顶栏，精准对齐老版标准头部 */
+/* 顶部操作区（打开配置文件 + 关闭按钮）：普通模式下透明浮动，无实体白条与下边框，绝不硬切出第二层顶部 */
 [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] {
   grid-column: 2 !important;
   grid-row: 1 / -1 !important;
@@ -574,14 +574,16 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [
   min-height: 56px !important;
   box-sizing: border-box !important;
   padding: 0 32px !important;
-  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
+  border: none !important;
+  border-bottom: none !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-end !important;
   gap: 12px !important;
-  background: var(--dsw-alias-bg-layer-2, #18181b) !important;
+  background: transparent !important;
   z-index: 10 !important;
   margin: 0 !important;
+  pointer-events: none !important;
 }
 
 [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] > * {
@@ -637,8 +639,9 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:has(> [class
 
 body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"],
 html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] {
-  background: var(--dsw-alias-bg-layer-1, #ffffff) !important;
-  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)) !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: none !important;
 }
 
 body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"],
@@ -697,22 +700,25 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="optio
   min-height: 56px !important;
   box-sizing: border-box !important;
   padding: 0 32px !important;
-  border-radius: 16px 16px 0 0 !important;
-  border: 1px solid var(--dsh-glass-rim-soft, rgba(255, 255, 255, 0.08)) !important;
-  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
-  background: var(--dsw-alias-bg-layer-1) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-end !important;
   gap: 12px !important;
   z-index: 10 !important;
+  pointer-events: none !important;
+}
+
+html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] > * {
+  pointer-events: auto !important;
 }
 
 html[data-dsh-glass-float] body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"],
 html[data-dsh-glass-float] html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="header"] {
-  background: var(--dsw-alias-bg-layer-1, #ffffff) !important;
-  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
-  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)) !important;
+  background: transparent !important;
+  border: none !important;
 }
 
 html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] {
@@ -790,7 +796,7 @@ html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-c
   gap: 0 !important;
 }
 
-html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav),
+html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2),
 html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="options"] {
   margin: 0 !important;
   border-radius: 0 !important;
@@ -800,6 +806,10 @@ html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-c
   overflow-y: auto !important;
   height: 100% !important;
   max-height: 100% !important;
+  padding-top: calc(56px + 28px) !important;
+  padding-bottom: 64px !important;
+  padding-inline: 48px !important;
+  box-sizing: border-box !important;
 }
 
 /* 浅色普通模式下的收起态高对比度平铺底板 */
@@ -1078,7 +1088,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
   flex: none !important;
 }
 
-/* 顶栏操作区（配置文件与关闭按钮）：普通模式下紧贴顶部，无圆角无投影 */
+/* 顶栏操作区（配置文件与关闭按钮）：普通模式下透明浮动，无实体白条与下边框，绝不硬切出第二层顶部 */
 html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="header"] {
   grid-column: 2 !important;
   grid-row: 1 / -1 !important;
@@ -1091,15 +1101,17 @@ html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-c
   padding: 0 20px !important;
   border-radius: 0 !important;
   border: none !important;
-  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
-  background: var(--dsw-alias-bg-base, #151517) !important;
+  border-bottom: none !important;
+  background: transparent !important;
   z-index: 10 !important;
+  pointer-events: none !important;
 }
 
 html:not([data-dsh-glass-float]) body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="header"],
 html:not([data-dsh-glass-float]) html[data-ds-theme-source="light"] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="header"] {
-  background: var(--dsw-alias-bg-base, #ffffff) !important;
-  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)) !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: none !important;
 }
 
 html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="header"] {
@@ -1108,15 +1120,19 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
   position: absolute !important;
   top: 8px !important;
   left: 0 !important;
-  right: 0 !important;
+  right: 12px !important;
   height: 52px !important;
   min-height: 52px !important;
   padding: 0 20px !important;
-  border: 1px solid var(--dsh-glass-rim-soft, rgba(255, 255, 255, 0.08)) !important;
-  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
-  border-radius: 16px 16px 0 0 !important;
-  background: var(--dsw-alias-bg-layer-1) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
   z-index: 10 !important;
+  pointer-events: none !important;
+}
+
+html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="header"] > * {
+  pointer-events: auto !important;
 }
 
 [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav),
@@ -1423,19 +1439,23 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     position: absolute !important;
     top: 8px !important;
     left: 0 !important;
-    right: 0 !important;
+    right: 12px !important;
     height: 52px !important;
     min-height: 52px !important;
     padding: 0 20px !important;
-    border: 1px solid var(--dsh-glass-rim-soft, rgba(255, 255, 255, 0.08)) !important;
-    border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
-    border-radius: 16px 16px 0 0 !important;
-    background: var(--dsw-alias-bg-layer-1) !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
     z-index: 10 !important;
+    pointer-events: none !important;
+  }
+
+  html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="header"] > * {
+    pointer-events: auto !important;
   }
 
   /* 右侧设置内容区：普通模式平铺紧贴，云母模式下复刻首页右侧 16px 圆角大卡片独立悬浮岛 */
-  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav),
+  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2),
   html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] {
     margin: 0 !important;
     border-radius: 0 !important;
@@ -1445,6 +1465,10 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     overflow-y: auto !important;
     height: 100% !important;
     max-height: 100% !important;
+    padding-top: calc(56px + 20px) !important;
+    padding-bottom: 40px !important;
+    padding-inline: 20px !important;
+    box-sizing: border-box !important;
   }
 
   html:not([data-dsh-glass-float]) body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav),
