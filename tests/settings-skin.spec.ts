@@ -342,6 +342,8 @@ test('SETTINGS_SKIN_CSS 包含新版平铺 Grid 4 块布局映射规则，杜绝
   expect(SETTINGS_SKIN_CSS).toContain('html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"])')
   expect(SETTINGS_SKIN_CSS).toContain('html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav)')
   expect(SETTINGS_SKIN_CSS).toContain('html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"])')
+  // 守护规则：56px 导轨内部绝不残留横向分割线（消除收起态 navTitle 的 border-bottom）
+  expect(SETTINGS_SKIN_CSS).toContain('html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="navTitle"]')
 })
 
 test('isHostSidebarCollapsed 准确探测宿主首页侧栏折叠状态', () => {
