@@ -76,4 +76,30 @@ describe('desktop titlebar menu injection', () => {
 
     cleanup()
   })
+
+  test('Help 按钮键盘可达：Tab 能到、方向键能开、条目间能移动', () => {
+    const { bar, cleanup } = mountHost()
+    const helpBtn = Array.from(bar.querySelectorAll('button'))[2]
+
+    // 宿主 menubar 的 roving tabindex 只认它自己两个按钮，帮助按钮必须自己可 Tab 到
+    assert.equal(helpBtn.tabIndex, 0, '帮助按钮必须在 Tab 序列里')
+
+    helpBtn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }))
+    const popover = document.body.querySelector('.dcu-desktop-menu-popover')
+    assert.notEqual(popover, null, '按方向键下应展开菜单')
+
+    const items = Array.from(popover!.querySelectorAll<HTMLButtonElement>('button.dcu-menu-item'))
+    assert.equal(document.activeElement, items[0], '展开后焦点应落在第一项')
+
+    popover!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }))
+    assert.equal(document.activeElement, items[1], '方向键下应移动到第二项')
+
+    popover!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }))
+    assert.equal(document.activeElement, items[0], '方向键上应移回第一项')
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    assert.equal(document.body.querySelector('.dcu-desktop-menu-popover'), null)
+
+    cleanup()
+  })
 })

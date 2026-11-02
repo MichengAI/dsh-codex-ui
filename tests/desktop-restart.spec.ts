@@ -88,12 +88,20 @@ describe('restart: 计划与助手脚本', () => {
     const plan = buildPlan(app, paths)
     assert.equal(plan.match, '/Applications/DeepSeek Harness.app/Contents/')
     assert.equal(plan.appId, 'com.deepseek.dsh')
+
+    const withIds = buildPlan(app, { ...paths, mainPid: 4242, bootId: 'boot-1' })
+    assert.equal(withIds.mainPid, 4242, 'Windows 要靠 mainPid 结束主进程')
+    assert.equal(withIds.bootId, 'boot-1', '状态文件要能被按启动轮次过滤')
   })
 
-  test('助手脚本按平台走优雅退出，而不是强杀', () => {
+  test('助手脚本按平台退出：Windows 结束主进程，macOS/Linux 优雅退出', () => {
+    // 安装版宿主的 window.on('close') 是无条件 preventDefault + 隐藏到托盘，
+    // 所以 Windows 只能结束 Electron 主进程；WM_CLOSE 永远退不了应用。
     const win = helperSource(buildPlan(detectApp({ platform: 'win32', execPath: 'C:\\a\\DeepSeek Harness.exe', env: {} }), paths))
-    assert.match(win, /CloseMainWindow/, 'Windows 必须发 WM_CLOSE')
-    assert.doesNotMatch(win, /taskkill/, '不允许强杀')
+    assert.match(win, /taskkill/, 'Windows 必须结束主进程')
+    assert.match(win, /'\/PID'/, '必须按 PID 结束，不能按映像名（会连坐助手自己）')
+    assert.doesNotMatch(win, /'\/T'/, '不能带 /T：会连坐刚起的助手进程')
+    assert.doesNotMatch(win, /CloseMainWindow\(/, 'WM_CLOSE 只会把窗口收进托盘，必须不再调用')
 
     const mac = helperSource(buildPlan(detectApp({ platform: 'darwin', execPath: '/A/DeepSeek Harness.app/Contents/MacOS/x', env: {} }), paths))
     assert.match(mac, /osascript/, 'macOS 必须走 AppleScript quit')
@@ -191,6 +199,39 @@ describe('restart: 路由鉴权', () => {
     assert.equal(spawned, 0)
   })
 
+  test('排程前会把状态/日志目录建出来（否则 ENOENT 被静默吞掉）', async () => {
+    const { existsSync } = await import('node:fs')
+    const paths = testPaths()
+    createDesktopMenuHandler({
+      isDisabled: () => false,
+      token: 'T0KEN',
+      platform: 'win32',
+      execPath: 'C:\Tools\DeepSeek Harness.exe',
+      paths,
+      spawn: () => ({ ok: true }),
+    })
+    assert.equal(existsSync(paths.statePath), false)
+    assert.notEqual(await import('node:fs').then(m => m.existsSync(paths.statePath.replace(/state\.json$/, ''))), false,
+      '状态目录必须存在')
+  })
+
+  test('上次运行留下的状态不会再被当成这次的结果', async () => {
+    const { writeFileSync } = await import('node:fs')
+    const paths = testPaths()
+    const handler = createDesktopMenuHandler({
+      isDisabled: () => false,
+      token: 'T0KEN',
+      platform: 'win32',
+      execPath: 'C:\Tools\DeepSeek Harness.exe',
+      paths,
+    })
+    // 伪造一份「别的启动轮次」写的 relaunched
+    writeFileSync(paths.statePath, JSON.stringify({ phase: 'relaunched', bootId: 'some-old-boot' }), 'utf8')
+    const response = fakeResponse()
+    await handler(request({ url: '/api/michengai/dsh-codex-ui/desktop-menu?action=status' }), response)
+    assert.equal(JSON.parse(String(response.body)).phase, undefined, '陈旧状态必须被丢弃')
+  })
+
   test('合法请求只排程一次，重复请求返回 busy', async () => {
     let spawned = 0
     const handler = createDesktopMenuHandler({
@@ -215,6 +256,40 @@ describe('restart: 路由鉴权', () => {
     assert.equal(JSON.parse(String(second.body)).error, 'busy')
   })
 
+  test('主进程死后会清理遗留 Host，避免新实例抢不到端口', () => {
+    const local = testPaths()
+    const source = helperSource(buildPlan(
+      detectApp({ platform: 'win32', execPath: 'C:\\a\\DeepSeek Harness.exe', env: {} }),
+      { ...local, mainPid: 111, hostPid: 222 },
+    ))
+    assert.match(source, /plan\.hostPid/, '助手必须知道旧 Host 的 PID')
+    assert.match(source, /清理遗留 Host/, '主进程退出后要显式结束孤儿 Host')
+  })
+
+  test('排程时把 mainPid/hostPid 交给助手', async () => {
+    let seen: { mainPid?: number; hostPid?: number; bootId?: string } | undefined
+    const handler = createDesktopMenuHandler({
+      isDisabled: () => false,
+      token: 'T0KEN',
+      platform: 'win32',
+      execPath: 'C:\\Tools\\DeepSeek Harness.exe',
+      paths: testPaths(),
+      mainPid: 4321,
+      hostPid: 8765,
+      spawn: (plan) => { seen = plan; return { ok: true } },
+    })
+    const response = fakeResponse()
+    await handler(request({
+      method: 'POST',
+      url: '/api/michengai/dsh-codex-ui/desktop-menu?action=restart',
+      headers: { host: '127.0.0.1:4584', [CODEX_UI_RESTART_HEADER]: 'T0KEN' },
+    }), response)
+    assert.equal(response.status, 200)
+    assert.equal(seen?.mainPid, 4321)
+    assert.equal(seen?.hostPid, 8765)
+    assert.ok(typeof seen?.bootId === 'string' && seen.bootId.length > 0, '状态文件要带上本次启动标识')
+  })
+
   test('非桌面环境（node 运行时）报告不可重启', async () => {
     let spawned = 0
     const handler = createDesktopMenuHandler({
@@ -229,7 +304,7 @@ describe('restart: 路由鉴权', () => {
     await handler(request({ url: '/api/michengai/dsh-codex-ui/desktop-menu?action=status', headers: { host: '127.0.0.1:4584' } }), status)
     const payload = JSON.parse(String(status.body))
     assert.equal(payload.canRestart, false)
-    assert.ok(typeof payload.reason === 'string' && payload.reason !== '')
+    assert.equal(payload.reason, 'missing-app', '不可重启时回机器码，文案由客户端翻译')
 
     const restart = fakeResponse()
     await handler(request({

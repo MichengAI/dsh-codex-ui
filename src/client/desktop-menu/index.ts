@@ -7,27 +7,23 @@ import {
   type RestartCopy,
 } from './restart-client.ts'
 
-/** 「重启应用与 Host」的文案。 */
-function restartCopy(zh: boolean): RestartCopy {
-  return zh
-    ? {
-        quitting: '正在退出并重新打开 DeepSeek Harness…',
-        relaunched: '已重新启动。',
-        cancelled: '应用没有退出，本次重启已取消。',
-        launchFailed: '应用已退出，但没能自动重新打开，请手动启动。',
-        timeout: '没有在预期时间内完成重启，请稍后确认应用是否还在。',
-        close: '关闭',
-        failed: '重启失败',
-      }
-    : {
-        quitting: 'Closing and reopening DeepSeek Harness…',
-        relaunched: 'Restarted.',
-        cancelled: 'The app did not exit; this restart was cancelled.',
-        launchFailed: 'The app exited but could not be reopened automatically.',
-        timeout: 'The restart did not finish in time; please check the app.',
-        close: 'Close',
-        failed: 'Restart failed',
-      }
+/** 「重启应用与 Host」的文案：全部来自本插件的词典，不在代码里写死语言。 */
+function restartCopy(translate: (key: string, fallback?: string) => string): RestartCopy {
+  return {
+    quitting: translate('desktopMenu.restart.quitting', 'Closing and reopening DeepSeek Harness…'),
+    relaunched: translate('desktopMenu.restart.relaunched', 'Restarted.'),
+    cancelled: translate('desktopMenu.restart.cancelled', 'The app did not exit; this restart was cancelled.'),
+    launchFailed: translate('desktopMenu.restart.launchFailed', 'The app exited but could not be reopened automatically.'),
+    timeout: translate('desktopMenu.restart.timeout', 'The restart did not finish in time; please check the app.'),
+    close: translate('desktopMenu.restart.close', 'Close'),
+    failed: translate('desktopMenu.restart.failed', 'Restart failed'),
+  }
+}
+
+/** 不可重启的原因代码 → 本地文案。 */
+function unsupportedText(translate: (key: string, fallback?: string) => string, reason: string | undefined): string {
+  if (reason === 'desktop-only') return translate('desktopMenu.restart.unsupportedDesktopOnly', 'This is not the desktop app, so it cannot be restarted.')
+  return translate('desktopMenu.restart.unsupportedMissingApp', 'Cannot locate the DeepSeek Harness executable, so it cannot be restarted.')
 }
 
 export interface MenuItemDefinition {
@@ -136,6 +132,7 @@ export function closeActiveMenu(): void {
 export function openDropdown(
   anchor: HTMLButtonElement,
   items: readonly MenuItemDefinition[],
+  options: { focusFirst?: boolean } = {},
 ): void {
   if (activeAnchor === anchor && activePopover !== null) {
     closeActiveMenu()
@@ -218,7 +215,32 @@ export function openDropdown(
   activePopover = popover
   activeAnchor = anchor
 
-  popover.focus()
+  // 键盘导航：上下键在条目间移动，Home/End 跳首尾（Esc 由全局监听关闭）。
+  const menuItems = Array.from(popover.querySelectorAll<HTMLButtonElement>('button.dcu-menu-item'))
+  const focusAt = (index: number): void => {
+    if (menuItems.length === 0) return
+    const clamped = Math.max(0, Math.min(index, menuItems.length - 1))
+    menuItems[clamped].focus()
+  }
+  popover.addEventListener('keydown', (event) => {
+    const current = menuItems.indexOf(document.activeElement as HTMLButtonElement)
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      focusAt(current < 0 ? 0 : current + 1)
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      focusAt(current < 0 ? menuItems.length - 1 : current - 1)
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      focusAt(0)
+    } else if (event.key === 'End') {
+      event.preventDefault()
+      focusAt(menuItems.length - 1)
+    }
+  })
+
+  if (options.focusFirst === true && menuItems.length > 0) menuItems[0].focus()
+  else popover.focus()
 }
 
 /**
@@ -297,27 +319,24 @@ export function observeDesktopTitlebarMenus(
         id: 'restart-host',
         label: translate('desktopMenu.help.restartAppHost', zh ? '重启应用与 Host' : 'Restart App and Host'),
         action: async () => {
-          const copy = restartCopy(zh)
+          const copy = restartCopy(translate)
           const status = await fetchRestartStatus()
           if (status === null) {
             showRestartToast(copy).set(
               copy.failed,
-              zh ? '连不上宿主，重启通道不可用。' : 'Cannot reach the Host; the restart channel is unavailable.',
+              translate('desktopMenu.restart.unreachable', 'Cannot reach the Host; the restart channel is unavailable.'),
               'error',
             )
             return
           }
           if (!status.canRestart) {
-            showRestartToast(copy).set(
-              copy.failed,
-              status.reason ?? (zh ? '当前环境不支持重启应用。' : 'Restarting the app is not supported here.'),
-              'error',
-            )
+            showRestartToast(copy).set(copy.failed, unsupportedText(translate, status.reason), 'error')
             return
           }
-          const confirmMsg = zh
-            ? '将退出并重新打开 DeepSeek Harness，正在运行的任务会被中断。继续？'
-            : 'DeepSeek Harness will close and reopen; running tasks will be interrupted. Continue?'
+          const confirmMsg = translate(
+            'desktopMenu.help.restartConfirm',
+            'DeepSeek Harness will close and reopen; running tasks will be interrupted. Continue?',
+          )
           if (!window.confirm(confirmMsg)) return
 
           const toast = showRestartToast(copy)
@@ -358,13 +377,38 @@ export function observeDesktopTitlebarMenus(
       helpBtn.setAttribute('role', 'menuitem')
       helpBtn.setAttribute('aria-haspopup', 'menu')
       helpBtn.setAttribute('aria-expanded', 'false')
-      helpBtn.tabIndex = -1
+      // 宿主 menubar 的 roving tabindex 只认它自己的两个按钮，方向键表也写死成
+      // buttons[index===0?1:0]。所以这里必须让帮助按钮自己可 Tab 到，并自己处理方向键，
+      // 否则菜单对键盘用户完全不可用。
+      helpBtn.tabIndex = 0
       helpBtn.textContent = translate('desktopMenu.help', '帮助')
 
       helpBtn.addEventListener('click', (e) => {
         e.preventDefault()
         e.stopPropagation()
         openDropdown(helpBtn, getHelpItems())
+      })
+
+      helpBtn.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          e.stopPropagation()
+          openDropdown(helpBtn, getHelpItems(), { focusFirst: true })
+          return
+        }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          // 交回官方按钮，保证整个菜单栏仍是一个可循环的键盘组。
+          e.preventDefault()
+          e.stopPropagation()
+          helpBtn.tabIndex = -1
+          const next = bar.querySelector<HTMLButtonElement>('button:not(#dcu-desktop-menu-help)')
+          if (next) {
+            next.tabIndex = 0
+            next.focus()
+          } else {
+            helpBtn.tabIndex = 0
+          }
+        }
       })
 
       bar.append(helpBtn)
@@ -375,12 +419,18 @@ export function observeDesktopTitlebarMenus(
   // 初始尝试挂载
   mountMenus()
 
-  // 针对 shadow DOM 异步挂载或宿主重绘做 DOM 变动监听
-  const observer = new MutationObserver(() => {
+  // 只盯 body 的直接子节点：宿主把一个 div[data-windows-menu] 挂到 body 上，
+  // 这个粒度足够捕获它的出现与重建。早先的 subtree:true 会为页面里每一次 DOM
+  // 变动调度一次 mountMenus（与已知卡顿问题同源），没有必要。
+  // 挂载成功后立即断开，宿主重建时由下面的一次性重试重新接上。
+  let observer = new MutationObserver(() => {
     mountMenus()
+    if (injectedHelpBtn !== null) {
+      observer.disconnect()
+    }
   })
 
-  observer.observe(document.body, { childList: true, subtree: true })
+  observer.observe(document.body, { childList: true })
 
   return () => {
     cleanedUp = true

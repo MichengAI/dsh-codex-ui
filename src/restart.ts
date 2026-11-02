@@ -108,6 +108,12 @@ export interface RestartPlan {
   readonly match: string
   readonly logPath: string
   readonly statePath: string
+  /** Electron 主进程 PID（Host 的父进程）；Windows 上要结束的就是它。 */
+  readonly mainPid: number
+  /** 本插件所在的 Host 进程 PID；主进程死后它可能变成孤儿，需要显式清理。 */
+  readonly hostPid: number
+  /** 本次 Host 启动的标识，用来丢弃上一次运行留下的状态文件。 */
+  readonly bootId: string
   readonly quitTimeoutMs: number
   readonly openDelayMs: number
 }
@@ -120,6 +126,9 @@ const DEFAULT_OPEN_DELAY_MS = 800
 export function buildPlan(app: AppTarget, options: {
   logPath: string
   statePath?: string
+  mainPid?: number
+  hostPid?: number
+  bootId?: string
   quitTimeoutMs?: number
   openDelayMs?: number
 }): RestartPlan {
@@ -132,6 +141,9 @@ export function buildPlan(app: AppTarget, options: {
     match: app.kind === 'mac' ? `${app.appPath}/Contents/` : app.execPath,
     logPath: options.logPath,
     statePath: options.statePath ?? '',
+    mainPid: options.mainPid ?? 0,
+    hostPid: options.hostPid ?? 0,
+    bootId: options.bootId ?? '',
     quitTimeoutMs: options.quitTimeoutMs ?? DEFAULT_QUIT_TIMEOUT_MS,
     openDelayMs: options.openDelayMs ?? DEFAULT_OPEN_DELAY_MS,
   }
@@ -164,7 +176,8 @@ function writeState(phase, detail) {
   if (!plan.statePath) return
   try {
     fs.writeFileSync(plan.statePath, JSON.stringify({
-      phase: phase, detail: detail || '', at: Date.now(), helper: SELF, platform: plan.platform
+      phase: phase, detail: detail || '', at: Date.now(), helper: SELF,
+      platform: plan.platform, bootId: plan.bootId
     }), 'utf8')
   } catch (error) {
     log('写状态失败: ' + (error && error.message ? error.message : String(error)))
@@ -244,13 +257,22 @@ function windowSeen(ms) {
   }, ms)
 }
 
-/** 请求应用自己退出：不杀进程，让官方退出流程走完。 */
+/**
+ * 让应用退出。
+ *
+ * Windows 只能结束 Electron 主进程：安装版宿主的 window.on('close') 是无条件
+ * preventDefault + hideMainWindow（收进托盘），所以 WM_CLOSE / CloseMainWindow 永远不会
+ * 让应用退出。结束主进程后 Host 会因 IPC 断开自行优雅退出，会话日志照常落盘。
+ * 刻意不带 /T：带 /T 会把刚起的助手自己一起杀掉。
+ */
 function requestQuit() {
   if (plan.kind === 'win') {
-    const name = plan.imageName.replace(/\\.exe$/i, '')
-    const script = "Get-Process -Name '" + name + "' -ErrorAction SilentlyContinue | ForEach-Object { $_.CloseMainWindow() | Out-Null }"
-    const result = run('powershell', ['-NoProfile', '-NonInteractive', '-Command', script])
-    log('CloseMainWindow status=' + result.status)
+    if (!plan.mainPid) {
+      log('缺少主进程 PID，放弃重启')
+      return false
+    }
+    const result = run('taskkill', ['/PID', String(plan.mainPid), '/F'])
+    log('taskkill main pid=' + plan.mainPid + ' status=' + result.status)
     return true
   }
   if (plan.kind === 'mac') {
@@ -301,13 +323,27 @@ function main() {
   writeState('quitting', '')
   requestQuit()
 
-  if (!waitUntil(function () { return appPids().filter(alive).length === 0 }, plan.quitTimeoutMs)) {
-    // 应用没退出：多半是用户在官方退出确认框里点了取消。此时补刀会让两个实例抢端口。
-    log('应用仍在运行，本次重启作废，不动进程')
+  // Windows 上判断「应用已退出」以 Electron 主进程为准：它才是窗口与托盘的所有者。
+  const targetGone = function () {
+    return plan.platform !== 'win32' ? appPids().filter(alive).length === 0 : !alive(plan.mainPid)
+  }
+  if (!waitUntil(targetGone, plan.quitTimeoutMs)) {
+    // 主进程没死：不补刀，否则可能留下两个实例抢同一个端口。
+    log('主进程仍在运行，本次重启作废，不动进程')
     writeState('cancelled', '应用没有退出')
     return
   }
-  log('应用已退出')
+  log('主进程已退出')
+
+  // 主进程一死，旧 Host 就只剩失去 IPC 的孤儿进程；它握着单实例锁和端口，
+  // 不清掉的话新实例起不来。它是我们自己的进程，直接按 PID 结束。
+  if (plan.platform === 'win32' && plan.hostPid && alive(plan.hostPid)) {
+    run('taskkill', ['/PID', String(plan.hostPid), '/F'])
+    log('清理遗留 Host pid=' + plan.hostPid)
+    waitUntil(function () { return !alive(plan.hostPid) }, 5000)
+  }
+  // 等旧实例的渲染进程等散场，再拉新的。
+  waitUntil(function () { return appPids().filter(alive).length === 0 }, 5000)
 
   sleep(Math.max(0, plan.openDelayMs))
   if (launch()) {
@@ -321,6 +357,8 @@ function main() {
 
 try { main() } catch (error) {
   log('helper 异常: ' + (error && error.stack ? error.stack : String(error)))
+} finally {
+  try { fs.unlinkSync(process.argv[1]) } catch {}
 }
 `
 }

@@ -11,7 +11,8 @@
  * 我们状态文档的那个页面（同一套思路见社区 dsh-refresh-restart）。
  */
 import { randomBytes, timingSafeEqual } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
+import { dirname } from 'node:path'
 import { CODEX_UI_RESTART_HEADER } from './business-api.ts'
 import { detectApp, buildPlan, defaultPaths, spawnHelper, type RestartKind } from './restart.ts'
 
@@ -25,6 +26,10 @@ export interface DesktopMenuRouteDeps {
   readonly execPath?: string
   readonly env?: Record<string, string | undefined>
   readonly paths?: { logPath: string; statePath: string }
+  /** Host 的父进程（Electron 主进程）PID；Windows 上被结束的就是它。 */
+  readonly mainPid?: number
+  /** Host 自身 PID（主进程死后可能变孤儿，需要清理）。 */
+  readonly hostPid?: number
   readonly spawn?: (plan: ReturnType<typeof buildPlan>) => { ok: boolean; error?: string }
 }
 
@@ -43,6 +48,8 @@ export interface RouteResponse {
 interface HelperState {
   phase?: string
   detail?: string
+  at?: number
+  bootId?: string
 }
 
 function headerValue(headers: RouteRequest['headers'], key: string): string | undefined {
@@ -85,15 +92,29 @@ function sendJson(response: RouteResponse, status: number, payload: unknown): vo
  */
 export function createDesktopMenuHandler(deps: DesktopMenuRouteDeps): (request: RouteRequest, response: RouteResponse) => Promise<void> {
   const token = deps.token ?? randomBytes(16).toString('hex')
+  /** 本次 Host 启动的标识：只认自己这一轮写出的状态，丢掉上次运行留下的结果。 */
+  const bootId = randomBytes(8).toString('hex')
   const paths = deps.paths ?? defaultPaths()
   const spawnPlan = deps.spawn ?? spawnHelper
-  let scheduled = false
+  /** 已排程的重启；超时后允许重试，避免一次失败把入口永久锁死。 */
+  let scheduledAt = 0
+  const scheduleTimeoutMs = 120_000
+
+  // 状态与日志要写进这个目录；不先建好，助手里的 try{}catch{} 会把 ENOENT 吞掉，
+  // 界面永远读不到 cancelled / launch-failed 这些结局。
+  try {
+    mkdirSync(dirname(paths.statePath), { recursive: true })
+    mkdirSync(dirname(paths.logPath), { recursive: true })
+  } catch { /* 目录不可写时下面的写入会静默失败，界面退化为超时提示 */ }
 
   const target = () => detectApp({ platform: deps.platform, execPath: deps.execPath, env: deps.env })
 
   const readState = (): HelperState => {
     try {
-      return JSON.parse(readFileSync(paths.statePath, 'utf8')) as HelperState
+      const state = JSON.parse(readFileSync(paths.statePath, 'utf8')) as HelperState
+      // 上一轮运行留下的状态不算数：否则界面会把旧结果当成这次的结果。
+      if (state.bootId !== undefined && state.bootId !== bootId) return {}
+      return state
     } catch {
       return {}
     }
@@ -165,14 +186,19 @@ export function createDesktopMenuHandler(deps: DesktopMenuRouteDeps): (request: 
         })
         return
       }
-      if (scheduled) {
+      if (scheduledAt !== 0 && Date.now() - scheduledAt < scheduleTimeoutMs) {
         sendJson(response, 409, { ok: false, error: 'busy' })
         return
       }
-      scheduled = true
-      const outcome = spawnPlan(buildPlan(app, paths))
+      scheduledAt = Date.now()
+      const outcome = spawnPlan(buildPlan(app, {
+        ...paths,
+        mainPid: deps.mainPid ?? process.ppid,
+        hostPid: deps.hostPid ?? process.pid,
+        bootId,
+      }))
       if (!outcome.ok) {
-        scheduled = false
+        scheduledAt = 0
         sendJson(response, 500, { ok: false, error: 'spawn-failed', detail: outcome.error })
         return
       }
@@ -184,11 +210,15 @@ export function createDesktopMenuHandler(deps: DesktopMenuRouteDeps): (request: 
   }
 }
 
-/** 平台不支持时给页面看的原因。 */
-export function unsupportedReason(platform: string, kind: RestartKind): string {
-  if (kind !== 'node') return ''
-  if (platform === 'win32') return '找不到 DeepSeek Harness 的可执行文件，无法重启'
-  if (platform === 'darwin') return '找不到 DeepSeek Harness 的 .app 位置，无法重启'
-  if (platform === 'linux') return '找不到 DeepSeek Harness 的程序路径，无法重启'
-  return '当前不是桌面版，无法重启应用'
+/**
+ * 不可重启的原因代码。
+ * 只回机器码，文案由客户端按当前语言翻——Host 不知道用户界面是哪种语言。
+ */
+export type UnsupportedReason = 'desktop-only' | 'missing-app'
+
+/** @returns 不能重启时的原因代码；能重启时为 undefined。 */
+export function unsupportedReason(platform: string, kind: RestartKind): UnsupportedReason | undefined {
+  if (kind !== 'node') return undefined
+  if (platform === 'win32' || platform === 'darwin' || platform === 'linux') return 'missing-app'
+  return 'desktop-only'
 }
