@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.12 (2026-11-02)
+
+- **Add Desktop App Titlebar Menu**: Injected a clean "Help" menu into the official Windows desktop titlebar, providing instant page reload and seamless application restart capabilities.
+- **Reliable App & Host Restart Engine**: Resolved the Windows issue where closing the desktop app only minimized it to the system tray without exiting, cleanly terminating the old instance and relaunching cleanly with live progress toast feedback.
+- **Full WAI-ARIA Accessible Keyboard Navigation**: Comprehensive keyboard support across menubar buttons with seamless arrow-key roving tab loops and accurate focus restoration upon pressing Escape.
+- **Complete Sub-Plugin Metadata & Feature Descriptions**: Displayed localized names and descriptions for "Codex Desktop Menu" in the DSH plugin manager, aligning feature summaries across the About workbench.
+
 ## 2.0.11 (2026-11-01)
 
 - **Decouple plain flat settings mode from mica float mode**: When mica glass is disabled, the settings modal (both expanded and collapsed) renders with seamless flat backgrounds, aligning perfectly with the home view and eliminating redundant margins, border-radius, and shadows.
