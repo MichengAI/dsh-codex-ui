@@ -24,13 +24,14 @@
 
 ## Why Codex UI 2.0?
 
-When working across complex projects in DeepSeek Harness, users often encounter cramped settings modals, plain monocolor palettes, unstructured sidebars, and lost prompt history. **Codex UI 2.0 rearchitects the entire frontend experience through six decoupled sub-plugins**, delivering a high-performance, non-intrusive, native-grade modern design:
+When working across complex projects in DeepSeek Harness, users often encounter cramped settings modals, plain monocolor palettes, unstructured sidebars, and lost prompt history. **Codex UI 2.0 rearchitects the entire frontend experience through seven decoupled sub-plugins**, delivering a high-performance, non-intrusive, native-grade modern design:
 
 * 🚀 **Instant Prompt Recall**: Terminal-style input history (`↑` / `↓` quick recall) with isolated workspace memory and adaptive width sizing;
 * 🪟 **Full-Screen Dual-Island Settings**: Replaces cramped dialogs with Ambient Ground diffuse lighting canvas and dual floating island cards;
 * 🎨 **Native Physical Glass Themes**: 7 built-in high-quality color schemes (featuring Codex Dark & Paper Light), dual layout modes (Stock Flat vs. Mica Floating), 3-tier material presets, and ground glow switch;
 * 🧭 **Modular Dynamic Sidebar**: In-place smooth accordion drawer and fluid drag-and-drop reordering; **100% aligned with host official 56px native rail** when collapsed, keeping all icons crisp and New Session permanently visible;
 * 🧠 **Intelligent Session Titles**: Semantic understanding of initial user prompts, supporting 4096-token reasoning model contexts;
+* 🖥️ **Desktop Native Menus**: Injects a clean Help menu into the official desktop app titlebar, supporting native page reload and reliable cross-platform app/Host restart;
 * 📦 **Ecosystem Companion Hub**: Centralized inspection, version checking, and 1-click batch upgrades for all official and third-party companion plugins.
 
 ---
@@ -48,14 +49,14 @@ In the early days of the DeepSeek Harness (DSH) plugin ecosystem, host frontend 
 ### 2. The 2.0.0 Rearchitecture Decision: Fully Embracing Host Natives
 Faced with these compounding challenges, we made the decisive choice in v2.0.0 to **completely scrap all 1.x component override code** and establish a new baseline: **zero-intrusion, micro-kernel decoupling, and native-first engineering**:
 * 🏛️ **Strict Adoption of Official Primitives & Slots**: Prohibited custom hand-drawn CSS widgets; strictly leveraged official `Switch`, `SegmentedControl`, and `Button` primitives. When collapsed, the sidebar strictly aligns with the official 56px native icon rail;
-* 🧩 **Six Decoupled Micro-Kernel Sub-Plugins**: Broken down into 6 self-contained, high-cohesion sub-plugins with explicit boundaries, enabling independent lifecycle management and streamlined code audits;
+* 🧩 **Seven Decoupled Micro-Kernel Sub-Plugins**: Broken down into 7 self-contained, high-cohesion sub-plugins with explicit boundaries, enabling independent lifecycle management and streamlined code audits;
 * 🛡️ **Fail-Closed Circuit Breaker & Adaptive UI**: Implemented strict fail-closed safety contracts. When a sub-plugin is disabled or unreachable, the runtime physically cleanses all injected tokens/root attributes, while the settings UI **completely hides the defunct card (0 DOM nodes)**, reverting instantly to pristine host defaults without visual clutter;
 * 🔒 **Authoritative Profile Isolation & Self-Healing**: Unambiguous Profile directory resolution eliminates cross-profile contamination, backed by window-focus self-healing probes for resilient network handling;
 * 🎨 **Authentic Codex Tech Aesthetic**: Purged legacy green color pollution, strictly adhering to `#339cff` tech-blue, minimalist paper, and charcoal dark tones with dual layout modes and ambient ground reflection glows.
 
 ---
 
-## Architecture: 6 Core Sub-Plugins
+## Architecture: 7 Core Sub-Plugins
 
 | Sub-Plugin ID | Name | Capabilities |
 | :--- | :--- | :--- |
@@ -64,6 +65,7 @@ Faced with these compounding challenges, we made the decisive choice in v2.0.0 t
 | `theme` | **Theme & Glassmorphism** | 7 built-in themes with Appearance Cubes, Stock Flat vs. Mica Floating modes, 3 material presets, and ground glow switch. |
 | `sidebar` | **Modular Sidebar** | In-place accordion expansion, smooth drag-and-drop reordering; collapses cleanly into host native 56px icon rail. |
 | `session-title` | **Intelligent Session Title** | Generates standardized session titles from initial prompt semantics, handling reasoning model outputs up to 4096 tokens. |
+| `desktop-menu` | **Desktop Native Menus** | Official desktop app titlebar menu integration with instant view reload and reliable cross-platform app/Host restart. |
 | `dependencies` | **Companion Management** | Centralized dashboard for official/third-party DSH companion plugins with live npm download counts and 1-click updates. |
 
 ---
