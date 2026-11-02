@@ -335,12 +335,17 @@ function main() {
   }
   log('主进程已退出')
 
-  // 主进程一死，旧 Host 就只剩失去 IPC 的孤儿进程；它握着单实例锁和端口，
-  // 不清掉的话新实例起不来。它是我们自己的进程，直接按 PID 结束。
+  // 主进程一死，Host 会失去父子 IPC 通道。先给予 3 秒让 Host 自行正常清理并落盘退出；
+  // 若超时仍未退出（依然占着单实例锁和端口），再按 PID 发起兜底清理。
   if (plan.platform === 'win32' && plan.hostPid && alive(plan.hostPid)) {
-    run('taskkill', ['/PID', String(plan.hostPid), '/F'])
-    log('清理遗留 Host pid=' + plan.hostPid)
-    waitUntil(function () { return !alive(plan.hostPid) }, 5000)
+    var hostGone = waitUntil(function () { return !alive(plan.hostPid) }, 3000)
+    if (!hostGone && alive(plan.hostPid)) {
+      run('taskkill', ['/PID', String(plan.hostPid), '/F'])
+      log('Host 超时未退，执行兜底清理 pid=' + plan.hostPid)
+      waitUntil(function () { return !alive(plan.hostPid) }, 3000)
+    } else {
+      log('Host 已自行正常退出 pid=' + plan.hostPid)
+    }
   }
   // 等旧实例的渲染进程等散场，再拉新的。
   waitUntil(function () { return appPids().filter(alive).length === 0 }, 5000)

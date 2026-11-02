@@ -112,8 +112,9 @@ export function createDesktopMenuHandler(deps: DesktopMenuRouteDeps): (request: 
   const readState = (): HelperState => {
     try {
       const state = JSON.parse(readFileSync(paths.statePath, 'utf8')) as HelperState
-      // 上一轮运行留下的状态不算数：否则界面会把旧结果当成这次的结果。
-      if (state.bootId !== undefined && state.bootId !== bootId) return {}
+      // 必须严格匹配本次启动生成的 bootId：缺少 bootId 或属于其他轮次的旧状态一律丢弃，
+      // 避免界面把上一轮的 relaunched 误报成这次的结果。
+      if (state.bootId !== bootId) return {}
       return state
     } catch {
       return {}

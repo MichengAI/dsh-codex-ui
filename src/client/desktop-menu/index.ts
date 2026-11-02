@@ -17,6 +17,7 @@ function restartCopy(translate: (key: string, fallback?: string) => string): Res
     timeout: translate('desktopMenu.restart.timeout', 'The restart did not finish in time; please check the app.'),
     close: translate('desktopMenu.restart.close', 'Close'),
     failed: translate('desktopMenu.restart.failed', 'Restart failed'),
+    busy: translate('desktopMenu.restart.busy', 'A restart is already in progress. Please wait.'),
   }
 }
 
@@ -118,7 +119,8 @@ function ensureStyles(): void {
 let activePopover: HTMLElement | null = null
 let activeAnchor: HTMLButtonElement | null = null
 
-export function closeActiveMenu(): void {
+export function closeActiveMenu(restoreFocus = false): void {
+  const anchor = activeAnchor
   if (activePopover !== null) {
     activePopover.remove()
     activePopover = null
@@ -126,6 +128,9 @@ export function closeActiveMenu(): void {
   if (activeAnchor !== null) {
     activeAnchor.setAttribute('aria-expanded', 'false')
     activeAnchor = null
+  }
+  if (restoreFocus && anchor && anchor.isConnected) {
+    anchor.focus()
   }
 }
 
@@ -268,7 +273,7 @@ function ensureGlobalListeners(): void {
 
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && activePopover !== null) {
-      closeActiveMenu()
+      closeActiveMenu(true)
     }
   }, true)
 }
@@ -343,11 +348,12 @@ export function observeDesktopTitlebarMenus(
           toast.set(copy.quitting)
           const outcome = await requestRestart(status.token)
           if (!outcome.ok) {
-            toast.set(
-              copy.failed,
-              outcome.reason ?? outcome.detail ?? outcome.error ?? 'unknown',
-              'error',
-            )
+            const detailText = outcome.error === 'busy'
+              ? copy.busy
+              : outcome.reason
+                ? unsupportedText(translate, outcome.reason)
+                : outcome.detail ?? outcome.error ?? 'unknown'
+            toast.set(copy.failed, detailText, 'error')
             return
           }
           watchRestart(toast, copy)
@@ -389,6 +395,12 @@ export function observeDesktopTitlebarMenus(
         openDropdown(helpBtn, getHelpItems())
       })
 
+      helpBtn.addEventListener('blur', () => {
+        // 焦点移出帮助按钮时复位为 0，确保后续用户按 Tab 循环遍历整个界面时，
+        // 帮助按钮始终稳定停留在 Tab 序列中。
+        helpBtn.tabIndex = 0
+      })
+
       helpBtn.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
@@ -397,19 +409,42 @@ export function observeDesktopTitlebarMenus(
           return
         }
         if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-          // 交回官方按钮，保证整个菜单栏仍是一个可循环的键盘组。
+          // 交回官方按钮：向左移到前一个（编辑），向右循环到第一个（应用）。
           e.preventDefault()
           e.stopPropagation()
-          helpBtn.tabIndex = -1
-          const next = bar.querySelector<HTMLButtonElement>('button:not(#dcu-desktop-menu-help)')
-          if (next) {
-            next.tabIndex = 0
-            next.focus()
-          } else {
-            helpBtn.tabIndex = 0
+          const official = Array.from(bar.querySelectorAll<HTMLButtonElement>('button:not(#dcu-desktop-menu-help)'))
+          const target = e.key === 'ArrowLeft'
+            ? official[official.length - 1] ?? official[0]
+            : official[0]
+          if (target) {
+            target.tabIndex = 0
+            target.focus()
           }
         }
       })
+
+      // 在 menubar 上补充官方按钮与帮助按钮之间的双向方向键连通：
+      // 官方自身的方向键表硬编码只有两个按钮（index===0?1:0）。通过捕获事件，
+      // 在最后一个官方按钮向右时接入帮助，在第一个官方按钮向左时向前循环到帮助。
+      bar.addEventListener('keydown', (e) => {
+        const target = e.target as HTMLElement | null
+        if (!target || target === helpBtn) return
+        const official = Array.from(bar.querySelectorAll<HTMLButtonElement>('button:not(#dcu-desktop-menu-help)'))
+        if (official.length === 0) return
+        if (e.key === 'ArrowRight' && target === official[official.length - 1]) {
+          e.preventDefault()
+          e.stopImmediatePropagation()
+          target.tabIndex = -1
+          helpBtn.tabIndex = 0
+          helpBtn.focus()
+        } else if (e.key === 'ArrowLeft' && target === official[0]) {
+          e.preventDefault()
+          e.stopImmediatePropagation()
+          target.tabIndex = -1
+          helpBtn.tabIndex = 0
+          helpBtn.focus()
+        }
+      }, true)
 
       bar.append(helpBtn)
       injectedHelpBtn = helpBtn
@@ -419,15 +454,11 @@ export function observeDesktopTitlebarMenus(
   // 初始尝试挂载
   mountMenus()
 
-  // 只盯 body 的直接子节点：宿主把一个 div[data-windows-menu] 挂到 body 上，
-  // 这个粒度足够捕获它的出现与重建。早先的 subtree:true 会为页面里每一次 DOM
-  // 变动调度一次 mountMenus（与已知卡顿问题同源），没有必要。
-  // 挂载成功后立即断开，宿主重建时由下面的一次性重试重新接上。
-  let observer = new MutationObserver(() => {
+  // 只盯 body 的直接子节点：宿主把 div[data-windows-menu] 作为 body 子节点挂载。
+  // 不带 subtree 的 childList 开销极低（聊天打字都在深层子树，不触发此监听），
+  // 持续监听可保证宿主在重绘或切换工作区重建标题栏时能自动重新挂载。
+  const observer = new MutationObserver(() => {
     mountMenus()
-    if (injectedHelpBtn !== null) {
-      observer.disconnect()
-    }
   })
 
   observer.observe(document.body, { childList: true })

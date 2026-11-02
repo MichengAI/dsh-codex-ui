@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
-import { test, describe } from 'vitest'
+import { test, describe, afterAll } from 'vitest'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { buildPlan, detectApp, helperSource } from '../src/restart.ts'
+import { rmSync } from 'node:fs'
 import { CODEX_UI_RESTART_HEADER } from '../src/business-api.ts'
+import { buildPlan, detectApp, helperSource } from '../src/restart.ts'
 import {
   createDesktopMenuHandler,
   hostIsLoopback,
@@ -11,6 +12,16 @@ import {
   type RouteRequest,
   type RouteResponse,
 } from '../src/desktop-menu-route.ts'
+
+/** 测试创建的临时目录集合，跑完测试后集中清理干净。 */
+const createdTestDirs = new Set<string>()
+
+afterAll(() => {
+  for (const dir of createdTestDirs) {
+    try { rmSync(dir, { recursive: true, force: true }) } catch {}
+  }
+  createdTestDirs.clear()
+})
 
 /** 造一个只会记录结果的假响应。 */
 function fakeResponse(): RouteResponse & { status?: number; body?: string } {
@@ -35,6 +46,7 @@ function request(overrides: Partial<RouteRequest> = {}): RouteRequest {
 /** 测试用的临时路径：不存在的状态文件 → 路由读不到阶段。 */
 function testPaths() {
   const dir = join(tmpdir(), `dcu-route-test-${Math.random().toString(36).slice(2)}`)
+  createdTestDirs.add(dir)
   return { logPath: join(dir, 'restart.log'), statePath: join(dir, 'state.json') }
 }
 
@@ -263,7 +275,7 @@ describe('restart: 路由鉴权', () => {
       { ...local, mainPid: 111, hostPid: 222 },
     ))
     assert.match(source, /plan\.hostPid/, '助手必须知道旧 Host 的 PID')
-    assert.match(source, /清理遗留 Host/, '主进程退出后要显式结束孤儿 Host')
+    assert.match(source, /兜底清理|自退出/, '主进程退出后要等待自退或兜底结束孤儿 Host')
   })
 
   test('排程时把 mainPid/hostPid 交给助手', async () => {

@@ -87,6 +87,7 @@ export interface RestartCopy {
   readonly timeout: string
   readonly close: string
   readonly failed: string
+  readonly busy: string
 }
 
 const STYLE_ID = 'dcu-desktop-restart-style'
