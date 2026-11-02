@@ -51,6 +51,10 @@
       "types": "./lib/theme-plugin.d.mts",
       "default": "./lib/theme-plugin.mjs"
     },
+    "./desktop-menu": {
+      "types": "./lib/desktop-menu-plugin.d.mts",
+      "default": "./lib/desktop-menu-plugin.mjs"
+    },
     "./package.json": "./package.json",
     "./locale/*.json": "./locale/*.json",
     "./session-title/locale/*.json": "./locale/session-title/*.json",

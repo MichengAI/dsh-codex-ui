@@ -1,0 +1,79 @@
+import assert from 'node:assert/strict'
+import { test, describe } from 'vitest'
+import { observeDesktopTitlebarMenus } from '../src/client/desktop-menu/index.ts'
+
+/** 构造官方顶栏的最小 shadow 宿主：应用、编辑两个原生按钮 */
+function mountHost(): { bar: HTMLElement; cleanup: () => void } {
+  document.documentElement.lang = 'zh-CN'
+  document.body.innerHTML = ''
+  const host = document.createElement('div')
+  host.dataset.windowsMenu = ''
+  const shadow = host.attachShadow({ mode: 'open' })
+
+  const bar = document.createElement('div')
+  bar.setAttribute('role', 'menubar')
+
+  const appBtn = document.createElement('button')
+  appBtn.textContent = '应用'
+  const editBtn = document.createElement('button')
+  editBtn.textContent = '编辑'
+
+  bar.append(appBtn, editBtn)
+  shadow.append(bar)
+  document.body.append(host)
+
+  const cleanup = observeDesktopTitlebarMenus((_key, fallback) => fallback ?? _key)
+  return { bar, cleanup }
+}
+
+describe('desktop titlebar menu injection', () => {
+  test('does not throw or mutate DOM when data-windows-menu is absent (web environment)', () => {
+    document.body.innerHTML = '<div id="app"></div>'
+    const cleanup = observeDesktopTitlebarMenus()
+    assert.equal(document.body.querySelector('[role="menuitem"]'), null)
+    cleanup()
+  })
+
+  test('appends only a Help button, keeping official App and Edit untouched', () => {
+    const { bar, cleanup } = mountHost()
+    const buttons = Array.from(bar.querySelectorAll('button'))
+
+    assert.equal(buttons.length, 3, '官方 应用、编辑 之外只应追加 1 个 帮助')
+    assert.equal(buttons[0].textContent, '应用', '首个按钮必须仍是官方【应用】')
+    assert.equal(buttons[1].textContent, '编辑', '第二个按钮必须仍是官方【编辑】')
+    assert.equal(buttons[2].textContent, '帮助')
+    assert.equal(
+      bar.querySelector('#dcu-desktop-menu-file'),
+      null,
+      '【文件】菜单必须彻底移除，不得再注入',
+    )
+
+    cleanup()
+    assert.equal(bar.querySelectorAll('button').length, 2, 'cleanup 应清理注入的按钮并恢复原样')
+  })
+
+  test('Help dropdown opens, holds exactly two items and closes on Escape', () => {
+    const { bar, cleanup } = mountHost()
+    const buttons = Array.from(bar.querySelectorAll('button'))
+    const helpBtn = buttons[2]
+
+    helpBtn.click()
+    const popover = document.body.querySelector('.dcu-desktop-menu-popover')
+    assert.notEqual(popover, null, '点击帮助应弹出下拉菜单')
+    assert.equal(helpBtn.getAttribute('aria-expanded'), 'true')
+
+    const labels = Array.from(popover!.querySelectorAll<HTMLButtonElement>('button.dcu-menu-item'))
+      .map(item => (item.textContent ?? '').replace(/Ctrl\+\w+$/, '').trim())
+    assert.deepEqual(
+      labels,
+      ['刷新页面', '重启应用与 Host'],
+      '帮助菜单只保留刷新页面与重启应用与 Host',
+    )
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    assert.equal(document.body.querySelector('.dcu-desktop-menu-popover'), null, '按 Esc 应收起下拉菜单')
+    assert.equal(helpBtn.getAttribute('aria-expanded'), 'false')
+
+    cleanup()
+  })
+})

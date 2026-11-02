@@ -11,5 +11,7 @@
       name: '@michengai/dsh-codex-ui/sidebar'
     - id: codex-ui-theme
       name: '@michengai/dsh-codex-ui/theme'
+    - id: codex-ui-desktop-menu
+      name: '@michengai/dsh-codex-ui/desktop-menu'
     - id: codex-ui
       name: '@michengai/dsh-codex-ui'

@@ -14,8 +14,9 @@ import { observeComposerEnhancements } from './composer/index.tsx'
 import { observeSidebarNav, checkSidebarEnabled } from './sidebar/index.ts'
 import { observeWorkspaceSections } from './sidebar/sections/index.ts'
 import { observeTheme } from './theme/index.ts'
+import { observeDesktopTitlebarMenus, checkDesktopMenuEnabled } from './desktop-menu/index.ts'
 
-export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTriggers', 'layout', 'uiWorkspace']
+export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTriggers', 'layout', 'uiWorkspace', 'workspaces']
 
 /** 浏览器客户端插件入口；保留官方原生侧边栏与工作区树，提供输入框增强、设置美化与生态关于页。 */
 export function apply(ctx: ClientContext): void {
@@ -24,6 +25,26 @@ export function apply(ctx: ClientContext): void {
 
   ctx.effect(() => observeTheme(ctx), 'michengai-codex-ui: theme & appearance')
   ctx.effect(() => observeSidebarNav(ctx), 'michengai-codex-ui: sidebar navigation')
+  ctx.effect(() => {
+    let stop: (() => void) | undefined
+    let cancelled = false
+    void checkDesktopMenuEnabled().then(enabled => {
+      if (cancelled || !enabled) return
+      const translate = (key: string, fallback?: string): string => {
+        try {
+          const value = (t as unknown as (name: string) => string)(key)
+          return typeof value === 'string' && value !== '' && value !== key ? value : (fallback ?? key)
+        } catch {
+          return fallback ?? key
+        }
+      }
+      stop = observeDesktopTitlebarMenus(translate)
+    })
+    return () => {
+      cancelled = true
+      stop?.()
+    }
+  }, 'michengai-codex-ui: desktop titlebar menus')
   // 工作区分区随侧栏子插件一起启停：探活失败（子插件被停用或 Host 路由缺失）时不注入任何标题。
   ctx.effect(() => {
     let stop: (() => void) | undefined

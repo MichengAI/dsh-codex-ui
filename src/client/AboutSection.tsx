@@ -44,6 +44,7 @@ interface SubPluginEntry {
     | 'about.feature.sidebar.name'
     | 'about.feature.theme.name'
     | 'about.feature.dependencies.name'
+    | 'about.feature.desktopMenu.name'
   readonly descKey:
     | 'about.feature.composer'
     | 'about.feature.settingsSkin'
@@ -51,6 +52,7 @@ interface SubPluginEntry {
     | 'about.feature.sidebar'
     | 'about.feature.theme'
     | 'about.feature.dependencies'
+    | 'about.feature.desktopMenu'
 }
 
 const SUB_PLUGINS: readonly SubPluginEntry[] = [
@@ -59,6 +61,7 @@ const SUB_PLUGINS: readonly SubPluginEntry[] = [
   { id: 'session-title', nameKey: 'about.feature.sessionTitle.name', descKey: 'about.feature.sessionTitle' },
   { id: 'sidebar', nameKey: 'about.feature.sidebar.name', descKey: 'about.feature.sidebar' },
   { id: 'theme', nameKey: 'about.feature.theme.name', descKey: 'about.feature.theme' },
+  { id: 'desktop-menu', nameKey: 'about.feature.desktopMenu.name', descKey: 'about.feature.desktopMenu' },
   { id: 'dependencies', nameKey: 'about.feature.dependencies.name', descKey: 'about.feature.dependencies' },
 ]
 
