@@ -383,22 +383,24 @@ export function observeDesktopTitlebarMenus(
       helpBtn.setAttribute('role', 'menuitem')
       helpBtn.setAttribute('aria-haspopup', 'menu')
       helpBtn.setAttribute('aria-expanded', 'false')
-      // 宿主 menubar 的 roving tabindex 只认它自己的两个按钮，方向键表也写死成
-      // buttons[index===0?1:0]。所以这里必须让帮助按钮自己可 Tab 到，并自己处理方向键，
-      // 否则菜单对键盘用户完全不可用。
-      helpBtn.tabIndex = 0
+      // WAI-ARIA menubar 巡检标准：menubar 内部严格维持单点 tabIndex = 0，
+      // 其余所有兄弟项为 -1。方向键移动焦点时同步迁移该单点。
+      const setRovingFocus = (target: HTMLButtonElement): void => {
+        bar.querySelectorAll<HTMLButtonElement>('button').forEach(btn => {
+          btn.tabIndex = btn === target ? 0 : -1
+        })
+        target.focus()
+      }
+
+      // 初始注入时：官方默认将第 0 项（应用）设为 0。帮助按钮保持 -1，
+      // 避免出现多个 tabIndex = 0 的不一致累积。
+      helpBtn.tabIndex = -1
       helpBtn.textContent = translate('desktopMenu.help', '帮助')
 
       helpBtn.addEventListener('click', (e) => {
         e.preventDefault()
         e.stopPropagation()
         openDropdown(helpBtn, getHelpItems())
-      })
-
-      helpBtn.addEventListener('blur', () => {
-        // 焦点移出帮助按钮时复位为 0，确保后续用户按 Tab 循环遍历整个界面时，
-        // 帮助按钮始终稳定停留在 Tab 序列中。
-        helpBtn.tabIndex = 0
       })
 
       helpBtn.addEventListener('keydown', (e) => {
@@ -417,8 +419,7 @@ export function observeDesktopTitlebarMenus(
             ? official[official.length - 1] ?? official[0]
             : official[0]
           if (target) {
-            target.tabIndex = 0
-            target.focus()
+            setRovingFocus(target)
           }
         }
       })
@@ -434,15 +435,11 @@ export function observeDesktopTitlebarMenus(
         if (e.key === 'ArrowRight' && target === official[official.length - 1]) {
           e.preventDefault()
           e.stopImmediatePropagation()
-          target.tabIndex = -1
-          helpBtn.tabIndex = 0
-          helpBtn.focus()
+          setRovingFocus(helpBtn)
         } else if (e.key === 'ArrowLeft' && target === official[0]) {
           e.preventDefault()
           e.stopImmediatePropagation()
-          target.tabIndex = -1
-          helpBtn.tabIndex = 0
-          helpBtn.focus()
+          setRovingFocus(helpBtn)
         }
       }, true)
 

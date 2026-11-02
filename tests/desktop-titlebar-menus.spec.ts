@@ -80,10 +80,16 @@ describe('desktop titlebar menu injection', () => {
   test('Help 按钮键盘可达：Tab 能到、方向键能开、条目间能移动', () => {
     const { bar, shadow, cleanup } = mountHost()
     const helpBtn = Array.from(bar.querySelectorAll('button'))[2]
+    const officialButtons = Array.from(bar.querySelectorAll<HTMLButtonElement>('button:not(#dcu-desktop-menu-help)'))
+    const appBtn = officialButtons[0]
+    const editBtn = officialButtons[1]
 
-    // 宿主 menubar 的 roving tabindex 只认它自己两个按钮，帮助按钮必须自己可 Tab 到
-    assert.equal(helpBtn.tabIndex, 0, '帮助按钮必须在 Tab 序列里')
+    // 初始状态下：官方第 0 项为 0，其余为 -1，严格维持单点 tabIndex = 0
+    assert.equal(appBtn.tabIndex, 0)
+    assert.equal(helpBtn.tabIndex, -1)
 
+    // 帮助按钮通过方向键或展开获得焦点
+    helpBtn.focus()
     helpBtn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }))
     const popover = document.body.querySelector('.dcu-desktop-menu-popover')
     assert.notEqual(popover, null, '按方向键下应展开菜单')
@@ -101,26 +107,24 @@ describe('desktop titlebar menu injection', () => {
     assert.equal(document.body.querySelector('.dcu-desktop-menu-popover'), null)
     assert.equal(shadow.activeElement, helpBtn, 'Esc 关闭菜单后焦点必须归还到帮助按钮，不得掉到 body')
 
-    // 左右方向键在 Menubar 上双向循环
-    const officialButtons = Array.from(bar.querySelectorAll<HTMLButtonElement>('button:not(#dcu-desktop-menu-help)'))
-    const appBtn = officialButtons[0]
-    const editBtn = officialButtons[1]
-
-    // 从帮助向左移到编辑
-    helpBtn.focus()
+    // 从帮助向左移到编辑，整条 menubar 的 tabIndex 必须单点迁移
     helpBtn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }))
     assert.equal(shadow.activeElement, editBtn, '帮助按钮向左应跳到官方编辑按钮')
-    helpBtn.dispatchEvent(new FocusEvent('blur'))
-    assert.equal(helpBtn.tabIndex, 0, '移开焦点后帮助按钮的 tabIndex 必须保持为 0，确保 Tab 序列始终可达')
+    assert.equal(editBtn.tabIndex, 0, '当前聚焦项的 tabIndex 应为 0')
+    assert.equal(helpBtn.tabIndex, -1, '非聚焦项的 tabIndex 应为 -1')
 
     // 从编辑向右移到帮助
     editBtn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }))
     assert.equal(shadow.activeElement, helpBtn, '官方编辑按钮向右应无缝跳入帮助按钮')
+    assert.equal(helpBtn.tabIndex, 0, '聚焦到帮助按钮时 tabIndex 应变为 0')
+    assert.equal(editBtn.tabIndex, -1)
 
     // 从应用向左向前循环到帮助
     appBtn.focus()
     appBtn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }))
     assert.equal(shadow.activeElement, helpBtn, '官方应用按钮向左应向前循环到帮助按钮')
+    assert.equal(helpBtn.tabIndex, 0)
+    assert.equal(appBtn.tabIndex, -1)
 
     cleanup()
   })
