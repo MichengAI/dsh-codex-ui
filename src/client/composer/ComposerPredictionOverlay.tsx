@@ -7,7 +7,6 @@ import { CODEX_UI_API_ENDPOINTS } from '../../business-api.ts'
 
 const h = React.createElement
 
-const NS = 'composer-predictions'
 const ENDPOINT = CODEX_UI_API_ENDPOINTS.composerPredictionStream
 
 /** Wait for the settled UI before asking, so a fresh turn is fully committed. */
@@ -293,12 +292,10 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
     }
 
     export function ComposerPredictionOverlay(props: any) {
-      const { sessionId, useSession, useInput, useSessionStatus, inputActions, t } = props
-      const predictionsEnabled = true
+      const { sessionId, useSession, useInput, inputActions, enabled = true, t } = props
+      const predictionsEnabled = enabled !== false
       const draft = useInput ? useInput((state: any) => (state === undefined ? '' : state.draft || '')) : ''
-      const running = useSession
-        ? useSession((state: any) => state?.running === true)
-        : (useSessionStatus ? useSessionStatus((state: any) => (state === undefined ? false : state.get(sessionId)?.running === true)) : false)
+      const running = useSession ? useSession((state: any) => state?.running === true) : false
       const [ghost, setGhost] = React.useState(NO_GHOST)
       const [box, setBox] = React.useState<any>(null)
       const [compositionEnd, setCompositionEnd] = React.useState(0)

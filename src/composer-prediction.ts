@@ -199,6 +199,18 @@ async function serveStream(ctx: any, options: any, cache: any, inflight: any, re
   }
 }
 
+function getService<T = any>(ctx: any, name: string): T | undefined {
+  try {
+    if (typeof ctx?.get === 'function') {
+      const svc = ctx.get(name)
+      if (svc !== undefined) return svc
+    }
+    return ctx?.[name]
+  } catch {
+    return undefined
+  }
+}
+
 /** Short, safe reason text for a client that only displays nothing. */
 function describeError(error: any) {
   const message = error instanceof Error ? error.message : String(error)
@@ -210,7 +222,7 @@ function describeError(error: any) {
  * @returns `null` when the response was already written, a plan, or an error.
  */
 async function planRequest(ctx: any, request: any, response: any) {
-  const connection = ctx.connection ?? ctx.get?.('connection')
+  const connection = getService(ctx, 'connection')
   const admission = connection?.admit ? connection.admit(request) : { peer: { principal: { kind: 'owner' } } }
   if (admission && 'rejection' in admission) {
     return { status: admission.rejection, error: admission.rejection === 401 ? 'unauthorized' : 'forbidden' }
@@ -239,7 +251,10 @@ async function planRequest(ctx: any, request: any, response: any) {
   const sessionId = typeof body?.sessionId === 'string' ? body.sessionId : ''
   if (sessionId === '') return { status: 400, error: 'missing-session' }
 
-  const session = ctx.sessions.get(sessionId)
+  const sessions = getService(ctx, 'sessions')
+  if (!sessions || typeof sessions.get !== 'function') return { status: 503, error: 'no-sessions-service' }
+
+  const session = sessions.get(sessionId)
   if (session === undefined) return { status: 200, error: 'session-not-live' }
 
   const mode = body?.mode === 'continue' ? 'continue' : 'next'
@@ -296,17 +311,49 @@ async function predict(ctx: any, options: any, session: any, mode: string, draft
   let finish
   try {
     deadline.signal.throwIfAborted()
-    const llm = ctx.llm ?? ctx.get?.('llm')
+    const llm = getService(ctx, 'llm')
     if (!llm || typeof llm.prepareCall !== 'function') return { items: [], reason: 'no-llm' }
 
-    const callConfig: Record<string, any> = {
+    let targetEffort: string | undefined = undefined
+    if (typeof llm.resolveModelInfo === 'function') {
+      try {
+        const modelInfo = await llm.resolveModelInfo(route.provider, route.model, deadline.signal)
+        const efforts = modelInfo?.reasoning?.efforts
+        if (Array.isArray(efforts) && efforts.length > 0) {
+          const effortIds = efforts.map((e: any) => e?.id).filter(Boolean)
+          const requested = options.reasoningEffort || 'off'
+          if (effortIds.includes(requested)) {
+            targetEffort = requested
+          } else if (effortIds.includes('off')) {
+            targetEffort = 'off'
+          }
+        }
+      } catch {
+        targetEffort = undefined
+      }
+    }
+
+    const baseConfig: Record<string, any> = {
       provider: route.provider,
       model: route.model,
       maxTokens: options.maxOutputTokens,
-      reasoningEffort: options.reasoningEffort || 'off',
+    }
+    const callConfig: Record<string, any> = { ...baseConfig }
+    if (targetEffort !== undefined) {
+      callConfig.reasoningEffort = targetEffort
     }
 
-    const call = await llm.prepareCall(callConfig, deadline.signal)
+    let call: any
+    try {
+      call = await llm.prepareCall(callConfig, deadline.signal)
+    } catch (error: any) {
+      const msg = String(error?.message || error?.code || '')
+      if (targetEffort !== undefined && (error?.code === 'UNSUPPORTED_REASONING_EFFORT' || msg.includes('does not support reasoning effort'))) {
+        call = await llm.prepareCall(baseConfig, deadline.signal)
+      } else {
+        throw error
+      }
+    }
     const messages = [{ role: 'user', content: [{ type: 'text', text: prompt }] }]
     for await (const chunk of call.stream({ ...call.config, messages, system, signal: deadline.signal })) {
       deadline.signal.throwIfAborted()
@@ -380,6 +427,27 @@ function resolveRoute(ctx: any, session: any, options: any) {
   return undefined
 }
 
+function extractToolResultText(block: any): string {
+  if (block === null || typeof block !== 'object') return ''
+  if (Array.isArray(block.content)) {
+    const text = block.content
+      .map((item: any) => {
+        if (!item || typeof item !== 'object') return ''
+        if (typeof item.text === 'string') return item.text
+        if (typeof item.result === 'string') return item.result
+        return ''
+      })
+      .filter((t: string) => t !== '')
+      .join('\n')
+      .trim()
+    if (text !== '') return text
+  }
+  if (typeof block.content === 'string' && block.content !== '') return block.content.trim()
+  if (typeof block.result === 'string' && block.result !== '') return block.result.trim()
+  if (typeof block.text === 'string' && block.text !== '') return block.text.trim()
+  return ''
+}
+
 /**
  * Render the conversation tail, recent tool activity, and (in continuation
  * mode) the draft as one bounded prompt.
@@ -409,15 +477,15 @@ function buildPrompt(session: any, options: any, mode: string, draft: string) {
             failed: false,
           }
           notes.push(note)
-          if (typeof block.id === 'string') callsById.set(block.id, note)
+          if (typeof block.id === 'string' && block.id !== '') callsById.set(block.id, note)
         }
       }
-      // DSH 工具结果通常以 tool-result block 形式存放在 message.content 中
+      // DSH 工具结果以 tool-result block 形式存放在 message.content 中
       if (options.maxToolNotes > 0) {
         for (const block of blocks) {
           if (block === null || typeof block !== 'object' || block.type !== 'tool-result') continue
           const callId = typeof block.toolCallId === 'string' ? block.toolCallId : (typeof block.id === 'string' ? block.id : '')
-          const resText = clip(typeof block.result === 'string' ? block.result : (typeof block.text === 'string' ? block.text : ''), 500)
+          const resText = clip(extractToolResultText(block), 500)
           const note = callId !== '' ? callsById.get(callId) : undefined
           if (note !== undefined) {
             note.result = resText
@@ -432,14 +500,31 @@ function buildPrompt(session: any, options: any, mode: string, draft: string) {
 
     const isToolMessage = message.role === 'tool' || message.source?.kind === 'tool'
     if (isToolMessage && options.maxToolNotes > 0) {
-      const text = clip(plainText(blocks), 500)
-      const callId = typeof message.toolCallId === 'string' ? message.toolCallId : ''
-      const note = callId !== '' ? callsById.get(callId) : undefined
-      if (note !== undefined) {
-        note.result = text
-        note.failed = message.isError === true
-      } else {
-        notes.push({ name: 'tool', input: '', result: text, failed: message.isError === true })
+      let text = ''
+      for (const block of blocks) {
+        if (block !== null && typeof block === 'object' && block.type === 'tool-result') {
+          const callId = typeof block.toolCallId === 'string' ? block.toolCallId : ''
+          const resText = clip(extractToolResultText(block), 500)
+          const note = callId !== '' ? callsById.get(callId) : undefined
+          if (note !== undefined) {
+            note.result = resText
+            note.failed = block.isError === true
+          } else {
+            notes.push({ name: 'tool', input: '', result: resText, failed: block.isError === true })
+          }
+          text = resText
+        }
+      }
+      if (text === '') {
+        text = clip(plainText(blocks) || extractToolResultText(message), 500)
+        const callId = typeof message.toolCallId === 'string' ? message.toolCallId : ''
+        const note = callId !== '' ? callsById.get(callId) : undefined
+        if (note !== undefined) {
+          note.result = text
+          note.failed = message.isError === true
+        } else {
+          notes.push({ name: 'tool', input: '', result: text, failed: message.isError === true })
+        }
       }
     }
   }
@@ -605,7 +690,7 @@ async function readJsonBody(request: any): Promise<any> {
     return JSON.parse(Buffer.concat(chunks).toString('utf8'))
   }
 
-  return {}
+  throw new Error('unsupported-request-stream')
 }
 
 function openStream(response: any) {
@@ -672,64 +757,12 @@ function timedSignal(signal: AbortSignal, timeoutMs: number) {
   }
 }
 
-// --- 兼容工程单测与子插件调用的桥接导出 ---
-export function cleanPredictionCandidate(line: string): string {
-  const text = line
-    .replace(/^(?:[-*•]|\d+[.)])\s+/u, '')
-    .replace(/^["'`\u201c\u201d]+|["'`\u201c\u201d]+$/gu, '')
-    .replace(/\s+/gu, ' ')
-    .trim()
-  if (text.toLowerCase() === 'none') return ''
-  return text
+// --- 供契约测试与回归断言使用的生产函数导出 ---
+export {
+  normalizeCandidates,
+  boundSuggestion,
+  buildPrompt,
+  extractToolResultText,
+  resolveRoute,
+  selectEffort,
 }
-
-export function isCjkCharacter(char: string): boolean {
-  if (!char) return false
-  return /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/u.test(char)
-}
-
-export function formatContinuation(draft: string, value: string): string {
-  if (draft === '' || value === '') return value
-  if (/\s$/u.test(draft)) return value.replace(/^\s+/u, '')
-  if (/^\s/u.test(value)) return value
-  const last = draft.slice(-1)
-  const first = value.slice(0, 1)
-  if (isCjkCharacter(last) || isCjkCharacter(first)) return value
-  const noSpaceTails = new Set(['(', '[', '{', '/', '\\', '"', "'", '`', '—', '-'])
-  if (noSpaceTails.has(last)) return value
-  if (/^[,.;:!?\]}%]/u.test(first)) return value
-  return ` ${value}`
-}
-
-export function buildPredictionPrompt(options: { mode: 'next' | 'continue'; messages: any[]; draft: string; maxSuggestions?: number }): { system: string; user: string } {
-  const max = options.maxSuggestions ?? 3
-  const system = (options.mode === 'continue' ? CONTINUE_SYSTEM_PROMPT : NEXT_SYSTEM_PROMPT).replace('{max}', String(max))
-  const user = options.messages.map(m => `${m.role}: ${typeof m.content === 'string' ? m.content : JSON.stringify(m.content)}`).join('\n\n')
-  return { system, user: options.mode === 'continue' ? `${user}\n\nDraft: ${options.draft}` : user }
-}
-
-export class PredictionCache {
-  private cache = new Map<string, { items: string[] }>()
-  constructor(private maxEntries = 200) {}
-
-  get(sessionId: string, seq: number, mode: string, draft: string): string[] | undefined {
-    const key = JSON.stringify([sessionId, seq, mode, draft])
-    return this.cache.get(key)?.items
-  }
-
-  set(sessionId: string, seq: number, mode: string, draft: string, items: string[]): void {
-    const key = JSON.stringify([sessionId, seq, mode, draft])
-    this.cache.delete(key)
-    this.cache.set(key, { items })
-    if (this.cache.size > this.maxEntries) {
-      const oldest = this.cache.keys().next().value
-      if (oldest) this.cache.delete(oldest)
-    }
-  }
-
-  clear(): void {
-    this.cache.clear()
-  }
-}
-
-export const registerComposerPredictions = apply
