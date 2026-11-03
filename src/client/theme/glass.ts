@@ -160,6 +160,19 @@ export const GLASS_EXTRA_CSS = `
   outline: 1px solid var(--dsh-glass-rim-soft, rgba(255, 255, 255, 0.12));
   outline-offset: -1px;
 }
+
+/* 输入框卡片：必须使用实体不透明材质，彻底阻断向上滚动的正文文字穿透输入框产生字叠字幽灵字穿透 */
+[data-dsh-glass-float] [data-composer-card],
+[data-dsh-glass] [data-composer-card],
+[data-composer-card] {
+  background: var(--dsw-specific-input-major, var(--dsw-alias-bg-layer-2, #1e1e2e)) !important;
+}
+
+[data-dsh-glass-float] [data-composer-card]:before,
+[data-dsh-glass] [data-composer-card]:before {
+  background: var(--dsw-specific-input-major, var(--dsw-alias-bg-layer-2, #1e1e2e)) !important;
+  opacity: 1 !important;
+}
 `
 
 let styleTag: HTMLStyleElement | null = null

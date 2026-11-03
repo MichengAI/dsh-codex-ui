@@ -149,6 +149,19 @@ export function ensureThemeSurfaceStyles(doc: Document = typeof document !== 'un
   mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 96px), transparent calc(100% - 16px)) !important;
 }
 
+/* 输入框卡片：必须使用实体不透明材质，彻底阻断向上滚动的正文文字穿透输入框产生字叠字幽灵字穿透 */
+[data-dsh-glass-float] [data-composer-card],
+[data-dsh-glass] [data-composer-card],
+[data-composer-card] {
+  background: var(--dsw-specific-input-major, var(--dsw-alias-bg-layer-2, #1e1e2e)) !important;
+}
+
+[data-dsh-glass-float] [data-composer-card]:before,
+[data-dsh-glass] [data-composer-card]:before {
+  background: var(--dsw-specific-input-major, var(--dsw-alias-bg-layer-2, #1e1e2e)) !important;
+  opacity: 1 !important;
+}
+
 /* 斜杠指令/快捷指令候选面板（[data-trigger-menu] / Issue #72）：
    在选用自定义主题时，无论是否开启毛玻璃，提升面板材质浓度，杜绝悬浮在消息流上时的字叠字穿透 */
 [data-trigger-menu] {
