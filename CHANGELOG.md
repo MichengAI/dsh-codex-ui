@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.13 (2026-11-03)
+
+- **Smart Input Prediction & Inline Continuation**: Automatically displays high-confidence follow-up suggestions directly behind the caret when pausing mid-draft; press `Tab` to accept seamlessly without re-typing.
+- **Effortless Candidate Cycling**: Press `Alt + Down` / `Alt + Up` to cycle through multiple predictive recommendations, or press `Escape` anytime to dismiss.
+- **Turn-Aware Activity Gating**: Automatically pauses suggestions while the agent is running or executing tools to prevent distractions, instantly resuming smart recommendations once the turn settles.
+- **Universal Model Compatibility & Clean Insertion**: Intelligently adapts across diverse conversation models, stripping duplicate draft prefixes upon acceptance to deliver clean, natural prompt continuations.
+
 ## 2.0.12 (2026-11-02)
 
 - **Add Desktop App Titlebar Menu**: Injected a clean "Help" menu into the official Windows desktop titlebar, providing instant page reload and seamless application restart capabilities.
