@@ -4,7 +4,7 @@ import { isSubPluginDisabledOnDisk as checkDisabledOnDisk } from './profile-reso
 import { apply as applyPredictions } from './composer-prediction.ts'
 
 export const name = 'codex-ui-composer'
-export const inject = ['webServer', 'connection', 'llm', 'sessions']
+export const inject = ['webServer']
 
 export function isSubPluginDisabledOnDisk(id: string, homeDir?: string, ctx?: Context): boolean {
   return checkDisabledOnDisk(id, homeDir, ctx)

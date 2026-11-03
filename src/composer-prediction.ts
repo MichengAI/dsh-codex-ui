@@ -3,30 +3,15 @@
  * 包含完整的 27 个处理函数、SSE 流式引擎、超时双重信号控制器与边界防护
  */
 import type { Context } from '@deepseek-ai/cordis'
-
-/**
- * Host half of composer predictions.
- *
- * Two same-origin endpoints share one prediction engine:
- * - `POST /composer-prediction`      JSON: one suggestion plus the full list.
- * - `POST /composer-prediction/v2`   SSE: text deltas, then the final list.
- *
- * The Client asks in two modes. `next` runs once a turn has settled and the
- * composer is empty; `continue` runs when the user pauses mid-draft, and the
- * suggestions are continuations of the text before the caret. Each request is
- * one small auxiliary model call over the Session tail plus recent tool
- * activity; nothing is written back to the Session.
- */
+import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
 
 export const name = 'composer-predictions'
 
-export const inject = ['connection', 'llm', 'sessions', 'webServer']
+export const inject = ['webServer']
 
-/** Same-origin endpoint the Client half posts to (JSON, kept for compatibility). */
-const ENDPOINT = '/composer-prediction'
-
-/** Streaming endpoint: SSE events `meta`, `delta`, `done`, `error`. */
-const STREAM_ENDPOINT = '/composer-prediction/v2'
+/** 使用自研专属命名空间端点，杜绝与社区插件全局路径冲突 */
+const ENDPOINT = CODEX_UI_API_ENDPOINTS.composerPrediction
+const STREAM_ENDPOINT = CODEX_UI_API_ENDPOINTS.composerPredictionStream
 
 /** One request carries a session id, a mode, and a bounded draft. */
 const MAX_BODY_BYTES = 64 * 1024
@@ -167,6 +152,7 @@ async function serveJson(ctx: any, options: any, cache: any, inflight: any, requ
       respond(response, 200, {
         suggestion: result.items[0] ?? null,
         suggestions: result.items,
+        candidates: result.items,
         reason: result.reason,
         cached: (result as any).cached === true,
       })
@@ -310,14 +296,17 @@ async function predict(ctx: any, options: any, session: any, mode: string, draft
   let finish
   try {
     deadline.signal.throwIfAborted()
-    const call = await ctx.llm.prepareCall(
-      { provider: route.provider, model: route.model, maxTokens: options.maxOutputTokens },
-      deadline.signal,
-      (controls: any, model: any) => {
-        const effort = selectEffort(model, options.reasoningEffort)
-        return effort === undefined ? controls : { ...controls, reasoningEffort: effort }
-      },
-    )
+    const llm = ctx.llm ?? ctx.get?.('llm')
+    if (!llm || typeof llm.prepareCall !== 'function') return { items: [], reason: 'no-llm' }
+
+    const callConfig: Record<string, any> = {
+      provider: route.provider,
+      model: route.model,
+      maxTokens: options.maxOutputTokens,
+      reasoningEffort: options.reasoningEffort || 'off',
+    }
+
+    const call = await llm.prepareCall(callConfig, deadline.signal)
     const messages = [{ role: 'user', content: [{ type: 'text', text: prompt }] }]
     for await (const chunk of call.stream({ ...call.config, messages, system, signal: deadline.signal })) {
       deadline.signal.throwIfAborted()
@@ -423,10 +412,26 @@ function buildPrompt(session: any, options: any, mode: string, draft: string) {
           if (typeof block.id === 'string') callsById.set(block.id, note)
         }
       }
+      // DSH 工具结果通常以 tool-result block 形式存放在 message.content 中
+      if (options.maxToolNotes > 0) {
+        for (const block of blocks) {
+          if (block === null || typeof block !== 'object' || block.type !== 'tool-result') continue
+          const callId = typeof block.toolCallId === 'string' ? block.toolCallId : (typeof block.id === 'string' ? block.id : '')
+          const resText = clip(typeof block.result === 'string' ? block.result : (typeof block.text === 'string' ? block.text : ''), 500)
+          const note = callId !== '' ? callsById.get(callId) : undefined
+          if (note !== undefined) {
+            note.result = resText
+            note.failed = block.isError === true
+          } else {
+            notes.push({ name: 'tool', input: '', result: resText, failed: block.isError === true })
+          }
+        }
+      }
       continue
     }
 
-    if (message.role === 'tool' && options.maxToolNotes > 0) {
+    const isToolMessage = message.role === 'tool' || message.source?.kind === 'tool'
+    if (isToolMessage && options.maxToolNotes > 0) {
       const text = clip(plainText(blocks), 500)
       const callId = typeof message.toolCallId === 'string' ? message.toolCallId : ''
       const note = callId !== '' ? callsById.get(callId) : undefined
@@ -552,40 +557,55 @@ function boundSuggestion(line: string) {
   return space > 120 ? cut.slice(0, space) : cut
 }
 
-function readJsonBody(request: any): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = []
-    let size = 0
-    let settled = false
-    const fail = (error: any) => {
-      if (settled) return
-      settled = true
-      // Stop reading but leave the socket able to carry the error response.
-      request.resume?.()
-      reject(error)
-    }
-    request.on('data', (chunk: Buffer) => {
-      if (settled) return
-      size += chunk.length
-      if (size > MAX_BODY_BYTES) {
-        fail(new Error('body-too-large'))
-        return
-      }
-      chunks.push(chunk)
-    })
-    request.on('end', () => {
-      if (settled) return
-      settled = true
-      try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')))
-      } catch (error) {
+async function readJsonBody(request: any): Promise<any> {
+  if (typeof request.on === 'function') {
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = []
+      let size = 0
+      let settled = false
+      const fail = (error: any) => {
+        if (settled) return
+        settled = true
+        request.resume?.()
         reject(error)
       }
+      request.on('data', (chunk: Buffer) => {
+        if (settled) return
+        size += chunk.length
+        if (size > MAX_BODY_BYTES) {
+          fail(new Error('body-too-large'))
+          return
+        }
+        chunks.push(chunk)
+      })
+      request.on('end', () => {
+        if (settled) return
+        settled = true
+        try {
+          resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')))
+        } catch (error) {
+          reject(error)
+        }
+      })
+      request.on('error', fail)
+      request.on('aborted', () => fail(new Error('request-aborted')))
+      request.on('close', () => fail(new Error('request-closed')))
     })
-    request.on('error', fail)
-    request.on('aborted', () => fail(new Error('request-aborted')))
-    request.on('close', () => fail(new Error('request-closed')))
-  })
+  }
+
+  if (request[Symbol.asyncIterator] !== undefined) {
+    const chunks: Buffer[] = []
+    let size = 0
+    for await (const chunk of request) {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+      size += buf.length
+      if (size > MAX_BODY_BYTES) throw new Error('body-too-large')
+      chunks.push(buf)
+    }
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'))
+  }
+
+  return {}
 }
 
 function openStream(response: any) {
