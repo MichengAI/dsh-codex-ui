@@ -57,7 +57,7 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-shortcut-modal="settin
   height: calc(100vh - var(--dsh-frame-top-clearance, 38px)) !important;
 }
 
-/* 左侧整列侧栏：与首页侧栏严格等宽，底色对齐 --dsw-specific-sidebar-fill */
+/* 左侧整列侧栏：与首页侧栏严格等宽，底色统合对齐 --dsw-alias-bg-layer-2，杜绝与右侧工作区产生色差断层 */
 [data-shortcut-modal="settings"] > nav {
   box-sizing: border-box !important;
   width: var(--dcu-settings-nav-width, 280px) !important;
@@ -67,19 +67,19 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-shortcut-modal="settin
   gap: 12px !important;
   padding: 16px 12px 24px !important;
   border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
-  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #121214)) !important;
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-specific-sidebar-fill, #18181b)) !important;
   overflow: hidden !important;
   display: flex !important;
   flex-direction: column !important;
 }
 
-/* 设置工作台必须使用实色不透明底板，严禁半透明导致底层文本透出重影 */
+/* 设置工作台必须使用实色不透明底板，左右两栏整体浑然一体 */
 [data-shortcut-modal="settings"] {
-  background: var(--dsw-alias-bg-base, #151517) !important;
+  background: var(--dsw-alias-bg-layer-2, #18181b) !important;
 }
 
 [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) {
-  background: var(--dsw-alias-bg-base, #151517) !important;
+  background: var(--dsw-alias-bg-layer-2, #18181b) !important;
 }
 
 /* 浅色模式全局兜底：浅底高对比度规范，绝不允许残留或回退暗黑色 */
@@ -536,7 +536,7 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [
   width: var(--dcu-settings-nav-width, 280px) !important;
   min-width: var(--dcu-settings-nav-width, 280px) !important;
   max-width: var(--dcu-settings-nav-width, 280px) !important;
-  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #18181b)) !important;
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-specific-sidebar-fill, #18181b)) !important;
   border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
   border-bottom: none !important;
   padding: 16px 12px 12px 12px !important;
@@ -552,7 +552,7 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [
   width: var(--dcu-settings-nav-width, 280px) !important;
   min-width: var(--dcu-settings-nav-width, 280px) !important;
   max-width: var(--dcu-settings-nav-width, 280px) !important;
-  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #18181b)) !important;
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-specific-sidebar-fill, #18181b)) !important;
   border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
   border-top: none !important;
   padding: 0 12px 24px !important;
@@ -1807,11 +1807,30 @@ export function decorateSettingsNav(panelEl: HTMLElement): () => void {
     navList.appendChild(emptyTip)
   }
 
+  // 安全提取设置按钮正文文本（兼容老版单 span 与新版 navIcon + navLabel 双 span 结构）
+  const getNavButtonLabel = (btn: HTMLButtonElement): string => {
+    const labelEl = btn.querySelector<HTMLElement>('[class*="navLabel"]')
+    if (labelEl && labelEl.textContent?.trim()) {
+      return labelEl.textContent.trim()
+    }
+    const textSpan = btn.querySelector<HTMLElement>('span:not([class*="navIcon"])')
+    if (textSpan && textSpan.textContent?.trim()) {
+      return textSpan.textContent.trim()
+    }
+    const allSpans = btn.querySelectorAll<HTMLElement>('span')
+    for (const s of allSpans) {
+      if (s.textContent?.trim() && !s.className?.includes('navIcon')) {
+        return s.textContent.trim()
+      }
+    }
+    return btn.textContent?.trim() ?? ''
+  }
+
   // 4. 归类并赋 order 给宿主生成的每个 button，纯通用布局
   const classifyButtons = () => {
     const buttons = navList.querySelectorAll<HTMLButtonElement>(':scope > button')
     buttons.forEach((btn, index) => {
-      const label = btn.querySelector('span')?.textContent?.trim() ?? btn.textContent?.trim() ?? ''
+      const label = getNavButtonLabel(btn)
       const group = classifySettingsButton(label)
       const baseOrder = group === 'personal' ? 100 : group === 'records' ? 300 : 200
       btn.style.setProperty('order', String(baseOrder + 1 + index))
@@ -1820,14 +1839,14 @@ export function decorateSettingsNav(panelEl: HTMLElement): () => void {
   }
   classifyButtons()
 
-  // 5. 搜索过滤联动
+  // 5. 搜索过滤联动与空分组小标题动态自愈隐藏
   const applyFilter = (query: string) => {
     const trimmed = query.trim().toLowerCase()
     const buttons = navList.querySelectorAll<HTMLButtonElement>(':scope > button')
     let totalVisible = 0
 
     for (const btn of buttons) {
-      const label = (btn.querySelector('span')?.textContent ?? btn.textContent ?? '').toLowerCase()
+      const label = getNavButtonLabel(btn).toLowerCase()
       if (trimmed === '') {
         btn.style.removeProperty('display')
         totalVisible += 1
@@ -1845,16 +1864,12 @@ export function decorateSettingsNav(panelEl: HTMLElement): () => void {
     for (const group of SETTINGS_NAV_GROUPS) {
       const header = navList.querySelector<HTMLElement>(`[data-dcu-group-header="${group.id}"]`)
       if (header) {
-        if (trimmed === '') {
+        const visibleCount = [...navList.querySelectorAll<HTMLButtonElement>(`button[data-dcu-group="${group.id}"]`)]
+          .filter(b => b.style.display !== 'none').length
+        if (visibleCount > 0) {
           header.style.removeProperty('display')
         } else {
-          const visibleCount = [...navList.querySelectorAll<HTMLButtonElement>(`button[data-dcu-group="${group.id}"]`)]
-            .filter(b => b.style.display !== 'none').length
-          if (visibleCount > 0) {
-            header.style.removeProperty('display')
-          } else {
-            header.style.setProperty('display', 'none', 'important')
-          }
+          header.style.setProperty('display', 'none', 'important')
         }
       }
     }

@@ -113,16 +113,19 @@ export function ensureThemeSurfaceStyles(doc: Document = typeof document !== 'un
   border-radius: 0 !important;
 }
 
-/* 彻底清除输入框底部 dock / stats 区域的半透明灰色脏色块与切线 */
-[data-dsh-glass] [data-phase] [data-dsh-glass-inputbar] > [class*="dock"]:before,
-[data-dsh-glass] [data-phase] [data-dsh-glass-inputbar] > [data-composer-dock]:before,
-[data-dsh-glass] [class*="dock"]:before,
-[data-dsh-glass] [data-composer-dock]:before {
+/* 彻底清除输入框底部 dock / stats 区域的半透明灰色脏色块与切线（全主题生效，消除矩形脏色块） */
+[class*="dock"]:before,
+[data-composer-dock]:before {
   display: none !important;
   content: none !important;
   background: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+/* 消除输入框座舱原生 36px 渐变在第三方主题下导致的生硬矩形实底色块，座舱底板自然透明融于聊天视口 */
+[class*="composerSeat"] {
+  background: transparent !important;
 }
 
 /* 斜杠指令/快捷指令候选面板（[data-trigger-menu] / Issue #72）：

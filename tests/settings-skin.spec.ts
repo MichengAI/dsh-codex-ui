@@ -403,3 +403,68 @@ test('installSettingsSkin 支持动态刷新已存在 style 标签的内容（HM
     uninstallSettingsSkin(document)
   }
 })
+
+test('双版本宿主 DOM 结构兼容：准确识别新版 navIcon + navLabel 按钮并正确归组', () => {
+  const panel = document.createElement('div')
+  panel.setAttribute('data-shortcut-modal', 'settings')
+  const nav = document.createElement('nav')
+  const navList = document.createElement('div')
+  navList.className = 'navList'
+
+  // 新版宿主（0.2.2-alpha.3+）：第一个 span 是 navIcon (内部无文字)，第二个 span 是 navLabel
+  const btnPersonal = document.createElement('button')
+  btnPersonal.innerHTML = '<span class="navIcon" aria-hidden="true"><svg></svg></span><span class="navLabel">通用设置</span>'
+
+  const btnIntegration = document.createElement('button')
+  btnIntegration.innerHTML = '<span class="navIcon" aria-hidden="true"><svg></svg></span><span class="navLabel">模型服务</span>'
+
+  const btnRecords = document.createElement('button')
+  btnRecords.innerHTML = '<span class="navIcon" aria-hidden="true"><svg></svg></span><span class="navLabel">Codex UI</span>'
+
+  navList.append(btnPersonal, btnIntegration, btnRecords)
+  nav.append(navList)
+  panel.append(nav)
+  document.body.append(panel)
+
+  const cleanup = decorateSettingsNav(panel)
+  try {
+    expect(btnPersonal.getAttribute('data-dcu-group')).toBe('personal')
+    expect(btnIntegration.getAttribute('data-dcu-group')).toBe('integrations')
+    expect(btnRecords.getAttribute('data-dcu-group')).toBe('records')
+    expect(Number(btnPersonal.style.order)).toBeLessThan(Number(btnIntegration.style.order))
+    expect(Number(btnIntegration.style.order)).toBeLessThan(Number(btnRecords.style.order))
+  } finally {
+    cleanup()
+    panel.remove()
+  }
+})
+
+test('设置导航智能隐藏无成员的分组小标题，杜绝孤立悬空显示', () => {
+  const panel = document.createElement('div')
+  panel.setAttribute('data-shortcut-modal', 'settings')
+  const nav = document.createElement('nav')
+  const navList = document.createElement('div')
+  navList.className = 'navList'
+
+  // 仅有集成组按钮，无个人与记录组按钮
+  const btn = document.createElement('button')
+  btn.innerHTML = '<span class="navIcon"><svg></svg></span><span class="navLabel">自定义扩展</span>'
+  navList.append(btn)
+  nav.append(navList)
+  panel.append(nav)
+  document.body.append(panel)
+
+  const cleanup = decorateSettingsNav(panel)
+  try {
+    const personalHeader = navList.querySelector<HTMLElement>('[data-dcu-group-header="personal"]')
+    const integrationsHeader = navList.querySelector<HTMLElement>('[data-dcu-group-header="integrations"]')
+    const recordsHeader = navList.querySelector<HTMLElement>('[data-dcu-group-header="records"]')
+
+    expect(integrationsHeader?.style.display).toBe('')
+    expect(personalHeader?.style.display).toBe('none')
+    expect(recordsHeader?.style.display).toBe('none')
+  } finally {
+    cleanup()
+    panel.remove()
+  }
+})
