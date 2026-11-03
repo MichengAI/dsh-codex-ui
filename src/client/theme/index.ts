@@ -140,6 +140,15 @@ export function ensureThemeSurfaceStyles(doc: Document = typeof document !== 'un
   -webkit-mask-image: none !important;
 }
 
+/* 对齐图 2 顶部 mask 遮挡规范：在滚动消息区域底部施加蒙版渐隐，正文向上滚动进入输入区前平滑淡出，彻底阻断透字且绝无色块 */
+[data-phase=active] [data-conversation-scroll] > [data-slot="conversation.session"],
+[data-content-phase=active] [data-conversation-scroll] > [data-slot="conversation.session"],
+[data-phase=active] [data-conversation-scroll] > [class*="viewArea"],
+[data-content-phase=active] [data-conversation-scroll] > [class*="viewArea"] {
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 96px), transparent calc(100% - 16px)) !important;
+  mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 96px), transparent calc(100% - 16px)) !important;
+}
+
 /* 斜杠指令/快捷指令候选面板（[data-trigger-menu] / Issue #72）：
    在选用自定义主题时，无论是否开启毛玻璃，提升面板材质浓度，杜绝悬浮在消息流上时的字叠字穿透 */
 [data-trigger-menu] {
