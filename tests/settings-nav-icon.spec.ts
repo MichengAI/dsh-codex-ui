@@ -23,6 +23,22 @@ test('为 Codex UI 设置项按钮打上 marker 并注入样式', () => {
   expect(document.getElementById('dcu-settings-nav-icon-style')).not.toBeNull()
 })
 
+test('当宿主已使用原生插槽容器(如 navIcon)时，不添加 marker 避免双图标', () => {
+  const button = document.createElement('button')
+  const iconSpan = document.createElement('span')
+  iconSpan.className = 'navIcon'
+  iconSpan.setAttribute('aria-hidden', 'true')
+  const labelSpan = document.createElement('span')
+  labelSpan.textContent = 'Codex UI'
+  button.appendChild(iconSpan)
+  button.appendChild(labelSpan)
+  document.body.appendChild(button)
+
+  const changed = applyNavIcon(button, () => 'Codex UI')
+  expect(changed).toBe(false)
+  expect(button.hasAttribute(CODEX_UI_NAV_MARKER)).toBe(false)
+})
+
 test('observeSettingsNavIcon 在 DOM 变更时自动补上图标并在卸载时清理', async () => {
   const stop = observeSettingsNavIcon(() => 'Codex UI', document)
 

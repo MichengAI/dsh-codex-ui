@@ -8,8 +8,8 @@ import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import type {} from '@deepseek-ai/dsh-session'
 import { AboutSection } from './AboutSection.tsx'
 import { en, NS, zh } from './locales.ts'
-import { observeSettingsSkin } from './settings-skin/index.ts'
-import { observeSettingsNavIcon } from './settings-nav-icon.ts'
+import { observeSettingsSkin } from './settings-skin/index.js'
+import { CodexUiNavIcon, observeSettingsNavIcon } from './settings-nav-icon.js'
 import { observeComposerEnhancements } from './composer/index.tsx'
 import { observeSidebarNav, checkSidebarEnabled } from './sidebar/index.ts'
 import { observeWorkspaceSections } from './sidebar/sections/index.ts'
@@ -69,6 +69,12 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => observeComposerEnhancements(ctx), 'michengai-codex-ui: composer enhancements')
   ctx.effect(() => observeSettingsSkin(), 'michengai-codex-ui: official settings skin')
   ctx.effect(() => observeSettingsNavIcon(() => t('about.nav')), 'michengai-codex-ui: settings nav icon')
+
+  ;(ctx.slots.inject as any)('settings.section.icon', () => (ctx.slots.register as any)({
+    name: 'settings.section.icon',
+    id: 'codex-ui',
+    locale: NS,
+  }, CodexUiNavIcon))
 
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section',

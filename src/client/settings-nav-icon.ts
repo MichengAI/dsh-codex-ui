@@ -1,3 +1,5 @@
+import React from 'react'
+
 /**
  * 为 Codex UI 在 DSH 原生设置导航中补上专属的 16x16 矢量图标。
  * 遵循与 dshmarket / dsh-automation 一致的非侵入式属性标记与 CSS mask 伪元素标准。
@@ -6,6 +8,27 @@
 export const CODEX_UI_NAV_MARKER = 'data-dcu-nav-icon'
 const NAV_ROW_SELECTOR = '[role="dialog"] nav button, [data-shortcut-modal="settings"] nav button'
 const STYLE_ID = 'dcu-settings-nav-icon-style'
+
+/** 原生 settings.section.icon 插槽图标组件 */
+export function CodexUiNavIcon({ size = 16 }: { size?: number }): React.ReactElement {
+  return React.createElement(
+    'svg',
+    {
+      xmlns: 'http://www.w3.org/2000/svg',
+      viewBox: '0 0 16 16',
+      width: size,
+      height: size,
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 1.3,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+    },
+    React.createElement('rect', { x: 1.5, y: 2, width: 13, height: 12, rx: 2 }),
+    React.createElement('line', { x1: 5.5, y1: 2, x2: 5.5, y2: 14 }),
+    React.createElement('line', { x1: 5.5, y1: 5.5, x2: 14.5, y2: 5.5 }),
+  )
+}
 
 /** 16x16 窗口+侧边栏布局矢量图标（黑底用于 mask alpha 裁剪） */
 const CODEX_UI_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect x="1.5" y="2" width="13" height="12" rx="2" stroke="black" stroke-width="1.3" fill="none"/><line x1="5.5" y1="2" x2="5.5" y2="14" stroke="black" stroke-width="1.3"/><line x1="5.5" y1="5.5" x2="14.5" y2="5.5" stroke="black" stroke-width="1.3"/></svg>'
@@ -48,6 +71,17 @@ function matchesLabel(text: string, getLabel: () => string): boolean {
 export function applyNavIcon(button: HTMLButtonElement, getLabel: () => string): boolean {
   const text = button.textContent ?? ''
   if (matchesLabel(text, getLabel)) {
+    const hasSlotIcon = Array.from((button as unknown as { children?: Element[] }).children ?? []).some((child: any) =>
+      child.tagName === 'SPAN' &&
+      (child.className?.includes('navIcon') || child.getAttribute?.('aria-hidden') === 'true')
+    ) || Boolean(button.querySelector?.('[class*="navIcon"]'))
+    if (hasSlotIcon) {
+      if (button.getAttribute(CODEX_UI_NAV_MARKER) === 'codex-ui') {
+        button.removeAttribute(CODEX_UI_NAV_MARKER)
+        return true
+      }
+      return false
+    }
     if (button.getAttribute(CODEX_UI_NAV_MARKER) === 'codex-ui') return false
     const doc = button.ownerDocument ?? document
     ensureStyle(doc)
