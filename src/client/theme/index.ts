@@ -142,21 +142,27 @@ export function ensureThemeSurfaceStyles(doc: Document = typeof document !== 'un
   -webkit-mask-image: none !important;
 }
 
-/* 输入框卡片：材质与外观 100% 对齐顶部云母浮动顶栏（Header），呈现纯正通透的磨砂质感与柔和悬浮阴影，绝无死板色块 */
-[data-dsh-glass-float] [data-composer-card] {
+/* 输入框卡片：颜色与质感 100% 对齐顶部云母浮动顶栏（Header，RGB 39, 43, 58），使用高密度实体云母材质彻底挡住背后的正文文字，绝不透字 */
+[data-composer-card],
+[data-dsh-glass-float] [data-composer-card],
+[data-dsh-glass] [data-composer-card] {
   border: 1px solid var(--dsh-glass-rim, rgba(255, 255, 255, 0.12)) !important;
-  background: var(--dsh-glass-card) !important;
+  background: var(--dsw-alias-bg-layer-2, #24273a) !important;
   box-shadow: var(--dsh-glass-edge), var(--dsh-glass-drop) !important;
   backdrop-filter: blur(var(--dsh-glass-blur, 14px)) !important;
   -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 14px)) !important;
   border-radius: 24px !important;
+  position: relative !important;
+  z-index: 8 !important;
 }
 
-[data-dsh-glass-float] [data-composer-card]:before {
+[data-composer-card]:before,
+[data-dsh-glass-float] [data-composer-card]:before,
+[data-dsh-glass] [data-composer-card]:before {
   content: "" !important;
   z-index: -1 !important;
   border-radius: inherit !important;
-  background: var(--dsh-glass-card) !important;
+  background: var(--dsw-alias-bg-layer-2, #24273a) !important;
   box-shadow: var(--dsh-glass-edge) !important;
   backdrop-filter: blur(var(--dsh-glass-blur, 14px)) !important;
   -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 14px)) !important;
@@ -165,11 +171,14 @@ export function ensureThemeSurfaceStyles(doc: Document = typeof document !== 'un
   inset: 0 !important;
 }
 
-/* 底部状态栏（dock）：作为输入框下方居中控制条，仅在居中有效区域内提供磨砂遮挡，阻断滚动正文从底部漏出，且绝对不向两侧空白区溢出色块 */
-[data-dsh-glass-float] [data-composer-dock] {
+/* 底部状态栏（dock）：作为输入框正下方居中控制条，使用与卡片一致的实底材质遮挡，彻底阻断历史正文从底部漏出，且绝对不向两侧空白区溢出色块 */
+[data-composer-dock],
+[data-dsh-glass-float] [data-composer-dock],
+[data-dsh-glass] [data-composer-dock] {
   position: relative !important;
+  z-index: 7 !important;
   border-radius: 0 0 16px 16px !important;
-  background: color-mix(in srgb, var(--dsw-alias-bg-layer-1, #24273a) 85%, transparent) !important;
+  background: var(--dsw-alias-bg-layer-2, #24273a) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
 }
