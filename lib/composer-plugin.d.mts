@@ -6,7 +6,7 @@ declare function isSubPluginDisabledOnDisk(id: string, homeDir?: string, ctx?: C
 /**
  * Composer 输入框增强子组件 (Host 侧)
  * 1. 暴露 /api/michengai/dsh-codex-ui/composer (启停状态)
- * 2. 暴露 /api/michengai/dsh-codex-ui/composer/prediction (输入预测与续写)
+ * 2. 暴露 /composer-prediction 与 /composer-prediction/v2 (参考插件标准流式预测)
  */
 declare function apply(ctx: Context): void;
 //#endregion

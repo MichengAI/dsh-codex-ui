@@ -27,21 +27,22 @@ describe('composer-plugin: 路由与鉴权契约', () => {
 
     apply(mockCtx)
 
-    expect(routes).toHaveLength(2)
+    expect(routes).toHaveLength(3)
     expect(routes.map(r => r.path)).toContain(CODEX_UI_API_ENDPOINTS.composer)
-    expect(routes.map(r => r.path)).toContain(CODEX_UI_API_ENDPOINTS.composerPrediction)
+    expect(routes.map(r => r.path)).toContain('/composer-prediction')
+    expect(routes.map(r => r.path)).toContain('/composer-prediction/v2')
   })
 
   it('未授权请求时返回 401 并拦截', async () => {
     let predictionHandler: any = null
     const webServer = {
       register: (r: any) => {
-        if (r.path === CODEX_UI_API_ENDPOINTS.composerPrediction) predictionHandler = r.handler
+        if (r.path === '/composer-prediction') predictionHandler = r.handler
         return () => {}
       },
     }
     const connection = {
-      requestRejection: vi.fn(() => 401),
+      admit: vi.fn(() => ({ rejection: 401 })),
     }
 
     const mockCtx = {

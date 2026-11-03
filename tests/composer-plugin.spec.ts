@@ -28,7 +28,8 @@ describe('codex-ui-composer sub-plugin', () => {
     apply(ctx)
 
     expect(handlers.has(CODEX_UI_API_ENDPOINTS.composer)).toBe(true)
-    expect(handlers.has(CODEX_UI_API_ENDPOINTS.composerPrediction)).toBe(true)
+    expect(handlers.has('/composer-prediction')).toBe(true)
+    expect(handlers.has('/composer-prediction/v2')).toBe(true)
 
     const statusHandler = handlers.get(CODEX_UI_API_ENDPOINTS.composer)
     expect(statusHandler).toBeDefined()
