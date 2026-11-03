@@ -4,8 +4,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { CODEX_UI_API_ENDPOINTS } from '../../business-api.ts'
 import { NS } from '../locales.ts'
-import { findComposer } from './input-history-keyboard.ts'
-import { isCaretAtDraftEnd, measureCaretRect } from './caret-position.ts'
+import { computeGhostBox, locateComposerNear, type BoxPosition } from './caret-position.ts'
 import { matchLocalPredictionPrefix } from './prediction-cache.ts'
 
 interface PredictionResponse {
@@ -17,6 +16,22 @@ function hasOpenMenu(): boolean {
   if (typeof document === 'undefined') return false
   const menus = document.querySelectorAll('[role="listbox"], [role="menu"]')
   return Array.from(menus).some(el => (el as HTMLElement).offsetParent !== null)
+}
+
+function resolveSessionId(propsSessionId?: string, ctx?: Context): string | undefined {
+  if (propsSessionId) return propsSessionId
+  try {
+    const sessions = (ctx as unknown as { sessions?: { list?: { getSnapshot?: () => { current?: string; byId?: Record<string, { id?: string; retainedBy?: { mainView?: number } }> } } } })?.sessions
+    const list = sessions?.list?.getSnapshot?.()
+    if (list?.current) return list.current
+    const byId = list?.byId ?? {}
+    for (const [id, row] of Object.entries(byId)) {
+      if (row && (row.retainedBy?.mainView ?? 0) > 0) return row.id?.trim() || id
+    }
+  } catch {
+    // 忽略异常
+  }
+  return undefined
 }
 
 export function ComposerPredictionOverlay({
@@ -41,7 +56,10 @@ export function ComposerPredictionOverlay({
     }
   }).conversation
 
-  const sessionId = props.sessionId ?? (props as unknown as { session?: { sessionId?: string; id?: string } })?.session?.sessionId
+  const sessionId = resolveSessionId(
+    props.sessionId ?? (props as unknown as { session?: { sessionId?: string; id?: string } })?.session?.sessionId,
+    ctx,
+  )
   const binding = sessionId && typeof sessions?.binding === 'function' ? sessions.binding(sessionId) : undefined
   const input = binding?.ctx && typeof conversation?.input?.for === 'function' ? conversation.input.for(binding.ctx) : undefined
 
@@ -50,7 +68,7 @@ export function ComposerPredictionOverlay({
   const [index, setIndex] = useState(0)
   const [baseDraft, setBaseDraft] = useState('')
   const [mode, setMode] = useState<'next' | 'continue'>('next')
-  const [caretOffset, setCaretOffset] = useState<{ left: number; top: number; height: number } | null>(null)
+  const [box, setBox] = useState<BoxPosition | null>(null)
 
   const composingRef = useRef(false)
   const dismissedRef = useRef<string>('')
@@ -79,6 +97,21 @@ export function ComposerPredictionOverlay({
 
   const visible = !isInputBusy && remainingText.length > 0 && draft !== dismissedRef.current
 
+  // 重新测量并更新幽灵文本局部定位
+  useEffect(() => {
+    if (!visible || !anchorRef.current) {
+      setBox(null)
+      return
+    }
+    const found = locateComposerNear(anchorRef.current)
+    if (!found) {
+      setBox(null)
+      return
+    }
+    const nextBox = computeGhostBox(found.card, found.editor, mode, draft)
+    setBox(nextBox)
+  }, [visible, mode, draft, remainingText])
+
   // 调度预测请求
   useEffect(() => {
     if (!sessionId || isInputBusy) {
@@ -96,6 +129,7 @@ export function ComposerPredictionOverlay({
         try {
           const res = await fetch(CODEX_UI_API_ENDPOINTS.composerPrediction, {
             method: 'POST',
+            credentials: 'same-origin',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ sessionId, mode: 'next', draft: '' }),
             signal: controller.signal,
@@ -111,7 +145,7 @@ export function ComposerPredictionOverlay({
         } catch {
           // 忽略中断
         }
-      }, 400)
+      }, 350)
 
       return () => {
         clearTimeout(timer)
@@ -130,12 +164,13 @@ export function ComposerPredictionOverlay({
     abortRef.current = controller
 
     const timer = setTimeout(async () => {
-      const editor = anchorRef.current ? findComposer(anchorRef.current) : undefined
-      if (!editor || !isCaretAtDraftEnd(editor, draft)) return
+      const found = anchorRef.current ? locateComposerNear(anchorRef.current) : null
+      if (!found) return
 
       try {
         const res = await fetch(CODEX_UI_API_ENDPOINTS.composerPrediction, {
           method: 'POST',
+          credentials: 'same-origin',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ sessionId, mode: 'continue', draft }),
           signal: controller.signal,
@@ -147,13 +182,11 @@ export function ComposerPredictionOverlay({
           setIndex(0)
           setBaseDraft(draft)
           setMode('continue')
-          const rect = measureCaretRect(editor)
-          if (rect) setCaretOffset(rect)
         }
       } catch {
         // 忽略中断
       }
-    }, 450)
+    }, 400)
 
     return () => {
       clearTimeout(timer)
@@ -163,8 +196,9 @@ export function ComposerPredictionOverlay({
 
   // 监听键盘按键交互
   useEffect(() => {
-    const editor = anchorRef.current ? findComposer(anchorRef.current) : undefined
-    if (!editor) return
+    const found = anchorRef.current ? locateComposerNear(anchorRef.current) : null
+    if (!found) return
+    const { editor } = found
 
     const onCompStart = () => { composingRef.current = true }
     const onCompEnd = () => { composingRef.current = false }
@@ -217,7 +251,7 @@ export function ComposerPredictionOverlay({
   return (
     <>
       <span ref={anchorRef} hidden data-codex-ui-prediction-anchor />
-      {visible && (
+      {visible && box && (
         <div
           data-codex-ui-prediction-ghost=""
           title={t('input.prediction.dismiss')}
@@ -227,14 +261,14 @@ export function ComposerPredictionOverlay({
             zIndex: 10,
             color: 'var(--dsw-alias-label-caption, rgba(140, 140, 140, 0.7))',
             fontSize: '13px',
-            lineHeight: '20px',
+            lineHeight: `${box.height}px`,
             userSelect: 'none',
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            top: mode === 'continue' && caretOffset ? `${caretOffset.top}px` : '8px',
-            left: mode === 'continue' && caretOffset ? `${caretOffset.left}px` : '14px',
-            maxWidth: 'calc(100% - 32px)',
+            top: `${box.top}px`,
+            left: `${box.left}px`,
+            maxWidth: `${box.maxWidth}px`,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
