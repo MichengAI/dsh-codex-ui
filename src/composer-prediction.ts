@@ -381,15 +381,34 @@ function buildHostPrompt(session: any, options: any, mode: string, draft: string
 
 function normalizeCandidates(text: string, maximum: number, draft: string, cue = ''): string[] {
   const items: string[] = []
+  const seen = new Set<string>()
+  const prefix = draft === '' ? '' : draft.trimEnd()
+  const prefixLower = prefix.toLowerCase()
+  const cueLower = cue.trim().toLowerCase()
+
   for (const raw of text.split(/\r?\n/u)) {
+    const hadLeadingSpace = /^\s/u.test(raw)
     let line = cleanPredictionCandidate(raw)
     if (!line) continue
-    if (cue && line.toLowerCase() === cue.toLowerCase()) continue
+    if (cueLower && line.toLowerCase() === cueLower) continue
     if (PROMPT_LABELS.some(l => line.toLowerCase() === l.toLowerCase())) continue
-    const candidate = draft ? formatContinuation(draft, line) : line
-    if (candidate && !items.includes(candidate)) {
-      items.push(candidate)
+
+    // 核心修复：若大模型复述了草稿，必须彻底剥离已存在的草稿前缀！
+    if (prefixLower !== '' && line.toLowerCase().startsWith(prefixLower)) {
+      line = line.slice(prefix.length).replace(/^\s+/u, ' ')
+    } else if (draft !== '' && hadLeadingSpace && !/^\s/u.test(line)) {
+      line = ` ${line}`
     }
+
+    line = draft === '' ? line.trim() : line.replace(/\s+$/u, '')
+    if (line.trim() === '') continue
+    if (line.length > 240) line = line.slice(0, 240)
+
+    const identity = line.replace(/[.:!?]+$/u, '').trim().toLowerCase()
+    if (seen.has(identity)) continue
+    seen.add(identity)
+
+    items.push(line)
     if (items.length >= maximum) break
   }
   return items

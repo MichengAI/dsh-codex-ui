@@ -366,9 +366,19 @@ export function ComposerPredictionOverlay({
     return () => clearTimeout(timer)
   }, [sessionId, draft, request, compositionEnd])
 
-  const rawCandidate = ghost.items.length > 0
+  let rawCandidate = ghost.items.length > 0
     ? ghost.items[Math.min(ghost.index, ghost.items.length - 1)] ?? ''
     : cleanLine(ghost.stream)
+
+  // 严格双重防御：续写模式下若大模型重复输出了当前草稿，彻底切除重复前缀
+  if (ghost.mode === 'continue' && draft.trim()) {
+    const draftTrimmed = draft.trim().toLowerCase()
+    const rawTrimmed = rawCandidate.trim().toLowerCase()
+    if (rawTrimmed.startsWith(draftTrimmed)) {
+      rawCandidate = rawCandidate.trim().slice(draft.trim().length)
+    }
+  }
+
   const current = ghost.mode === 'continue' ? joinContinuation(draft, rawCandidate) : rawCandidate
   currentRef.current = current
   const hasCandidate = current !== ''
@@ -479,8 +489,18 @@ export function ComposerPredictionOverlay({
   }, [ghost.mode, draft, sessionId, running, hasCandidate])
 
   const accept = () => {
-    const value = currentRef.current
+    let value = currentRef.current
     if (value === '' || ghost.active) return
+
+    // 终极防重：如果是续写模式且要插入的文本包含了草稿，切除草稿部分
+    if (ghost.mode === 'continue' && draft.trim()) {
+      const draftTrimmed = draft.trim().toLowerCase()
+      if (value.trim().toLowerCase().startsWith(draftTrimmed)) {
+        value = value.trim().slice(draft.trim().length)
+      }
+    }
+    if (value === '') return
+
     const expected = ghost.mode === 'continue' ? draft + value : value
     dismissedRef.current = { draft: expected }
     abortRef.current?.abort()
