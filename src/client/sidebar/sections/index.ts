@@ -1104,18 +1104,55 @@ export function observeWorkspaceSections(
   /* ── 项目菜单扩展 ── */
 
   /**
-   * 项目行 `···` 按钮：宿主的行内操作区里**第一颗**按钮。
-   * 操作区还有一颗「新建会话」按钮，且两颗按钮的 aria-label 都随语言变化，
-   * 所以按位置（`rowActions` 容器的第一个 button）识别，不依赖文案。
+   * 对齐归档管理器规范：从行内操作区精准定位“···”操作菜单触发按钮。
+   * 优先匹配 aria-haspopup="menu"，排除星标按钮与新建会话按钮，避免行内按钮顺序变化时误判。
+   */
+  function isStarButton(btn: HTMLButtonElement): boolean {
+    const className = btn.getAttribute('class') ?? ''
+    if (className.includes('dsham_rowStar') || className.includes('star')) return true
+    if (typeof btn.closest === 'function' && Boolean(btn.closest('.dsham_starSlot'))) return true
+    return false
+  }
+
+  function findRowMenuButton(row: Element): HTMLButtonElement | null {
+    const actions = row.querySelector<HTMLElement>('[class*="rowActions"]')
+    if (!actions) return null
+    const buttons = Array.from(actions.querySelectorAll<HTMLButtonElement>('button'))
+    if (buttons.length === 0) return null
+
+    const actionBtn = buttons.find(btn => {
+      if (isStarButton(btn)) return false
+      if (btn.getAttribute('aria-haspopup') === 'menu') return true
+      const label = (btn.getAttribute('aria-label') ?? btn.getAttribute('title') ?? '').toLowerCase()
+      if (/new|create|新建|add|\+|созда/.test(label)) return false
+      return /action|操作|действи|more|更多|选项|options|menu/.test(label)
+    })
+    return actionBtn ?? buttons[0] ?? null
+  }
+
+  function isRowMenuButton(button: HTMLButtonElement, row: Element): boolean {
+    const menuBtn = findRowMenuButton(row)
+    if (menuBtn === button) return true
+    const label = (button.getAttribute('aria-label') ?? button.getAttribute('title') ?? '').toLowerCase()
+    if (/new|create|新建|add|\+|созда/.test(label)) return false
+    return /action|操作|действи|more|更多|选项|options|menu/.test(label)
+  }
+
+  /**
+   * 从触发目标元素反查对应的工作区行节点，严格过滤会话行与菜单内部元素。
    */
   function projectRowOfMenuButton(target: Element): Element | null {
-    const button = target.closest('button')
-    if (button === null) return null
-    const row = button.closest('[data-row-key^="workspace:"]')
+    const row = target.closest<HTMLElement>('[data-row-key]')
     if (row === null) return null
-    const actions = row.querySelector('[class*="rowActions"]')
-    if (actions === null || !actions.contains(button)) return null
-    return actions.querySelector('button') === button ? row : null
+    const key = row.getAttribute('data-row-key') ?? ''
+    if (!key.startsWith('workspace:')) return null
+
+    const button = target.closest('button')
+    if (button !== null) {
+      // 若点击了按钮，必须是合法的操作菜单按钮（排除新建会话等功能按钮）
+      return isRowMenuButton(button, row) ? row : null
+    }
+    return row
   }
 
   /**
@@ -1136,7 +1173,7 @@ export function observeWorkspaceSections(
     }
     const row = projectRowOfMenuButton(target)
     if (row === null) {
-      // 点击处不是工作区操作按钮，清空目标
+      // 点击处不是工作区操作按钮或工作区行，清空目标
       assigningWorkspaceId = undefined
       return
     }
@@ -1154,8 +1191,33 @@ export function observeWorkspaceSections(
     if (event.target instanceof Element) prepareMenuInjection(event.target)
   }
 
+  /** 对齐归档管理器规范：支持在工作区行上右键直接唤起操作菜单与分区入口 */
+  function onContextMenuToPrepareMenu(event: MouseEvent): void {
+    const target = event.target as Element | null
+    if (!target) return
+    if (target.closest("input, textarea, [contenteditable='true']")) return
+
+    const row = target.closest<HTMLElement>('[data-row-key^="workspace:"]')
+    if (!row) return
+
+    const clickedButton = target.closest<HTMLButtonElement>('button')
+    if (clickedButton && !isRowMenuButton(clickedButton, row)) {
+      return
+    }
+
+    const menuBtn = findRowMenuButton(row)
+    if (!menuBtn) return
+
+    const id = workspaceIdOfRow(row)
+    if (id) {
+      assigningWorkspaceId = id
+      injectMenuEntry()
+    }
+  }
+
   document.addEventListener('pointerdown', onPointerdownToPrepareMenu, true)
   document.addEventListener('click', onClickToPrepareMenu, true)
+  document.addEventListener('contextmenu', onContextMenuToPrepareMenu, true)
 
   /**
    * 用宿主自己的图标组件渲染出静态 SVG。
@@ -1697,6 +1759,7 @@ export function observeWorkspaceSections(
     document.removeEventListener('pointerdown', onPointerdownToCloseSectionMenu, true)
     document.removeEventListener('pointerdown', onPointerdownToPrepareMenu, true)
     document.removeEventListener('click', onClickToPrepareMenu, true)
+    document.removeEventListener('contextmenu', onContextMenuToPrepareMenu, true)
     unsubscribe?.()
 
     closeSectionMenu()

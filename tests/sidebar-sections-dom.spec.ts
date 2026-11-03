@@ -684,6 +684,48 @@ describe('工作区分区：DOM 层', () => {
     expect(hostItem.textContent).toBe('重命名')
   })
 
+  it('对齐归档管理器规范：在工作区行上右键触发或存在星标按钮时仍能精准注入菜单', async () => {
+    mountFixture(['a'])
+    mount(['a'])
+    await waitForSync()
+
+    const row = document.querySelector<HTMLElement>('[data-row-key="workspace:a"]')!
+    // 模拟归档管理器的星标按钮插入在操作区最前面
+    const starBtn = document.createElement('button')
+    starBtn.className = 'dsham_rowStar'
+    row.querySelector('[class*="rowActions"]')?.prepend(starBtn)
+
+    const menu = document.createElement('div')
+    menu.setAttribute('role', 'menu')
+    const hostRow = document.createElement('div')
+    hostRow.className = 'hostRow'
+    const hostItem = document.createElement('button')
+    hostItem.type = 'button'
+    hostItem.setAttribute('role', 'menuitem')
+    hostItem.className = 'hostItem'
+    const hostIcon = document.createElement('span')
+    hostIcon.className = 'hostIcon'
+    hostIcon.innerHTML = '<svg></svg>'
+    const hostLabel = document.createElement('span')
+    hostLabel.className = 'hostLabel'
+    hostLabel.textContent = '重命名'
+    hostItem.append(hostIcon, hostLabel)
+    hostRow.appendChild(hostItem)
+    menu.appendChild(hostRow)
+    document.body.appendChild(menu)
+
+    // 右键触发
+    row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }))
+    await new Promise<void>(resolve => {
+      window.setTimeout(resolve, 0)
+    })
+
+    const injected = Array.from(menu.querySelectorAll<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`))
+    expect(injected).toHaveLength(2)
+    expect(injected[0]?.textContent).toBe('置顶')
+    expect(injected[1]?.textContent).toBe('分区')
+  })
+
   it('菜单里的「置顶」行能把项目移进内置置顶分区', async () => {
     mountFixture(['a', 'b'])
     mount(['a', 'b'])
