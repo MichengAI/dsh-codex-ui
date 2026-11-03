@@ -123,9 +123,21 @@ export function ensureThemeSurfaceStyles(doc: Document = typeof document !== 'un
   -webkit-backdrop-filter: none !important;
 }
 
-/* 消除输入框座舱原生 36px 渐变在第三方主题下导致的生硬矩形实底色块，座舱底板自然透明融于聊天视口 */
-[class*="composerSeat"] {
+/* 消除输入框座舱原生 36px 渐变与 16px 伪元素在第三方主题下导致的生硬矩形实底色块与横线，座舱底板自然透明融于聊天视口 */
+[class*="composerSeat"],
+[data-composer-seat] {
   background: transparent !important;
+}
+
+[class*="composerSeat"]::before,
+[class*="composerSeat"]::after,
+[data-composer-seat]::before,
+[data-composer-seat]::after {
+  display: none !important;
+  content: none !important;
+  background: transparent !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
 }
 
 /* 斜杠指令/快捷指令候选面板（[data-trigger-menu] / Issue #72）：

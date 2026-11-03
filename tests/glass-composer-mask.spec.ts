@@ -95,6 +95,8 @@ test('指令面板加浓与磨砂：必须声明 [data-trigger-menu] 提浓规�
   expect(surfaceTag?.textContent).toContain('[data-trigger-menu]')
   expect(surfaceTag?.textContent).toContain('--dsw-menu-surface-fill: color-mix(in srgb, var(--dsw-alias-bg-layer-2, #1e1e2e) 88%, transparent) !important;')
   expect(surfaceTag?.textContent).toContain('--dsw-menu-backdrop-filter: blur(24px) saturate(140%) !important;')
+  expect(surfaceTag?.textContent).toContain('[class*="composerSeat"]::before')
+  expect(surfaceTag?.textContent).toContain('display: none !important;')
 
   // 3. 停用时通过真实生命周期 checkAndSync 必须彻底清除 DOM 上的 surface 标签（严格差分变异守卫）
   // 设置自选主题，将 hasAppliedCustomTheme 标志置为 true 且在 DOM 插入 surface 标签
