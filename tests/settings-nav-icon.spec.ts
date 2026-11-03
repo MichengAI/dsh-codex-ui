@@ -39,6 +39,21 @@ test('当宿主已使用原生插槽容器(如 navIcon)时，不添加 marker �
   expect(button.hasAttribute(CODEX_UI_NAV_MARKER)).toBe(false)
 })
 
+test('老宿主回归：老宿主原生渲染的 svg.navIcon 不得被误判为新版插槽，必须正常打上 marker', () => {
+  const button = document.createElement('button')
+  const svg = document.createElement('svg')
+  svg.setAttribute('class', 'VOzbGW_navIcon')
+  const labelSpan = document.createElement('span')
+  labelSpan.textContent = 'Codex UI'
+  button.appendChild(svg)
+  button.appendChild(labelSpan)
+  document.body.appendChild(button)
+
+  const changed = applyNavIcon(button, () => 'Codex UI')
+  expect(changed).toBe(true)
+  expect(button.getAttribute(CODEX_UI_NAV_MARKER)).toBe('codex-ui')
+})
+
 test('observeSettingsNavIcon 在 DOM 变更时自动补上图标并在卸载时清理', async () => {
   const stop = observeSettingsNavIcon(() => 'Codex UI', document)
 

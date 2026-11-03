@@ -72,9 +72,8 @@ export function applyNavIcon(button: HTMLButtonElement, getLabel: () => string):
   const text = button.textContent ?? ''
   if (matchesLabel(text, getLabel)) {
     const hasSlotIcon = Array.from((button as unknown as { children?: Element[] }).children ?? []).some((child: any) =>
-      child.tagName === 'SPAN' &&
-      (child.className?.includes('navIcon') || child.getAttribute?.('aria-hidden') === 'true')
-    ) || Boolean(button.querySelector?.('[class*="navIcon"]'))
+      child.tagName === 'SPAN' && child.className && String(child.className).includes('navIcon')
+    ) || Boolean(button.querySelector?.('span[class*="navIcon"]'))
     if (hasSlotIcon) {
       if (button.getAttribute(CODEX_UI_NAV_MARKER) === 'codex-ui') {
         button.removeAttribute(CODEX_UI_NAV_MARKER)
