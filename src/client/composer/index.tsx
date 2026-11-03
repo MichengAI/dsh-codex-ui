@@ -17,6 +17,7 @@ function currentSessionId(state?: { current?: string; byId?: Record<string, { id
 }
 import { initializeComposerWidth, observeHeroWidthHandles } from './composer-width.ts'
 import { NewConversationSuggestions } from './NewConversationSuggestions.tsx'
+import { ComposerPredictionOverlay } from './ComposerPredictionOverlay.tsx'
 import { NEW_CONVERSATION_STYLE } from './new-conversation-style.ts'
 import { prefillNewConversation } from './new-conversation-draft.ts'
 
@@ -116,6 +117,18 @@ export function observeComposerEnhancements(ctx: Context): () => void {
       locale: NS,
     }, SuggestionsDock))
     cleaners.push(unregisterSuggestions)
+
+    // 6. 智能输入预测与行内续写 (挂载于 conversation.input.overlay 插槽)
+    function PredictionSlot(props: PropsRuntime<'conversation.input.overlay'>) {
+      return <ComposerPredictionOverlay {...props} ctx={ctx} t={t} />
+    }
+    const unregisterPrediction = ctx.slots.inject('conversation.input.overlay', () => ctx.slots.register({
+      name: 'conversation.input.overlay',
+      id: 'codex-ui-composer-prediction',
+      order: 50,
+      locale: NS,
+    }, PredictionSlot))
+    cleaners.push(unregisterPrediction)
 
     return () => {
       for (const clean of cleaners.reverse()) {

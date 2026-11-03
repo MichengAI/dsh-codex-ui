@@ -14,28 +14,28 @@ describe('codex-ui-composer sub-plugin', () => {
 
   it('宿主插件正确向 webServer 注册 /api/michengai/dsh-codex-ui/composer 端点', () => {
     const ctx = new Context()
-    let registeredPath = ''
-    let handlerFn: ((req: unknown, res: { writeHead: (status: number, headers?: Record<string, string>) => void; end: (body?: string) => void }) => void) | undefined
+    const handlers = new Map<string, (req: unknown, res: { writeHead: (status: number, headers?: Record<string, string>) => void; end: (body?: string) => void }) => void>()
 
     ctx.provide('webServer', {
-      register: (options: { kind: 'exact'; path: string; handler: typeof handlerFn }) => {
-        registeredPath = options.path
-        handlerFn = options.handler
+      register: (options: { kind: 'exact'; path: string; handler: any }) => {
+        handlers.set(options.path, options.handler)
         return () => {
-          registeredPath = ''
-          handlerFn = undefined
+          handlers.delete(options.path)
         }
       },
     } as never)
 
     apply(ctx)
 
-    expect(registeredPath).toBe(CODEX_UI_API_ENDPOINTS.composer)
-    expect(handlerFn).toBeDefined()
+    expect(handlers.has(CODEX_UI_API_ENDPOINTS.composer)).toBe(true)
+    expect(handlers.has(CODEX_UI_API_ENDPOINTS.composerPrediction)).toBe(true)
+
+    const statusHandler = handlers.get(CODEX_UI_API_ENDPOINTS.composer)
+    expect(statusHandler).toBeDefined()
 
     let responseStatus = 0
     let responseBody = ''
-    handlerFn!({}, {
+    statusHandler!({}, {
       writeHead: (status) => { responseStatus = status },
       end: (body) => { responseBody = body ?? '' },
     })
