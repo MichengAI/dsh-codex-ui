@@ -316,20 +316,25 @@ async function predict(ctx: any, options: any, session: any, mode: string, draft
 
     let targetEffort: string | undefined = undefined
     if (typeof llm.resolveModelInfo === 'function') {
-      try {
-        const modelInfo = await llm.resolveModelInfo(route.provider, route.model, deadline.signal)
-        const efforts = modelInfo?.reasoning?.efforts
-        if (Array.isArray(efforts) && efforts.length > 0) {
-          const effortIds = efforts.map((e: any) => e?.id).filter(Boolean)
-          const requested = options.reasoningEffort || 'off'
-          if (effortIds.includes(requested)) {
-            targetEffort = requested
-          } else if (effortIds.includes('off')) {
-            targetEffort = 'off'
-          }
+      const cacheKey = `${route.provider}:${route.model}`
+      let effortIds: string[] | undefined = modelEffortsCache.get(cacheKey)
+      if (effortIds === undefined) {
+        try {
+          const modelInfo = await llm.resolveModelInfo(route.provider, route.model, deadline.signal)
+          const efforts = modelInfo?.reasoning?.efforts
+          effortIds = Array.isArray(efforts) ? efforts.map((e: any) => e?.id).filter(Boolean) : []
+          remember(modelEffortsCache, cacheKey, effortIds)
+        } catch {
+          effortIds = []
         }
-      } catch {
-        targetEffort = undefined
+      }
+      if (effortIds && effortIds.length > 0) {
+        const requested = options.reasoningEffort || 'off'
+        if (effortIds.includes(requested)) {
+          targetEffort = requested
+        } else if (effortIds.includes('off')) {
+          targetEffort = 'off'
+        }
       }
     }
 
@@ -398,14 +403,7 @@ function shortReason(text: string) {
   return text.length > 200 ? `${text.slice(0, 200)}…` : text
 }
 
-/** Pick the requested effort when the model advertises it, else its lowest. */
-function selectEffort(model: any, requested: string) {
-  const efforts = model?.reasoning?.efforts
-  if (!Array.isArray(efforts) || efforts.length === 0) return undefined
-  const ids = efforts.map((effort) => effort?.id).filter((id) => typeof id === 'string' && id !== '')
-  if (ids.length === 0) return undefined
-  return requested !== '' && ids.includes(requested) ? requested : ids[0]
-}
+const modelEffortsCache = new Map<string, string[]>()
 
 function remember(cache: Map<string, any>, key: string, entry: any) {
   cache.delete(key)
@@ -764,5 +762,4 @@ export {
   buildPrompt,
   extractToolResultText,
   resolveRoute,
-  selectEffort,
 }
