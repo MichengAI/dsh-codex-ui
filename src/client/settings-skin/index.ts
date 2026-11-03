@@ -156,7 +156,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="
   border-radius: 16px !important;
   border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
   box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
-  background: var(--dsh-glass-card, var(--dsw-alias-bg-layer-1)) !important;
+  background: var(--dsw-alias-bg-layer-2, var(--dsh-glass-card, #18181b)) !important;
   backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
   -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
   overflow: hidden !important;
@@ -170,7 +170,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="
   border-radius: 16px !important;
   border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
   box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
-  background: var(--dsw-alias-bg-layer-1) !important;
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1, #18181b)) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   overflow: hidden !important;
@@ -181,12 +181,12 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="
   height: 48px !important;
   min-height: 48px !important;
   padding: 0 24px !important;
-  background: var(--dsw-alias-bg-layer-1) !important;
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1, #18181b)) !important;
 }
 
 html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2) {
-  padding: 16px 36px 48px !important;
-  background: var(--dsw-alias-bg-layer-1) !important;
+  padding: 16px 32px 48px !important;
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1, #18181b)) !important;
 }
 
 html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
@@ -459,11 +459,11 @@ button.dcu-settings-back-btn:hover,
   min-height: 0 !important;
   flex: 1 1 auto !important;
   overflow-y: auto !important;
-  padding: 32px 48px 64px !important;
+  padding: 24px 32px 48px !important;
   background: var(--dsw-alias-bg-layer-2, #18181b) !important;
   display: flex !important;
   flex-direction: column !important;
-  align-items: center !important;
+  align-items: stretch !important;
 }
 
 /* 浅色模式右侧内容区实色与文字按钮高对比度兜底 */
@@ -499,7 +499,7 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [
   background: var(--dsw-alias-bg-layer-1, #ffffff) !important;
 }
 
-/* 右侧设置区固定宽度规范：居中排版，避免宽屏下拉伸 */
+/* 右侧设置区固定宽度规范：居左舒展排版，避免宽屏下拉伸且绝不产生左侧空洞 */
 [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2) > * {
   width: 100% !important;
   max-width: 800px !important;
@@ -597,13 +597,13 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [
   box-sizing: border-box !important;
   min-height: 0 !important;
   overflow-y: auto !important;
-  padding-top: calc(56px + 28px) !important;
-  padding-bottom: 64px !important;
-  padding-inline: 48px !important;
+  padding-top: calc(56px + 20px) !important;
+  padding-bottom: 48px !important;
+  padding-inline: 32px !important;
   background: var(--dsw-alias-bg-layer-2, #18181b) !important;
   display: flex !important;
   flex-direction: column !important;
-  align-items: center !important;
+  align-items: stretch !important;
   margin: 0 !important;
   height: 100% !important;
   flex: none !important;
@@ -666,7 +666,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="optio
   border-top: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
   border-bottom: none !important;
   border-radius: 16px 16px 0 0 !important;
-  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #18181b)) !important;
+  background: var(--dsw-alias-bg-layer-2, var(--dsh-glass-card, #18181b)) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   box-shadow: none !important;
@@ -682,7 +682,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="optio
   border-bottom: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
   border-top: none !important;
   border-radius: 0 0 16px 16px !important;
-  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-layer-1, #18181b)) !important;
+  background: var(--dsw-alias-bg-layer-2, var(--dsh-glass-card, #18181b)) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)) !important;
@@ -725,11 +725,11 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="optio
   margin: 0 !important;
   border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
   border-radius: 16px !important;
-  background: var(--dsw-alias-bg-layer-1) !important;
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1, #18181b)) !important;
   box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
-  padding-top: calc(56px + 28px) !important;
+  padding-top: calc(56px + 20px) !important;
   padding-bottom: 48px !important;
-  padding-inline: 36px !important;
+  padding-inline: 32px !important;
 }
 
 /* 无论窗口 <=768px 还是处于收起态 [data-sidebar-collapsed]，结构尺寸均收敛为 56px 导轨 */
