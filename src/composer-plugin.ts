@@ -1,7 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
 import { isSubPluginDisabledOnDisk as checkDisabledOnDisk } from './profile-resolver.ts'
-import { registerComposerPredictions } from './composer-prediction.ts'
+import { apply as applyPredictions } from './composer-prediction.ts'
 
 export const name = 'codex-ui-composer'
 export const inject = ['webServer', 'connection', 'llm', 'sessions']
@@ -22,7 +22,8 @@ export function apply(ctx: Context): void {
   ctx.effect(() => {
     const disabled = isSubPluginDisabledOnDisk('codex-ui-composer', undefined, ctx)
     if (disabled) return () => {}
-    return registerComposerPredictions(ctx)
+    applyPredictions(ctx)
+    return () => {}
   }, 'michengai-codex-ui: composer predictions engine')
 
   // 2. 状态端点
