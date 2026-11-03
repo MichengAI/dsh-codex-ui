@@ -134,6 +134,19 @@ export const GLASS_EXTRA_CSS = `
   mask-image: linear-gradient(180deg, transparent 0, transparent 96px, #000 106px);
 }
 
+/* 对齐图 2 顶部 mask 遮挡规范：在毛玻璃模式下滚动消息流底部同样施加蒙版渐隐，正文向上滚动进入输入区前平滑淡出，彻底阻断透字且绝无色块 */
+[data-dsh-glass] [data-phase=active] [data-conversation-scroll] > [data-slot="conversation.session"],
+[data-dsh-glass] [data-content-phase=active] [data-conversation-scroll] > [data-slot="conversation.session"],
+[data-dsh-glass] [data-phase=active] [data-conversation-scroll] > [class*="viewArea"],
+[data-dsh-glass] [data-content-phase=active] [data-conversation-scroll] > [class*="viewArea"],
+[data-dsh-glass-float] [data-phase=active] [data-conversation-scroll] > [data-slot="conversation.session"],
+[data-dsh-glass-float] [data-content-phase=active] [data-conversation-scroll] > [data-slot="conversation.session"],
+[data-dsh-glass-float] [data-phase=active] [data-conversation-scroll] > [class*="viewArea"],
+[data-dsh-glass-float] [data-content-phase=active] [data-conversation-scroll] > [class*="viewArea"] {
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 96px), transparent calc(100% - 16px)) !important;
+  mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 96px), transparent calc(100% - 16px)) !important;
+}
+
 /* 斜杠指令/快捷指令候选面板（[data-trigger-menu] / Issue #72）：
    该菜单悬浮在输入卡片上方、直接压在滚动消息正文与代码块上。
    通用菜单 raised 填充（约 45%~58%）在密集文字流上无法有效阻断文字穿透（幽灵字叠字）。
