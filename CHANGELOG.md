@@ -2,6 +2,7 @@
 
 ## 2.0.16 (2026-11-04)
 
+- **Scoped Settings Sidebar Styles to Direct Children**: Restricted capsule navigation styles strictly to the direct left sidebar container of the settings workbench, completely preventing style bleed into the right-hand options content area. Third-party plugins with internal tabs or button navigations now preserve their native button dimensions and flex layout without being stretched to 100% full-width rows.
 - **Added an inline-prediction switch**: a new "Composer Enhancements" card in settings toggles inline suggestions on and off. Turning it off takes effect immediately, clears the current ghost, and **issues no further requests at all**, so no model tokens are spent. `↑`/`↓` history recall, width handles, and starter suggestion cards are unaffected.
 - **Added a site-level config flag**: a Profile can set `config.prediction: false` on `codex-ui-composer` in `cordis.patch.yml` to disable predictions wholesale. The Host then does not register the prediction routes (direct hits return 404), and the settings switch is locked off with an explanatory hint.
 
