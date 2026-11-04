@@ -71,18 +71,17 @@ export const GLASS_EXTRA_CSS = `
   border-radius: 0 !important;
 }
 
-/* 云母浮动顶栏：浮动排版把滚动内容上提 95px，让它从顶栏下方穿过（padding-top:107px 只保证
-   滚到顶部时内容起始于顶栏下方）。而顶栏底色只有 52% × frost（clear 预设仅 8.3%）、blur 为 0，
-   于是正文在「窗口顶部 12px 留白」「20px 圆角切角」「顶栏本体」三处都会透出来。
-   做法：不动顶栏本身（边框、阴影、磨砂全部保留），而是让滚动内容在顶栏区域内淡出。
-   注意 mask 的原点是滚动容器的 border box，不是视口：
-   - 容器顶 = 顶栏底边 97px − 95px(margin-top) = 2px
-   - 96px → 绝对 y=98，刚好压在顶栏底边 97 之下（alpha=0，顶栏内不留任何正文）
-   - 106px → 绝对 y=108，而内容最早从 y=109 开始（容器顶 2 + 宿主 padding-top 107）
-   所以渐入既盖满顶栏区域，又不会压暗任何正文。改这两个常量前先重算这三个数。 */
-[data-dsh-glass-float] [data-phase=active] [data-conversation-scroll] {
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, transparent 96px, #000 106px);
-  mask-image: linear-gradient(180deg, transparent 0, transparent 96px, #000 106px);
+/* 云母浮动顶栏：浮动排版把滚动内容上提 95px，让它从顶栏下方穿过。
+   ⚠ 绝对禁止在滚动容器 [data-conversation-scroll] 上使用 mask-image / clip-path 做顶部淡出：
+   Chromium 会让被遮罩的元素成为 backdrop root，导致其内部所有 backdrop-filter（输入卡片、
+   底部 dock 磨砂幕布）全部失效 —— 实测在真实宿主里把它设成 blur(24px) 后画面几乎没有任何
+   变化（拉普拉斯方差仅降 17%），去掉 mask 后同一处方差降 86%，云母输入框恢复正常磨砂。
+   这正是「还是透」的真因：兜底模糊一直在，只是被 mask 变成惰性。
+   因此顶部遮挡改为与对标插件一致的做法：不给滚动容器加遮罩，只把顶栏自己的磨砂设为下限值，
+   让从顶栏背后穿过的正文被磨砂化开。 */
+[data-dsh-glass-float] [data-phase] header:not([class*="headerBlank"]) {
+  backdrop-filter: blur(max(var(--dsh-glass-blur, 12px), 12px)) !important;
+  -webkit-backdrop-filter: blur(max(var(--dsh-glass-blur, 12px), 12px)) !important;
 }
 
 /* 对齐平铺风格（Compat）防漏字规范：将云母输入框卡片底色提升为高遮蔽度的 card-raised，
