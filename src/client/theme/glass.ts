@@ -71,56 +71,7 @@ export const GLASS_EXTRA_CSS = `
   border-radius: 0 !important;
 }
 
-/* 彻底清除输入框底部 dock / stats 区域的半透明灰色脏色块与切线 */
-[data-dsh-glass] [data-phase] [data-dsh-glass-inputbar] > [class*="dock"]:before,
-[data-dsh-glass] [data-phase] [data-dsh-glass-inputbar] > [data-composer-dock]:before,
-[data-dsh-glass] [class*="dock"]:before,
-[data-dsh-glass] [data-composer-dock]:before {
-  display: none !important;
-  content: none !important;
-  background: transparent !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-/* 底盘渐变（与 body 上那份逐字一致）抽成变量挂在 body 上，供「座舱底板」和「云母浮动顶栏」共用：
-   这两处都需要一块与页面底色完全一致的实底来遮挡滚过的正文，而 background-attachment: fixed
-   能把渐变钉到视口上，画出来与页面底色逐像素一致（实测 RGB 通道差 0），不会产生横向色差。 */
-[data-dsh-glass] body {
-  --dsh-glass-ground-layers:
-    radial-gradient(58% 46% at 18% 6%, color-mix(in srgb, var(--dsw-alias-brand-primary-new-colorprimary-new-color) calc(12% * var(--dsh-glass-ambience) * var(--dsh-glass-glow,0)), transparent), transparent 68%),
-    radial-gradient(48% 42% at 86% 14%, color-mix(in srgb, var(--dsw-alias-state-success-tertiary) calc(10% * var(--dsh-glass-ambience) * var(--dsh-glass-glow,0)), transparent), transparent 62%),
-    linear-gradient(165deg, color-mix(in srgb, var(--dsh-glass-ground), var(--dsh-glass-wash-tint) calc(var(--dsh-glass-wash-mix) * var(--dsh-glass-ambience))) 0%, var(--dsh-glass-ground) 55%, color-mix(in srgb, var(--dsh-glass-ground), #000 calc(5% * var(--dsh-glass-ambience))) 100%);
-}
-
-/* 输入框座舱遮挡（Issue #69）：玻璃层把宿主 composerSeat 的原生 36px 渐变底板覆盖成了透明，
-   向上回看历史时正文会直接穿过输入卡片与底部 dock 区域；参考插件那条 dock 遮罩带又因色差被移除，
-   于是两层遮挡同时缺失。这里补回遮挡，拆成「座舱底板 + 上沿渐隐带」两段：
-   底板铺与页面底色逐像素一致的底盘（见上），彻底挡住正文且无色带；
-   渐隐带用 mask 淡出同一块底盘，高度 16px 是因为实测最后一条消息底部与座舱顶部正好留白 16px，
-   只覆盖这段空白，滚到底时不会把最后一条消息一起淡掉。 */
-[data-dsh-glass] [data-phase=active] [class*="composerSeat"][class*="composerSeat"],
-[data-dsh-glass] [data-content-phase=active] [class*="composerSeat"][class*="composerSeat"] {
-  background: var(--dsh-glass-ground-layers);
-  background-attachment: fixed;
-}
-
-[data-dsh-glass] [data-phase=active] [class*="composerSeat"][class*="composerSeat"]::before,
-[data-dsh-glass] [data-content-phase=active] [class*="composerSeat"][class*="composerSeat"]::before {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  bottom: 100%;
-  height: 16px;
-  z-index: -1;
-  pointer-events: none;
-  background: var(--dsh-glass-ground-layers);
-  background-attachment: fixed;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 100%);
-  mask-image: linear-gradient(180deg, transparent 0, #000 100%);
-}
-
-/* 云母浮动顶栏同一缺陷：浮动排版把滚动内容上提 95px，让它从顶栏下方穿过（padding-top:107px 只保证
+/* 云母浮动顶栏：浮动排版把滚动内容上提 95px，让它从顶栏下方穿过（padding-top:107px 只保证
    滚到顶部时内容起始于顶栏下方）。而顶栏底色只有 52% × frost（clear 预设仅 8.3%）、blur 为 0，
    于是正文在「窗口顶部 12px 留白」「20px 圆角切角」「顶栏本体」三处都会透出来。
    做法：不动顶栏本身（边框、阴影、磨砂全部保留），而是让滚动内容在顶栏区域内淡出。
@@ -132,19 +83,6 @@ export const GLASS_EXTRA_CSS = `
 [data-dsh-glass-float] [data-phase=active] [data-conversation-scroll] {
   -webkit-mask-image: linear-gradient(180deg, transparent 0, transparent 96px, #000 106px);
   mask-image: linear-gradient(180deg, transparent 0, transparent 96px, #000 106px);
-}
-
-/* 对齐图 2 顶部 mask 遮挡规范：在毛玻璃模式下滚动消息流底部同样施加蒙版渐隐，正文向上滚动进入输入区前平滑淡出，彻底阻断透字且绝无色块 */
-[data-dsh-glass] [data-phase=active] [data-conversation-scroll] > [data-slot="conversation.session"],
-[data-dsh-glass] [data-content-phase=active] [data-conversation-scroll] > [data-slot="conversation.session"],
-[data-dsh-glass] [data-phase=active] [data-conversation-scroll] > [class*="viewArea"],
-[data-dsh-glass] [data-content-phase=active] [data-conversation-scroll] > [class*="viewArea"],
-[data-dsh-glass-float] [data-phase=active] [data-conversation-scroll] > [data-slot="conversation.session"],
-[data-dsh-glass-float] [data-content-phase=active] [data-conversation-scroll] > [data-slot="conversation.session"],
-[data-dsh-glass-float] [data-phase=active] [data-conversation-scroll] > [class*="viewArea"],
-[data-dsh-glass-float] [data-content-phase=active] [data-conversation-scroll] > [class*="viewArea"] {
-  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 96px), transparent calc(100% - 16px)) !important;
-  mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 96px), transparent calc(100% - 16px)) !important;
 }
 
 /* 斜杠指令/快捷指令候选面板（[data-trigger-menu] / Issue #72）：

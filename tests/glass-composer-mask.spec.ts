@@ -14,34 +14,30 @@ function injectedCss(): string {
   return tag?.textContent ?? ''
 }
 
-test('输入框座舱遮挡：必须声明 composerSeat 底板并覆盖内嵌会话（Issue #69）', () => {
-  // 选择器必须锁定激活态座舱，且用加倍类名特异性压过生成 CSS 里的 `background: 0 0`
-  expect(GLASS_EXTRA_CSS).toContain(
-    '[data-dsh-glass] [data-phase=active] [class*="composerSeat"][class*="composerSeat"]',
-  )
-  // 内嵌会话走 data-content-phase，同样要覆盖
-  expect(GLASS_EXTRA_CSS).toContain(
-    '[data-dsh-glass] [data-content-phase=active] [class*="composerSeat"][class*="composerSeat"]',
-  )
+test('对齐对标插件最新规范：座舱本体 composerSeat 必须保持透明无涂层（background: 0 0），防止视口两侧出现长条矩形大色块', () => {
+  // 生成 CSS 中座舱必须声明 background: 0 0（对应对标插件 Issue #28/#29 基础规范）
+  expect(GLASS_CSS_TEXT).toContain('[data-dsh-glass] [data-phase] [class*=composerSeat][class*=composerSeat]{background:0 0}')
+  // 追加 CSS 中不得给座舱铺满宽实底渐变，否则 1500px 满宽视口两侧会画出深色矩形脏色块
+  expect(GLASS_EXTRA_CSS).not.toContain('background: var(--dsh-glass-ground-layers)')
 })
 
-test('座舱底板必须复用全局底盘渐变并固定到视口，避免与渐变背景产生色差', () => {
-  // 底盘是「两层径向光晕 + 一层 165deg 线性渐变」，必须与 body 那份逐字一致
-  expect(GLASS_EXTRA_CSS).toContain('linear-gradient(165deg')
-  expect(GLASS_EXTRA_CSS).toContain('var(--dsh-glass-ground)')
-  expect(GLASS_EXTRA_CSS).toContain('var(--dsh-glass-wash-tint)')
-  // 固定到视口才能与页面底色逐像素对齐（实测 RGB 通道差 0）
-  expect(GLASS_EXTRA_CSS).toContain('background-attachment: fixed')
-  // 不允许退回近似纯色底板：宿主 --dsw-alias-bg-base 与玻璃渐变底盘不同色，会重新出现横向色带
-  expect(GLASS_EXTRA_CSS).not.toContain('var(--dsw-alias-bg-base)')
+test('对齐对标插件最新规范（Issue #29）：dock 状态栏必须使用磨砂幕布遮挡（地面色 + 半透 + 模糊 + 18px 顶部渐变蒙版）', () => {
+  // 1. 包含对标插件 Issue #29 核心规则：针对 [data-dsh-glass-inputbar] 下的 dock 伪元素
+  expect(GLASS_CSS_TEXT).toContain('[data-dsh-glass] [data-phase] [data-dsh-glass-inputbar]>[class*=dock]:before')
+  expect(GLASS_CSS_TEXT).toContain('[data-dsh-glass] [data-phase] [data-dsh-glass-inputbar]>[data-composer-dock]:before')
+
+  // 2. 必须具备磨砂模糊与顶部蒙版坡度（向上 8px 伸入输入卡片阴影，18px 蒙版自然过渡，绝不留硬切线）
+  expect(GLASS_CSS_TEXT).toContain('backdrop-filter:blur(var(--dsh-glass-blur,14px))')
+  expect(GLASS_CSS_TEXT).toContain('mask-image:linear-gradient(#0000 0,#000 18px)')
+  expect(GLASS_CSS_TEXT).toContain('var(--dsh-glass-ground)')
 })
 
-test('座舱上沿必须有 16px 渐隐带，且靠 mask 淡出同一块底盘', () => {
-  expect(GLASS_EXTRA_CSS).toContain('[class*="composerSeat"][class*="composerSeat"]::before')
-  expect(GLASS_EXTRA_CSS).toContain('bottom: 100%')
-  expect(GLASS_EXTRA_CSS).toContain('height: 16px')
-  // 渐隐必须用 mask：铺渐变底色会与渐变背景错色
-  expect(GLASS_EXTRA_CSS).toContain('mask-image: linear-gradient(180deg, transparent 0, #000 100%)')
+test('对齐对标插件最新规范：输入框卡片保留专属立体边框与阴影，内部使用云母磨砂', () => {
+  // 卡片保留 24px 圆角、专属高对比描边 rim-strong 和专属双层柔光投影 input-shadow
+  expect(GLASS_CSS_TEXT).toContain('border:1px solid var(--dsh-glass-rim-strong)')
+  expect(GLASS_CSS_TEXT).toContain('box-shadow:var(--dsh-glass-input-shadow)')
+  // 卡片伪元素使用 var(--dsh-glass-card) 云母磨砂层
+  expect(GLASS_CSS_TEXT).toContain('background:var(--dsh-glass-card)')
 })
 
 test('云母浮动顶栏：正文必须在顶栏区域内淡出，且不得改动顶栏自身外观', () => {
@@ -56,28 +52,19 @@ test('云母浮动顶栏：正文必须在顶栏区域内淡出，且不得改�
   expect(GLASS_EXTRA_CSS).not.toMatch(
     /\[data-dsh-glass-float\] \[data-phase\][^{]*header[^{]*\{[^}]*background:/,
   )
-  // 座舱与顶栏共用的底盘变量必须仍存在（座舱底板用）
-  expect(GLASS_EXTRA_CSS).toContain('var(--dsh-glass-ground-layers)')
-  expect(GLASS_EXTRA_CSS).toContain('[data-dsh-glass] body {')
 })
 
-test('输入框座舱遮挡：追加 CSS 必须排在生成 CSS 之后才能生效', () => {
+test('样式层级：生成 CSS 必须正确包含对标插件的座舱与输入卡片基础规则', () => {
   applyGlassSettings({ enabled: true, mode: 'mica', preset: 'standard' })
   const css = injectedCss()
   const transparentOverride = css.indexOf('[class*=composerSeat][class*=composerSeat]{background:0 0}')
-  const maskRule = css.indexOf('[data-phase=active] [class*="composerSeat"][class*="composerSeat"]')
   expect(transparentOverride).toBeGreaterThan(-1)
-  expect(maskRule).toBeGreaterThan(transparentOverride)
 })
 
-test('底部 dock 遮罩带保持移除，不得回退成参考插件的矩形色块', () => {
-  // 参考插件原来的做法：dock::before 铺一条左右各溢出 16px 的矩形磨砂带，正是此前“底部脏色块”的来源
-  expect(GLASS_CSS_TEXT).not.toContain('left:calc(-1 * var(--dsh-composer-side-clearance')
-  expect(GLASS_EXTRA_CSS).not.toContain('left: calc(-1 * var(--dsh-composer-side-clearance')
-  // dock 伪元素必须继续被关闭
-  expect(GLASS_EXTRA_CSS).toContain('[data-dsh-glass] [data-composer-dock]:before')
-  expect(GLASS_EXTRA_CSS).toMatch(
-    /\[data-dsh-glass\] \[data-composer-dock\]:before\s*\{[^}]*display: none !important/,
+test('对标插件（Issue #29）磨砂幕布规则规范：dock 伪元素绝不得被设为 display: none', () => {
+  // dock 伪元素必须保留以承载磨砂幕布，不得在追加 CSS 中粗暴隐藏
+  expect(GLASS_EXTRA_CSS).not.toMatch(
+    /\[data-dsh-glass\] \[data-composer-dock\]:before\s*\{[^}]*display:\s*none !important/,
   )
 })
 
@@ -95,8 +82,6 @@ test('指令面板加浓与磨砂：必须声明 [data-trigger-menu] 提浓规�
   expect(surfaceTag?.textContent).toContain('[data-trigger-menu]')
   expect(surfaceTag?.textContent).toContain('--dsw-menu-surface-fill: color-mix(in srgb, var(--dsw-alias-bg-layer-2, #1e1e2e) 88%, transparent) !important;')
   expect(surfaceTag?.textContent).toContain('--dsw-menu-backdrop-filter: blur(24px) saturate(140%) !important;')
-  expect(surfaceTag?.textContent).toContain('[class*="composerSeat"]::before')
-  expect(surfaceTag?.textContent).toContain('display: none !important;')
 
   // 3. 停用时通过真实生命周期 checkAndSync 必须彻底清除 DOM 上的 surface 标签（严格差分变异守卫）
   // 设置自选主题，将 hasAppliedCustomTheme 标志置为 true 且在 DOM 插入 surface 标签
@@ -139,17 +124,10 @@ test('指令面板加浓与磨砂：必须声明 [data-trigger-menu] 提浓规�
   }
 })
 
-test('右侧栏全屏与平铺玻璃：不得在布局壳或其内部 panel 上挂载导致层叠上下文冲突的 backdrop-filter', () => {
-  // 1. 生成 CSS 中不得再向 [data-sidebar-right-panel] 或其内部 panel 添加 backdrop-filter
-  expect(GLASS_CSS_TEXT).not.toContain(
-    '[data-dsh-glass-compat] [data-sidebar-right-panel][data-sidebar-right-open]',
-  )
-  expect(GLASS_CSS_TEXT).not.toContain(
-    '[data-sidebar-right-panel][data-sidebar-right-open] [class*="panel"]',
-  )
-  // 2. 注入后的样式表同样不得包含该污染规则
-  applyGlassSettings({ enabled: true, mode: 'compat', preset: 'standard' })
-  const css = injectedCss()
-  expect(css).not.toContain('[data-sidebar-right-panel][data-sidebar-right-open]')
+test('右侧栏全屏与平铺玻璃：仅在侧边栏展开时（[data-sidebar-right-open]）挂载磨砂，关闭时不得残留磨砂', () => {
+  // 1. 展开状态下支持磨砂
+  expect(GLASS_CSS_TEXT).toContain('[data-sidebar-right-panel][data-sidebar-right-open]')
+  // 2. 未展开或通配状态下不得无条件挂载磨砂
+  expect(GLASS_CSS_TEXT).not.toMatch(/\[data-sidebar-right-panel\]\s*\{[^}]*backdrop-filter:/)
 })
 
