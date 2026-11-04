@@ -1598,6 +1598,8 @@ describe('分区菜单使用宿主原语渲染：', () => {
     // 表面来自宿主 MenuSurface（自带 data-menu-material 磨砂层），行来自宿主 MenuItemButton
     expect(panel!.hasAttribute('data-dcu-menu-surface')).toBe(true)
     expect(panel!.hasAttribute('data-menu-material')).toBe(true)
+    // 可访问名称：读屏能报出这是「分区」菜单
+    expect(panel!.getAttribute('aria-label')).toBe('分区')
     const labels = Array.from(panel!.querySelectorAll('button[role="menuitem"]')).map(button =>
       button.textContent?.trim(),
     )
@@ -1610,6 +1612,39 @@ describe('分区菜单使用宿主原语渲染：', () => {
     expect(source).not.toContain('hostMenuShellTemplate')
     expect(source).toContain('MenuSurface')
     expect(source).toContain('MenuItemButton')
+  })
+})
+
+
+describe('分区二级菜单的可访问性：', () => {
+  it('「分区 ›」行声明 aria-haspopup=menu，展开时 aria-expanded 同步翻转', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '测试分区', ids: ['b'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    const menu = await openWorkspaceMenu('a')
+    const sectionRow = Array.from(menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find(
+      button => button.textContent?.trim() === '分区',
+    )
+    expect(sectionRow).toBeDefined()
+    expect(sectionRow!.getAttribute('aria-haspopup')).toBe('menu')
+    expect(sectionRow!.getAttribute('aria-expanded')).toBe('false')
+
+    sectionRow!.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }))
+    await new Promise<void>(resolve => setTimeout(resolve, 140))
+    expect(document.querySelector('.dcu-ws-section-menu')).not.toBeNull()
+    // 菜单行可能被重新注入，按文案重新取一次当前节点
+    const liveRow = Array.from(menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find(
+      button => button.textContent?.trim() === '分区',
+    )
+    expect(liveRow!.getAttribute('aria-expanded')).toBe('true')
   })
 })
 

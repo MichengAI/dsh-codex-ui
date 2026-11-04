@@ -327,6 +327,8 @@ export function observeWorkspaceSections(
   let unsubscribe: (() => void) | undefined
   const headers = new Map<string, HTMLElement>()
   let menuHost: HTMLElement | undefined
+  /** 「分区 ›」二级菜单当前是否展开：菜单行会被重新注入，展开态必须按这个标志落到新节点上。 */
+  let assignExpanded = false
   /** 当前二级菜单的锚点（「分区」那一行），悬停重复触发时用来去重。 */
   let assignAnchor: HTMLElement | undefined
 
@@ -702,6 +704,8 @@ export function observeWorkspaceSections(
       unmountComponentAtNode(menuHost)
       menuHost.remove()
     }
+    assignExpanded = false
+    assignAnchor?.setAttribute('aria-expanded', 'false')
     menuHost = undefined
     assignAnchor = undefined
   }
@@ -744,6 +748,7 @@ export function observeWorkspaceSections(
           MenuSurface as never,
           {
             role: 'menu',
+            'aria-label': text('sections.menu', '分区'),
             className: MENU_CLASS,
             'data-dcu-menu-surface': 'true',
             ...(parentMenu === null || parentMenu === undefined ? {} : { 'data-flyout': 'true' }),
@@ -1372,6 +1377,10 @@ export function observeWorkspaceSections(
       const button = sectionRow.querySelector('button')
       const anchorButton = button
       if (anchorButton !== null) {
+        // 宿主 MenuItemButton 不透传 aria-haspopup/aria-expanded，这里按等价语义补齐，
+        // 让读屏知道这一行会展开二级菜单（与归档插件的做法一致）。
+        anchorButton.setAttribute('aria-haspopup', 'menu')
+        anchorButton.setAttribute('aria-expanded', assignExpanded ? 'true' : 'false')
         let hoverTimer: number | undefined
         const cancelHover = (): void => {
           if (hoverTimer === undefined) return
@@ -1421,7 +1430,6 @@ export function observeWorkspaceSections(
   let collapsed: Record<string, boolean> = readCollapsed()
 
   function openAssignMenu(anchor: HTMLElement, parentMenu?: HTMLElement): void {
-    assignAnchor = anchor
     const workspaceId = assigningWorkspaceId
     if (workspaceId === undefined) return
     const current = sectionOf(state, workspaceId)
@@ -1451,6 +1459,13 @@ export function observeWorkspaceSections(
       },
     })
     openHostPanel(anchor, items, parentMenu)
+    // 展开态在面板建立之后再落标记：openHostPanel 开头会 closeSectionMenu() 清标志，
+    // 先设会被自己清掉（这也是菜单行重新注入后 aria-expanded 回退的原因）。
+    if (menuHost !== undefined) {
+      assignAnchor = anchor
+      assignExpanded = true
+      anchor.setAttribute('aria-expanded', 'true')
+    }
   }
 
   /* ── 顺序同步 ── */
