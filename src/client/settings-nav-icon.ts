@@ -68,12 +68,14 @@ function matchesLabel(text: string, getLabel: () => string): boolean {
   return normalized === expected || normalized === 'codex ui'
 }
 
+/** 把「Codex UI」设置项按钮切到原生插槽图标之外的自绘 icon（属性标记 + CSS mask）。
+ *  返回值表示「本次调用改动了该按钮的状态」（打上或移除了标记），供调用方做变更统计。 */
 export function applyNavIcon(button: HTMLButtonElement, getLabel: () => string): boolean {
   const text = button.textContent ?? ''
   if (matchesLabel(text, getLabel)) {
-    const hasSlotIcon = Array.from((button as unknown as { children?: Element[] }).children ?? []).some((child: any) =>
-      child.tagName === 'SPAN' && child.className && String(child.className).includes('navIcon')
-    ) || Boolean(button.querySelector?.('span[class*="navIcon"]'))
+    // 宿主已经用原生插槽渲染了图标容器（span.navIcon）：不再自绘，避免双图标。
+    // 注意必须限定 span：老宿主把它画成 <svg class="xxx_navIcon">，那是宿主自己的图标，不是插槽。
+    const hasSlotIcon = Boolean(button.querySelector?.('span[class*="navIcon"]'))
     if (hasSlotIcon) {
       if (button.getAttribute(CODEX_UI_NAV_MARKER) === 'codex-ui') {
         button.removeAttribute(CODEX_UI_NAV_MARKER)

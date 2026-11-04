@@ -823,6 +823,20 @@ export function observeWorkspaceSections(
     })
     container.addEventListener('pointerdown', event => event.stopPropagation())
     container.addEventListener('mousedown', event => event.stopPropagation())
+    // 方向键走到首/尾时必须截住：宿主的 roving focus 监听在 document 上，
+    // 不拦就会把焦点甩回一级菜单（实测：末项再按 ↓ 焦点跳到「置顶」）。
+    container.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+      const rows = Array.from(
+        container.querySelectorAll<HTMLElement>('[role="menuitem"]'),
+      )
+      if (rows.length === 0) return
+      const index = rows.indexOf(document.activeElement as HTMLElement)
+      const atEdge = event.key === 'ArrowDown' ? index === rows.length - 1 : index <= 0
+      if (!atEdge) return
+      event.preventDefault()
+      event.stopPropagation()
+    })
 
     menuHost = container
 

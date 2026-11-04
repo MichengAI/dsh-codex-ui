@@ -75,3 +75,25 @@ test('observeSettingsNavIcon 在 DOM 变更时自动补上图标并在卸载时�
   expect(btn.hasAttribute(CODEX_UI_NAV_MARKER)).toBe(false)
   expect(document.getElementById('dcu-settings-nav-icon-style')).toBeNull()
 })
+
+test('原生插槽图标出现后必须撤掉自绘标记，避免双图标（并如实返回「状态已改动」）', () => {
+  const button = document.createElement('button')
+  const labelSpan = document.createElement('span')
+  labelSpan.textContent = 'Codex UI'
+  button.appendChild(labelSpan)
+  document.body.appendChild(button)
+
+  // 第一次：没有插槽图标 → 自绘并打标记
+  expect(applyNavIcon(button, () => 'Codex UI')).toBe(true)
+  expect(button.getAttribute(CODEX_UI_NAV_MARKER)).toBe('codex-ui')
+
+  // 宿主随后渲染出原生插槽图标 → 必须撤掉自绘标记（自绘样式随之失效，只剩宿主图标）
+  const slot = document.createElement('span')
+  slot.className = 'navIcon'
+  button.insertBefore(slot, labelSpan)
+  expect(applyNavIcon(button, () => 'Codex UI')).toBe(true)
+  expect(button.hasAttribute(CODEX_UI_NAV_MARKER)).toBe(false)
+
+  // 再调一次不应再改动任何状态
+  expect(applyNavIcon(button, () => 'Codex UI')).toBe(false)
+})

@@ -1746,6 +1746,48 @@ describe('分区二级菜单的可访问性：', () => {
     await new Promise<void>(resolve => setTimeout(resolve, 180))
     expect(document.querySelector('.dcu-ws-section-menu')).not.toBeNull()
   })
+
+  it('方向键走到二级菜单首尾时必须被截住，不能把焦点甩回一级菜单', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '测试分区', ids: ['b'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    const menu = await openWorkspaceMenu('a')
+    const row = Array.from(menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find(
+      button => button.textContent?.trim() === '分区',
+    )!
+    row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }))
+    await new Promise<void>(resolve => setTimeout(resolve, 150))
+
+    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    const items = Array.from(panel.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]'))
+    expect(items.length).toBeGreaterThan(1)
+
+    // 末项再按 ↓：必须 preventDefault，否则宿主的 roving focus 会把焦点移出面板
+    items[items.length - 1].focus()
+    const down = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })
+    items[items.length - 1].dispatchEvent(down)
+    expect(down.defaultPrevented).toBe(true)
+
+    // 首项再按 ↑：同理
+    items[0].focus()
+    const up = new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })
+    items[0].dispatchEvent(up)
+    expect(up.defaultPrevented).toBe(true)
+
+    // 中间位置的方向键必须放行，否则面板内就无法用键盘移动
+    items[0].focus()
+    const pass = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })
+    items[0].dispatchEvent(pass)
+    expect(pass.defaultPrevented).toBe(false)
+  })
 })
 
 })
