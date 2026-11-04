@@ -32,7 +32,6 @@ import {
   type SectionsState,
 } from './model.ts'
 import { SectionLayoutMotion } from './motion.ts'
-import { fitFlyoutIntoColumn, type Rect } from '../flyout-fit.ts'
 import { planWorkspaceMoves } from './order.ts'
 import { flushSectionsSave, loadSectionsDocument, scheduleSectionsSave } from './store.ts'
 
@@ -706,7 +705,40 @@ export function observeWorkspaceSections(
 
   /* ── 分区菜单 ── */
 
+  /** 清理「内部 pointerout 截断」监听（每次开面板重新挂，closeSectionMenu 里释放）。 */
+  let flyoutExitCleanup: (() => void) | undefined
+
+  /**
+   * 截断子面板与父菜单之间「同一菜单内部」的 out 事件，避免宿主把跨 React 根的内部移动
+   * 判成离开菜单。真正移出菜单（related 落在菜单外）的事件原样放行。
+   */
+  function guardFlyoutExit(parentMenu: HTMLElement, container: HTMLElement): () => void {
+    const inside = (node: EventTarget | null, root: HTMLElement): boolean =>
+      node instanceof Node && root.contains(node)
+    const handler = (event: Event): void => {
+      const related = (event as MouseEvent).relatedTarget
+      if (!(related instanceof Node)) return
+      if (inside(related, container)) {
+        // 进入子面板，或在子面板内部换行
+        event.stopPropagation()
+        return
+      }
+      if (inside(event.target, container) && inside(related, parentMenu)) {
+        // 从子面板退回父菜单
+        event.stopPropagation()
+      }
+    }
+    parentMenu.addEventListener('pointerout', handler)
+    parentMenu.addEventListener('mouseout', handler)
+    return () => {
+      parentMenu.removeEventListener('pointerout', handler)
+      parentMenu.removeEventListener('mouseout', handler)
+    }
+  }
+
   function closeSectionMenu(): void {
+    flyoutExitCleanup?.()
+    flyoutExitCleanup = undefined
     if (menuHost !== undefined) {
       // 先在容器上卸载 React 树，再摘掉容器，避免宿主菜单里残留孤儿节点
       unmountComponentAtNode(menuHost)
@@ -754,6 +786,12 @@ export function observeWorkspaceSections(
     if (parentMenu !== null && parentMenu !== undefined) {
       // 挂进父菜单内部：宿主的 outside-click 判定才会把它当成菜单的一部分
       parentMenu.appendChild(container)
+      // 子面板是另一棵 React 根：宿主菜单的 onPointerLeave 用 relatedTarget 判进出，
+      // 跨根时会把「指针从父行移到子面板」错判成离开整个菜单，随即启动 200ms 收起，
+      // 表现就是鼠标一进分区子菜单、整条菜单链一起消失（rc.5 实测，Web/桌面同源）。
+      // 只截断「本菜单内部往返」的 out 事件，真正移出菜单的事件照常冒泡，宿主语义不变。
+      flyoutExitCleanup?.()
+      flyoutExitCleanup = guardFlyoutExit(parentMenu, container)
     } else {
       document.body.appendChild(container)
     }
@@ -848,9 +886,6 @@ export function observeWorkspaceSections(
       const height = surface.offsetHeight || 120
       const maxHeight = Math.max(140, Math.min(360, window.innerHeight - 20))
       surface.style.maxHeight = `${maxHeight}px`
-      // 抽屉（收起）状态的侧栏：宿主 2 秒 linger 会因指针离开列矩形把抽屉收起，
-      // 所以面板必须夹在列内（见 flyout-fit.ts 的说明）。
-      const column = drawerColumnRect()
       if (parentMenu !== null && parentMenu !== undefined) {
         const parentRect = parentMenu.getBoundingClientRect()
         let left = parentRect.right + 2
@@ -859,50 +894,14 @@ export function observeWorkspaceSections(
         if (top + Math.min(height, maxHeight) > window.innerHeight - 10) {
           top = Math.max(10, window.innerHeight - Math.min(height, maxHeight) - 10)
         }
-        const fitted = fitFlyoutIntoColumn(
-          { left, top, width, height: Math.min(height, maxHeight) },
-          column,
-        )
-        if (fitted.shrunk) {
-          surface.style.minWidth = '0px'
-          surface.style.maxWidth = `${Math.max(96, fitted.width)}px`
-        }
-        surface.style.left = `${fitted.left}px`
-        surface.style.top = `${fitted.top}px`
+        surface.style.left = `${left}px`
+        surface.style.top = `${top}px`
       } else {
-        const rawLeft = Math.max(8, Math.min(rect.left + 4, window.innerWidth - width - 8))
-        const rawTop = Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - height - 8))
-        const fitted = fitFlyoutIntoColumn(
-          { left: rawLeft, top: rawTop, width, height: Math.min(height, maxHeight) },
-          column,
-        )
-        if (fitted.shrunk) {
-          surface.style.minWidth = '0px'
-          surface.style.maxWidth = `${Math.max(96, fitted.width)}px`
-        }
-        surface.style.left = `${fitted.left}px`
-        surface.style.top = `${fitted.top}px`
+        surface.style.left = `${Math.max(8, Math.min(rect.left + 4, window.innerWidth - width - 8))}px`
+        surface.style.top = `${Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - height - 8))}px`
       }
     }
     container.style.visibility = 'visible'
-  }
-
-  /**
-   * 侧栏处于「收起/抽屉」状态时返回列矩形，否则返回 null。
-   * 判据用宿主自己的标记：收起时 frame 上有 data-sidebar-collapsed；常驻展开时没有。
-   * 列矩形在抽屉收起时停在屏幕左侧外，此时 isColumnVisible 会判为不可见并跳过夹取。
-   */
-  function drawerColumnRect(): Rect | null {
-    const flag = document.querySelector('[data-sidebar-collapsed]')
-    if (flag === null) return null
-    // 宿主有的版本写成 data-sidebar-collapsed="false" 表示展开，别把常驻侧栏也夹了
-    if (flag.getAttribute('data-sidebar-collapsed') === 'false') return null
-    const column =
-      document.querySelector<HTMLElement>('[class*="sidebarCol"]') ??
-      document.querySelector<HTMLElement>('[data-dsh-glass-sidebar-root]')
-    if (column === null) return null
-    const box = column.getBoundingClientRect()
-    return { left: box.left, top: box.top, right: box.right, bottom: box.bottom }
   }
 
   function openSectionMenu(sectionId: string, anchor: HTMLElement): void {

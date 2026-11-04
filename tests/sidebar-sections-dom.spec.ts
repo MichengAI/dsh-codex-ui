@@ -1716,6 +1716,41 @@ describe('分区二级菜单的可访问性：', () => {
     expect(document.querySelector('.dcu-ws-section-menu')).not.toBeNull()
   })
 
+  it('跨独立渲染树的内部 pointerout 不应上报给宿主，真正离开菜单仍应放行', async () => {
+    seedSections({ sections: [
+      { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+      { id: 's1', name: '测试分区', ids: ['b'] },
+      { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+    ] })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+    const menu = await openWorkspaceMenu('a')
+    const row = Array.from(menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]'))
+      .find(button => button.textContent?.trim() === '分区')!
+    row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }))
+    await new Promise<void>(resolve => setTimeout(resolve, 150))
+    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    const item = panel.querySelector<HTMLButtonElement>('button[role="menuitem"]')!
+    const received: Event[] = []
+    const onPointerOut = (event: Event): void => { received.push(event) }
+    document.addEventListener('pointerout', onPointerOut)
+    try {
+      // rc.5 的 React 根会把来自另一棵树的 relatedTarget 当作菜单外部。
+      row.dispatchEvent(new MouseEvent('pointerout', { bubbles: true, relatedTarget: item }))
+      expect(received).toHaveLength(0)
+      item.dispatchEvent(new MouseEvent('pointerout', { bubbles: true, relatedTarget: row }))
+      expect(received).toHaveLength(0)
+      item.dispatchEvent(new MouseEvent('pointerout', { bubbles: true, relatedTarget: document.body }))
+      expect(received).toHaveLength(1)
+      // 不涉及子面板的父菜单事件不应被吞掉。
+      row.dispatchEvent(new MouseEvent('pointerout', { bubbles: true, relatedTarget: menu }))
+      expect(received).toHaveLength(2)
+    } finally {
+      document.removeEventListener('pointerout', onPointerOut)
+    }
+  })
+
   it('父菜单被宿主摘掉后，悬停「分区」仍能重新弹出（陈旧 menuHost 必须先自清）', async () => {
     seedSections({
       sections: [
@@ -1789,74 +1824,6 @@ describe('分区二级菜单的可访问性：', () => {
     expect(pass.defaultPrevented).toBe(false)
   })
 
-  it('侧边栏是收起抽屉时，二级菜单必须被夹在侧栏列内（宿主 2s linger 会因指针出列收起抽屉）', async () => {
-    seedSections({
-      sections: [
-        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
-        { id: 's1', name: '测试分区', ids: ['b'] },
-        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
-      ],
-    })
-    mountFixture(['a', 'b'])
-    mount(['a', 'b'])
-    await waitForSync()
-
-    // 模拟抽屉：frame 带 data-sidebar-collapsed，侧栏列 0..280
-    const frame = document.createElement('div')
-    frame.setAttribute('data-sidebar-collapsed', 'true')
-    const column = document.createElement('div')
-    column.className = 'sidebarCol'
-    column.getBoundingClientRect = () => ({ left: 0, top: 12, right: 280, bottom: 812, width: 280, height: 800, x: 0, y: 12, toJSON: () => ({}) }) as DOMRect
-    frame.appendChild(column)
-    document.body.appendChild(frame)
-
-    const menu = await openWorkspaceMenu('a')
-    const row = Array.from(menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find(
-      button => button.textContent?.trim() === '分区',
-    )!
-    row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }))
-    await new Promise<void>(resolve => setTimeout(resolve, 150))
-
-    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
-    expect(panel).not.toBeNull()
-    // 压缩到列内：min-width 被放开、max-width 不超过列右边界（280 - 6）
-    expect(panel.style.minWidth).toBe('0px')
-    const maxWidth = Number.parseFloat(panel.style.maxWidth)
-    expect(maxWidth).toBeGreaterThan(0)
-    expect(Number.parseFloat(panel.style.left) + maxWidth).toBeLessThanOrEqual(280 - 6 + 0.5)
-  })
-
-  it('抽屉标记写成 data-sidebar-collapsed="false" 时视为常驻展开，不做夹取', async () => {
-    seedSections({
-      sections: [
-        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
-        { id: 's1', name: '测试分区', ids: ['b'] },
-        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
-      ],
-    })
-    mountFixture(['a', 'b'])
-    mount(['a', 'b'])
-    await waitForSync()
-
-    const frame = document.createElement('div')
-    frame.setAttribute('data-sidebar-collapsed', 'false')
-    const column = document.createElement('div')
-    column.className = 'sidebarCol'
-    column.getBoundingClientRect = () => ({ left: 0, top: 12, right: 280, bottom: 812, width: 280, height: 800, x: 0, y: 12, toJSON: () => ({}) }) as DOMRect
-    frame.appendChild(column)
-    document.body.appendChild(frame)
-
-    const menu = await openWorkspaceMenu('a')
-    const row = Array.from(menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find(
-      button => button.textContent?.trim() === '分区',
-    )!
-    row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }))
-    await new Promise<void>(resolve => setTimeout(resolve, 150))
-
-    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
-    expect(panel.style.minWidth).toBe('')
-    expect(panel.style.maxWidth).toBe('')
-  })
 })
 
 })
