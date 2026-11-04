@@ -157,3 +157,10 @@ test('云母模式挂载顶部渐隐条（[data-dsh-glass-fade=top]），平铺�
   disposeGlassMode()
   expect(document.querySelector('[data-dsh-glass-fade="top"]')).toBeNull()
 })
+
+test('dock 模糊下限只作用于云母浮动模式，绝不泄漏到 compat（否则 clear 预设 blur:0 会被抬到 12px）', () => {
+  // 追加 CSS 里不得存在「只用 [data-dsh-glass] 限定」的 dock 伪元素规则
+  expect(GLASS_EXTRA_CSS).not.toMatch(/\[data-dsh-glass\]\s+\[data-dsh-glass-inputbar\][^{]*dock[^{]*\{/)
+  // 云母浮动模式仍保留下限
+  expect(GLASS_EXTRA_CSS).toContain('[data-dsh-glass-float] [data-dsh-glass-inputbar] > [class*="dock"]::before')
+})

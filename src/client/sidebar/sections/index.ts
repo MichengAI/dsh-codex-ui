@@ -1421,6 +1421,9 @@ export function observeWorkspaceSections(
           // 悬停即展开（和 Codex 的「移动到项目」一样），留 90ms 防误触。
           hoverTimer = window.setTimeout(() => {
             hoverTimer = undefined
+            // 宿主可能自己把菜单摘掉（滚动/缩放/路由切换）：容器已脱离 DOM 时
+            // 必须先清掉残留状态，否则这里的守卫会让二级菜单再也弹不出来。
+            if (menuHost !== undefined && !menuHost.isConnected) closeSectionMenu()
             if (menuHost !== undefined && assignAnchor === anchorButton) return
             openAssignMenu(anchorButton, menu)
           }, 90)

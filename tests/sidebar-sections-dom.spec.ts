@@ -1715,6 +1715,37 @@ describe('分区二级菜单的可访问性：', () => {
     await new Promise<void>(resolve => setTimeout(resolve, 260))
     expect(document.querySelector('.dcu-ws-section-menu')).not.toBeNull()
   })
+
+  it('父菜单被宿主摘掉后，悬停「分区」仍能重新弹出（陈旧 menuHost 必须先自清）', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '测试分区', ids: ['b'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    const menu = await openWorkspaceMenu('a')
+    const row = Array.from(menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find(
+      button => button.textContent?.trim() === '分区',
+    )!
+    row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }))
+    await new Promise<void>(resolve => setTimeout(resolve, 150))
+    const first = document.querySelector<HTMLElement>('.dcu-ws-section-menu')
+    expect(first).not.toBeNull()
+
+    // 模拟宿主自己关掉菜单（滚动/缩放/路由切换）：容器被摘走，但插件侧 menuHost 仍指向它
+    first!.parentElement!.remove()
+    expect(document.querySelector('.dcu-ws-section-menu')).toBeNull()
+
+    // 再次悬停：不得被「menuHost 已存在」的守卫挡住
+    row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }))
+    await new Promise<void>(resolve => setTimeout(resolve, 180))
+    expect(document.querySelector('.dcu-ws-section-menu')).not.toBeNull()
+  })
 })
 
 })
