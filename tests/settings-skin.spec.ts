@@ -411,7 +411,7 @@ test('双版本宿主 DOM 结构兼容：准确识别新版 navIcon + navLabel �
   const navList = document.createElement('div')
   navList.className = 'navList'
 
-  // 新版宿主（0.2.2-alpha.3+）：第一个 span 是 navIcon (内部无文字)，第二个 span 是 navLabel
+  // 新版宿主（0.2.2-rc.1+）：第一个 span 是 navIcon (内部无文字)，第二个 span 是 navLabel
   const btnPersonal = document.createElement('button')
   btnPersonal.innerHTML = '<span class="navIcon" aria-hidden="true"><svg></svg></span><span class="navLabel">通用设置</span>'
 

@@ -36,6 +36,7 @@ function setup() {
     shortcuts: { register: () => () => {} },
     get: () => ({ state: { getSnapshot: () => 'connected', subscribe: () => () => {} } }),
     remote: { $host: { isLoopback: false } },
+    remoteAccess: { whenAccess: (_name: string, cb: () => void) => cb?.() },
     inject: () => () => {},
     effect: (callback: () => () => void) => { const off = callback(); disposers.push(off); return off },
   } as unknown as Context
