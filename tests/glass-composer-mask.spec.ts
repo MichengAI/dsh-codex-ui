@@ -36,8 +36,11 @@ test('对齐对标插件最新规范：输入框卡片保留专属立体边框�
   // 卡片保留 24px 圆角、专属高对比描边 rim-strong 和专属双层柔光投影 input-shadow
   expect(GLASS_CSS_TEXT).toContain('border:1px solid var(--dsh-glass-rim-strong)')
   expect(GLASS_CSS_TEXT).toContain('box-shadow:var(--dsh-glass-input-shadow)')
-  // 卡片伪元素使用 var(--dsh-glass-card) 云母磨砂层
+  // 卡片伪元素基础规则使用 var(--dsh-glass-card) 云母磨砂层
   expect(GLASS_CSS_TEXT).toContain('background:var(--dsh-glass-card)')
+  // 对齐平铺风格（Compat）：追加规则强化输入卡片为 card-raised 且锁定至少 12px 磨砂，杜绝文字穿透叠字
+  expect(GLASS_EXTRA_CSS).toContain('var(--dsh-glass-card-raised) !important;')
+  expect(GLASS_EXTRA_CSS).toContain('backdrop-filter: blur(max(var(--dsh-glass-blur, 12px), 12px)) !important;')
 })
 
 test('云母浮动顶栏：正文必须在顶栏区域内淡出，且不得改动顶栏自身外观', () => {
