@@ -32,6 +32,7 @@ import {
   type SectionsState,
 } from './model.ts'
 import { SectionLayoutMotion } from './motion.ts'
+import { fitFlyoutIntoColumn, type Rect } from '../flyout-fit.ts'
 import { planWorkspaceMoves } from './order.ts'
 import { flushSectionsSave, loadSectionsDocument, scheduleSectionsSave } from './store.ts'
 
@@ -847,6 +848,9 @@ export function observeWorkspaceSections(
       const height = surface.offsetHeight || 120
       const maxHeight = Math.max(140, Math.min(360, window.innerHeight - 20))
       surface.style.maxHeight = `${maxHeight}px`
+      // 抽屉（收起）状态的侧栏：宿主 2 秒 linger 会因指针离开列矩形把抽屉收起，
+      // 所以面板必须夹在列内（见 flyout-fit.ts 的说明）。
+      const column = drawerColumnRect()
       if (parentMenu !== null && parentMenu !== undefined) {
         const parentRect = parentMenu.getBoundingClientRect()
         let left = parentRect.right + 2
@@ -855,14 +859,50 @@ export function observeWorkspaceSections(
         if (top + Math.min(height, maxHeight) > window.innerHeight - 10) {
           top = Math.max(10, window.innerHeight - Math.min(height, maxHeight) - 10)
         }
-        surface.style.left = `${left}px`
-        surface.style.top = `${top}px`
+        const fitted = fitFlyoutIntoColumn(
+          { left, top, width, height: Math.min(height, maxHeight) },
+          column,
+        )
+        if (fitted.shrunk) {
+          surface.style.minWidth = '0px'
+          surface.style.maxWidth = `${Math.max(96, fitted.width)}px`
+        }
+        surface.style.left = `${fitted.left}px`
+        surface.style.top = `${fitted.top}px`
       } else {
-        surface.style.left = `${Math.max(8, Math.min(rect.left + 4, window.innerWidth - width - 8))}px`
-        surface.style.top = `${Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - height - 8))}px`
+        const rawLeft = Math.max(8, Math.min(rect.left + 4, window.innerWidth - width - 8))
+        const rawTop = Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - height - 8))
+        const fitted = fitFlyoutIntoColumn(
+          { left: rawLeft, top: rawTop, width, height: Math.min(height, maxHeight) },
+          column,
+        )
+        if (fitted.shrunk) {
+          surface.style.minWidth = '0px'
+          surface.style.maxWidth = `${Math.max(96, fitted.width)}px`
+        }
+        surface.style.left = `${fitted.left}px`
+        surface.style.top = `${fitted.top}px`
       }
     }
     container.style.visibility = 'visible'
+  }
+
+  /**
+   * 侧栏处于「收起/抽屉」状态时返回列矩形，否则返回 null。
+   * 判据用宿主自己的标记：收起时 frame 上有 data-sidebar-collapsed；常驻展开时没有。
+   * 列矩形在抽屉收起时停在屏幕左侧外，此时 isColumnVisible 会判为不可见并跳过夹取。
+   */
+  function drawerColumnRect(): Rect | null {
+    const flag = document.querySelector('[data-sidebar-collapsed]')
+    if (flag === null) return null
+    // 宿主有的版本写成 data-sidebar-collapsed="false" 表示展开，别把常驻侧栏也夹了
+    if (flag.getAttribute('data-sidebar-collapsed') === 'false') return null
+    const column =
+      document.querySelector<HTMLElement>('[class*="sidebarCol"]') ??
+      document.querySelector<HTMLElement>('[data-dsh-glass-sidebar-root]')
+    if (column === null) return null
+    const box = column.getBoundingClientRect()
+    return { left: box.left, top: box.top, right: box.right, bottom: box.bottom }
   }
 
   function openSectionMenu(sectionId: string, anchor: HTMLElement): void {

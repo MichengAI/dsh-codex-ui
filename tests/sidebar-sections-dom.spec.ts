@@ -1788,6 +1788,75 @@ describe('分区二级菜单的可访问性：', () => {
     items[0].dispatchEvent(pass)
     expect(pass.defaultPrevented).toBe(false)
   })
+
+  it('侧边栏是收起抽屉时，二级菜单必须被夹在侧栏列内（宿主 2s linger 会因指针出列收起抽屉）', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '测试分区', ids: ['b'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    // 模拟抽屉：frame 带 data-sidebar-collapsed，侧栏列 0..280
+    const frame = document.createElement('div')
+    frame.setAttribute('data-sidebar-collapsed', 'true')
+    const column = document.createElement('div')
+    column.className = 'sidebarCol'
+    column.getBoundingClientRect = () => ({ left: 0, top: 12, right: 280, bottom: 812, width: 280, height: 800, x: 0, y: 12, toJSON: () => ({}) }) as DOMRect
+    frame.appendChild(column)
+    document.body.appendChild(frame)
+
+    const menu = await openWorkspaceMenu('a')
+    const row = Array.from(menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find(
+      button => button.textContent?.trim() === '分区',
+    )!
+    row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }))
+    await new Promise<void>(resolve => setTimeout(resolve, 150))
+
+    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    expect(panel).not.toBeNull()
+    // 压缩到列内：min-width 被放开、max-width 不超过列右边界（280 - 6）
+    expect(panel.style.minWidth).toBe('0px')
+    const maxWidth = Number.parseFloat(panel.style.maxWidth)
+    expect(maxWidth).toBeGreaterThan(0)
+    expect(Number.parseFloat(panel.style.left) + maxWidth).toBeLessThanOrEqual(280 - 6 + 0.5)
+  })
+
+  it('抽屉标记写成 data-sidebar-collapsed="false" 时视为常驻展开，不做夹取', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '测试分区', ids: ['b'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    const frame = document.createElement('div')
+    frame.setAttribute('data-sidebar-collapsed', 'false')
+    const column = document.createElement('div')
+    column.className = 'sidebarCol'
+    column.getBoundingClientRect = () => ({ left: 0, top: 12, right: 280, bottom: 812, width: 280, height: 800, x: 0, y: 12, toJSON: () => ({}) }) as DOMRect
+    frame.appendChild(column)
+    document.body.appendChild(frame)
+
+    const menu = await openWorkspaceMenu('a')
+    const row = Array.from(menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find(
+      button => button.textContent?.trim() === '分区',
+    )!
+    row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }))
+    await new Promise<void>(resolve => setTimeout(resolve, 150))
+
+    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    expect(panel.style.minWidth).toBe('')
+    expect(panel.style.maxWidth).toBe('')
+  })
 })
 
 })
