@@ -281,7 +281,7 @@ async function runPrediction(ctx: any, options: any, cache: any, inflight: any, 
   const controller = new AbortController()
   inflight.add(controller)
   try {
-    const result = await predict(ctx, options, plan.session, plan.mode, plan.draft, joinSignals([controller.signal, ...signals]), onDelta)
+    const result = await predict(ctx, options, plan.session, plan.sessionId, plan.mode, plan.draft, joinSignals([controller.signal, ...signals]), onDelta)
     if (result.items.length > 0 && !controller.signal.aborted && !signals.some(signal => signal.aborted)) {
       remember(cache, plan.key, { items: result.items })
     }
@@ -295,7 +295,7 @@ async function runPrediction(ctx: any, options: any, cache: any, inflight: any, 
  * Run one auxiliary model call over the transcript tail and tool activity.
  * @returns `{ items }` on success or `{ items: [], reason }` when none is usable.
  */
-async function predict(ctx: any, options: any, session: any, mode: string, draft: string, signal: AbortSignal, onDelta?: (text: string) => void) {
+async function predict(ctx: any, options: any, session: any, sessionId: string, mode: string, draft: string, signal: AbortSignal, onDelta?: (text: string) => void) {
   const prompt = buildPrompt(session, options, mode, draft)
   if (prompt === null) return { items: [], reason: 'no-conversation' }
 
@@ -360,7 +360,9 @@ async function predict(ctx: any, options: any, session: any, mode: string, draft
       }
     }
     const messages = [{ role: 'user', content: [{ type: 'text', text: prompt }] }]
-    for await (const chunk of call.stream({ ...call.config, messages, system, signal: deadline.signal })) {
+    // `sessionId` 必须随请求下发：OpenCode 兼容网关按 `x-opencode-session` 头路由，
+    // 缺失该头的辅助请求会被 400 拒绝（MissingSessionID），预测永远不会出现。
+    for await (const chunk of call.stream({ ...call.config, messages, system, sessionId, purpose: 'composer-prediction', signal: deadline.signal })) {
       deadline.signal.throwIfAborted()
       if (chunk.type === 'text-delta') {
         text += chunk.text

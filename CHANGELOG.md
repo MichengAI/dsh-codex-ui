@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.16 (2026-11-04)
+
+- **Added an inline-prediction switch**: a new "Composer Enhancements" card in settings toggles inline suggestions on and off. Turning it off takes effect immediately, clears the current ghost, and **issues no further requests at all**, so no model tokens are spent. `↑`/`↓` history recall, width handles, and starter suggestion cards are unaffected.
+- **Added a site-level config flag**: a Profile can set `config.prediction: false` on `codex-ui-composer` in `cordis.patch.yml` to disable predictions wholesale. The Host then does not register the prediction routes (direct hits return 404), and the settings switch is locked off with an explanatory hint.
+
+## 2.0.15 (2026-11-04)
+
+- **Fixed Input Prediction & Inline Continuation Never Appearing**: The auxiliary model call was issued without a session id, so OpenCode-compatible gateways — which route on the `x-opencode-session` header — rejected every prediction request with `400 MissingSessionID` and no suggestion ever appeared at the caret. The owning session id is now forwarded with the prepared call, restoring the inline suggestion together with `Tab` acceptance, `Alt + ↓/↑` candidate cycling and `Esc` dismissal.
+
 ## 2.0.14 (2026-11-04)
 
 - **Enhanced Sidebar Section Submenu Stability & Hover Transitions**: Resolved an issue where moving the pointer onto the "Partition" submenu could unexpectedly close the menu chain. Seamlessly supports hover transitions and click expansions across both expanded and collapsed sidebar states, ensuring the flyout menu layer always renders above sidebar rows without clipping.

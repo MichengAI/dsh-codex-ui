@@ -1,0 +1,49 @@
+import React, { useSyncExternalStore } from 'react'
+import { Switch } from '@deepseek-ai/dsh-client-ui-primitives'
+import { SECTION_CARD_CSS, SETTINGS_ROW_CSS } from '../section-card-styles.ts'
+import { getPredictionSettingsState, setPredictionEnabled, subscribePredictionSettings } from './prediction-state.ts'
+
+export interface ComposerSettingsCardProps {
+  t: (key: any) => string
+}
+
+/**
+ * 输入框增强设置卡片。
+ *
+ * 只放预测开关：其他能力（↑/↓ 历史、宽度手柄、建议卡片）没有可调项，
+ * 用不到就不渲染成灰项，遵循插件「不残留死配置」的既有约定。
+ *
+ * 站点级关闭（profile `cordis.patch.yml` 里 `config: { prediction: false }`）时，
+ * 开关保持可见但置为关闭且禁用，并给出原因提示——比整卡消失更容易排查。
+ */
+export function ComposerSettingsCard({ t }: ComposerSettingsCardProps): React.JSX.Element {
+  const state = useSyncExternalStore(subscribePredictionSettings, getPredictionSettingsState, getPredictionSettingsState)
+  const lockedByHost = !state.hostAllowed
+
+  return (
+    <div className="dcu-section-card dcu-composer-settings" aria-label={t('composer.title')}>
+      <style>{SECTION_CARD_CSS + SETTINGS_ROW_CSS}</style>
+      <div className="dcu-section-header">
+        <div className="dcu-section-title-wrap">
+          <h3 className="dcu-section-title">{t('composer.title')}</h3>
+          <p className="dcu-section-desc">{t('composer.desc')}</p>
+        </div>
+      </div>
+      <div className="dcu-settings-row">
+        <div className="dcu-settings-row-label">
+          <span className="dcu-settings-row-title">{t('composer.prediction')}</span>
+          <span className="dcu-settings-row-hint">{lockedByHost ? t('composer.predictionLocked') : t('composer.predictionHint')}</span>
+        </div>
+        <Switch
+          label={t('composer.prediction')}
+          checked={state.enabled}
+          disabled={lockedByHost}
+          onChange={(checked) => {
+            if (lockedByHost) return
+            setPredictionEnabled(checked)
+          }}
+        />
+      </div>
+    </div>
+  )
+}

@@ -3,7 +3,7 @@ import { Context } from '@deepseek-ai/cordis'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
-import { name, apply, isSubPluginDisabledOnDisk } from '../src/composer-plugin.ts'
+import { name, apply, isSubPluginDisabledOnDisk, resolvePredictionAllowed } from '../src/composer-plugin.ts'
 import { checkComposerEnabled, COMPOSER_ENHANCEMENT_STYLE_ID } from '../src/client/composer/index.tsx'
 import { CODEX_UI_API_ENDPOINTS } from '../src/business-api.ts'
 
@@ -134,5 +134,53 @@ describe('codex-ui-composer sub-plugin', () => {
 
       container.remove()
     })
+  })
+})
+
+describe('预测开关：站点级配置 (cordis.patch.yml → codex-ui-composer)', () => {
+  function mountPlugin(config?: { prediction?: boolean }) {
+    const ctx = new Context()
+    const handlers = new Map<string, (req: unknown, res: { writeHead: (status: number, headers?: Record<string, string>) => void; end: (body?: string) => void }) => void>()
+    ctx.provide('webServer', {
+      register: (options: { kind: 'exact'; path: string; handler: any }) => {
+        handlers.set(options.path, options.handler)
+        return () => { handlers.delete(options.path) }
+      },
+    } as never)
+    apply(ctx, config)
+    return handlers
+  }
+
+  function readStatus(handlers: ReturnType<typeof mountPlugin>): { enabled: boolean; prediction: boolean } {
+    let body = ''
+    handlers.get(CODEX_UI_API_ENDPOINTS.composer)!({}, {
+      writeHead: () => {},
+      end: (value?: string) => { body = value ?? '' },
+    })
+    return JSON.parse(body)
+  }
+
+  it('未声明配置时默认允许预测，且预测路由照常注册', () => {
+    const handlers = mountPlugin()
+    expect(handlers.has(CODEX_UI_API_ENDPOINTS.composerPrediction)).toBe(true)
+    expect(handlers.has(CODEX_UI_API_ENDPOINTS.composerPredictionStream)).toBe(true)
+    expect(readStatus(handlers)).toEqual({ enabled: true, prediction: true })
+  })
+
+  it('prediction: false 时状态如实回报，且完全不注册预测路由', () => {
+    const handlers = mountPlugin({ prediction: false })
+    expect(handlers.has(CODEX_UI_API_ENDPOINTS.composerPrediction)).toBe(false)
+    expect(handlers.has(CODEX_UI_API_ENDPOINTS.composerPredictionStream)).toBe(false)
+    expect(readStatus(handlers)).toEqual({ enabled: true, prediction: false })
+  })
+
+  it('只有显式 false 才关闭，其他取值一律按开启处理', () => {
+    expect(resolvePredictionAllowed(undefined)).toBe(true)
+    expect(resolvePredictionAllowed({})).toBe(true)
+    expect(resolvePredictionAllowed({ prediction: true })).toBe(true)
+    expect(resolvePredictionAllowed({ prediction: false })).toBe(false)
+    // 配置被写坏时不能误关整条能力
+    expect(resolvePredictionAllowed({ prediction: 'false' } as never)).toBe(true)
+    expect(resolvePredictionAllowed(null as never)).toBe(true)
   })
 })
