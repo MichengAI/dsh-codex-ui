@@ -1682,6 +1682,36 @@ describe('分区二级菜单的可访问性：', () => {
     // 所有行都在内层容器里（外层不再承担滚动，桥才不会被 overflow 裁剪）
     expect(panel.querySelectorAll('button[role="menuitem"]').length).toBe(rows.length)
   })
+
+  it('指针从「分区」行移到二级菜单上不会把菜单收起（行侧 180ms 定时器要被面板取消）', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '测试分区', ids: ['b'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    const menu = await openWorkspaceMenu('a')
+    const row = Array.from(menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find(
+      button => button.textContent?.trim() === '分区',
+    )!
+    row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }))
+    await new Promise<void>(resolve => setTimeout(resolve, 140))
+    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')
+    expect(panel).not.toBeNull()
+
+    // 指针离开行、进入面板（mouseenter 不冒泡，真实浏览器里是容器收到）
+    row.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }))
+    panel!.parentElement!.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }))
+
+    // 越过 180ms 宽限：菜单必须还在
+    await new Promise<void>(resolve => setTimeout(resolve, 260))
+    expect(document.querySelector('.dcu-ws-section-menu')).not.toBeNull()
+  })
 })
 
 })

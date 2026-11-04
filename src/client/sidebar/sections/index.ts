@@ -328,6 +328,10 @@ export function observeWorkspaceSections(
   let unsubscribe: (() => void) | undefined
   const headers = new Map<string, HTMLElement>()
   let menuHost: HTMLElement | undefined
+  /** 取消「分区」行上待触发的收起定时器：指针移到二级菜单上时由面板侧调用。 */
+  let cancelAnchorLeave: (() => void) | undefined
+  /** 取消二级菜单自身待触发的收起定时器：指针移回行上时由行侧调用。 */
+  let cancelPanelLeave: (() => void) | undefined
   /** 「分区 ›」二级菜单当前是否展开：菜单行会被重新注入，展开态必须按这个标志落到新节点上。 */
   let assignExpanded = false
   /** 当前二级菜单的锚点（「分区」那一行），悬停重复触发时用来去重。 */
@@ -707,6 +711,9 @@ export function observeWorkspaceSections(
     }
     assignExpanded = false
     assignAnchor?.setAttribute('aria-expanded', 'false')
+    // 注意：只清面板自己的收起定时器。cancelAnchorLeave 属于「分区」行上的定时器，
+    // 在这里清掉会让「指针移到面板上取消行侧收起」失效（面板 180ms 后自己消失）。
+    cancelPanelLeave = undefined
     menuHost = undefined
     assignAnchor = undefined
   }
@@ -786,7 +793,12 @@ export function observeWorkspaceSections(
       window.clearTimeout(leaveTimer)
       leaveTimer = undefined
     }
-    container.addEventListener('mouseenter', cancelLeave)
+    cancelPanelLeave = cancelLeave
+    container.addEventListener('mouseenter', () => {
+      // 指针从「分区」行移到面板上：取消行侧 180ms 收起定时器，否则面板会在 180ms 后自己消失
+      cancelAnchorLeave?.()
+      cancelLeave()
+    })
     container.addEventListener('mouseleave', () => {
       cancelLeave()
       leaveTimer = window.setTimeout(() => {
@@ -1386,8 +1398,11 @@ export function observeWorkspaceSections(
           window.clearTimeout(hoverTimer)
           hoverTimer = undefined
         }
+        cancelAnchorLeave = cancelHover
         anchorButton.addEventListener('mouseenter', () => {
           cancelHover()
+          // 指针从二级菜单移回本行：取消面板已排期的收起
+          cancelPanelLeave?.()
           // 悬停即展开（和 Codex 的「移动到项目」一样），留 90ms 防误触。
           hoverTimer = window.setTimeout(() => {
             hoverTimer = undefined
