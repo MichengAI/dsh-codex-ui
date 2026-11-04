@@ -827,6 +827,8 @@ describe('工作区分区：DOM 层', () => {
     mountFixture(['a'])
     mount(['a'])
     await waitForSync()
+    // 分区菜单只克隆宿主菜单结构（不再自绘）：先让宿主行菜单渲染一次，缓存外壳与行模板。
+    await openWorkspaceMenu('a')
     for (const id of [PINNED_SECTION_ID, DEFAULT_SECTION_ID]) {
       const header = headers().find(item => item.getAttribute(SECTION_HEADER_ATTR) === id)!
       expect(header.draggable).toBe(false)
@@ -854,6 +856,9 @@ describe('工作区分区：DOM 层', () => {
     mountFixture(['a'])
     mount(['a'])
     await waitForSync()
+
+    // 分区菜单只克隆宿主菜单结构（不再自绘）：先渲染一次宿主行菜单，缓存外壳与行模板。
+    await openWorkspaceMenu('a')
 
     const custom = headers().find(header => header.getAttribute(SECTION_HEADER_ATTR) === 's1')!
     const button = custom.querySelector<HTMLElement>('.dcu-ws-section-actions button')!
@@ -1190,6 +1195,9 @@ describe('工作区分区：DOM 层', () => {
     mountFixture(['a', 'b'])
     mount(['a', 'b'])
     await waitForSync()
+
+    // 分区菜单只克隆宿主菜单结构（不再自绘）：先渲染一次宿主行菜单，缓存外壳与行模板。
+    await openWorkspaceMenu('a')
 
     const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
     expect(s1Header).toBeDefined()

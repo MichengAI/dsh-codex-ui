@@ -100,12 +100,8 @@ const SECTIONS_CSS = `
 .dcu-ws-section-menu > .dcu-ws-section-menu-material{position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--dsw-menu-surface-fill,var(--dsw-alias-surface-overlay,#1e1e22));backdrop-filter:var(--dsw-menu-backdrop-filter,blur(40px) saturate(150%));-webkit-backdrop-filter:var(--dsw-menu-backdrop-filter,blur(40px) saturate(150%));pointer-events:none}
 /* 父菜单与二级菜单之间有一小段空隙：铺一条透明桥，指针穿过去时不会触发离开事件。 */
 .dcu-ws-section-menu[data-flyout='true']::before{content:'';position:absolute;top:0;bottom:0;left:-6px;width:8px}
-.dcu-ws-section-menu button{display:flex;align-items:center;gap:8px;width:100%;min-height:28px;padding:6px 10px;text-align:left;border:0;border-radius:var(--dsw-radius-sm,6px);background:transparent;color:inherit;font:inherit;font-size:13px;line-height:20px;cursor:pointer;transition:background-color .12s ease}
-.dcu-ws-section-menu .dcu-ws-section-menu-icon{display:grid;place-items:center;width:16px;height:16px;flex:none;color:var(--dsw-alias-label-secondary,#a1a1a6)}
-.dcu-ws-section-menu .dcu-ws-section-menu-icon:empty{display:none}
-.dcu-ws-section-menu .dcu-ws-section-menu-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dcu-ws-section-menu button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.08))}
-.dcu-ws-section-menu button[aria-current='true']{color:var(--dsw-alias-state-business-primary,#4176e6)}
+/* 行样式一律交由宿主类名（克隆行自带），这里不再覆盖 button 的 padding / 圆角 / 字号，
+   否则二级菜单的行与一级菜单的行会出现可见差异。 */
 .dcu-ws-section[data-dcu-section-fixed='true']{cursor:default}
 /* 跨分区拖拽拦截时以 CSS 隐藏宿主落点线，绝不侵入修改宿主 React 的 DOM className；移回合法区自然恢复 */
 body[data-dcu-drag-blocked='true'] [class*="workspaceDropBefore"]::before,
@@ -709,9 +705,9 @@ export function observeWorkspaceSections(
   }
 
   /**
-   * 分区自己的菜单面板。
-   * 宿主菜单的底色画在它内部的 viewport 上、外壳是全透明的，克隆外壳拿不到样式；
-   * 这里直接用宿主主题令牌画一张同风格的菜单，图标仍用宿主图标组件渲染。
+   * 分区自己的菜单面板：一律克隆宿主真实菜单的 DOM 外壳 + 行结构，不手写控件。
+   * 宿主 0.2.x 的菜单外壳是 `[role="menu"]`（`.surface` + `.list` + `.material`），
+   * 拿不到克隆源时宁可不弹（注入失败即失败），也不退回自绘面板——自绘必然和宿主菜单有样式差。
    */
   function openHostPanel(
     anchor: HTMLElement,
@@ -722,56 +718,39 @@ export function observeWorkspaceSections(
 
     const parentMenu =
       flyoutFrom?.isConnected === true ? flyoutFrom : anchor.closest<HTMLElement>('[role="menu"]')
+    const shell = parentMenu ?? hostMenuShellTemplate
+    // 没有可克隆的宿主菜单外壳：直接放弃，不画自绘面板。
+    if (shell === null || shell === undefined) return
 
-    let panel: HTMLElement
-    let viewport: HTMLElement
+    const panel = shell.cloneNode(false) as HTMLElement
+    panel.classList.add(MENU_CLASS)
 
-    if (parentMenu !== null && parentMenu !== undefined) {
-      // 100% 按照宿主一级菜单结构克隆外壳（保留 data-menu-material="translucent" 与原生类名）
-      panel = parentMenu.cloneNode(false) as HTMLElement
-      panel.classList.add(MENU_CLASS)
-
-      // 克隆宿主菜单的 material 磨砂层（如有）
-      const material = parentMenu.querySelector<HTMLElement>('[class*="material"]')
-      if (material !== null) {
-        panel.appendChild(material.cloneNode(true))
-      }
-
-      // 克隆宿主菜单的 viewport 视口层（如有）
-      const vp = parentMenu.querySelector<HTMLElement>('[role="presentation"], [class*="viewport"]')
-      if (vp !== null) {
-        viewport = vp.cloneNode(false) as HTMLElement
-        panel.appendChild(viewport)
-      } else {
-        viewport = panel
-      }
-    } else if (hostMenuShellTemplate !== undefined) {
-      panel = hostMenuShellTemplate.cloneNode(false) as HTMLElement
-      panel.classList.add(MENU_CLASS)
-      if (hostMenuViewportTemplate !== undefined) {
-        viewport = hostMenuViewportTemplate.cloneNode(false) as HTMLElement
-        panel.appendChild(viewport)
-      } else {
-        viewport = panel
-      }
+    // 克隆宿主菜单的 material 磨砂层（填充 + 模糊只在这一层）
+    const material = parentMenu?.querySelector<HTMLElement>('[class*="material"]')
+    if (material !== null && material !== undefined) {
+      panel.appendChild(material.cloneNode(true))
     } else {
-      panel = document.createElement('div')
-      panel.className = MENU_CLASS
-      panel.setAttribute('role', 'menu')
-      viewport = panel
-    }
-
-    // 材质层：宿主 MenuSurface 把「填充 + 模糊」画在独立的 `.material` 子层上，根节点只负责
-    // isolation 与几何。克隆得到就沿用；克隆不到（无宿主菜单模板时的兜底分支）就补一层自己的，
-    // 绝不退回「在面板根上画背景」——那样会和子层叠成双层填充，还会把子层模糊打成惰性。
-    if (panel.querySelector('[class*="material"]') === null) {
+      // 模板缓存里没有子节点，补一层同样结构的材质层
       const materialLayer = document.createElement('div')
       materialLayer.className = `${MENU_CLASS}-material`
       materialLayer.setAttribute('aria-hidden', 'true')
-      panel.insertBefore(materialLayer, panel.firstChild)
+      panel.appendChild(materialLayer)
     }
 
-    // 获取行模板：优先直接从 parentMenu 中取真实的宿主行克隆
+    // 克隆宿主菜单的 viewport 视口层（如有），没有就挂在面板根上
+    const vp = parentMenu?.querySelector<HTMLElement>('[role="presentation"], [class*="viewport"]')
+    let viewport: HTMLElement
+    if (vp !== null && vp !== undefined) {
+      viewport = vp.cloneNode(false) as HTMLElement
+      panel.appendChild(viewport)
+    } else if (hostMenuViewportTemplate !== undefined) {
+      viewport = hostMenuViewportTemplate.cloneNode(false) as HTMLElement
+      panel.appendChild(viewport)
+    } else {
+      viewport = panel
+    }
+
+    // 行一律克隆宿主真实行；克隆不到就跳过该行（不手拼 button）
     const sampleRow =
       parentMenu?.querySelector<HTMLElement>('[class*="itemWrap"]') ?? hostMenuRowTemplate
     const sampleRef =
@@ -779,33 +758,17 @@ export function observeWorkspaceSections(
 
     for (const item of items) {
       const row = buildMenuRow(sampleRef, item.icon, item.label, '', sampleRow)
-      if (row !== null) {
-        const btn = row.querySelector('button')
-        btn?.addEventListener('click', event => {
-          event.preventDefault()
-          event.stopPropagation()
-          item.onSelect()
-        })
-        viewport.appendChild(row)
-      } else {
-        const button = document.createElement('button')
-        button.type = 'button'
-        button.setAttribute('role', 'menuitem')
-        const icon = document.createElement('span')
-        icon.className = `${MENU_CLASS}-icon`
-        icon.innerHTML = item.icon
-        const label = document.createElement('span')
-        label.className = `${MENU_CLASS}-label`
-        label.textContent = item.label
-        button.append(icon, label)
-        button.addEventListener('click', event => {
-          event.preventDefault()
-          event.stopPropagation()
-          item.onSelect()
-        })
-        viewport.appendChild(button)
-      }
+      if (row === null) continue
+      row.querySelector('button')?.addEventListener('click', event => {
+        event.preventDefault()
+        event.stopPropagation()
+        item.onSelect()
+      })
+      viewport.appendChild(row)
     }
+
+    // 一行都没注入成功：说明拿不到宿主行模板，放弃这次弹出（不手拼行）。
+    if (viewport.querySelector('button[role="menuitem"]') === null) return
 
     let leaveTimer: number | undefined
     const cancelLeave = (): void => {
