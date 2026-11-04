@@ -227,7 +227,7 @@ html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
 
 .dcu-settings-back-btn,
 button.dcu-settings-back-btn,
-[data-shortcut-modal="settings"] nav button.dcu-settings-back-btn {
+[data-shortcut-modal="settings"] > nav button.dcu-settings-back-btn {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -249,7 +249,7 @@ button.dcu-settings-back-btn,
 
 .dcu-settings-back-btn:hover,
 button.dcu-settings-back-btn:hover,
-[data-shortcut-modal="settings"] nav button.dcu-settings-back-btn:hover {
+[data-shortcut-modal="settings"] > nav button.dcu-settings-back-btn:hover {
   background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.06)) !important;
   color: var(--dsw-alias-label-primary, #ffffff) !important;
 }
@@ -309,7 +309,7 @@ button.dcu-settings-back-btn:hover,
 }
 
 /* 导航项列表容器 */
-[data-shortcut-modal="settings"] nav [class*="navList"],
+[data-shortcut-modal="settings"] > nav [class*="navList"],
 [data-shortcut-modal="settings"] > nav > :nth-child(2) {
   display: flex !important;
   flex-direction: column !important;
@@ -346,7 +346,7 @@ button.dcu-settings-back-btn:hover,
 }
 
 /* 导航项按钮：Codex 原生胶囊形态（Capsule） */
-[data-shortcut-modal="settings"] nav button,
+[data-shortcut-modal="settings"] > nav button,
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button {
   box-sizing: border-box !important;
   display: flex !important;
@@ -367,7 +367,7 @@ button.dcu-settings-back-btn:hover,
   width: 100% !important;
 }
 
-[data-shortcut-modal="settings"] nav button svg,
+[data-shortcut-modal="settings"] > nav button svg,
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button svg {
   width: 16px !important;
   height: 16px !important;
@@ -377,21 +377,21 @@ button.dcu-settings-back-btn:hover,
   transition: color 0.12s ease !important;
 }
 
-[data-shortcut-modal="settings"] nav button:hover,
+[data-shortcut-modal="settings"] > nav button:hover,
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button:hover {
   background: var(--dsw-specific-sidebar-nav-item-hover, var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.05))) !important;
   color: var(--dsw-alias-label-primary, #ffffff) !important;
 }
 
-[data-shortcut-modal="settings"] nav button:hover svg,
+[data-shortcut-modal="settings"] > nav button:hover svg,
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button:hover svg {
   color: var(--dsw-alias-label-primary, #ffffff) !important;
 }
 
 /* 选中菜单项：纯正 Codex 胶囊激活态（Capsule Pill） */
-[data-shortcut-modal="settings"] nav button[aria-current="true"],
-[data-shortcut-modal="settings"] nav button[class*="active"],
-[data-shortcut-modal="settings"] nav [class*="navCell"][class*="active"],
+[data-shortcut-modal="settings"] > nav button[aria-current="true"],
+[data-shortcut-modal="settings"] > nav button[class*="active"],
+[data-shortcut-modal="settings"] > nav [class*="navCell"][class*="active"],
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button[aria-current="true"],
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button[class*="active"] {
   background: var(--dsw-specific-sidebar-nav-item-active, var(--dsw-alias-interactive-bg-selected, rgba(255, 255, 255, 0.10))) !important;
@@ -399,15 +399,15 @@ button.dcu-settings-back-btn:hover,
   font-weight: 500 !important;
 }
 
-[data-shortcut-modal="settings"] nav button[aria-current="true"] svg,
-[data-shortcut-modal="settings"] nav button[class*="active"] svg,
-[data-shortcut-modal="settings"] nav [class*="navCell"][class*="active"] svg,
+[data-shortcut-modal="settings"] > nav button[aria-current="true"] svg,
+[data-shortcut-modal="settings"] > nav button[class*="active"] svg,
+[data-shortcut-modal="settings"] > nav [class*="navCell"][class*="active"] svg,
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button[aria-current="true"] svg,
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button[class*="active"] svg {
   color: var(--dsw-alias-label-primary, #ffffff) !important;
 }
 
-[data-shortcut-modal="settings"] nav button:focus-visible,
+[data-shortcut-modal="settings"] > nav button:focus-visible,
 [data-shortcut-modal="settings"] > nav > :nth-child(2) > button:focus-visible {
   outline: 2px solid var(--dsw-alias-state-focus-ring, var(--dsw-static-deepseek-500, #4176e6)) !important;
   outline-offset: 1px !important;
@@ -974,7 +974,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
   max-height: 100% !important;
 }
 
-[data-shortcut-modal="settings"][data-sidebar-collapsed] nav::-webkit-scrollbar,
+[data-shortcut-modal="settings"][data-sidebar-collapsed] > nav::-webkit-scrollbar,
 [data-shortcut-modal="settings"][data-sidebar-collapsed] [class*="navList"]::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
@@ -1064,9 +1064,9 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
 }
 
 /* 导航项按钮：纯图标居中方块，对齐宿主官方首页折叠 36x36px panelRow，绝对居中无偏移 */
-[data-shortcut-modal="settings"][data-sidebar-collapsed] nav button,
+[data-shortcut-modal="settings"][data-sidebar-collapsed] > nav button,
 [data-shortcut-modal="settings"][data-sidebar-collapsed] > nav > :nth-child(2) > button,
-[data-shortcut-modal="settings"][data-sidebar-collapsed] nav [class*="navCell"] {
+[data-shortcut-modal="settings"][data-sidebar-collapsed] > nav [class*="navCell"] {
   box-sizing: border-box !important;
   width: 36px !important;
   height: 36px !important;
@@ -1085,8 +1085,8 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
 }
 
 /* 仅隐藏设置菜单列表中的文字标签，绝不干涉任何图标的显示规则，100%继承展开态既定图标状态！ */
-[data-shortcut-modal="settings"][data-sidebar-collapsed] nav [class*="navList"] button [class*="navLabel"],
-[data-shortcut-modal="settings"][data-sidebar-collapsed] nav button:not(.dcu-settings-back-btn) [class*="navLabel"] {
+[data-shortcut-modal="settings"][data-sidebar-collapsed] > nav [class*="navList"] button [class*="navLabel"],
+[data-shortcut-modal="settings"][data-sidebar-collapsed] > nav button:not(.dcu-settings-back-btn) [class*="navLabel"] {
   display: none !important;
 }
 
@@ -1117,8 +1117,8 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
 }
 
 /* 无论官方项目还是第三方插件，每个按钮在折叠态均保持唯一的视觉中心，不强行干涉内部已隐藏的备用 svg */
-[data-shortcut-modal="settings"][data-sidebar-collapsed] nav [class*="navList"] button svg,
-[data-shortcut-modal="settings"][data-sidebar-collapsed] nav [class*="navIcon"] svg {
+[data-shortcut-modal="settings"][data-sidebar-collapsed] > nav [class*="navList"] button svg,
+[data-shortcut-modal="settings"][data-sidebar-collapsed] > nav [class*="navIcon"] svg {
   margin: 0 !important;
   padding: 0 !important;
   width: 18px !important;
@@ -1430,7 +1430,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     -ms-overflow-style: none !important;
   }
 
-  [data-shortcut-modal="settings"] nav::-webkit-scrollbar,
+  [data-shortcut-modal="settings"] > nav::-webkit-scrollbar,
   [data-shortcut-modal="settings"] [class*="navList"]::-webkit-scrollbar {
     display: none !important;
     width: 0 !important;
@@ -1438,9 +1438,9 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
   }
 
   /* 导航项按钮：纯图标正方形居中卡片，尺寸统一为 36x36px 图标导轨 */
-  [data-shortcut-modal="settings"] nav button,
+  [data-shortcut-modal="settings"] > nav button,
   [data-shortcut-modal="settings"] > nav > :nth-child(2) > button,
-  [data-shortcut-modal="settings"] nav [class*="navCell"] {
+  [data-shortcut-modal="settings"] > nav [class*="navCell"] {
     width: 36px !important;
     height: 36px !important;
     min-width: 36px !important;
@@ -1455,14 +1455,14 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
   }
 
   /* 隐藏菜单项文字标签，保留居中图标，保护返回按钮 */
-  [data-shortcut-modal="settings"] nav [class*="navList"] button [class*="navLabel"],
-  [data-shortcut-modal="settings"] nav button:not(.dcu-settings-back-btn) [class*="navLabel"] {
+  [data-shortcut-modal="settings"] > nav [class*="navList"] button [class*="navLabel"],
+  [data-shortcut-modal="settings"] > nav button:not(.dcu-settings-back-btn) [class*="navLabel"] {
     display: none !important;
   }
 
   /* 移动端媒体查询下同样仅隐藏文字，不干涉图标 */
-  [data-shortcut-modal="settings"] nav [class*="navList"] button svg,
-  [data-shortcut-modal="settings"] nav [class*="navIcon"] svg {
+  [data-shortcut-modal="settings"] > nav [class*="navList"] button svg,
+  [data-shortcut-modal="settings"] > nav [class*="navIcon"] svg {
     margin: 0 !important;
     width: 18px !important;
     height: 18px !important;

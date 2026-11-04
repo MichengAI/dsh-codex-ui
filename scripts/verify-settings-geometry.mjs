@@ -271,6 +271,40 @@ try {
   check('云母·nav 内边距 0/24', gridFloat.nav.padding, ARR([0, 12, 24, 12]), '[0,12,24,12]')
   check('云母·options 仍在第 2 列', gridFloat.options.gridColumn, eq('2'), '2')
 
+  // ── 5. Issue #82 防护：第三方插件（如 our-free-model）在设置区放 <nav> 容器时，内部按钮完全不受整宽污染 ──
+  const checkPluginTabs = async (shape) => {
+    const tabsHtml = `
+      <section class="wo_section">
+        <nav class="ofm_nav" style="width: 609px;">
+          <div class="ofm_tabs" role="tablist" style="display: flex; flex-wrap: wrap; gap: 4px;">
+            <button role="tab" style="box-sizing: border-box; width: 80px; height: 26px; padding: 2px 8px;">Tab 1</button>
+            <button role="tab" style="box-sizing: border-box; width: 80px; height: 26px; padding: 2px 8px;">Tab 2</button>
+          </div>
+        </nav>
+      </section>
+    `
+    const bodyWithTabs = (shape === 'nested' ? NESTED_BODY : GRID_BODY).replace(
+      '<section class="wo_section"><div class="wo_card">卡片一</div></section>',
+      tabsHtml,
+    )
+    const result = await page.evaluate(({ body, tokens }) => {
+      document.body.innerHTML = body + `<style>${tokens}</style><style>${window.__skin.SETTINGS_SKIN_CSS}</style>`
+      const btn = document.querySelector('.ofm_tabs button')
+      const hostBtn = document.querySelector('.wo_navCell')
+      const cs = el => getComputedStyle(el)
+      return {
+        tabBtnWidth: btn.getBoundingClientRect().width,
+        tabBtnHeight: btn.getBoundingClientRect().height,
+        hostBtnHeight: hostBtn.getBoundingClientRect().height,
+      }
+    }, { body: bodyWithTabs, tokens: TOKENS })
+    check(`${shape}·第三方插件Tab按钮宽度不受污染`, result.tabBtnWidth, eq(80), '80px')
+    check(`${shape}·第三方插件Tab按钮高度不受污染`, result.tabBtnHeight, eq(26), '26px')
+    check(`${shape}·宿主左侧导航按钮高度保持32px胶囊`, result.hostBtnHeight, eq(32), '32px')
+  }
+  await checkPluginTabs('nested')
+  await checkPluginTabs('grid')
+
   console.log('设置页几何校验：')
   for (const row of rows) console.log(`  ✓ ${row.label} = ${row.actual}`)
   console.log(`共 ${rows.length} 项断言通过`)

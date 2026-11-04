@@ -468,3 +468,11 @@ test('设置导航智能隐藏无成员的分组小标题，杜绝孤立悬空�
     panel.remove()
   }
 })
+
+test('设置侧栏选择器严格收紧至直接子代 > nav，杜绝误伤右侧第三方插件内容的 nav 容器', () => {
+  // 1. 禁止在设置模态框下出现对任意深层 nav 的后代选择器
+  expect(SETTINGS_SKIN_CSS).not.toMatch(/\[data-shortcut-modal="settings"\](?:\s+|\[[^\]]+\]\s+)nav\b/)
+  // 2. 核心导航项规则必须为直接子代 > nav
+  expect(SETTINGS_SKIN_CSS).toContain('[data-shortcut-modal="settings"] > nav button')
+  expect(SETTINGS_SKIN_CSS).toContain('[data-shortcut-modal="settings"][data-sidebar-collapsed] > nav button')
+})

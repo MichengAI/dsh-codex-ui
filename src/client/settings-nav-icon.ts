@@ -6,7 +6,7 @@ import React from 'react'
  */
 
 export const CODEX_UI_NAV_MARKER = 'data-dcu-nav-icon'
-const NAV_ROW_SELECTOR = '[role="dialog"] nav button, [data-shortcut-modal="settings"] nav button'
+const NAV_ROW_SELECTOR = '[role="dialog"] > nav button, [data-shortcut-modal="settings"] > nav button'
 const STYLE_ID = 'dcu-settings-nav-icon-style'
 
 /** 原生 settings.section.icon 插槽图标组件 */
