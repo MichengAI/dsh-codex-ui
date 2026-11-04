@@ -1677,6 +1677,9 @@ describe('分区二级菜单的可访问性：', () => {
     const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
     const scroll = panel.querySelector<HTMLElement>('.dcu-ws-section-menu-scroll')
     expect(scroll).not.toBeNull()
+    // 容器必须脱离 z-index 竞争：宿主侧边栏的层级可高于任何数字，靠 top layer（popover）压住
+    expect(panel.parentElement!.getAttribute('popover')).toBe('manual')
+    expect(panel.parentElement!.style.zIndex).toBe('2147483000')
     const rows = scroll!.querySelectorAll('button[role="menuitem"]')
     expect(rows.length).toBeGreaterThan(0)
     // 所有行都在内层容器里（外层不再承担滚动，桥才不会被 overflow 裁剪）

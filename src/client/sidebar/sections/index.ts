@@ -92,9 +92,11 @@ const SECTIONS_CSS = `
 .dcu-ws-section-action{width:22px;height:22px;border:0;border-radius:50%;background:transparent;color:inherit;font:inherit;font-size:12px;line-height:1;cursor:pointer;display:grid;place-items:center}
 .dcu-ws-section-action:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.16))}
 [data-sidebar-collapsed='true'] .dcu-ws-section{display:none !important}
-/* 面板本体由宿主 MenuSurface 原语渲染（表面 + material 磨砂层），这里只补壳外的几何与文字颜色，
+/* z-index 取宿主顶级浮层的量级：分区标题 ··· 这条路径把面板挂在 body 上，宿主侧边栏/工作区树自己是
+   更大的层级，1000 会让侧边栏的行文字压在面板上（表现为「菜单跑到侧边栏后面」）。
+   面板本体由宿主 MenuSurface 原语渲染（表面 + material 磨砂层），这里只补壳外的几何与文字颜色，
    不碰填充与模糊——否则会和宿主的 material 叠加成双层，并把它的模糊打成惰性。 */
-.dcu-ws-section-menu{position:fixed;z-index:1000;min-width:144px;max-width:360px;overflow:visible;padding:4px;display:flex;flex-direction:column;gap:0;border:none;border-radius:var(--dsw-radius-lg,14px);box-shadow:var(--dsw-elevation-prominent,0 6px 20px rgba(0,0,0,.45));color:var(--dsw-alias-label-primary,#ededed);isolation:isolate}
+.dcu-ws-section-menu{position:fixed;z-index:2147483000;min-width:144px;max-width:360px;overflow:visible;padding:4px;display:flex;flex-direction:column;gap:0;border:none;border-radius:var(--dsw-radius-lg,14px);box-shadow:var(--dsw-elevation-prominent,0 6px 20px rgba(0,0,0,.45));color:var(--dsw-alias-label-primary,#ededed);isolation:isolate}
 /* 滚动搬进内层：面板自身必须 overflow:visible，否则下面的 8px 透明桥会被横向裁掉 */
 .dcu-ws-section-menu-scroll{display:flex;flex-direction:column;gap:0;min-height:0;flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;max-height:inherit}
 /* 父菜单与二级菜单之间有一小段空隙：铺一条透明桥，指针穿过去时不会触发离开事件。 */
@@ -743,7 +745,10 @@ export function observeWorkspaceSections(
     if (MenuSurface === undefined || MenuItemButton === undefined) return
 
     const container = document.createElement('div')
-    container.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden'
+    // inset/margin 显式归零：容器可能被提升到 top layer（popover），UA 默认样式会居中并裁剪
+    container.style.cssText =
+      'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;z-index:2147483000;' +
+      'margin:0;padding:0;border:0;background:transparent;overflow:visible;inset:auto'
 
     if (parentMenu !== null && parentMenu !== undefined) {
       // 挂进父菜单内部：宿主的 outside-click 判定才会把它当成菜单的一部分
@@ -786,6 +791,16 @@ export function observeWorkspaceSections(
         container,
       )
     })
+
+    // 提升到 top layer：宿主侧边栏/工作区树自己的层级可能高于任何 z-index 数字，
+    // 仅靠 z-index 会出现「菜单被侧边栏行文字压住」。popover 进入 top layer 后与 z-index 无关，
+    // 不支持的引擎靠上面的 z-index 兜底。
+    try {
+      container.setAttribute('popover', 'manual')
+      ;(container as HTMLElement & { showPopover?: () => void }).showPopover?.()
+    } catch {
+      // 老引擎没有 popover API：保持 z-index 兜底，不阻断菜单
+    }
 
     let leaveTimer: number | undefined
     const cancelLeave = (): void => {
