@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.14 (2026-11-04)
+
+- **Enhanced Sidebar Section Submenu Stability & Hover Transitions**: Resolved an issue where moving the pointer onto the "Partition" submenu could unexpectedly close the menu chain. Seamlessly supports hover transitions and click expansions across both expanded and collapsed sidebar states, ensuring the flyout menu layer always renders above sidebar rows without clipping.
+- **Full Keyboard Accessibility for Flyout Menus**: Comprehensive keyboard navigation within the section flyout menu. Press `Home` / `End` to jump directly to the first and last menu items, navigate with `Up` / `Down` arrow keys without focus escaping back to the parent menu, and press `Escape` to cleanly dismiss and reset menu state.
+- **Host-Native Menu Surface & Precision Anchor Matching**: Reused host-native glass materials and button primitives for the section flyout menu, aligning 100% with native context menus; accurately detects row action triggers and prevents misplaced menu anchors on ungrouped rows.
+- **Composer & Dock Mica Backdrop Masking Refinement**: Eliminated scroller mask conflicts to restore glass backdrop blurring across the bottom of the transcript. Solidified the composer card and dock surface to stop ghost text leakage when scrolling long sessions, and scoped the bottom blur mask strictly to the centered dock area.
+- **Adaptive Multi-Host Settings Layout & Icon Alignment**: Seamlessly adapted settings layout across different host generations, standardizing the left rail to 280px and centering options cards at 800px max width without stretched horizontal layouts. Enhanced icon slot detection to prevent missing or duplicate navigation icons.
+
 ## 2.0.13 (2026-11-03)
 
 - **Smart Input Prediction & Inline Continuation**: Automatically displays high-confidence follow-up suggestions directly behind the caret when pausing mid-draft; press `Tab` to accept seamlessly without re-typing.
