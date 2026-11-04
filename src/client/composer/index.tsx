@@ -1,7 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { useMemo } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 import { CODEX_UI_API_ENDPOINTS } from '../../business-api.ts'
 import { NS } from '../locales.ts'
 import { registerInputHistory } from './InputHistoryDock.tsx'
@@ -18,6 +18,12 @@ function currentSessionId(state?: { current?: string; byId?: Record<string, { id
 import { initializeComposerWidth, observeHeroWidthHandles } from './composer-width.ts'
 import { NewConversationSuggestions } from './NewConversationSuggestions.tsx'
 import { ComposerPredictionOverlay } from './ComposerPredictionOverlay.tsx'
+import {
+  getPredictionSettingsState,
+  observePredictionSettings,
+  setHostPredictionAllowed,
+  subscribePredictionSettings,
+} from './prediction-state.ts'
 import { NEW_CONVERSATION_STYLE } from './new-conversation-style.ts'
 import { prefillNewConversation } from './new-conversation-draft.ts'
 
@@ -30,16 +36,27 @@ function browserStorage(): Storage | undefined {
 
 /** 探测宿主 codex-ui-composer 子组件是否处于激活状态（遵循 fail-closed 契约） */
 export async function checkComposerEnabled(): Promise<boolean> {
+  const status = await fetchComposerStatus()
+  return status.enabled
+}
+
+/**
+ * 读取 Host 状态：子插件是否启用，以及站点级是否允许预测。
+ * 网络/解析失败一律返回“全部关闭”，避免在宿主不可达时仍然悄悄花 token。
+ */
+export async function fetchComposerStatus(): Promise<{ enabled: boolean; prediction: boolean }> {
   try {
     const response = await fetch(CODEX_UI_API_ENDPOINTS.composer, {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     })
-    if (!response.ok) return false
+    if (!response.ok) return { enabled: false, prediction: false }
     const data = await response.json()
-    return data?.enabled === true
+    const enabled = data?.enabled === true
+    // 旧版 Host 不返回 prediction 字段：此时按允许处理，不因升级不同步而丢掉用户已有的能力
+    return { enabled, prediction: enabled && data?.prediction !== false }
   } catch {
-    return false
+    return { enabled: false, prediction: false }
   }
 }
 
@@ -119,8 +136,11 @@ export function observeComposerEnhancements(ctx: Context): () => void {
     cleaners.push(unregisterSuggestions)
 
     // 6. 智能输入预测与行内续写 (挂载于 conversation.input.overlay 插槽)
+    // `enabled` 由设置页开关与 Host 站点级配置共同决定；关闭时 overlay 自身中止请求并清空 ghost，
+    // 这里保留插槽注册以避免反复装卸 React 子树造成输入框抖动。
     function PredictionSlot(props: PropsRuntime<'conversation.input.overlay'>) {
-      return <ComposerPredictionOverlay {...props} ctx={ctx} t={t} />
+      const prediction = useSyncExternalStore(subscribePredictionSettings, getPredictionSettingsState, getPredictionSettingsState)
+      return <ComposerPredictionOverlay {...props} enabled={prediction.enabled} ctx={ctx} t={t} />
     }
     const unregisterPrediction = ctx.slots.inject('conversation.input.overlay', () => ctx.slots.register({
       name: 'conversation.input.overlay',
@@ -129,6 +149,7 @@ export function observeComposerEnhancements(ctx: Context): () => void {
       locale: NS,
     }, PredictionSlot))
     cleaners.push(unregisterPrediction)
+    cleaners.push(observePredictionSettings())
 
     return () => {
       for (const clean of cleaners.reverse()) {
@@ -146,9 +167,11 @@ export function observeComposerEnhancements(ctx: Context): () => void {
 
   const sync = async (): Promise<void> => {
     if (disposed) return
-    const enabled = await checkComposerEnabled()
+    const status = await fetchComposerStatus()
     if (disposed) return
-    if (enabled) {
+    // 站点级配置先行落地：用户开关只能在其为真时生效
+    setHostPredictionAllowed(status.prediction)
+    if (status.enabled) {
       if (!cleanActive) cleanActive = activate()
     } else {
       cleanActive?.()

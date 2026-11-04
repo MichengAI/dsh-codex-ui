@@ -8,6 +8,7 @@ import { MANAGED_DEPENDENCIES, type ManagedDependencyId } from '../dependencies.
 import { NS } from './locales.ts'
 import { installErrorText } from './user-error.ts'
 import { ThemeSettingsCard } from './theme/ThemeSettingsCard.tsx'
+import { ComposerSettingsCard } from './composer/ComposerSettingsCard.tsx'
 
 type DependencyStatus = { id: ManagedDependencyId; packageName: string; installed: boolean; version?: string; latestVersion?: string; updateAvailable: boolean; totalDownloads?: number }
 const PROJECT_HOMEPAGES = Object.fromEntries(MANAGED_DEPENDENCIES.map(({ id, packageName }) => [
@@ -352,6 +353,9 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
 
     {/* 区域二：界面外观与换肤配置卡片 */}
     <ThemeSettingsCard t={t} />
+
+    {/* 区域二之一：输入框增强开关 */}
+    <ComposerSettingsCard t={t} />
 
     {/* 区域三：配套生态管理与在线更新卡片 */}
     <div className="dcu-section-card dcu-card-dependencies">
