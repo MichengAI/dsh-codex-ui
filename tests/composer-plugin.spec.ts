@@ -7,6 +7,8 @@ import { join } from 'node:path'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { name, apply, isSubPluginDisabledOnDisk, resolvePredictionAllowed } from '../src/composer-plugin.ts'
 import { checkComposerEnabled, COMPOSER_ENHANCEMENT_STYLE_ID, observeComposerEnhancements } from '../src/client/composer/index.tsx'
+import { ComposerSettingsCard } from '../src/client/composer/ComposerSettingsCard.tsx'
+import { setPredictionEnabled, setSubPluginEnabled } from '../src/client/composer/prediction-state.ts'
 import { CODEX_UI_API_ENDPOINTS } from '../src/business-api.ts'
 
 describe('codex-ui-composer sub-plugin', () => {
@@ -158,10 +160,57 @@ describe('codex-ui-composer sub-plugin', () => {
       const dispose = observeComposerEnhancements(fakeCtx)
       try {
         expect(registeredSlotComponent).toBeDefined()
-        const html = renderToString(React.createElement(registeredSlotComponent, { sessionId: 'test-session' }))
-        expect(typeof html).toBe('string')
+
+        let capturedProps: any = null
+        function TestWrapper() {
+          const el = registeredSlotComponent({ sessionId: 'test-session' })
+          capturedProps = el.props
+          return null
+        }
+
+        // 1. 默认开启状态下，透传给底层组件的 enabled 必须为 true
+        setPredictionEnabled(true)
+        renderToString(React.createElement(TestWrapper))
+        expect(capturedProps.enabled).toBe(true)
+
+        // 2. 当用户关闭预测时，透传给底层组件的 enabled 必须切换为 false
+        // 若 index.tsx 漏传 enabled 或写死 true，此断言必红
+        setPredictionEnabled(false)
+        renderToString(React.createElement(TestWrapper))
+        expect(capturedProps.enabled).toBe(false)
+      } finally {
+        setPredictionEnabled(true)
+        dispose()
+      }
+    })
+
+    it('端到端状态驱动：子插件停用时必须通过 sync() 将 subPluginEnabled 置为 false 并整卡隐藏', async () => {
+      const originalFetch = globalThis.fetch
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ enabled: false, prediction: true }),
+      } as Response)
+
+      const fakeCtx = {
+        locale: { bind: () => (k: string) => k },
+        slots: {
+          inject: () => () => {},
+          register: () => () => {},
+        },
+      } as any
+
+      setSubPluginEnabled(true)
+      const dispose = observeComposerEnhancements(fakeCtx)
+      try {
+        // 等待 observeComposerEnhancements 内部的 void sync() 异步落定
+        await new Promise(resolve => setTimeout(resolve, 80))
+        const html = renderToString(React.createElement(ComposerSettingsCard, { t: (k: string) => k }))
+        // 若 index.tsx 漏调用 setSubPluginEnabled(status.enabled)，html 不会为空，此断言必红
+        expect(html).toBe('')
       } finally {
         dispose()
+        setSubPluginEnabled(true)
+        globalThis.fetch = originalFetch
       }
     })
   })
