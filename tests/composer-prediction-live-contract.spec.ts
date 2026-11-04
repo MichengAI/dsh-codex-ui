@@ -181,6 +181,66 @@ describe('composer-prediction: 真实宿主契约与防御回归', () => {
     expect(parsed.suggestions).toEqual(['继续进行下一步重构'])
   })
 
+  it('辅助模型调用必须携带 sessionId：OpenCode 网关按 x-opencode-session 头路由，缺失即 400', async () => {
+    let streamHandler: any = null
+    const webServer = {
+      register: (options: any) => {
+        if (options.path === CODEX_UI_API_ENDPOINTS.composerPredictionStream) {
+          streamHandler = options.handler
+        }
+        return () => {}
+      },
+    }
+
+    let capturedStreamOptions: any = null
+    const mockLlm = {
+      prepareCall: vi.fn(async (config: any) => ({
+        config,
+        stream: async function* (options: any) {
+          capturedStreamOptions = options
+          yield { type: 'text-delta', text: '继续检查参数校验' }
+          yield { type: 'finish', reason: { kind: 'stop' } }
+        },
+      })),
+    }
+
+    const mockSession = {
+      seq: 4,
+      deriveMessages: () => [
+        { role: 'user', content: [{ type: 'text', text: '你好' }] },
+        { role: 'assistant', content: [{ type: 'text', text: '请问有什么任务？' }] },
+      ],
+      requestHeader: () => ({ config: { provider: 'opencode-go', model: 'deepseek-v4.1-flash' } }),
+    }
+
+    const mockCtx = {
+      webServer,
+      connection: { admit: vi.fn(() => ({ peer: { principal: { kind: 'owner' } } })) },
+      llm: mockLlm,
+      sessions: { get: vi.fn(() => mockSession) },
+      effect: (fn: any) => fn(),
+    } as any
+
+    applyPredictions(mockCtx)
+
+    const response = { writeHead: vi.fn(), write: vi.fn(), end: vi.fn(), on: vi.fn() }
+
+    await streamHandler(
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        [Symbol.asyncIterator]: async function* () {
+          yield Buffer.from(JSON.stringify({ sessionId: 'sess_opencode', mode: 'continue', draft: '请帮我检查' }))
+        },
+      },
+      response,
+    )
+
+    expect(capturedStreamOptions).not.toBeNull()
+    expect(capturedStreamOptions.sessionId).toBe('sess_opencode')
+    expect(capturedStreamOptions.purpose).toBe('composer-prediction')
+  })
+
   it('大模型复述草稿时，前缀被干净剥离，绝不传出重复文本', async () => {
     let jsonHandler: any = null
     const webServer = {
