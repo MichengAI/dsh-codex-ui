@@ -184,6 +184,32 @@ export function applyGlassSettings(options: {
   if (!seamDisposer) {
     seamDisposer = startGlassSeamStamper()
   }
+
+  // 6. 顶部渐隐条：宿主基线里已有 [data-dsh-glass-fade] 的样式（13px、blur 5px、
+  //    上实下虚的 mask），但上游的 DOM 创建点不在我们这份构建里。云母浮动模式下滚动内容
+  //    被上提 95px，顶栏上方 12px 留白与 20px 圆角切角都没有遮挡，正文会从这两处锐利露出；
+  //    这条固定 13px 的渐隐条正好盖住留白带。它自身用 backdrop-filter 而非给滚动容器加 mask，
+  //    不会把输入卡片/dock 的磨砂打死（滚动容器 mask 的坑见下方注释）。
+  ensureGlassFade(!isCompat)
+}
+
+const FADE_ATTRIBUTE = 'data-dsh-glass-fade'
+
+/** 云母模式挂载顶部渐隐条；平铺模式或关闭玻璃时移除 */
+function ensureGlassFade(enabled: boolean): void {
+  if (typeof document === 'undefined') return
+  const existing = document.querySelector<HTMLElement>(`[${FADE_ATTRIBUTE}="top"]`)
+  if (!enabled) {
+    existing?.remove()
+    return
+  }
+  if (existing !== null) return
+  const body = document.body
+  if (body === null) return
+  const fade = document.createElement('div')
+  fade.setAttribute(FADE_ATTRIBUTE, 'top')
+  fade.setAttribute('aria-hidden', 'true')
+  body.appendChild(fade)
 }
 
 /** 兼容旧接口 */
@@ -200,6 +226,7 @@ export function disposeGlassMode(): void {
   root.removeAttribute(GLASS_ATTRIBUTE)
   root.removeAttribute(GLASS_FLOAT_ATTRIBUTE)
   root.removeAttribute(GLASS_COMPAT_ATTRIBUTE)
+  ensureGlassFade(false)
 
   const knobs = [
     '--dsh-glass-blur',

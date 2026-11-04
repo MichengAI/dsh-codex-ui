@@ -124,7 +124,7 @@ Quick actions directly on session rows: Pin, Rename, Unread marker, Archive, For
 ## Host Compatibility
 
 * **Supported Generations**: Full DeepSeek Harness `0.2.x` line (`>=0.2.0-rc.1 <0.3.0-0`);
-* **Verified Builds**: Tested and verified on `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-rc.1`, `0.2.1-rc.2`, `0.2.1-rc.3`, `0.2.1-rc.4`, `0.2.1-rc.5`, `0.2.2-alpha.2`, and `0.2.2-alpha.3`, with automatic forwards compatibility for subsequent RCs;
+* **Verified Builds**: Supports every `0.2.x` RC (`0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-rc.1`–`0.2.1-rc.5`) plus the latest `0.2.2` alpha (`0.2.2-alpha.3`); intermediate alphas are not part of the support matrix;
 * **Runtime Requirements**: Node.js `^22.19.0 || >=24.0.0`, pnpm `^11.0.0`.
 
 > ⚠️ **Notice**: Do not enable Codex UI and `ds-bot` concurrently. Both redesign sidebar and session slots with overlapping layout mechanics. Disable or uninstall one before enabling the other.

@@ -139,3 +139,21 @@ test('平铺玻璃模式绝不出现右侧栏外壳的 backdrop-filter（df5eb68
   expect(GLASS_CSS_TEXT).not.toContain('sidebar-right-panel')
 })
 
+
+test('云母模式挂载顶部渐隐条（[data-dsh-glass-fade=top]），平铺与关闭时移除', () => {
+  applyGlassSettings({ enabled: true, mode: 'mica', preset: 'standard' })
+  expect(document.querySelectorAll('[data-dsh-glass-fade="top"]').length).toBe(1)
+
+  // 重复应用不得叠加
+  applyGlassSettings({ enabled: true, mode: 'mica', preset: 'frosted' })
+  expect(document.querySelectorAll('[data-dsh-glass-fade="top"]').length).toBe(1)
+
+  // 平铺模式不需要这条（宿主的位移不成立）
+  applyGlassSettings({ enabled: true, mode: 'compat', preset: 'standard' })
+  expect(document.querySelector('[data-dsh-glass-fade="top"]')).toBeNull()
+
+  // 重新开云母再彻底关闭：节点必须清干净，不留孤儿
+  applyGlassSettings({ enabled: true, mode: 'mica', preset: 'standard' })
+  disposeGlassMode()
+  expect(document.querySelector('[data-dsh-glass-fade="top"]')).toBeNull()
+})
