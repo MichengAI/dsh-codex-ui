@@ -499,7 +499,9 @@ html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [
   background: var(--dsw-alias-bg-layer-1, #ffffff) !important;
 }
 
-/* 右侧设置区固定宽度规范：居左舒展排版，避免宽屏下拉伸且绝不产生左侧空洞 */
+/* 右侧设置区固定宽度规范：卡片先吃满列宽、再被 800px 夹住，左右留白相等（不会出现单侧空洞）。
+   实测（scripts/verify-settings-geometry.mjs，1400px 面板）：卡片宽 800px、左右各 260px —
+   即「居中收束」而不是贴左；若要改成贴左，需同时去掉下面的 margin-inline: auto。 */
 [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2) > * {
   width: 100% !important;
   max-width: 800px !important;

@@ -862,14 +862,23 @@ export function observeWorkspaceSections(
     })
     container.addEventListener('pointerdown', event => event.stopPropagation())
     container.addEventListener('mousedown', event => event.stopPropagation())
-    // 方向键走到首/尾时必须截住：宿主的 roving focus 监听在 document 上，
-    // 不拦就会把焦点甩回一级菜单（实测：末项再按 ↓ 焦点跳到「置顶」）。
+    // 宿主的 roving focus 把「一级菜单行 + 子面板行」当成同一个列表（listRef 就是菜单表面，
+    // 子面板是它的最后一个子节点），所以凡是越过子面板边界的方向键都会把焦点甩回一级菜单
+    // （实测：末项再按 ↓ 焦点跳到「置顶」）。↑/↓ 在边界处截住；Home 按宿主语义是「跳到列表
+    // 第一项」= 一级菜单首行，这里改成落在面板首行；End 一并显式处理，避免将来宿主在面板
+    // 之后再渲染行时又把焦点带出去。
     container.addEventListener('keydown', event => {
-      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
       const rows = Array.from(
         container.querySelectorAll<HTMLElement>('[role="menuitem"]'),
       )
       if (rows.length === 0) return
+      if (event.key === 'Home' || event.key === 'End') {
+        event.preventDefault()
+        event.stopPropagation()
+        rows[event.key === 'Home' ? 0 : rows.length - 1]?.focus()
+        return
+      }
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
       const index = rows.indexOf(document.activeElement as HTMLElement)
       const atEdge = event.key === 'ArrowDown' ? index === rows.length - 1 : index <= 0
       if (!atEdge) return
@@ -1175,20 +1184,24 @@ export function observeWorkspaceSections(
     return false
   }
 
+  /**
+   * 语义不匹配就返回 null（与归档管理器的 `findRowMenuButton` 一致）：
+   * 未分组伪工作区的行里 `rowActions` 只有「新建会话」，退回 `buttons[0]` 会把它当成
+   * 菜单锚点，右键/点击时给一个不存在的菜单做注入准备。
+   */
   function findRowMenuButton(row: Element): HTMLButtonElement | null {
     const actions = row.querySelector<HTMLElement>('[class*="rowActions"]')
     if (!actions) return null
     const buttons = Array.from(actions.querySelectorAll<HTMLButtonElement>('button'))
     if (buttons.length === 0) return null
 
-    const actionBtn = buttons.find(btn => {
+    return buttons.find(btn => {
       if (isStarButton(btn)) return false
       if (btn.getAttribute('aria-haspopup') === 'menu') return true
       const label = (btn.getAttribute('aria-label') ?? btn.getAttribute('title') ?? '').toLowerCase()
       if (/new|create|新建|add|\+|созда/.test(label)) return false
       return /action|操作|действи|more|更多|选项|options|menu/.test(label)
-    })
-    return actionBtn ?? buttons[0] ?? null
+    }) ?? null
   }
 
   function isRowMenuButton(button: HTMLButtonElement, row: Element): boolean {

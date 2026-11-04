@@ -685,7 +685,7 @@ describe('工作区分区：DOM 层', () => {
     expect(hostItem.textContent).toBe('重命名')
   })
 
-  it('对齐归档管理器规范：在工作区行上右键触发或存在星标按钮时仍能精准注入菜单', async () => {
+  it('右键时菜单还没挂上也必须注入成功（宿主是事件之后才开菜单，靠轮询窗口等到）', async () => {
     mountFixture(['a'])
     mount(['a'])
     await waitForSync()
@@ -695,6 +695,10 @@ describe('工作区分区：DOM 层', () => {
     const starBtn = document.createElement('button')
     starBtn.className = 'dsham_rowStar'
     row.querySelector('[class*="rowActions"]')?.prepend(starBtn)
+
+    // 真实时序：右键先发生，宿主随后才把菜单挂上来。
+    row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }))
+    expect(document.querySelector('[role="menu"]')).toBeNull()
 
     const menu = document.createElement('div')
     menu.setAttribute('role', 'menu')
@@ -715,16 +719,53 @@ describe('工作区分区：DOM 层', () => {
     menu.appendChild(hostRow)
     document.body.appendChild(menu)
 
-    // 右键触发
-    row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }))
+    // 菜单随后才挂上：注入靠 20ms × 6 的重试或挂载后的 body 观察器落位（两条路径都在生产里）
     await new Promise<void>(resolve => {
-      window.setTimeout(resolve, 0)
+      window.setTimeout(resolve, 60)
     })
 
     const injected = Array.from(menu.querySelectorAll<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`))
     expect(injected).toHaveLength(2)
     expect(injected[0]?.textContent).toBe('置顶')
     expect(injected[1]?.textContent).toBe('分区')
+  })
+
+  it('操作区只有「新建会话」的行不能被当成菜单锚点（语义不匹配就放弃，不退回第一个按钮）', async () => {
+    mountFixture(['a'])
+    mount(['a'])
+    await waitForSync()
+
+    const row = document.querySelector<HTMLElement>('[data-row-key="workspace:a"]')!
+    const actions = row.querySelector<HTMLElement>('[class*="rowActions"]')!
+    // 未分组伪工作区的行只有「新建会话」；把它前面的菜单按钮摘掉还原该形态
+    actions.querySelectorAll('button')[0]?.remove()
+    const newSessionBtn = actions.querySelector('button')!
+    expect(newSessionBtn.getAttribute('aria-label')).toContain('新建会话')
+
+    const menu = document.createElement('div')
+    menu.setAttribute('role', 'menu')
+    const hostRow = document.createElement('div')
+    const hostItem = document.createElement('button')
+    hostItem.type = 'button'
+    hostItem.setAttribute('role', 'menuitem')
+    const hostIcon = document.createElement('span')
+    hostIcon.className = 'hostIcon'
+    hostIcon.innerHTML = '<svg></svg>'
+    const hostLabel = document.createElement('span')
+    hostLabel.className = 'hostLabel'
+    hostLabel.textContent = '重命名'
+    hostItem.append(hostIcon, hostLabel)
+    hostRow.appendChild(hostItem)
+    menu.appendChild(hostRow)
+    document.body.appendChild(menu)
+
+    newSessionBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    await new Promise<void>(resolve => {
+      window.setTimeout(resolve, 60)
+    })
+
+    // 语义不匹配就放弃：不能因为「操作区里有个按钮」就把新建会话当成菜单锚点
+    expect(menu.querySelectorAll(`[${MENU_ITEM_ATTR}]`)).toHaveLength(0)
   })
 
   it('菜单里的「置顶」行能把项目移进内置置顶分区', async () => {
@@ -1567,6 +1608,8 @@ describe('工作区分区：DOM 层', () => {
     expect(headerIdsInDomOrder()).toEqual([DEFAULT_SECTION_ID])
   })
 
+// 下面两组用例必须留在本 describe 内部：mountFixture / mount / waitForSync / seedSections/
+// openWorkspaceMenu 与 beforeEach 里的宿主传输桩都定义在本 describe 作用域内，提到顶层就取不到这些夹具。
 /**
  * 分区菜单必须走宿主原语（MenuSurface + MenuItemButton）：既不自绘行，也不依赖
  * 「页面上已经开着某个宿主菜单」。冷启动（全新打开 DSH 后第一次点分区标题 ···）同样要能弹出。
@@ -1822,6 +1865,45 @@ describe('分区二级菜单的可访问性：', () => {
     const pass = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })
     items[0].dispatchEvent(pass)
     expect(pass.defaultPrevented).toBe(false)
+  })
+
+  it('Home/End 必须把焦点留在二级菜单内，不能甩回一级菜单', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '测试分区', ids: ['b'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    const menu = await openWorkspaceMenu('a')
+    const row = Array.from(menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find(
+      button => button.textContent?.trim() === '分区',
+    )!
+    row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }))
+    await new Promise<void>(resolve => setTimeout(resolve, 150))
+
+    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    const items = Array.from(panel.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]'))
+    expect(items.length).toBeGreaterThan(1)
+
+    // Home：宿主的漫游里它等于「整个菜单第一项」（一级菜单首行），必须截住并落在面板首行
+    const last = items[items.length - 1]
+    last.focus()
+    const home = new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true })
+    last.dispatchEvent(home)
+    expect(home.defaultPrevented).toBe(true)
+    expect(document.activeElement).toBe(items[0])
+
+    // End：落在面板末行（当前恰好也是整个菜单末行，显式处理以防宿主将来在面板后追加行）
+    items[0].focus()
+    const end = new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true })
+    items[0].dispatchEvent(end)
+    expect(end.defaultPrevented).toBe(true)
+    expect(document.activeElement).toBe(items[items.length - 1])
   })
 
 })
