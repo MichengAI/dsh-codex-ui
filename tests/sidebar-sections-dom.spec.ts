@@ -1645,6 +1645,42 @@ describe('分区二级菜单的可访问性：', () => {
       button => button.textContent?.trim() === '分区',
     )
     expect(liveRow!.getAttribute('aria-expanded')).toBe('true')
+
+    // 关闭（Escape）后展开态必须回到 false，否则读屏会一直报「已展开」
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await waitForSync()
+    const closedRow = Array.from(menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find(
+      button => button.textContent?.trim() === '分区',
+    )
+    expect(closedRow!.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('菜单行包在内层滚动容器里（面板本体保持 overflow:visible，hover 桥才不会被横向裁掉）', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '测试分区', ids: ['b'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+
+    const menu = await openWorkspaceMenu('a')
+    const sectionRow = Array.from(menu.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find(
+      button => button.textContent?.trim() === '分区',
+    )!
+    sectionRow.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }))
+    await new Promise<void>(resolve => setTimeout(resolve, 140))
+
+    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    const scroll = panel.querySelector<HTMLElement>('.dcu-ws-section-menu-scroll')
+    expect(scroll).not.toBeNull()
+    const rows = scroll!.querySelectorAll('button[role="menuitem"]')
+    expect(rows.length).toBeGreaterThan(0)
+    // 所有行都在内层容器里（外层不再承担滚动，桥才不会被 overflow 裁剪）
+    expect(panel.querySelectorAll('button[role="menuitem"]').length).toBe(rows.length)
   })
 })
 

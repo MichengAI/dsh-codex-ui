@@ -8,8 +8,8 @@ import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import type {} from '@deepseek-ai/dsh-session'
 import { AboutSection } from './AboutSection.tsx'
 import { en, NS, zh } from './locales.ts'
-import { observeSettingsSkin } from './settings-skin/index.js'
-import { CodexUiNavIcon, observeSettingsNavIcon } from './settings-nav-icon.js'
+import { observeSettingsSkin } from './settings-skin/index.ts'
+import { CodexUiNavIcon, observeSettingsNavIcon } from './settings-nav-icon.ts'
 import { observeComposerEnhancements } from './composer/index.tsx'
 import { observeSidebarNav, checkSidebarEnabled } from './sidebar/index.ts'
 import { observeWorkspaceSections } from './sidebar/sections/index.ts'
@@ -70,6 +70,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => observeSettingsSkin(), 'michengai-codex-ui: official settings skin')
   ctx.effect(() => observeSettingsNavIcon(() => t('about.nav')), 'michengai-codex-ui: settings nav icon')
 
+  // 老宿主没有 settings.section.icon 插槽：inject 会等声明，未声明时回调不执行、也不抛错（安全降级）
   ;(ctx.slots.inject as any)('settings.section.icon', () => (ctx.slots.register as any)({
     name: 'settings.section.icon',
     id: 'codex-ui',

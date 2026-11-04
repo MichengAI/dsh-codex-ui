@@ -92,10 +92,11 @@ const SECTIONS_CSS = `
 .dcu-ws-section-action{width:22px;height:22px;border:0;border-radius:50%;background:transparent;color:inherit;font:inherit;font-size:12px;line-height:1;cursor:pointer;display:grid;place-items:center}
 .dcu-ws-section-action:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.16))}
 [data-sidebar-collapsed='true'] .dcu-ws-section{display:none !important}
-.dcu-ws-section-menu{position:fixed;z-index:1000;min-width:144px;max-width:280px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:4px;display:flex;flex-direction:column;gap:0;border:none;border-radius:var(--dsw-radius-lg,14px);box-shadow:var(--dsw-elevation-prominent,0 6px 20px rgba(0,0,0,.45));color:var(--dsw-alias-label-primary,#ededed);isolation:isolate}
 /* 面板本体由宿主 MenuSurface 原语渲染（表面 + material 磨砂层），这里只补壳外的几何与文字颜色，
    不碰填充与模糊——否则会和宿主的 material 叠加成双层，并把它的模糊打成惰性。 */
-.dcu-ws-section-menu{position:fixed;z-index:1000;max-width:360px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:4px;display:flex;flex-direction:column;gap:0;border:none;border-radius:var(--dsw-radius-lg,14px);box-shadow:var(--dsw-elevation-prominent,0 6px 20px rgba(0,0,0,.45));color:var(--dsw-alias-label-primary,#ededed);isolation:isolate}
+.dcu-ws-section-menu{position:fixed;z-index:1000;min-width:144px;max-width:360px;overflow:visible;padding:4px;display:flex;flex-direction:column;gap:0;border:none;border-radius:var(--dsw-radius-lg,14px);box-shadow:var(--dsw-elevation-prominent,0 6px 20px rgba(0,0,0,.45));color:var(--dsw-alias-label-primary,#ededed);isolation:isolate}
+/* 滚动搬进内层：面板自身必须 overflow:visible，否则下面的 8px 透明桥会被横向裁掉 */
+.dcu-ws-section-menu-scroll{display:flex;flex-direction:column;gap:0;min-height:0;flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;max-height:inherit}
 /* 父菜单与二级菜单之间有一小段空隙：铺一条透明桥，指针穿过去时不会触发离开事件。 */
 .dcu-ws-section-menu[data-flyout='true']::before{content:'';position:absolute;top:0;bottom:0;left:-6px;width:8px}
 /* 行样式一律交由宿主类名（克隆行自带），这里不再覆盖 button 的 padding / 圆角 / 字号，
@@ -728,9 +729,11 @@ export function observeWorkspaceSections(
     const parentMenu =
       flyoutFrom?.isConnected === true ? flyoutFrom : anchor.closest<HTMLElement>('[role="menu"]')
     const { MenuSurface, MenuItemButton } = primitives as unknown as {
-      MenuSurface: (props: Record<string, unknown>) => unknown
-      MenuItemButton: (props: Record<string, unknown>) => unknown
+      MenuSurface?: (props: Record<string, unknown>) => unknown
+      MenuItemButton?: (props: Record<string, unknown>) => unknown
     }
+    // 宿主缺原语就不弹（不自绘降级）：0.2.0-rc.1 起两端都已导出，这里只是给未来宿主留的护栏
+    if (MenuSurface === undefined || MenuItemButton === undefined) return
 
     const container = document.createElement('div')
     container.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden'
@@ -753,28 +756,29 @@ export function observeWorkspaceSections(
             'data-dcu-menu-surface': 'true',
             ...(parentMenu === null || parentMenu === undefined ? {} : { 'data-flyout': 'true' }),
           },
-          items.map(item =>
-            createElement(
-              MenuItemButton as never,
-              {
-                key: item.label,
-                icon: createElement('span', {
-                  style: { display: 'inline-flex' },
-                  dangerouslySetInnerHTML: { __html: item.icon },
-                }),
-                onSelect: () => {
-                  closeSectionMenu()
-                  item.onSelect()
+          createElement('div', { className: `${MENU_CLASS}-scroll` },
+            items.map(item =>
+              createElement(
+                MenuItemButton as never,
+                {
+                  key: item.label,
+                  icon: createElement('span', {
+                    style: { display: 'inline-flex' },
+                    dangerouslySetInnerHTML: { __html: item.icon },
+                  }),
+                  onSelect: () => {
+                    closeSectionMenu()
+                    item.onSelect()
+                  },
                 },
-              },
-              item.label,
+                item.label,
+              ),
             ),
           ),
         ),
         container,
       )
     })
-
 
     let leaveTimer: number | undefined
     const cancelLeave = (): void => {
@@ -820,7 +824,6 @@ export function observeWorkspaceSections(
     container.style.visibility = 'visible'
   }
 
-  
   function openSectionMenu(sectionId: string, anchor: HTMLElement): void {
     const section = state.sections.find(item => item.id === sectionId)
     if (section === undefined) return
@@ -1336,14 +1339,10 @@ export function observeWorkspaceSections(
     }
     if (reference !== undefined && template === undefined) {
       // 首次打开菜单：顺便把宿主菜单的模板记下来，后续就有了缓存。
-      hostMenuSurface = menu
-      hostMenuClassName = menu.className
       // 面板改用宿主 MenuSurface 原语渲染，这里只缓存行结构
     }
     if (reference !== undefined && hostMenuRowTemplate === undefined && !isOwnPanel(reference)) {
       hostMenuRowTemplate = reference.parentElement?.cloneNode(true) as HTMLElement | undefined
-      hostMenuSurface = menu
-      hostMenuClassName = menu.className
     }
 
     const workspaceId = assigningWorkspaceId
@@ -1422,9 +1421,7 @@ export function observeWorkspaceSections(
   }
 
   let assigningWorkspaceId: string | undefined
-  let hostMenuSurface: HTMLElement | undefined
   /** 宿主菜单表面与菜单行的克隆模板：分区菜单复用它们，样式才与原生一致。 */
-  let hostMenuClassName: string | undefined
   let hostMenuRowTemplate: HTMLElement | undefined
   /** 宿主菜单的外壳与内容容器：真正的底色/模糊画在 viewport 上，必须整层复用。 */
   let collapsed: Record<string, boolean> = readCollapsed()
@@ -1542,7 +1539,6 @@ export function observeWorkspaceSections(
     const reference = menu?.querySelector<HTMLButtonElement>('button[role="menuitem"]')
     const wrapper = reference?.parentElement
     if (menu === undefined || reference === undefined || wrapper === undefined || wrapper === null) return
-    hostMenuClassName = menu.className
     hostMenuRowTemplate = wrapper.cloneNode(true) as HTMLElement
   }
 

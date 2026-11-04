@@ -87,12 +87,13 @@ export const GLASS_EXTRA_CSS = `
 /* 对齐平铺风格（Compat）防漏字规范：将云母输入框卡片底色提升为高遮蔽度的 card-raised，
    并锁定至少 12px 高斯磨砂，将底层滚动的历史文字彻底化开为淡淡的柔和色块，杜绝锐利笔画穿透叠字；
    同时下方 dock 磨砂幕布亦获得 12px 磨砂兜底，消除统计行透字 */
-[data-dsh-glass-float] [data-composer-card]::before,
-[data-dsh-glass] [data-composer-card]::before {
+[data-dsh-glass-float] [data-composer-card]::before {
   background: var(--dsh-glass-card-raised) !important;
   backdrop-filter: blur(max(var(--dsh-glass-blur, 12px), 12px)) !important;
   -webkit-backdrop-filter: blur(max(var(--dsh-glass-blur, 12px), 12px)) !important;
 }
+
+/* 平铺（compat）模式的卡片材质由上游固定为 12px，这里不再覆盖，避免浓厚预设把 compat 也带成 20px */
 
 [data-dsh-glass-float] [data-dsh-glass-inputbar] > [class*="dock"]::before,
 [data-dsh-glass-float] [data-dsh-glass-inputbar] > [data-composer-dock]::before,
