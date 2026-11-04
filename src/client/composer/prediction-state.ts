@@ -14,11 +14,13 @@ export const PREDICTION_STORAGE_KEY = 'codex-ui.composer.prediction'
 export const PREDICTION_STORAGE_EVENT = 'codex-ui:prediction-change'
 
 export interface PredictionSettingsState {
+  /** 子插件在 Host 侧是否启用；未启用时整个设置卡片不渲染（对齐 ThemeSettingsCard 规范）。 */
+  readonly subPluginEnabled: boolean
   /** 用户开关；`false` 表示用户主动关闭预测。 */
   readonly userEnabled: boolean
   /** Host 侧是否允许预测（配置未声明时默认允许）。 */
   readonly hostAllowed: boolean
-  /** 最终生效值：两者同时为真才预测。 */
+  /** 最终生效值：子插件启用且两者同时为真才预测。 */
   readonly enabled: boolean
 }
 
@@ -46,11 +48,17 @@ function parseStored(raw: string | null): boolean {
   return true
 }
 
+let subPluginEnabled = true
 let userEnabled = parseStored(safeGetItem(PREDICTION_STORAGE_KEY))
 let hostAllowed = true
 
 function snapshot(): PredictionSettingsState {
-  return { userEnabled, hostAllowed, enabled: userEnabled && hostAllowed }
+  return {
+    subPluginEnabled,
+    userEnabled,
+    hostAllowed,
+    enabled: subPluginEnabled && userEnabled && hostAllowed,
+  }
 }
 
 let cached: PredictionSettingsState = snapshot()
@@ -58,6 +66,7 @@ let cached: PredictionSettingsState = snapshot()
 function publish(): void {
   const next = snapshot()
   if (
+    next.subPluginEnabled === cached.subPluginEnabled &&
     next.userEnabled === cached.userEnabled &&
     next.hostAllowed === cached.hostAllowed &&
     next.enabled === cached.enabled
@@ -105,6 +114,12 @@ export function setPredictionEnabled(enabled: boolean): void {
 /** Host 状态端点回报的配置位；缺省视为允许。 */
 export function setHostPredictionAllowed(allowed: boolean): void {
   hostAllowed = allowed
+  publish()
+}
+
+/** 标记 codex-ui-composer 子插件在 Host 侧的启用状态；未启用时设置卡片不渲染（对齐主题卡片）。 */
+export function setSubPluginEnabled(enabled: boolean): void {
+  subPluginEnabled = enabled
   publish()
 }
 

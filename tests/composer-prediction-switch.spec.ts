@@ -9,22 +9,24 @@ import {
   refreshPredictionSettingsSnapshot,
   setHostPredictionAllowed,
   setPredictionEnabled,
+  setSubPluginEnabled,
   subscribePredictionSettings,
 } from '../src/client/composer/prediction-state.ts'
 import { ComposerSettingsCard } from '../src/client/composer/ComposerSettingsCard.tsx'
 
-/** 复位到「用户开启 + Host 允许」的干净起点。 */
+/** 复位到「用户开启 + Host 允许 + 子插件启用」的干净起点。 */
 function reset(): void {
   localStorage.removeItem(PREDICTION_STORAGE_KEY)
   setPredictionEnabled(true)
   setHostPredictionAllowed(true)
+  setSubPluginEnabled(true)
 }
 
 describe('预测开关：客户端偏好', () => {
   beforeEach(reset)
 
   it('默认开启，且没有任何偏好写入时不会凭空关闭预测', () => {
-    expect(getPredictionSettingsState()).toEqual({ userEnabled: true, hostAllowed: true, enabled: true })
+    expect(getPredictionSettingsState()).toEqual({ subPluginEnabled: true, userEnabled: true, hostAllowed: true, enabled: true })
     expect(isPredictionEnabled()).toBe(true)
   })
 
@@ -53,7 +55,7 @@ describe('预测开关：客户端偏好', () => {
   it('站点级关闭时压过用户偏好，用户关不掉也开不了', () => {
     setPredictionEnabled(true)
     setHostPredictionAllowed(false)
-    expect(getPredictionSettingsState()).toEqual({ userEnabled: true, hostAllowed: false, enabled: false })
+    expect(getPredictionSettingsState()).toEqual({ subPluginEnabled: true, userEnabled: true, hostAllowed: false, enabled: false })
     expect(isPredictionEnabled()).toBe(false)
 
     setPredictionEnabled(false)
@@ -132,9 +134,24 @@ describe('预测开关：设置卡片', () => {
     expect(html).toContain('disabled')
   })
 
+  it('子插件未启用时整个卡片区域不渲染（与 ThemeSettingsCard 规范一致）', () => {
+    setSubPluginEnabled(false)
+    const html = renderToString(React.createElement(ComposerSettingsCard, { t }))
+    expect(html).toBe('')
+  })
+
   it('卡片自带结构样式，不依赖主题卡片是否渲染', () => {
     const html = renderToString(React.createElement(ComposerSettingsCard, { t }))
     expect(html).toContain('.dcu-section-card')
     expect(html).toContain('.dcu-settings-row')
+  })
+
+  it('接线守卫：当预测禁用时，状态能够准确反映给插槽消费者', () => {
+    setPredictionEnabled(false)
+    expect(isPredictionEnabled()).toBe(false)
+    expect(getPredictionSettingsState().enabled).toBe(false)
+    setPredictionEnabled(true)
+    expect(isPredictionEnabled()).toBe(true)
+    expect(getPredictionSettingsState().enabled).toBe(true)
   })
 })

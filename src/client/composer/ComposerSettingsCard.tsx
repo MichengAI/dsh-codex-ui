@@ -16,8 +16,14 @@ export interface ComposerSettingsCardProps {
  * 站点级关闭（profile `cordis.patch.yml` 里 `config: { prediction: false }`）时，
  * 开关保持可见但置为关闭且禁用，并给出原因提示——比整卡消失更容易排查。
  */
-export function ComposerSettingsCard({ t }: ComposerSettingsCardProps): React.JSX.Element {
+export function ComposerSettingsCard({ t }: ComposerSettingsCardProps): React.JSX.Element | null {
   const state = useSyncExternalStore(subscribePredictionSettings, getPredictionSettingsState, getPredictionSettingsState)
+
+  // 当输入增强子插件在 Host 侧被停用时，遵照规范：设置卡片直接全部隐藏，不渲染任何 DOM（与 ThemeSettingsCard 保持一致）
+  if (!state.subPluginEnabled) {
+    return null
+  }
+
   const lockedByHost = !state.hostAllowed
 
   return (

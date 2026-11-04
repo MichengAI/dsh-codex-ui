@@ -163,6 +163,7 @@ Once installed, restart your DSH Web instance and hard-refresh your browser (`Ct
 | Feature | How to Use |
 | :--- | :--- |
 | **Accept Input Prediction** | Press `Tab` when predictive ghost text appears behind the caret; press `Alt + Down` / `Alt + Up` to cycle recommendations, or `Escape` to dismiss. |
+| **Toggle Predictions** | Go to **Settings → Codex UI** and toggle the switch in the "Composer Enhancements" card. Can also be locked off wholesale across a profile by setting `config.prediction: false` in `cordis.patch.yml`. |
 | **Recall Input History** | Press `↑` / `↓` in an empty composer to cycle through past inputs submitted in the current workspace (up to 200 items). |
 | **Resize Composer Width** | Hover over either lateral border of the composer and drag the blue handles. |
 | **Switch Themes & Blur** | Navigate to **Settings → Codex UI**, choose from 7 palettes, and toggle Stock/Mica or blur presets. |

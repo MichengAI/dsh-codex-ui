@@ -22,6 +22,7 @@ import {
   getPredictionSettingsState,
   observePredictionSettings,
   setHostPredictionAllowed,
+  setSubPluginEnabled,
   subscribePredictionSettings,
 } from './prediction-state.ts'
 import { NEW_CONVERSATION_STYLE } from './new-conversation-style.ts'
@@ -53,8 +54,8 @@ export async function fetchComposerStatus(): Promise<{ enabled: boolean; predict
     if (!response.ok) return { enabled: false, prediction: false }
     const data = await response.json()
     const enabled = data?.enabled === true
-    // 旧版 Host 不返回 prediction 字段：此时按允许处理，不因升级不同步而丢掉用户已有的能力
-    return { enabled, prediction: enabled && data?.prediction !== false }
+    // prediction 代表站点级配置允许与否（cordis.patch.yml 的 config.prediction），与子插件 enabled 解耦
+    return { enabled, prediction: data?.prediction !== false }
   } catch {
     return { enabled: false, prediction: false }
   }
@@ -169,6 +170,8 @@ export function observeComposerEnhancements(ctx: Context): () => void {
     if (disposed) return
     const status = await fetchComposerStatus()
     if (disposed) return
+    // 同步子插件启用态：与主题卡片一致，未启用时设置面板整卡不渲染
+    setSubPluginEnabled(status.enabled)
     // 站点级配置先行落地：用户开关只能在其为真时生效
     setHostPredictionAllowed(status.prediction)
     if (status.enabled) {

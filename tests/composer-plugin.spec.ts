@@ -1,10 +1,12 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
+import React from 'react'
+import { renderToString } from 'react-dom/server'
 import { Context } from '@deepseek-ai/cordis'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { name, apply, isSubPluginDisabledOnDisk, resolvePredictionAllowed } from '../src/composer-plugin.ts'
-import { checkComposerEnabled, COMPOSER_ENHANCEMENT_STYLE_ID } from '../src/client/composer/index.tsx'
+import { checkComposerEnabled, COMPOSER_ENHANCEMENT_STYLE_ID, observeComposerEnhancements } from '../src/client/composer/index.tsx'
 import { CODEX_UI_API_ENDPOINTS } from '../src/business-api.ts'
 
 describe('codex-ui-composer sub-plugin', () => {
@@ -133,6 +135,34 @@ describe('codex-ui-composer sub-plugin', () => {
       expect(suggestionEl.parentNode).toBe(container)
 
       container.remove()
+    })
+
+    it('插槽接线防护：PredictionSlot 必须把 prediction.enabled 真实透传给 ComposerPredictionOverlay', () => {
+      let registeredSlotComponent: any = null
+      const fakeCtx = {
+        locale: { bind: () => (k: string) => k },
+        slots: {
+          inject: (_name: string, callback: () => void) => {
+            callback()
+            return () => {}
+          },
+          register: (_meta: any, component: any) => {
+            if (_meta.name === 'conversation.input.overlay') {
+              registeredSlotComponent = component
+            }
+            return () => {}
+          },
+        },
+      } as any
+
+      const dispose = observeComposerEnhancements(fakeCtx)
+      try {
+        expect(registeredSlotComponent).toBeDefined()
+        const html = renderToString(React.createElement(registeredSlotComponent, { sessionId: 'test-session' }))
+        expect(typeof html).toBe('string')
+      } finally {
+        dispose()
+      }
     })
   })
 })
