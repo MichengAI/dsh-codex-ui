@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
 import {
   MENU_ITEM_ATTR,
   SECTION_HEADER_ATTR,
@@ -1563,5 +1564,37 @@ describe('工作区分区：DOM 层', () => {
     await waitForSync()
     expect(hostSection(PINNED_SECTION_ID).ids).toEqual([])
     expect(headerIdsInDomOrder()).toEqual([DEFAULT_SECTION_ID])
+  })
+})
+/**
+ * 分区菜单的材质契约：必须与宿主 MenuSurface 同构 —— 填充与模糊只画在独立 `.material` 子层，
+ * 面板根节点不得自带 background / backdrop-filter。
+ * 根上画材质会有两个后果：① 根形成 backdrop root，把子层模糊打成惰性；
+ * ② 与子层叠加成双层填充，二级菜单明显比一级菜单更实更亮（宿主因此专门把材质放在子层）。
+ */
+describe('分区菜单材质同构宿主 MenuSurface：', () => {
+  const source = readFileSync('src/client/sidebar/sections/index.ts', 'utf8')
+  const rootRule = /\.dcu-ws-section-menu\{[^}]*\}/.exec(source)?.[0] ?? ''
+  const materialRule =
+    /\.dcu-ws-section-menu > \.dcu-ws-section-menu-material\{[^}]*\}/.exec(source)?.[0] ?? ''
+
+  it('面板根节点不得自带填充与模糊，只负责几何与 isolation', () => {
+    expect(rootRule).not.toBe('')
+    expect(rootRule).not.toContain('backdrop-filter')
+    expect(rootRule).not.toContain('background:')
+    expect(rootRule).toContain('isolation:isolate')
+  })
+
+  it('材质子层承载填充与模糊，并铺满面板、继承圆角', () => {
+    expect(materialRule).toContain('position:absolute')
+    expect(materialRule).toContain('inset:0')
+    expect(materialRule).toContain('z-index:-1')
+    expect(materialRule).toContain('border-radius:inherit')
+    expect(materialRule).toContain('--dsw-menu-surface-fill')
+    expect(materialRule).toContain('--dsw-menu-backdrop-filter')
+  })
+
+  it('克隆不到宿主 material 层时会补一层自己的材质节点', () => {
+    expect(source).toContain('`${MENU_CLASS}-material`')
   })
 })
