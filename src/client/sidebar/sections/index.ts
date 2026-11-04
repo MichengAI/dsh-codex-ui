@@ -13,7 +13,7 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 import { createElement } from 'react'
-import { render, unmountComponentAtNode } from 'react-dom'
+import { flushSync, render, unmountComponentAtNode } from 'react-dom'
 import {
   DEFAULT_SECTION_ID,
   PINNED_SECTION_ID,
@@ -93,11 +93,9 @@ const SECTIONS_CSS = `
 .dcu-ws-section-action:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.16))}
 [data-sidebar-collapsed='true'] .dcu-ws-section{display:none !important}
 .dcu-ws-section-menu{position:fixed;z-index:1000;min-width:144px;max-width:280px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:4px;display:flex;flex-direction:column;gap:0;border:none;border-radius:var(--dsw-radius-lg,14px);box-shadow:var(--dsw-elevation-prominent,0 6px 20px rgba(0,0,0,.45));color:var(--dsw-alias-label-primary,#ededed);isolation:isolate}
-/* 材质只画在独立子层，绝不在面板根上写 background/backdrop-filter：宿主 MenuSurface 就是这么做的
-   （见 dsh-client-ui-primitives MenuSurface.module.css 的注释）。画在根上会有两个后果：
-   ① 根自身的 backdrop-filter 形成 backdrop root，把子层 material 的模糊打成惰性；
-   ② 与子层 material 叠加成「52%+52%」的双层填充，二级菜单明显比一级菜单更实更亮。 */
-.dcu-ws-section-menu > .dcu-ws-section-menu-material{position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--dsw-menu-surface-fill,var(--dsw-alias-surface-overlay,#1e1e22));backdrop-filter:var(--dsw-menu-backdrop-filter,blur(40px) saturate(150%));-webkit-backdrop-filter:var(--dsw-menu-backdrop-filter,blur(40px) saturate(150%));pointer-events:none}
+/* 面板本体由宿主 MenuSurface 原语渲染（表面 + material 磨砂层），这里只补壳外的几何与文字颜色，
+   不碰填充与模糊——否则会和宿主的 material 叠加成双层，并把它的模糊打成惰性。 */
+.dcu-ws-section-menu{position:fixed;z-index:1000;max-width:360px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:4px;display:flex;flex-direction:column;gap:0;border:none;border-radius:var(--dsw-radius-lg,14px);box-shadow:var(--dsw-elevation-prominent,0 6px 20px rgba(0,0,0,.45));color:var(--dsw-alias-label-primary,#ededed);isolation:isolate}
 /* 父菜单与二级菜单之间有一小段空隙：铺一条透明桥，指针穿过去时不会触发离开事件。 */
 .dcu-ws-section-menu[data-flyout='true']::before{content:'';position:absolute;top:0;bottom:0;left:-6px;width:8px}
 /* 行样式一律交由宿主类名（克隆行自带），这里不再覆盖 button 的 padding / 圆角 / 字号，
@@ -699,15 +697,22 @@ export function observeWorkspaceSections(
   /* ── 分区菜单 ── */
 
   function closeSectionMenu(): void {
-    menuHost?.remove()
+    if (menuHost !== undefined) {
+      // 先在容器上卸载 React 树，再摘掉容器，避免宿主菜单里残留孤儿节点
+      unmountComponentAtNode(menuHost)
+      menuHost.remove()
+    }
     menuHost = undefined
     assignAnchor = undefined
   }
 
   /**
-   * 分区自己的菜单面板：一律克隆宿主真实菜单的 DOM 外壳 + 行结构，不手写控件。
-   * 宿主 0.2.x 的菜单外壳是 `[role="menu"]`（`.surface` + `.list` + `.material`），
-   * 拿不到克隆源时宁可不弹（注入失败即失败），也不退回自绘面板——自绘必然和宿主菜单有样式差。
+   * 分区自己的菜单面板：直接用宿主原语渲染 —— `MenuSurface`（表面 + material 磨砂层）
+   * 与 `MenuItemButton`（行）。既不手绘控件，也不依赖「页面上已经开着某个宿主菜单」，
+   * 所以冷启动第一次点分区标题的 `···` 同样能弹出来。
+   *
+   * 嵌套在宿主行菜单里时挂进父菜单内部（outside-click 判定视为菜单内部，指针移入不会关父菜单）；
+   * 独立打开时挂到 body。
    */
   function openHostPanel(
     anchor: HTMLElement,
@@ -718,57 +723,53 @@ export function observeWorkspaceSections(
 
     const parentMenu =
       flyoutFrom?.isConnected === true ? flyoutFrom : anchor.closest<HTMLElement>('[role="menu"]')
-    const shell = parentMenu ?? hostMenuShellTemplate
-    // 没有可克隆的宿主菜单外壳：直接放弃，不画自绘面板。
-    if (shell === null || shell === undefined) return
+    const { MenuSurface, MenuItemButton } = primitives as unknown as {
+      MenuSurface: (props: Record<string, unknown>) => unknown
+      MenuItemButton: (props: Record<string, unknown>) => unknown
+    }
 
-    const panel = shell.cloneNode(false) as HTMLElement
-    panel.classList.add(MENU_CLASS)
+    const container = document.createElement('div')
+    container.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden'
 
-    // 克隆宿主菜单的 material 磨砂层（填充 + 模糊只在这一层）
-    const material = parentMenu?.querySelector<HTMLElement>('[class*="material"]')
-    if (material !== null && material !== undefined) {
-      panel.appendChild(material.cloneNode(true))
+    if (parentMenu !== null && parentMenu !== undefined) {
+      // 挂进父菜单内部：宿主的 outside-click 判定才会把它当成菜单的一部分
+      parentMenu.appendChild(container)
     } else {
-      // 模板缓存里没有子节点，补一层同样结构的材质层
-      const materialLayer = document.createElement('div')
-      materialLayer.className = `${MENU_CLASS}-material`
-      materialLayer.setAttribute('aria-hidden', 'true')
-      panel.appendChild(materialLayer)
+      document.body.appendChild(container)
     }
+    // 同步渲染：定位要量真实尺寸，异步渲染会让第一次量到 null 而丢掉定位
+    flushSync(() => {
+      render(
+        createElement(
+          MenuSurface as never,
+          {
+            role: 'menu',
+            className: MENU_CLASS,
+            'data-dcu-menu-surface': 'true',
+            ...(parentMenu === null || parentMenu === undefined ? {} : { 'data-flyout': 'true' }),
+          },
+          items.map(item =>
+            createElement(
+              MenuItemButton as never,
+              {
+                key: item.label,
+                icon: createElement('span', {
+                  style: { display: 'inline-flex' },
+                  dangerouslySetInnerHTML: { __html: item.icon },
+                }),
+                onSelect: () => {
+                  closeSectionMenu()
+                  item.onSelect()
+                },
+              },
+              item.label,
+            ),
+          ),
+        ),
+        container,
+      )
+    })
 
-    // 克隆宿主菜单的 viewport 视口层（如有），没有就挂在面板根上
-    const vp = parentMenu?.querySelector<HTMLElement>('[role="presentation"], [class*="viewport"]')
-    let viewport: HTMLElement
-    if (vp !== null && vp !== undefined) {
-      viewport = vp.cloneNode(false) as HTMLElement
-      panel.appendChild(viewport)
-    } else if (hostMenuViewportTemplate !== undefined) {
-      viewport = hostMenuViewportTemplate.cloneNode(false) as HTMLElement
-      panel.appendChild(viewport)
-    } else {
-      viewport = panel
-    }
-
-    // 行一律克隆宿主真实行；克隆不到就跳过该行（不手拼 button）
-    const sampleRow =
-      parentMenu?.querySelector<HTMLElement>('[class*="itemWrap"]') ?? hostMenuRowTemplate
-    const sampleRef =
-      sampleRow?.querySelector<HTMLButtonElement>('button[role="menuitem"]') ?? undefined
-
-    for (const item of items) {
-      const row = buildMenuRow(sampleRef, item.icon, item.label, '', sampleRow)
-      if (row === null) continue
-      row.querySelector('button')?.addEventListener('click', event => {
-        event.preventDefault()
-        event.stopPropagation()
-        item.onSelect()
-      })
-      viewport.appendChild(row)
-    }
-
-    // 一行都没注入成功：说明拿不到宿主行模板，放弃这次弹出（不手拼行）。
-    if (viewport.querySelector('button[role="menuitem"]') === null) return
 
     let leaveTimer: number | undefined
     const cancelLeave = (): void => {
@@ -776,51 +777,45 @@ export function observeWorkspaceSections(
       window.clearTimeout(leaveTimer)
       leaveTimer = undefined
     }
-    panel.addEventListener('mouseenter', cancelLeave)
-    panel.addEventListener('mouseleave', () => {
+    container.addEventListener('mouseenter', cancelLeave)
+    container.addEventListener('mouseleave', () => {
       cancelLeave()
       leaveTimer = window.setTimeout(() => {
         leaveTimer = undefined
         closeSectionMenu()
       }, 180)
     })
+    container.addEventListener('pointerdown', event => event.stopPropagation())
+    container.addEventListener('mousedown', event => event.stopPropagation())
 
-    panel.addEventListener('pointerdown', event => event.stopPropagation())
-    panel.addEventListener('mousedown', event => event.stopPropagation())
+    menuHost = container
 
-    if (parentMenu !== null && parentMenu !== undefined) {
-      // 挂入父菜单内部：杜绝 pointerleave 导致父菜单消失
-      parentMenu.appendChild(panel)
-      panel.dataset.flyout = 'true'
-      panel.style.left = '0px'
-      panel.style.top = '0px'
+    const surface = container.querySelector<HTMLElement>('[data-dcu-menu-surface]')
+    if (surface !== null) {
       const rect = anchor.getBoundingClientRect()
-      const width = panel.offsetWidth || 196
-      const height = panel.offsetHeight || 120
-      const parentRect = parentMenu.getBoundingClientRect()
-      let left = parentRect.right + 2
-      if (left + width > window.innerWidth - 10) left = Math.max(10, parentRect.left - width - 4)
+      const width = surface.offsetWidth || 196
+      const height = surface.offsetHeight || 120
       const maxHeight = Math.max(140, Math.min(360, window.innerHeight - 20))
-      panel.style.maxHeight = `${maxHeight}px`
-      let top = rect.top - 4
-      if (top + Math.min(height, maxHeight) > window.innerHeight - 10) {
-        top = Math.max(10, window.innerHeight - Math.min(height, maxHeight) - 10)
+      surface.style.maxHeight = `${maxHeight}px`
+      if (parentMenu !== null && parentMenu !== undefined) {
+        const parentRect = parentMenu.getBoundingClientRect()
+        let left = parentRect.right + 2
+        if (left + width > window.innerWidth - 10) left = Math.max(10, parentRect.left - width - 4)
+        let top = rect.top - 4
+        if (top + Math.min(height, maxHeight) > window.innerHeight - 10) {
+          top = Math.max(10, window.innerHeight - Math.min(height, maxHeight) - 10)
+        }
+        surface.style.left = `${left}px`
+        surface.style.top = `${top}px`
+      } else {
+        surface.style.left = `${Math.max(8, Math.min(rect.left + 4, window.innerWidth - width - 8))}px`
+        surface.style.top = `${Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - height - 8))}px`
       }
-      panel.style.left = `${left}px`
-      panel.style.top = `${top}px`
-    } else {
-      document.body.appendChild(panel)
-      panel.style.left = '0px'
-      panel.style.top = '0px'
-      const rect = anchor.getBoundingClientRect()
-      const width = panel.offsetWidth || 196
-      const height = panel.offsetHeight || 120
-      panel.style.left = `${Math.max(8, Math.min(rect.left + 4, window.innerWidth - width - 8))}px`
-      panel.style.top = `${Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - height - 8))}px`
     }
-    menuHost = panel
+    container.style.visibility = 'visible'
   }
 
+  
   function openSectionMenu(sectionId: string, anchor: HTMLElement): void {
     const section = state.sections.find(item => item.id === sectionId)
     if (section === undefined) return
@@ -1338,19 +1333,12 @@ export function observeWorkspaceSections(
       // 首次打开菜单：顺便把宿主菜单的模板记下来，后续就有了缓存。
       hostMenuSurface = menu
       hostMenuClassName = menu.className
-      hostMenuShellTemplate = menu.cloneNode(false) as HTMLElement
-      const viewport = reference.parentElement?.parentElement
-      hostMenuViewportTemplate =
-        viewport === undefined || viewport === null ? undefined : (viewport.cloneNode(false) as HTMLElement)
+      // 面板改用宿主 MenuSurface 原语渲染，这里只缓存行结构
     }
     if (reference !== undefined && hostMenuRowTemplate === undefined && !isOwnPanel(reference)) {
       hostMenuRowTemplate = reference.parentElement?.cloneNode(true) as HTMLElement | undefined
       hostMenuSurface = menu
       hostMenuClassName = menu.className
-      hostMenuShellTemplate = menu.cloneNode(false) as HTMLElement
-      const viewport = reference.parentElement?.parentElement
-      hostMenuViewportTemplate =
-        viewport === undefined || viewport === null ? undefined : (viewport.cloneNode(false) as HTMLElement)
     }
 
     const workspaceId = assigningWorkspaceId
@@ -1430,8 +1418,6 @@ export function observeWorkspaceSections(
   let hostMenuClassName: string | undefined
   let hostMenuRowTemplate: HTMLElement | undefined
   /** 宿主菜单的外壳与内容容器：真正的底色/模糊画在 viewport 上，必须整层复用。 */
-  let hostMenuShellTemplate: HTMLElement | undefined
-  let hostMenuViewportTemplate: HTMLElement | undefined
   let collapsed: Record<string, boolean> = readCollapsed()
 
   function openAssignMenu(anchor: HTMLElement, parentMenu?: HTMLElement): void {
@@ -1543,10 +1529,6 @@ export function observeWorkspaceSections(
     if (menu === undefined || reference === undefined || wrapper === undefined || wrapper === null) return
     hostMenuClassName = menu.className
     hostMenuRowTemplate = wrapper.cloneNode(true) as HTMLElement
-    hostMenuShellTemplate = menu.cloneNode(false) as HTMLElement
-    const viewport = wrapper.parentElement
-    hostMenuViewportTemplate =
-      viewport === null ? undefined : (viewport.cloneNode(false) as HTMLElement)
   }
 
   function syncNow(): void {

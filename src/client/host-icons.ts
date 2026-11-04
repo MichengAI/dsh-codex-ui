@@ -35,28 +35,29 @@ const FALLBACK_LOADING = createFallbackIcon('M8 2a6 6 0 1 0 6 6')
 const FALLBACK_REFRESH = createFallbackIcon('M2.5 8a5.5 5.5 0 1 0 1.2-3.4M2.5 3v3h3')
 
 /**
- * 跨宿主版本图标安全解析器：
- * 优先匹配 modern，次优匹配 legacy，若提供 fallback 则安全回退，未提供且均缺失时才抛错（单测保护）。
+ * 跨宿主版本图标安全解析器：按候选名依次匹配（新版 → 老版 → Medium/Regular 变体），
+ * 全部缺失时才回退到给到的 fallback；没有 fallback 就抛错（由单测保护）。
+ * 生产路径的 `hostIcon` 也走这里 —— 只有一套候选顺序，避免「测试改的是导出函数、线上走的是另一套」。
  */
 export function resolveHostIcon(
   icons: Record<string, HostIcon | undefined>,
-  modern: string,
-  legacy: string,
-  fallback?: HostIcon
+  candidates: readonly string[],
+  fallback?: HostIcon,
 ): HostIcon {
-  const icon = icons[modern] ?? icons[legacy]
-  if (icon) return icon
-  if (fallback) return fallback
-  throw new Error(`宿主缺少图标 ${modern}`)
+  for (const name of candidates) {
+    const icon = icons[name]
+    if (icon !== undefined) return icon
+  }
+  if (fallback !== undefined) return fallback
+  throw new Error(`宿主缺少图标 ${candidates[0] ?? '(空候选)'}`)
 }
 
 function hostIcon(modern: string, legacy: string, fallback: HostIcon): HostIcon {
-  const candidates = [modern, legacy, modern.replace('Medium', 'Regular'), modern.replace('OutlineMedium', 'OutlineRegular')]
-  const icons = primitives as unknown as Record<string, HostIcon | undefined>
-  for (const name of candidates) {
-    if (icons[name]) return icons[name]!
-  }
-  return fallback
+  return resolveHostIcon(
+    primitives as unknown as Record<string, HostIcon | undefined>,
+    [modern, legacy, modern.replace('Medium', 'Regular'), modern.replace('OutlineMedium', 'OutlineRegular')],
+    fallback,
+  )
 }
 
 export const IconCheckOutlineMedium = hostIcon('IconCheckOutlineMedium', 'IconCheckOutline16', FALLBACK_CHECK)

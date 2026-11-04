@@ -827,8 +827,6 @@ describe('工作区分区：DOM 层', () => {
     mountFixture(['a'])
     mount(['a'])
     await waitForSync()
-    // 分区菜单只克隆宿主菜单结构（不再自绘）：先让宿主行菜单渲染一次，缓存外壳与行模板。
-    await openWorkspaceMenu('a')
     for (const id of [PINNED_SECTION_ID, DEFAULT_SECTION_ID]) {
       const header = headers().find(item => item.getAttribute(SECTION_HEADER_ATTR) === id)!
       expect(header.draggable).toBe(false)
@@ -856,9 +854,6 @@ describe('工作区分区：DOM 层', () => {
     mountFixture(['a'])
     mount(['a'])
     await waitForSync()
-
-    // 分区菜单只克隆宿主菜单结构（不再自绘）：先渲染一次宿主行菜单，缓存外壳与行模板。
-    await openWorkspaceMenu('a')
 
     const custom = headers().find(header => header.getAttribute(SECTION_HEADER_ATTR) === 's1')!
     const button = custom.querySelector<HTMLElement>('.dcu-ws-section-actions button')!
@@ -1196,8 +1191,6 @@ describe('工作区分区：DOM 层', () => {
     mount(['a', 'b'])
     await waitForSync()
 
-    // 分区菜单只克隆宿主菜单结构（不再自绘）：先渲染一次宿主行菜单，缓存外壳与行模板。
-    await openWorkspaceMenu('a')
 
     const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
     expect(s1Header).toBeDefined()
@@ -1573,36 +1566,51 @@ describe('工作区分区：DOM 层', () => {
     expect(hostSection(PINNED_SECTION_ID).ids).toEqual([])
     expect(headerIdsInDomOrder()).toEqual([DEFAULT_SECTION_ID])
   })
-})
+
 /**
- * 分区菜单的材质契约：必须与宿主 MenuSurface 同构 —— 填充与模糊只画在独立 `.material` 子层，
- * 面板根节点不得自带 background / backdrop-filter。
- * 根上画材质会有两个后果：① 根形成 backdrop root，把子层模糊打成惰性；
- * ② 与子层叠加成双层填充，二级菜单明显比一级菜单更实更亮（宿主因此专门把材质放在子层）。
+ * 分区菜单必须走宿主原语（MenuSurface + MenuItemButton）：既不自绘行，也不依赖
+ * 「页面上已经开着某个宿主菜单」。冷启动（全新打开 DSH 后第一次点分区标题 ···）同样要能弹出。
  */
-describe('分区菜单材质同构宿主 MenuSurface：', () => {
-  const source = readFileSync('src/client/sidebar/sections/index.ts', 'utf8')
-  const rootRule = /\.dcu-ws-section-menu\{[^}]*\}/.exec(source)?.[0] ?? ''
-  const materialRule =
-    /\.dcu-ws-section-menu > \.dcu-ws-section-menu-material\{[^}]*\}/.exec(source)?.[0] ?? ''
+describe('分区菜单使用宿主原语渲染：', () => {
+  it('冷启动（页面上没有任何宿主菜单）点分区标题 ··· 也能弹出菜单', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '测试分区', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    })
+    mountFixture(['a'])
+    mount(['a'])
+    await waitForSync()
+    // 冷启动前提：文档里没有任何宿主菜单可克隆
+    document.querySelectorAll('[role="menu"]').forEach(menu => menu.remove())
+    expect(document.querySelectorAll('[role="menu"]').length).toBe(0)
 
-  it('面板根节点不得自带填充与模糊，只负责几何与 isolation', () => {
-    expect(rootRule).not.toBe('')
-    expect(rootRule).not.toContain('backdrop-filter')
-    expect(rootRule).not.toContain('background:')
-    expect(rootRule).toContain('isolation:isolate')
+    const header = headers().find(item => item.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+    header.querySelector<HTMLElement>('.dcu-ws-section-actions button')!.click()
+    await waitForSync(2)
+    await new Promise<void>(resolve => window.requestAnimationFrame(() => resolve()))
+
+    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')
+    expect(panel).not.toBeNull()
+    expect(panel!.getAttribute('role')).toBe('menu')
+    // 表面来自宿主 MenuSurface（自带 data-menu-material 磨砂层），行来自宿主 MenuItemButton
+    expect(panel!.hasAttribute('data-dcu-menu-surface')).toBe(true)
+    expect(panel!.hasAttribute('data-menu-material')).toBe(true)
+    const labels = Array.from(panel!.querySelectorAll('button[role="menuitem"]')).map(button =>
+      button.textContent?.trim(),
+    )
+    expect(labels).toContain('重命名')
   })
 
-  it('材质子层承载填充与模糊，并铺满面板、继承圆角', () => {
-    expect(materialRule).toContain('position:absolute')
-    expect(materialRule).toContain('inset:0')
-    expect(materialRule).toContain('z-index:-1')
-    expect(materialRule).toContain('border-radius:inherit')
-    expect(materialRule).toContain('--dsw-menu-surface-fill')
-    expect(materialRule).toContain('--dsw-menu-backdrop-filter')
+  it('不再自绘面板材质，也不再克隆宿主菜单外壳', () => {
+    const source = readFileSync('src/client/sidebar/sections/index.ts', 'utf8')
+    expect(source).not.toContain('dcu-ws-section-menu-material')
+    expect(source).not.toContain('hostMenuShellTemplate')
+    expect(source).toContain('MenuSurface')
+    expect(source).toContain('MenuItemButton')
   })
+})
 
-  it('克隆不到宿主 material 层时会补一层自己的材质节点', () => {
-    expect(source).toContain('`${MENU_CLASS}-material`')
-  })
 })

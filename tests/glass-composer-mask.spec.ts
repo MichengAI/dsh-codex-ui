@@ -133,10 +133,9 @@ test('指令面板加浓与磨砂：必须声明 [data-trigger-menu] 提浓规�
   }
 })
 
-test('右侧栏全屏与平铺玻璃：仅在侧边栏展开时（[data-sidebar-right-open]）挂载磨砂，关闭时不得残留磨砂', () => {
-  // 1. 展开状态下支持磨砂
-  expect(GLASS_CSS_TEXT).toContain('[data-sidebar-right-panel][data-sidebar-right-open]')
-  // 2. 未展开或通配状态下不得无条件挂载磨砂
-  expect(GLASS_CSS_TEXT).not.toMatch(/\[data-sidebar-right-panel\]\s*\{[^}]*backdrop-filter:/)
+test('平铺玻璃模式绝不出现右侧栏外壳的 backdrop-filter（df5eb68 修复的透出/白屏回归，禁止随上游基线同步带回）', () => {
+  // 生成基线里不得再出现右侧栏 panel 的模糊规则
+  expect(GLASS_CSS_TEXT).not.toContain('[data-sidebar-right-panel][data-sidebar-right-open]')
+  expect(GLASS_CSS_TEXT).not.toContain('sidebar-right-panel')
 })
 
