@@ -10,13 +10,13 @@ import {
 import { DEFAULT_SECTION_ID, PINNED_SECTION_ID } from '../src/client/sidebar/sections/model.ts'
 import { flushSectionsSave, setSectionsTransport } from '../src/client/sidebar/sections/store.ts'
 
-/** 宿主列表夹具：`.list > .groupSection > [data-row-key]`，与 rc.3 的实际结构一致。 */
+/** 宿主列表夹具：`.list > .groupSection > [data-row-key]`，与 rc.5 的实际结构一致。 */
 function mountFixture(ids: readonly string[]): HTMLElement {
   const list = document.createElement('div')
   list.className = 'list'
   list.setAttribute('role', 'tree')
   for (const id of ids) {
-    // 与宿主 0.2.1-rc.3 一致：list > groupSection > span > 项目行。
+    // 与宿主 0.2.1-rc.5 一致：list > groupSection > span > 项目行。
     const group = document.createElement('div')
     group.className = 'groupSection'
     group.setAttribute('data-dcu-test-group', id)
