@@ -1,4 +1,9 @@
 # Changelog
+
+## [2.0.18] - 2026-11-05
+
+- **Decoupled Composer Glass Layer to Prevent Decorative Skin Collisions (Issue #83)**: Migrated the composer card's frosted glass background and backdrop filters from the shared `[data-composer-card]::before` pseudo-element to a dedicated, scoped surface element (`[data-dcu-glass-composer-surface]`). When third-party skins use `::before` to draw expanded frames, borders, or ribbons outside the input box, the decorative layer is no longer contaminated with dark background tints or blur filters, completely eliminating unwanted frosted rectangles and text occlusion.
+
 ## [2.0.17] - 2026-11-04
 
 ### Compatibility & Dependencies
