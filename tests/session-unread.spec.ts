@@ -254,6 +254,14 @@ describe('会话菜单项：按会话状态渲染', () => {
     expect(container.querySelector('button')).toBeNull()
     await unmount()
   })
+
+  it('旧 Slot 模式下 canWrite 为 false 或返回 false 时整行不渲染（杜绝老宿主静默失效）', async () => {
+    for (const canWrite of [false, () => false]) {
+      const { container, unmount } = await mountMenu({ ...createMenuProps().props, canWrite })
+      expect(container.querySelector('button')).toBeNull()
+      await unmount()
+    }
+  })
 })
 
 describe('会话未读：Observer 装配与右键唤起', () => {
@@ -262,7 +270,7 @@ describe('会话未读：Observer 装配与右键唤起', () => {
     id: string
     order: number
     locale: string
-    inject: () => { markUnread: (id: string) => boolean; markRead: (id: string) => boolean }
+    inject: () => { markUnread: (id: string) => boolean; markRead: (id: string) => boolean; canWrite?: () => boolean }
   }
 
   const createFakeCtx = (host: { service?: unknown } = {}) => {
@@ -310,6 +318,7 @@ describe('会话未读：Observer 装配与右键唤起', () => {
     })
 
     const actions = registrations[0]!.inject()
+    expect(actions.canWrite?.()).toBe(true)
     expect(actions.markUnread('s1')).toBe(true)
     expect(completionUnread.has('s1')).toBe(true)
     expect(publishStatus).toHaveBeenCalledTimes(1)
@@ -323,10 +332,12 @@ describe('会话未读：Observer 装配与右键唤起', () => {
     const stop = observeSessionUnread(ctx as never)
     const actions = registrations[0]!.inject()
 
+    expect(actions.canWrite?.()).toBe(false)
     expect(actions.markUnread('s1')).toBe(false)
 
     const completionUnread = new Set<string>()
     host.service = { completionUnread, publishStatus: vi.fn() }
+    expect(actions.canWrite?.()).toBe(true)
     expect(actions.markUnread('s1')).toBe(true)
     expect(completionUnread.has('s1')).toBe(true)
     stop()

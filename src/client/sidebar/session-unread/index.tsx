@@ -76,6 +76,8 @@ export interface MarkUnreadMenuProps {
   markUnread: (sessionId: string) => boolean
   /** 清除未读标记；宿主契约不可用时返回 false。 */
   markRead: (sessionId: string) => boolean
+  /** 宿主未读能力是否可写；契约漂移时为 false 或返回 false。 */
+  canWrite?: boolean | (() => boolean)
   useMenuOpenState?: () => readonly [open: boolean, setOpen: (open: boolean) => void]
   useSessionStatus?: SelectorHook<ReadonlyMap<string, SessionStatusLike>>
   useSessions?: SelectorHook<SessionListLike>
@@ -93,7 +95,9 @@ export interface MarkUnreadMenuProps {
  */
 export function MarkUnreadMenuItem(props: MarkUnreadMenuProps): React.JSX.Element | null {
   const { useMenuOpenState, useSessionStatus, useSessions, useWorkspaces } = props
+  const canWrite = typeof props.canWrite === 'function' ? props.canWrite() : props.canWrite !== false
   if (
+    !canWrite ||
     typeof useMenuOpenState !== 'function' ||
     typeof useSessionStatus !== 'function' ||
     typeof useSessions !== 'function' ||
@@ -119,10 +123,11 @@ function MarkUnreadMenuRow(props: MarkUnreadMenuProps): React.JSX.Element | null
   const busy = props.useSessionStatus!(statuses => isSessionBusy(statuses.get(sessionId)))
   const openInMainView = props.useSessions!(list => isSessionOpenInMainView(list.byId[sessionId]))
   const archived = props.useWorkspaces!(state => isSessionArchived(state.archivedSessionIds, sessionId))
+  const canWrite = typeof props.canWrite === 'function' ? props.canWrite() : props.canWrite !== false
 
   if (
     !shouldShowSessionUnreadAction({
-      canWrite: true,
+      canWrite,
       isUnread: unread,
       isArchived: archived,
       isOpenInMainView: openInMainView,
@@ -360,7 +365,11 @@ export function observeSessionUnread(ctx: ClientContext): () => void {
           id: MENU_ITEM_ID,
           order: MENU_ORDER,
           locale: NS,
-          inject: () => ({ markUnread, markRead }),
+          inject: () => ({
+            markUnread,
+            markRead,
+            canWrite: () => canMarkSession(unreadHostOf(ctx)),
+          }),
         },
         MarkUnreadMenuItem,
       ),
