@@ -95,9 +95,7 @@ export interface MarkUnreadMenuProps {
  */
 export function MarkUnreadMenuItem(props: MarkUnreadMenuProps): React.JSX.Element | null {
   const { useMenuOpenState, useSessionStatus, useSessions, useWorkspaces } = props
-  const canWrite = typeof props.canWrite === 'function' ? props.canWrite() : props.canWrite === true
   if (
-    !canWrite ||
     typeof useMenuOpenState !== 'function' ||
     typeof useSessionStatus !== 'function' ||
     typeof useSessions !== 'function' ||
@@ -261,9 +259,6 @@ export function observeSessionUnread(ctx: ClientContext): () => void {
 
           const unreadHost = unreadHostOf(ctx)
           const canWrite = canMarkSession(unreadHost)
-          // 宿主契约漂移不可写时直接 fail-closed，杜绝点击静默无效
-          if (!canWrite) return []
-
           const unreadSet = unreadSetOf(unreadHost)
           const isUnread = unreadSet?.has(sessionId) === true
 
