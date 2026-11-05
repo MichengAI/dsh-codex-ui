@@ -13,6 +13,7 @@ import { CodexUiNavIcon, observeSettingsNavIcon } from './settings-nav-icon.ts'
 import { observeComposerEnhancements } from './composer/index.tsx'
 import { observeSidebarNav, checkSidebarEnabled } from './sidebar/index.ts'
 import { observeWorkspaceSections } from './sidebar/sections/index.ts'
+import { observeSessionUnread } from './sidebar/session-unread/index.tsx'
 import { observeTheme } from './theme/index.ts'
 import { observeDesktopTitlebarMenus, checkDesktopMenuEnabled } from './desktop-menu/index.ts'
 
@@ -22,6 +23,8 @@ export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTrig
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'michengai-codex-ui: dictionaries')
   const t = ctx.locale.bind(NS)
+  // 侧栏增强共用一次探活：分区标题与会话未读都随 sidebar 子插件启停，但不需要各发一次请求。
+  const sidebarReady = checkSidebarEnabled()
 
   ctx.effect(() => observeTheme(ctx), 'michengai-codex-ui: theme & appearance')
   ctx.effect(() => observeSidebarNav(ctx), 'michengai-codex-ui: sidebar navigation')
@@ -49,7 +52,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => {
     let stop: (() => void) | undefined
     let cancelled = false
-    void checkSidebarEnabled().then(enabled => {
+    void sidebarReady.then(enabled => {
       if (cancelled || !enabled) return
       const translate = (key: string, fallback?: string): string => {
         try {
@@ -66,6 +69,19 @@ export function apply(ctx: ClientContext): void {
       stop?.()
     }
   }, 'michengai-codex-ui: workspace sections')
+  // 会话「标记为未读」也是侧栏增强：子插件停用或端点不可达时，既不注册菜单项也不接管右键。
+  ctx.effect(() => {
+    let stop: (() => void) | undefined
+    let cancelled = false
+    void sidebarReady.then(enabled => {
+      if (cancelled || !enabled) return
+      stop = observeSessionUnread(ctx)
+    })
+    return () => {
+      cancelled = true
+      stop?.()
+    }
+  }, 'michengai-codex-ui: session unread')
   ctx.effect(() => observeComposerEnhancements(ctx), 'michengai-codex-ui: composer enhancements')
   ctx.effect(() => observeSettingsSkin(), 'michengai-codex-ui: official settings skin')
   ctx.effect(() => observeSettingsNavIcon(() => t('about.nav')), 'michengai-codex-ui: settings nav icon')
