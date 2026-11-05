@@ -59,6 +59,7 @@ function createMenuProps(scenario: MenuScenario = {}) {
     useSessions: selector =>
       selector({ byId: { s1: { retainedBy: { mainView: scenario.openInMainView === true ? 1 : 0 } } } }),
     useWorkspaces: selector => selector({ archivedSessionIds: scenario.archived === true ? ['s1'] : [] }),
+    canWrite: true,
   }
   return { props, setMenuOpen, markUnread, markRead }
 }
@@ -255,8 +256,8 @@ describe('会话菜单项：按会话状态渲染', () => {
     await unmount()
   })
 
-  it('旧 Slot 模式下 canWrite 为 false 或返回 false 时整行不渲染（杜绝老宿主静默失效）', async () => {
-    for (const canWrite of [false, () => false]) {
+  it('旧 Slot 模式下 canWrite 为 false、返回 false 或未传时整行不渲染（严格 fail-closed）', async () => {
+    for (const canWrite of [false, () => false, undefined]) {
       const { container, unmount } = await mountMenu({ ...createMenuProps().props, canWrite })
       expect(container.querySelector('button')).toBeNull()
       await unmount()

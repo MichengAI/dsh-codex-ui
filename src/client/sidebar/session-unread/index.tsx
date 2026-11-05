@@ -95,7 +95,7 @@ export interface MarkUnreadMenuProps {
  */
 export function MarkUnreadMenuItem(props: MarkUnreadMenuProps): React.JSX.Element | null {
   const { useMenuOpenState, useSessionStatus, useSessions, useWorkspaces } = props
-  const canWrite = typeof props.canWrite === 'function' ? props.canWrite() : props.canWrite !== false
+  const canWrite = typeof props.canWrite === 'function' ? props.canWrite() : props.canWrite === true
   if (
     !canWrite ||
     typeof useMenuOpenState !== 'function' ||
@@ -123,7 +123,7 @@ function MarkUnreadMenuRow(props: MarkUnreadMenuProps): React.JSX.Element | null
   const busy = props.useSessionStatus!(statuses => isSessionBusy(statuses.get(sessionId)))
   const openInMainView = props.useSessions!(list => isSessionOpenInMainView(list.byId[sessionId]))
   const archived = props.useWorkspaces!(state => isSessionArchived(state.archivedSessionIds, sessionId))
-  const canWrite = typeof props.canWrite === 'function' ? props.canWrite() : props.canWrite !== false
+  const canWrite = typeof props.canWrite === 'function' ? props.canWrite() : props.canWrite === true
 
   if (
     !shouldShowSessionUnreadAction({

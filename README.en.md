@@ -63,7 +63,7 @@ Faced with these compounding challenges, we made the decisive choice in v2.0.0 t
 | `composer` | **Composer Enhancement** | Smart inline input prediction (`Tab` to accept, `Alt+Down/Up` to cycle), terminal-style input history (`↑`/`↓`), workspace-isolated storage, dual drag-resize handles, and contextual prompt hints. |
 | `settings-skin` | **Native Settings Skin** | Full-screen workbench layout, dual floating island system, Ambient Ground lighting canvas, and native search. |
 | `theme` | **Theme & Glassmorphism** | 7 built-in themes with Appearance Cubes, Stock Flat vs. Mica Floating modes, 3 material presets, and ground glow switch. |
-| `sidebar` | **Modular Sidebar** | In-place accordion expansion, smooth drag-and-drop reordering, and right-click “mark as unread” for sessions; collapses cleanly into host native 56px icon rail. |
+| `sidebar` | **Modular Sidebar** | In-place accordion expansion, smooth drag-and-drop reordering, and right-click “mark as unread / read” for sessions; collapses cleanly into host native 56px icon rail. |
 | `session-title` | **Intelligent Session Title** | Generates standardized session titles from initial prompt semantics, handling reasoning model outputs up to 4096 tokens. |
 | `desktop-menu` | **Desktop Native Menus** | Official desktop app titlebar menu integration with instant view reload and reliable cross-platform app/Host restart. |
 | `dependencies` | **Companion Management** | Centralized dashboard for official/third-party DSH companion plugins with live npm download counts and 1-click updates. |
