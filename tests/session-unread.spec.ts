@@ -474,7 +474,20 @@ describe('会话未读：Observer 装配与右键唤起', () => {
             }),
           }
         }
-        if (name === 'uiSession') return { completionUnread, publishStatus }
+        if (name === 'uiSession') {
+          return {
+            completionUnread,
+            publishStatus,
+            sessionStatus: {
+              getSnapshot: () =>
+                new Map([
+                  ['busy-1', { running: false, pendingInteraction: { type: 'approval' } }],
+                  ['running-1', { running: true }],
+                ]),
+              subscribe: vi.fn(),
+            },
+          }
+        }
         if (name === 'workspaces') return { list: { getSnapshot: () => ({ archivedSessionIds: ['archived-1'] }) } }
         if (name === 'sessions') return { list: { getSnapshot: () => ({ byId: { 'open-1': { retainedBy: { mainView: 1 } } } }) } }
         return undefined
@@ -511,9 +524,11 @@ describe('会话未读：Observer 装配与右键唤起', () => {
     readItem[0].run()
     expect(completionUnread.has('s1')).toBe(false)
 
-    // 已归档与主视图打开会话过滤
+    // 已归档与主视图打开会话过滤，以及通过 sessionStatus 检查的忙碌/等待交互会话过滤
     expect(nativeRegistrations[0].resolve({ sessionId: 'archived-1' })).toEqual([])
     expect(nativeRegistrations[0].resolve({ sessionId: 'open-1' })).toEqual([])
+    expect(nativeRegistrations[0].resolve({ sessionId: 'busy-1' })).toEqual([])
+    expect(nativeRegistrations[0].resolve({ sessionId: 'running-1' })).toEqual([])
 
     stop()
     expect(unregNative).toHaveBeenCalledTimes(1)

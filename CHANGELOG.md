@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.19] - 2026-11-05
+
+- **Mark Sessions as Unread / Read from Row Menu**: Right-click any conversation row or open its action menu to toggle sessions between "Mark as unread" and "Mark as read". Marked unread conversations instantly restore native green status dots and update the sidebar unread counter badge; opening or remarking clears them cleanly. The action item is neatly placed directly after "Pin session" and works consistently across all host versions.
+
 ## [2.0.18] - 2026-11-05
 
 - **Decoupled Composer Glass Layer to Prevent Decorative Skin Collisions (Issue #83)**: Migrated the composer card's frosted glass background and backdrop filters from the shared `[data-composer-card]::before` pseudo-element to a dedicated, scoped surface element (`[data-dcu-glass-composer-surface]`). When third-party skins use `::before` to draw expanded frames, borders, or ribbons outside the input box, the decorative layer is no longer contaminated with dark background tints or blur filters, completely eliminating unwanted frosted rectangles and text occlusion.

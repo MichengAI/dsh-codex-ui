@@ -252,7 +252,11 @@ export function observeSessionUnread(ctx: ClientContext): () => void {
         id: MENU_ITEM_ID,
         target: 'session',
         order: MENU_ORDER,
-        observe: () => [ctx.locale],
+        observe: () => {
+          const uiSession = unreadHostOf(ctx) as any
+          const sessionStatus = uiSession?.sessionStatus
+          return [ctx.locale, ...(sessionStatus?.subscribe ? [sessionStatus] : [])]
+        },
         resolve: (target: { sessionId?: string }) => {
           const sessionId = target?.sessionId
           if (!sessionId) return []
@@ -280,7 +284,11 @@ export function observeSessionUnread(ctx: ClientContext): () => void {
             openInMainView = isSessionOpenInMainView(sessionItem)
 
             const uiSession = unreadHost as any
-            const status = uiSession?.statusOf?.(sessionId) ?? uiSession?.statuses?.get?.(sessionId)
+            const statusMap = uiSession?.sessionStatus?.getSnapshot?.() ?? uiSession?.sessionStatus
+            const status =
+              statusMap instanceof Map
+                ? statusMap.get(sessionId)
+                : (statusMap?.[sessionId] ?? uiSession?.statusOf?.(sessionId))
             busy = isSessionBusy(status, sessionItem)
           } catch {}
 
