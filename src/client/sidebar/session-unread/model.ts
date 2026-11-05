@@ -86,7 +86,7 @@ export function findSessionMenuButton(row: Element): HTMLButtonElement | null {
  * @param host - 宿主 `uiSession` 服务的最小可用面。
  * @returns 未读集合；服务缺失或内部字段改名时返回 undefined。
  */
-function unreadSetOf(host: SessionUnreadHost | undefined): Set<string> | undefined {
+export function unreadSetOf(host: SessionUnreadHost | undefined): Set<string> | undefined {
   if (host === undefined) return undefined
   if (!(host.completionUnread instanceof Set)) return undefined
   if (typeof host.publishStatus !== 'function') return undefined

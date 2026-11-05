@@ -426,4 +426,79 @@ describe('会话未读：Observer 装配与右键唤起', () => {
     expect(typeof stop).toBe('function')
     stop()
   })
+
+  it('宿主提供原生 contextMenus 服务时，通过 contextMenus 注册 order 150 菜单项与图标插槽', () => {
+    const nativeRegistrations: any[] = []
+    const iconRegistrations: any[] = []
+    const unregNative = vi.fn()
+    const completionUnread = new Set<string>()
+    const publishStatus = vi.fn()
+
+    const ctx = {
+      slots: {
+        inject: vi.fn((name: string, callback: () => unknown) => callback()),
+        register: vi.fn((options: any) => {
+          if (options.name === 'contextMenu.icon') {
+            iconRegistrations.push(options)
+          }
+          return vi.fn()
+        }),
+      },
+      locale: {
+        bind: vi.fn(() => t),
+      },
+      get: vi.fn((name: string) => {
+        if (name === 'contextMenus') {
+          return {
+            open: () => {},
+            register: vi.fn((spec: any) => {
+              nativeRegistrations.push(spec)
+              return unregNative
+            }),
+          }
+        }
+        if (name === 'uiSession') return { completionUnread, publishStatus }
+        if (name === 'workspaces') return { list: { getSnapshot: () => ({ archivedSessionIds: ['archived-1'] }) } }
+        if (name === 'sessions') return { list: { getSnapshot: () => ({ byId: { 'open-1': { retainedBy: { mainView: 1 } } } }) } }
+        return undefined
+      }),
+    }
+
+    const stop = observeSessionUnread(ctx as never)
+    expect(nativeRegistrations).toHaveLength(1)
+    expect(nativeRegistrations[0]).toMatchObject({
+      id: 'codex-ui:session-unread',
+      target: 'session',
+      order: 150,
+    })
+    expect(iconRegistrations).toHaveLength(2)
+
+    // 已读普通会话
+    const unreadItem = nativeRegistrations[0].resolve({ sessionId: 's1' })
+    expect(unreadItem).toHaveLength(1)
+    expect(unreadItem[0]).toMatchObject({
+      id: 'mark-unread',
+      label: '标记为未读',
+    })
+    unreadItem[0].run()
+    expect(completionUnread.has('s1')).toBe(true)
+    expect(publishStatus).toHaveBeenCalledTimes(1)
+
+    // 未读普通会话
+    const readItem = nativeRegistrations[0].resolve({ sessionId: 's1' })
+    expect(readItem).toHaveLength(1)
+    expect(readItem[0]).toMatchObject({
+      id: 'mark-read',
+      label: '标记为已读',
+    })
+    readItem[0].run()
+    expect(completionUnread.has('s1')).toBe(false)
+
+    // 已归档与主视图打开会话过滤
+    expect(nativeRegistrations[0].resolve({ sessionId: 'archived-1' })).toEqual([])
+    expect(nativeRegistrations[0].resolve({ sessionId: 'open-1' })).toEqual([])
+
+    stop()
+    expect(unregNative).toHaveBeenCalledTimes(1)
+  })
 })

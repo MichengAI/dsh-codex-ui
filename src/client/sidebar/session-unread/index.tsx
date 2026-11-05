@@ -22,6 +22,7 @@ import { NS } from '../../locales.ts'
 import {
   findSessionMenuButton,
   sessionIdOfRowKey,
+  unreadSetOf,
   writeSessionUnread,
   type SessionUnreadHost,
 } from './model.ts'
@@ -32,6 +33,10 @@ const MENU_SLOT = 'sidebar.workspaces.session.menu.item'
 const MENU_ITEM_ID = 'codex-ui:session-unread'
 /** 排在置顶（100）之后、重命名（200）之前。 */
 const MENU_ORDER = 150
+
+/** 图标插槽 entryKey。 */
+const ICON_UNREAD_KEY = 'codex-ui:icon-session-unread'
+const ICON_READ_KEY = 'codex-ui:icon-session-read'
 
 /** 会话 UI 状态里本能力用到的字段。 */
 interface SessionStatusLike {
@@ -165,42 +170,152 @@ function unreadHostOf(ctx: ClientContext): SessionUnreadHost | undefined {
 
 /**
  * 宿主是否自带右键菜单服务（0.2.2+ 把 `contextmenu` 绑定到了会话行本身）。
- *
- * 服务存在时再点「···」只会把宿主刚打开的面板再切换一次，因此完全让给宿主。
- *
- * @param ctx - 客户端插件 Context。
- * @returns 宿主是否接管右键。
  */
-function hostOwnsContextMenu(ctx: ClientContext): boolean {
+function getNativeContextMenuService(
+  ctx: ClientContext,
+): { register?: (spec: unknown) => () => void; open?: unknown } | undefined {
   try {
-    const service = (ctx.get?.('contextMenus') as { open?: unknown } | undefined) ??
-      (ctx as unknown as { contextMenus?: { open?: unknown } }).contextMenus
-    return typeof service?.open === 'function'
+    const service =
+      (ctx.get?.('contextMenus') as { register?: (spec: unknown) => () => void; open?: unknown } | undefined) ??
+      (ctx as unknown as { contextMenus?: { register?: (spec: unknown) => () => void; open?: unknown } }).contextMenus
+    if (service === null || typeof service !== 'object') return undefined
+    return service
   } catch {
-    return false
+    return undefined
   }
+}
+
+function hostOwnsContextMenu(ctx: ClientContext): boolean {
+  return typeof getNativeContextMenuService(ctx)?.open === 'function'
 }
 
 /**
  * 挂载会话未读能力。
  *
- * - 注册会话行菜单项（随宿主槽位声明激活，宿主移除槽位时自动注销）；
- * - 安装文档级 `contextmenu` 委托：只在命中会话行、且宿主自己还没有右键菜单能力时接管
- *   （0.2.0 / 0.2.1），直接点击「···」锚点让宿主自己打开菜单；0.2.2+ 由宿主原生
- *   `contextMenus` 负责右键，本层不插手。
+ * - DSH 0.2.2+：宿主拥有 contextMenus 服务，直接通过 contextMenus.register(..., order: 150)
+ *   注入会话菜单，精准排在置顶（100）之后、重命名（200）之前；同时注入 contextMenu.icon。
+ * - DSH 0.2.0 / 0.2.1：老版宿主无 contextMenus 服务，注册 sidebar.workspaces.session.menu.item
+ *   并安装文档级 contextmenu 委托点击「···」锚点唤起菜单。
  *
  * @param ctx - 客户端插件 Context。
  * @returns 卸载函数（重复调用安全）。
  */
 export function observeSessionUnread(ctx: ClientContext): () => void {
   const slots = ctx.slots as unknown as SlotsLike | undefined
+  let disposed = false
+
+  const markUnread = (sessionId: string): boolean => writeSessionUnread(unreadHostOf(ctx), sessionId, true)
+  const markRead = (sessionId: string): boolean => writeSessionUnread(unreadHostOf(ctx), sessionId, false)
+
+  const nativeContextMenus = getNativeContextMenuService(ctx)
+  if (typeof nativeContextMenus?.register === 'function') {
+    // 0.2.2+ 宿主：通过原生 contextMenus 服务注册，order 150 真正插在置顶（100）和重命名（200）之间
+    let disposeUnreadIcon: (() => void) | undefined
+    let disposeReadIcon: (() => void) | undefined
+
+    if (slots !== undefined && typeof slots.inject === 'function' && typeof slots.register === 'function') {
+      try {
+        const u1 = slots.inject('contextMenu.icon', () =>
+          slots.register(
+            { name: 'contextMenu.icon', key: ICON_UNREAD_KEY },
+            () => <StateDot state="done" size={10} />,
+          ),
+        )
+        if (typeof u1 === 'function') disposeUnreadIcon = u1 as () => void
+      } catch {}
+      try {
+        const u2 = slots.inject('contextMenu.icon', () =>
+          slots.register(
+            { name: 'contextMenu.icon', key: ICON_READ_KEY },
+            () => <IconCheckCircleOutlineRegular size={16} />,
+          ),
+        )
+        if (typeof u2 === 'function') disposeReadIcon = u2 as () => void
+      } catch {}
+    }
+
+    let unregNative: (() => void) | undefined
+    try {
+      unregNative = nativeContextMenus.register({
+        id: MENU_ITEM_ID,
+        target: 'session',
+        order: MENU_ORDER,
+        observe: () => [ctx.locale],
+        resolve: (target: { sessionId?: string }) => {
+          const sessionId = target?.sessionId
+          if (!sessionId) return []
+
+          const unreadHost = unreadHostOf(ctx)
+          const unreadSet = unreadSetOf(unreadHost)
+          const isUnread = unreadSet?.has(sessionId) === true
+
+          // 归档状态检查：已归档会话不渲染
+          try {
+            const workspaces = (ctx.get?.('workspaces') as any) ?? (ctx as any).workspaces
+            const snapshot = workspaces?.list?.getSnapshot?.() ?? workspaces?.getSnapshot?.()
+            const archivedIds: readonly string[] = snapshot?.archivedSessionIds ?? []
+            if (archivedIds.includes(sessionId)) return []
+          } catch {}
+
+          // 忙碌与主视图打开检查：若非未读状态，在主视图打开或运行中时不显示「标记为未读」
+          if (!isUnread) {
+            try {
+              const sessions = (ctx.get?.('sessions') as any) ?? (ctx as any).sessions
+              const list = sessions?.list?.getSnapshot?.() ?? sessions?.getSnapshot?.()
+              const sessionItem = list?.byId?.[sessionId] ?? list?.items?.find?.((s: any) => s.id === sessionId)
+              const openInMainView = (sessionItem?.retainedBy?.mainView ?? 0) > 0
+
+              const uiSession = unreadHost as any
+              const status = uiSession?.statusOf?.(sessionId) ?? uiSession?.statuses?.get?.(sessionId)
+              const busy =
+                status?.running === true || status?.pendingInteraction !== undefined || sessionItem?.running === true
+
+              if (openInMainView || busy) return []
+            } catch {}
+          }
+
+          const t = ctx.locale?.bind?.(NS) ?? ((k: string) => k)
+          if (isUnread) {
+            return [
+              {
+                id: 'mark-read',
+                label: t('session.markRead'),
+                icon: { key: ICON_READ_KEY },
+                run: () => {
+                  markRead(sessionId)
+                },
+              },
+            ]
+          }
+          return [
+            {
+              id: 'mark-unread',
+              label: t('session.markUnread'),
+              icon: { key: ICON_UNREAD_KEY },
+              run: () => {
+                markUnread(sessionId)
+              },
+            },
+          ]
+        },
+      })
+    } catch (error) {
+      console.warn('[codex-ui:session-unread] 注册原生 contextMenus 失败，跳过。', error)
+    }
+
+    return () => {
+      if (disposed) return
+      disposed = true
+      unregNative?.()
+      disposeUnreadIcon?.()
+      disposeReadIcon?.()
+    }
+  }
+
+  // 0.2.0 / 0.2.1 老版宿主回退通道
   if (slots === undefined || typeof slots.inject !== 'function' || typeof slots.register !== 'function') {
     return () => {}
   }
-
-  let disposed = false
-  const markUnread = (sessionId: string): boolean => writeSessionUnread(unreadHostOf(ctx), sessionId, true)
-  const markRead = (sessionId: string): boolean => writeSessionUnread(unreadHostOf(ctx), sessionId, false)
 
   let disposeEntry: unknown
   try {
