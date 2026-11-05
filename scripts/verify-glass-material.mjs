@@ -27,9 +27,10 @@ function moduleToScript(path, extraExports = '') {
   return script
 }
 
+const seamScript = moduleToScript('src/client/theme/glass-seams.ts')
 const glassScript = moduleToScript(
   'src/client/theme/glass.ts',
-  'window.__glass = { GLASS_EXTRA_CSS, GLASS_PRESETS };',
+  'window.__glass = { applyGlassSettings };',
 )
 const genScript = moduleToScript(
   'src/client/theme/glass-css.gen.ts',
@@ -58,31 +59,16 @@ try {
     route.fulfill({ contentType: 'text/html', body: FIXTURE }),
   )
   await page.goto('http://glass.test/')
-  await page.addScriptTag({ content: glassScript })
   await page.addScriptTag({ content: genScript })
+  await page.addScriptTag({ content: seamScript })
+  await page.addScriptTag({ content: glassScript })
 
   /** 按模式 + 预设渲染，并读回三段计算样式 */
   const render = (mode, preset) =>
     page.evaluate(({ mode, preset }) => {
-      const { GLASS_EXTRA_CSS, GLASS_PRESETS } = window.__glass
-      const { GLASS_CSS_TEXT } = window.__gen
-      const html = document.documentElement
-      html.removeAttribute('data-dsh-glass')
-      html.removeAttribute('data-dsh-glass-float')
-      html.removeAttribute('data-dsh-glass-compat')
-      html.setAttribute('data-dsh-glass', '')
-      if (mode === 'compat') html.setAttribute('data-dsh-glass-compat', '')
-      else html.setAttribute('data-dsh-glass-float', '')
+      const { applyGlassSettings } = window.__glass
       document.body.setAttribute('data-ds-dark-theme', '')
-      html.style.setProperty('--dsh-glass-blur', `${GLASS_PRESETS[preset].blur}px`)
-      html.style.setProperty('--dsh-glass-frost', String(Math.min(GLASS_PRESETS[preset].frost / 50, 1.4)))
-      let style = document.getElementById('glass-under-test')
-      if (style === null) {
-        style = document.createElement('style')
-        style.id = 'glass-under-test'
-        document.head.appendChild(style)
-      }
-      style.textContent = GLASS_CSS_TEXT + GLASS_EXTRA_CSS
+      applyGlassSettings({ enabled: true, mode, preset })
       const filterOf = (selector, pseudo) => {
         const el = document.querySelector(selector)
         if (el === null) return 'MISSING'
@@ -90,9 +76,9 @@ try {
       }
       return {
         dock: filterOf('.dock', '::before'),
-        card: filterOf('[data-composer-card]', '::before'),
+        card: filterOf('[data-dcu-glass-composer-surface]', null),
         header: filterOf('header', null),
-        fadeCss: /\[data-dsh-glass-fade\]/.test(GLASS_CSS_TEXT),
+        fadeCss: /\[data-dsh-glass-fade\]/.test(window.__gen.GLASS_CSS_TEXT),
       }
     }, { mode, preset })
 
@@ -140,6 +126,49 @@ try {
     'blur(20px)',
   )
 
+  // 模拟任意外扩装饰，而不是针对某个皮肤写特判。
+  await page.addStyleTag({ content: `
+    body { --dsw-alias-bg-layer-1: #203050; }
+    body[data-test-decoration] [data-composer-card]::before {
+      content: ''; position: absolute; inset: -20px -14px -18px; z-index: 1;
+      border: 3px solid red;
+    }
+    [data-composer-card]::after { content: ''; position: absolute; inset: 0; border: 1px dashed blue; }
+  ` })
+  await page.evaluate(() => document.body.setAttribute('data-test-decoration', ''))
+  for (const mode of ['mica', 'compat']) {
+    for (const preset of ['clear', 'standard', 'frosted']) {
+      const state = await page.evaluate(({ mode, preset }) => {
+        window.__glass.applyGlassSettings({ enabled: true, mode, preset })
+        const card = document.querySelector('[data-composer-card]')
+        const before = getComputedStyle(card, '::before')
+        const after = getComputedStyle(card, '::after')
+        const surface = card.querySelector('[data-dcu-glass-composer-surface]')
+        const glass = getComputedStyle(surface)
+        const bounds = card.getBoundingClientRect()
+        const layer = surface.getBoundingClientRect()
+        return {
+          before: { background: before.backgroundColor, filter: before.backdropFilter, inset: before.inset, z: before.zIndex, border: before.borderTopStyle },
+          after: after.borderTopStyle,
+          surface: { filter: glass.backdropFilter, background: glass.backgroundColor, z: glass.zIndex, pointer: glass.pointerEvents, width: layer.width, height: layer.height },
+          card: { width: bounds.width, height: bounds.height },
+        }
+      }, { mode, preset })
+      assert.equal(state.before.background, 'rgba(0, 0, 0, 0)', `${mode}/${preset} 装饰不得被玻璃底色覆盖`)
+      assert.equal(state.before.filter, 'none', `${mode}/${preset} 装饰不得被磨砂覆盖`)
+      assert.equal(state.before.inset, '-20px -14px -18px')
+      assert.equal(state.before.z, '1')
+      assert.equal(state.before.border, 'solid')
+      assert.equal(state.after, 'dashed')
+      assert.equal(state.surface.filter, mode === 'compat' ? 'blur(12px)' : preset === 'frosted' ? 'blur(20px)' : preset === 'standard' ? 'blur(14px)' : 'blur(12px)')
+      assert.notEqual(state.surface.background, 'rgba(0, 0, 0, 0)')
+      assert.equal(state.surface.z, '-1')
+      assert.equal(state.surface.pointer, 'none')
+      assert.ok(Math.abs(state.surface.width - state.card.width) <= 2)
+      assert.ok(Math.abs(state.surface.height - state.card.height) <= 2)
+    }
+  }
+  console.log('通用外扩装饰与玻璃层共存：两种模式、三种预设均通过')
   console.log('玻璃材质计算样式校验：')
   for (const row of rows) {
     console.log(`  ${row.ok ? '✓' : '×'} ${row.label} = ${row.actual}`)

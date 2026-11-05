@@ -32,6 +32,23 @@ test('对齐对标插件最新规范（Issue #29）：dock 状态栏必须使用
   expect(GLASS_CSS_TEXT).toContain('var(--dsh-glass-ground)')
 })
 
+test('玻璃底层随卡片创建、重建和关闭而维护，不占用宿主伪元素', async () => {
+  document.body.innerHTML = '<div data-composer-card><button>输入</button></div>'
+  applyGlassSettings({ enabled: true, mode: 'mica' })
+  const card = document.querySelector('[data-composer-card]')!
+  expect(card.querySelectorAll(':scope > [data-dcu-glass-composer-surface]')).toHaveLength(1)
+  expect(card.querySelector('[data-dcu-glass-composer-surface]')?.getAttribute('aria-hidden')).toBe('true')
+  applyGlassSettings({ enabled: true, mode: 'compat' })
+  expect(card.querySelectorAll(':scope > [data-dcu-glass-composer-surface]')).toHaveLength(1)
+  const replacement = document.createElement('div')
+  replacement.setAttribute('data-composer-card', '')
+  card.replaceWith(replacement)
+  await vi.waitFor(() => expect(replacement.querySelectorAll(':scope > [data-dcu-glass-composer-surface]')).toHaveLength(1))
+  applyGlassSettings({ enabled: false })
+  expect(document.querySelector('[data-dcu-glass-composer-surface]')).toBeNull()
+  replacement.remove()
+})
+
 test('对齐对标插件最新规范：输入框卡片保留专属立体边框与阴影，内部使用云母磨砂', () => {
   // 卡片保留 24px 圆角、专属高对比描边 rim-strong 和专属双层柔光投影 input-shadow
   expect(GLASS_CSS_TEXT).toContain('border:1px solid var(--dsh-glass-rim-strong)')

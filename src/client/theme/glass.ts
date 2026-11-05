@@ -26,6 +26,11 @@ export const GLASS_COMPAT_ATTRIBUTE = 'data-dsh-glass-compat'
 
 const STYLE_TAG_ID = 'dsh-codex-ui-glass-style'
 
+// 上游压缩样式仍作为基线保存；仅将输入卡片的玻璃面迁移到自有节点。
+const GLASS_COMPOSER_CSS = GLASS_CSS_TEXT
+  .replaceAll('[data-dsh-glass-float] [data-composer-card]:before', '[data-dsh-glass-float] [data-composer-card] > [data-dcu-glass-composer-surface]')
+  .replaceAll('[data-dsh-glass-compat] [data-composer-card]:before', '[data-dsh-glass-compat] [data-composer-card] > [data-dcu-glass-composer-surface]')
+
 /** 玻璃层追加样式（拼在生成 CSS 之后，同特异性下后者胜出）；导出以便契约测试断言 */
 export const GLASS_EXTRA_CSS = `
 /* 插件页顶栏色差彻底消除：静止与滚动吸顶均保持底板透明，与全局背景底色与渐变自然融为一体；吸顶时呈现纯净磨砂与细线悬浮效果 */
@@ -86,7 +91,7 @@ export const GLASS_EXTRA_CSS = `
 
 /* 对齐平铺风格（Compat）防漏字规范：将云母输入框卡片底色提升为高遮蔽度的 card-raised，
    并锁定至少 12px 高斯磨砂，将底层滚动的历史文字彻底化开为淡淡的柔和色块，杜绝锐利笔画穿透叠字 */
-[data-dsh-glass-float] [data-composer-card]::before {
+[data-dsh-glass-float] [data-composer-card] > [data-dcu-glass-composer-surface] {
   background: var(--dsh-glass-card-raised) !important;
   backdrop-filter: blur(max(var(--dsh-glass-blur, 12px), 12px)) !important;
   -webkit-backdrop-filter: blur(max(var(--dsh-glass-blur, 12px), 12px)) !important;
@@ -145,7 +150,7 @@ export function applyGlassSettings(options: {
     if (!styleTag) {
       styleTag = document.createElement('style')
       styleTag.id = STYLE_TAG_ID
-      styleTag.textContent = GLASS_CSS_TEXT + GLASS_EXTRA_CSS
+      styleTag.textContent = GLASS_COMPOSER_CSS + GLASS_EXTRA_CSS
     }
   }
   if (!styleTag.isConnected) {

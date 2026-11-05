@@ -78,8 +78,17 @@ function stamp(seam: Seam): void {
   }
 }
 
+const COMPOSER_SURFACE_ATTRIBUTE = 'data-dcu-glass-composer-surface'
+
 function stampAll(): void {
   for (const seam of SEAMS) stamp(seam)
+  for (const card of document.querySelectorAll('[data-composer-card]')) {
+    if (card.querySelector(`:scope > [${COMPOSER_SURFACE_ATTRIBUTE}]`)) continue
+    const surface = document.createElement('div')
+    surface.setAttribute(COMPOSER_SURFACE_ATTRIBUTE, '')
+    surface.setAttribute('aria-hidden', 'true')
+    card.prepend(surface)
+  }
 }
 
 /**
@@ -135,5 +144,6 @@ export function startGlassSeamStamper(): () => void {
     if (frame !== undefined) cancelAnimationFrame(frame)
     frame = undefined
     dirty = false
+    for (const surface of document.querySelectorAll(`[${COMPOSER_SURFACE_ATTRIBUTE}]`)) surface.remove()
   }
 }
