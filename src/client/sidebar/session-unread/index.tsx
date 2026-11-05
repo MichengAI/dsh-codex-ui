@@ -20,8 +20,13 @@ import {
 import React from 'react'
 import { NS } from '../../locales.ts'
 import {
+  canMarkSession,
   findSessionMenuButton,
+  isSessionArchived,
+  isSessionBusy,
+  isSessionOpenInMainView,
   sessionIdOfRowKey,
+  shouldShowSessionUnreadAction,
   unreadSetOf,
   writeSessionUnread,
   type SessionUnreadHost,
@@ -111,17 +116,21 @@ function MarkUnreadMenuRow(props: MarkUnreadMenuProps): React.JSX.Element | null
   const { markRead, markUnread, sessionId, t } = props
   const [, setMenuOpen] = props.useMenuOpenState!()
   const unread = props.useSessionStatus!(statuses => statuses.get(sessionId)?.completionUnread === true)
-  const busy = props.useSessionStatus!(statuses => {
-    const status = statuses.get(sessionId)
-    return status?.running === true || status?.pendingInteraction !== undefined
-  })
-  // 主视图正在打开的会话：宿主下一次状态重算就会清掉未读，标记了也留不住。
-  const openInMainView = props.useSessions!(list => (list.byId[sessionId]?.retainedBy?.mainView ?? 0) > 0)
-  // 已归档的行首不画未读点，标记后没有任何可见结果。
-  const archived = props.useWorkspaces!(state => state.archivedSessionIds.includes(sessionId))
+  const busy = props.useSessionStatus!(statuses => isSessionBusy(statuses.get(sessionId)))
+  const openInMainView = props.useSessions!(list => isSessionOpenInMainView(list.byId[sessionId]))
+  const archived = props.useWorkspaces!(state => isSessionArchived(state.archivedSessionIds, sessionId))
 
-  if (archived) return null
-  if (!unread && (openInMainView || busy)) return null
+  if (
+    !shouldShowSessionUnreadAction({
+      canWrite: true,
+      isUnread: unread,
+      isArchived: archived,
+      isOpenInMainView: openInMainView,
+      isBusy: busy,
+    })
+  ) {
+    return null
+  }
 
   const select = (next: boolean): void => {
     setMenuOpen(false)
@@ -246,32 +255,45 @@ export function observeSessionUnread(ctx: ClientContext): () => void {
           if (!sessionId) return []
 
           const unreadHost = unreadHostOf(ctx)
+          const canWrite = canMarkSession(unreadHost)
+          // 宿主契约漂移不可写时直接 fail-closed，杜绝点击静默无效
+          if (!canWrite) return []
+
           const unreadSet = unreadSetOf(unreadHost)
           const isUnread = unreadSet?.has(sessionId) === true
 
           // 归档状态检查：已归档会话不渲染
+          let archived = false
           try {
             const workspaces = (ctx.get?.('workspaces') as any) ?? (ctx as any).workspaces
             const snapshot = workspaces?.list?.getSnapshot?.() ?? workspaces?.getSnapshot?.()
-            const archivedIds: readonly string[] = snapshot?.archivedSessionIds ?? []
-            if (archivedIds.includes(sessionId)) return []
+            archived = isSessionArchived(snapshot?.archivedSessionIds, sessionId)
           } catch {}
 
-          // 忙碌与主视图打开检查：若非未读状态，在主视图打开或运行中时不显示「标记为未读」
-          if (!isUnread) {
-            try {
-              const sessions = (ctx.get?.('sessions') as any) ?? (ctx as any).sessions
-              const list = sessions?.list?.getSnapshot?.() ?? sessions?.getSnapshot?.()
-              const sessionItem = list?.byId?.[sessionId] ?? list?.items?.find?.((s: any) => s.id === sessionId)
-              const openInMainView = (sessionItem?.retainedBy?.mainView ?? 0) > 0
+          // 忙碌与主视图打开检查
+          let openInMainView = false
+          let busy = false
+          try {
+            const sessions = (ctx.get?.('sessions') as any) ?? (ctx as any).sessions
+            const list = sessions?.list?.getSnapshot?.() ?? sessions?.getSnapshot?.()
+            const sessionItem = list?.byId?.[sessionId] ?? list?.items?.find?.((s: any) => s.id === sessionId)
+            openInMainView = isSessionOpenInMainView(sessionItem)
 
-              const uiSession = unreadHost as any
-              const status = uiSession?.statusOf?.(sessionId) ?? uiSession?.statuses?.get?.(sessionId)
-              const busy =
-                status?.running === true || status?.pendingInteraction !== undefined || sessionItem?.running === true
+            const uiSession = unreadHost as any
+            const status = uiSession?.statusOf?.(sessionId) ?? uiSession?.statuses?.get?.(sessionId)
+            busy = isSessionBusy(status, sessionItem)
+          } catch {}
 
-              if (openInMainView || busy) return []
-            } catch {}
+          if (
+            !shouldShowSessionUnreadAction({
+              canWrite,
+              isUnread,
+              isArchived: archived,
+              isOpenInMainView: openInMainView,
+              isBusy: busy,
+            })
+          ) {
+            return []
           }
 
           const t = ctx.locale?.bind?.(NS) ?? ((k: string) => k)
@@ -306,9 +328,21 @@ export function observeSessionUnread(ctx: ClientContext): () => void {
     return () => {
       if (disposed) return
       disposed = true
-      unregNative?.()
-      disposeUnreadIcon?.()
-      disposeReadIcon?.()
+      if (typeof unregNative === 'function') {
+        try {
+          unregNative()
+        } catch {}
+      }
+      if (typeof disposeUnreadIcon === 'function') {
+        try {
+          disposeUnreadIcon()
+        } catch {}
+      }
+      if (typeof disposeReadIcon === 'function') {
+        try {
+          disposeReadIcon()
+        } catch {}
+      }
     }
   }
 

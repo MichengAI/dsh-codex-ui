@@ -8,8 +8,13 @@ import {
   type MarkUnreadMenuProps,
 } from '../src/client/sidebar/session-unread/index.tsx'
 import {
+  canMarkSession,
   findSessionMenuButton,
+  isSessionArchived,
+  isSessionBusy,
+  isSessionOpenInMainView,
   sessionIdOfRowKey,
+  shouldShowSessionUnreadAction,
   writeSessionUnread,
 } from '../src/client/sidebar/session-unread/model.ts'
 
@@ -500,5 +505,98 @@ describe('会话未读：Observer 装配与右键唤起', () => {
 
     stop()
     expect(unregNative).toHaveBeenCalledTimes(1)
+  })
+
+  it('宿主契约漂移时（无法写入）原生 contextMenus 坚决 fail-closed 返回空数组，杜绝静默无效选项', () => {
+    const nativeRegistrations: any[] = []
+    const ctx = {
+      slots: { inject: vi.fn(), register: vi.fn() },
+      locale: { bind: vi.fn(() => t) },
+      get: vi.fn((name: string) => {
+        if (name === 'contextMenus') {
+          return {
+            register: vi.fn((spec: any) => {
+              nativeRegistrations.push(spec)
+              return vi.fn()
+            }),
+          }
+        }
+        // uiSession 缺失或内部字段不是 Set
+        if (name === 'uiSession') return { completionUnread: [] }
+        return undefined
+      }),
+    }
+
+    const stop = observeSessionUnread(ctx as never)
+    expect(nativeRegistrations).toHaveLength(1)
+    // 契约异常时，对任何会话均应返回空数组
+    expect(nativeRegistrations[0].resolve({ sessionId: 's1' })).toEqual([])
+    stop()
+  })
+
+  it('模型层 shouldShowSessionUnreadAction 统一多维度条件判定', () => {
+    // 无法写入时恒为 false
+    expect(
+      shouldShowSessionUnreadAction({
+        canWrite: false,
+        isUnread: false,
+        isArchived: false,
+        isOpenInMainView: false,
+        isBusy: false,
+      }),
+    ).toBe(false)
+
+    // 已归档时恒为 false
+    expect(
+      shouldShowSessionUnreadAction({
+        canWrite: true,
+        isUnread: false,
+        isArchived: true,
+        isOpenInMainView: false,
+        isBusy: false,
+      }),
+    ).toBe(false)
+
+    // 当前未读时，即使忙碌或在主视图也应允许「标记为已读」
+    expect(
+      shouldShowSessionUnreadAction({
+        canWrite: true,
+        isUnread: true,
+        isArchived: false,
+        isOpenInMainView: true,
+        isBusy: true,
+      }),
+    ).toBe(true)
+
+    // 当前已读时，主视图打开或运行中不应展示「标记为未读」
+    expect(
+      shouldShowSessionUnreadAction({
+        canWrite: true,
+        isUnread: false,
+        isArchived: false,
+        isOpenInMainView: true,
+        isBusy: false,
+      }),
+    ).toBe(false)
+    expect(
+      shouldShowSessionUnreadAction({
+        canWrite: true,
+        isUnread: false,
+        isArchived: false,
+        isOpenInMainView: false,
+        isBusy: true,
+      }),
+    ).toBe(false)
+
+    // 正常已读会话展示「标记为未读」
+    expect(
+      shouldShowSessionUnreadAction({
+        canWrite: true,
+        isUnread: false,
+        isArchived: false,
+        isOpenInMainView: false,
+        isBusy: false,
+      }),
+    ).toBe(true)
   })
 })

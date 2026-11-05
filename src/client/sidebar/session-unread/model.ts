@@ -94,6 +94,58 @@ export function unreadSetOf(host: SessionUnreadHost | undefined): Set<string> | 
 }
 
 /**
+ * 宿主未读服务是否具备可写能力（未读集合有效且广播方法存在）。
+ */
+export function canMarkSession(host: SessionUnreadHost | undefined): boolean {
+  return unreadSetOf(host) !== undefined
+}
+
+/**
+ * 目标会话是否处于已归档状态。
+ */
+export function isSessionArchived(archivedSessionIds: readonly string[] | undefined, sessionId: string): boolean {
+  return archivedSessionIds?.includes(sessionId) === true
+}
+
+/**
+ * 目标会话是否正在主视图中打开。
+ */
+export function isSessionOpenInMainView(sessionItem: { retainedBy?: { mainView?: number } } | undefined): boolean {
+  return (sessionItem?.retainedBy?.mainView ?? 0) > 0
+}
+
+/**
+ * 目标会话是否处于忙碌态（运行中或等待交互）。
+ */
+export function isSessionBusy(
+  status: { running?: boolean; pendingInteraction?: unknown } | undefined,
+  sessionItem?: { running?: boolean },
+): boolean {
+  return status?.running === true || status?.pendingInteraction !== undefined || sessionItem?.running === true
+}
+
+/**
+ * 综合判断是否应向用户展示未读/已读切换菜单项。
+ *
+ * - 宿主契约漂移不可写时：不展示（fail-closed，杜绝点击静默无效）；
+ * - 已归档会话：不展示；
+ * - 当前处于已读态，但在主视图打开中或忙碌中：不展示（标记后会被宿主重算冲掉）；
+ * - 当前处于未读态：始终展示「标记为已读」。
+ */
+export function shouldShowSessionUnreadAction(params: {
+  canWrite: boolean
+  isUnread: boolean
+  isArchived: boolean
+  isOpenInMainView: boolean
+  isBusy: boolean
+}): boolean {
+  if (!params.canWrite) return false
+  if (params.isArchived) return false
+  if (!params.isUnread && (params.isOpenInMainView || params.isBusy)) return false
+  return true
+}
+
+/**
  * 写入或清除未读标记，并让宿主重算状态。
  *
  * 已经是目标值时直接成功（不重复广播）；广播抛错时回滚集合，避免内存状态与宿主
