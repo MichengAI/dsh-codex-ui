@@ -300,7 +300,7 @@ describe('会话未读：Observer 装配与右键唤起', () => {
     expect(registrations[0]).toMatchObject({
       name: 'sidebar.workspaces.session.menu.item',
       id: 'codex-ui:session-unread',
-      order: 350,
+      order: 150,
       locale: NS,
     })
 

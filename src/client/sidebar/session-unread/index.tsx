@@ -30,8 +30,8 @@ import {
 const MENU_SLOT = 'sidebar.workspaces.session.menu.item'
 /** 槽位内本子插件的行 id：命名空间化，避免与宿主行冲突。 */
 const MENU_ITEM_ID = 'codex-ui:session-unread'
-/** 排在分叉（300）之后、归档（400）之前。 */
-const MENU_ORDER = 350
+/** 排在置顶（100）之后、重命名（200）之前。 */
+const MENU_ORDER = 150
 
 /** 会话 UI 状态里本能力用到的字段。 */
 interface SessionStatusLike {
