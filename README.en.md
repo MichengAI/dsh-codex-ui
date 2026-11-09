@@ -26,7 +26,7 @@
 
 ## Why Codex UI 2.0?
 
-When working across complex projects in DeepSeek Harness, users often encounter cramped settings modals, plain monocolor palettes, unstructured sidebars, and lost prompt history. **Codex UI 2.0 rearchitects the entire frontend experience through seven decoupled sub-plugins**, delivering a high-performance, non-intrusive, native-grade modern design:
+When working across complex projects in DeepSeek Harness, users often encounter cramped settings modals, plain monocolor palettes, unstructured sidebars, and lost prompt history. **Codex UI 2.0 rearchitects the entire frontend experience through six decoupled sub-plugins and built-in companion management**, delivering a high-performance, non-intrusive, native-grade modern design:
 
 * 🚀 **Instant Prompt Recall & Smart Prediction**: Intelligent inline input prediction (`Tab` to accept, `Alt+Down/Up` to cycle), terminal-style input history (`↑` / `↓` quick recall) with isolated workspace memory and adaptive width sizing;
 * 🪟 **Full-Screen Dual-Island Settings**: Replaces cramped dialogs with Ambient Ground diffuse lighting canvas and dual floating island cards;
@@ -59,7 +59,7 @@ Faced with these compounding challenges, we made the decisive choice in v2.0.0 t
 
 ---
 
-## Architecture: 7 Core Sub-Plugins
+## Architecture: 6 Core Sub-Plugins & Built-in Modules
 
 | Sub-Plugin ID | Name | Capabilities |
 | :--- | :--- | :--- |
@@ -69,7 +69,7 @@ Faced with these compounding challenges, we made the decisive choice in v2.0.0 t
 | `sidebar` | **Modular Sidebar** | In-place accordion expansion, smooth drag-and-drop reordering, and right-click “mark as unread / read” for sessions; collapses cleanly into host native 56px icon rail. |
 | `session-title` | **Intelligent Session Title** | Generates standardized session titles from initial prompt semantics, handling reasoning model outputs up to 4096 tokens. |
 | `desktop-menu` | **Desktop Native Menus** | Official desktop app titlebar menu integration with instant view reload and reliable cross-platform app/Host restart. |
-| `dependencies` | **Companion Management** | Centralized dashboard for official/third-party DSH companion plugins with live npm download counts and 1-click updates. |
+| `dependencies` | **Companion Management (Built-in)** | Centralized dashboard for official/third-party DSH companion plugins with live npm download counts and 1-click updates. |
 
 ---
 

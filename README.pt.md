@@ -26,7 +26,7 @@
 
 ## Por que escolher o Codex UI 2.0?
 
-No uso diário do DeepSeek Harness, a interface padrão pode apresentar caixas de diálogo estreitas, temas monótonos ou perda do histórico de comandos. **O Codex UI 2.0 foi totalmente reestruturado em sua arquitetura e design visual**, reunindo **sete subplugins desacoplados**, de alto desempenho e foco na experiência nativa:
+No uso diário do DeepSeek Harness, a interface padrão pode apresentar caixas de diálogo estreitas, temas monótonos ou perda do histórico de comandos. **O Codex UI 2.0 foi totalmente reestruturado em sua arquitetura e design visual**, reunindo **seis subplugins desacoplados e gerenciamento de ecossistema integrado**, de alto desempenho e foco na experiência nativa:
 
 * 🚀 **Recuperação rápida e previsão inteligente**: Previsão de digitação em linha (`Tab` para aceitar, `Alt+Abaixo/Acima` para alternar opções), histórico de comandos estilo terminal (`↑` / `↓`) e alças de largura adaptáveis;
 * 🪟 **Painel de configurações em tela cheia**: Substitui diálogos estreitos por uma tela ampla com iluminação difusa Ambient Ground e cartões flutuantes;
@@ -39,7 +39,22 @@ No uso diário do DeepSeek Harness, a interface padrão pode apresentar caixas d
 
 ---
 
-## Arquitetura: 7 Subplugins Principais
+## Evolução Arquitetural: Por que uma reescrita completa?
+
+### 1. O dilema da versão 1.x: Dívida técnica por sobreposições agressivas
+Nos primeiros dias do ecossistema DSH, não existiam registros de Slots oficiais nem bibliotecas de primitivos headless. A versão 1.x precisava sequestrar nós do DOM e injetar estilos CSS globais.
+Isso causava quebras repentinas a cada atualização do Host DSH, além de deixar resíduos CSS ao desativar temas.
+
+### 2. Princípios de design da versão 2.0: Respeito integral aos padrões nativos
+Na versão 2.0.0, todo o código antigo de sobreposição foi **descartado** em favor de uma base limpa em micro-kernel:
+* 🏛️ **Uso rigoroso de componentes nativos**: Abolição de widgets CSS desenhados à mão, utilizando exclusivamente os componentes `Switch` e `Button` oficiais;
+* 🧩 **6 subplugins modulares**: Fronteiras bem delimitadas garantem ciclos de vida independentes e manutenção previsível;
+* 🛡️ **Segurança fail-closed**: Ao desativar um módulo, todos os estilos e cartões são removidos imediatamente do DOM sem deixar rastros;
+* 🔒 **Isolamento estrito de perfis**: Resolução inequívoca de diretórios para evitar interferências entre perfis.
+
+---
+
+## Arquitetura: 6 Subplugins Principais e Módulo Integrado
 
 | ID do Subplugin | Nome | Funcionalidades |
 | :--- | :--- | :--- |
@@ -49,7 +64,58 @@ No uso diário do DeepSeek Harness, a interface padrão pode apresentar caixas d
 | `sidebar` | **Barra Lateral Modular (Sidebar)** | Expansão suave, reorganização por arrasto, marcador de lido/não lido e aderência estrita ao trilho de 56px. |
 | `session-title` | **Títulos de Sessão (Session Title)** | Geração padronizada de títulos baseada na semântica da primeira solicitação, com suporte a 8 idiomas e até 4096 tokens. |
 | `desktop-menu` | **Menus do Desktop (Desktop Menus)** | Menu de ajuda integrado na barra de título do aplicativo desktop, com recarregamento e reinício seguro do Host. |
-| `dependencies` | **Gestão de Dependências (Dependencies)** | Monitoramento de plugins integrados, contagem de downloads npm em tempo real e atualização em lote com um clique. |
+| `dependencies` | **Gestão de Dependências (Integrado)** | Monitoramento de plugins integrados, contagem de downloads npm em tempo real e atualização em lote com um clique. |
+
+---
+
+## Capturas de Tela em Ambiente Real
+
+> *Todas as imagens foram capturadas diretamente em instâncias em execução do DeepSeek Harness Web usando o `ego-browser`.*
+
+### 1. Espaço de trabalho imersivo e área de entrada (Modo Escuro)
+Paleta Codex Dark com ações centralizadas, cartões de sugestão e campo de entrada inferior com alças adaptáveis e dicas de histórico `↑↓`.
+
+![Modo Escuro Conversa e Entrada](assets/screenshots/conversation.png)
+
+---
+
+### 2. Espaço de trabalho branco papel (Modo Claro)
+Paleta Codex Light com iluminação difusa Ambient Ground para uma leitura agradável e sem cansaço visual.
+
+![Modo Claro Ambient Ground](assets/screenshots/conversation-light.png)
+
+---
+
+### 3. Painel de configurações em tela cheia (Sistema de Cartões Modulares)
+Amplo ambiente de trabalho organizado em cartões temáticos de acordo com os componentes ativos.
+
+![Painel em Tela Cheia](assets/screenshots/settings-about.png)
+
+---
+
+### 4. Personalização de tema e textura de vidro
+7 cartões de paleta de cores (Padrão, Codex Preto e Branco, Mocha, Macchiato, Frappé, Latte), seletores de modo de layout e nível de desfoque.
+
+---
+
+### 5. Navegação modular na barra lateral (Expandida)
+Itens reorganizáveis, gaveta tipo sanfona para ferramentas e atalhos de acesso rápido fixados.
+
+![Barra Lateral Modular Expandida](assets/screenshots/sidebar.png)
+
+---
+
+### 6. Trilho nativo oficial de 56px (Recolhido)
+Recolhe-se com total fluidez no trilho compacto de 56px oficial, mantendo os ícones alinhados e o botão de Novo Chat em evidência.
+
+![Trilho Nativo 56px Recolhido](assets/screenshots/sidebar-collapsed.png)
+
+---
+
+### 7. Menu de contexto avançado de sessões
+Ações imediatas na lista de conversas: Fixar, Renomear, Marcar como não lido/lido, Arquivar, Bifurcar e Exclusão segura.
+
+![Menu Avançado de Sessão](assets/screenshots/session-menu.png)
 
 ---
 
@@ -58,6 +124,8 @@ No uso diário do DeepSeek Harness, a interface padrão pode apresentar caixas d
 * **Gerações Suportadas**: Linha completa DeepSeek Harness `0.2.x` (`>=0.2.0-rc.1 <0.3.0-0`);
 * **Compilações Verificadas**: Todas as versões Release Candidate `0.2.x` (`0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-rc.1`–`0.2.1-rc.5`, `0.2.2-rc.1`);
 * **Requisitos de Execução**: Node.js `^22.19.0 || >=24.0.0`, pnpm `^11.0.0`.
+
+> ⚠️ **Aviso**: Não habilite o Codex UI e o `ds-bot` simultaneamente, pois ambos alteram os slots da barra lateral com potenciais conflitos.
 
 ---
 
@@ -85,6 +153,41 @@ dsh --profile web --dump-config
 ```
 
 Após a instalação, reinicie a instância do DSH Web e force a atualização da página no navegador (`Ctrl + Shift + R` ou `Cmd + Shift + R`).
+
+---
+
+## Guia Rápido de Utilização
+
+| Funcionalidade | Como Usar |
+| :--- | :--- |
+| **Aceitar previsão de digitação** | Pressione `Tab` quando o texto sugerido aparecer após o cursor; use `Alt + Abaixo` / `Alt + Acima` para alternar ou `Esc` para dispensar. |
+| **Alternar previsões** | Vá em **Configurações → Codex UI** e acione o interruptor no cartão «Melhorias de Entrada». Pode ser desativado no perfil via `config.prediction: false` em `cordis.patch.yml`. |
+| **Histórico de comandos** | Em um campo de entrada vazio, pressione `↑` / `↓` para navegar pelos últimos 200 comandos do espaço de trabalho atual. |
+| **Redimensionar largura** | Posicione o cursor sobre as bordas laterais da caixa de entrada e arraste as alças azuis. |
+| **Alternar temas e desfoque** | Em **Configurações → Codex UI**, selecione uma das 7 paletas e alterne entre os modos de vidro Plano e Mica Flutuante. |
+| **Reordenar barra lateral** | Arraste verticalmente os itens; os guias azuis indicam o ponto exato para mover para dentro ou fora do menu «Mais». |
+| **Recolher barra lateral** | Clique no botão no topo da barra para alternar para o trilho oficial compacto de 56px. |
+| **Atualizar plugins em lote** | Em **Configurações → Codex UI**, clique em **Instalar/atualizar tudo** no cartão de extensões complementares. |
+
+---
+
+## Matriz do Ecossistema
+
+Combine o Codex UI com as extensões complementares oficiais para um ambiente integrado:
+
+| Plugin | Finalidade |
+| :--- | :--- |
+| [Codex UI](https://github.com/MichengAI/dsh-codex-ui) | **Núcleo de UI**: Histórico rápido, visual de configurações, vidro fosco e barra modular |
+| [Agency Agents](https://github.com/MichengAI/dsh-agency-agents) | **Matriz de Especialistas**: Despacho de agentes especializados para diferentes tarefas |
+| [Skills Manager](https://github.com/MichengAI/dsh-skills-manager) | **Central de Habilidades**: Descoberta, importação e ativação de habilidades locais |
+| [Archive Manager](https://github.com/MichengAI/dsh-archive-manager) | **Gestão de Arquivos**: Busca profunda, restauração e limpeza de conversas anteriores |
+| [IM Connect](https://github.com/MichengAI/dsh-im-connect) | **Ponte IM**: Conexão com WeChat, DingTalk, Feishu e QQBot |
+| [Automation](https://github.com/MichengAI/dsh-automation) | **Automação**: Agendamentos com cron e auditoria de registros de execução |
+| [Code Review](https://github.com/MichengAI/dsh-code-review) | **Revisão de Código**: Comando `/review` para auditoria de código autônoma com subagentes |
+| [Simplify](https://github.com/MichengAI/dsh-simplify) | **Refatoração**: Comando `/simplify` para limpeza concorrente com 4 agentes |
+| [PUA](https://github.com/MichengAI/dsh-pua) | **Resiliência**: Recuperação de falhas, teste de hipóteses e verificação de evidências |
+| [BTW](https://github.com/MichengAI/dsh-btw) | **Perguntas Rápidas**: Consultas contextuais efêmeras sem interromper o fluxo principal |
+| [Codex Pet](https://github.com/MichengAI/dsh-codex-pet) | **Mascote de Mesa**: Companheiro interativo para notificações e aprovações |
 
 ---
 
