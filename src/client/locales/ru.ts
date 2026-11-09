@@ -43,6 +43,8 @@ export const ru: Record<CodexUiKey, string> = {
   'about.installFailed': 'Ошибка установки плагина. Попробуйте позже.',
   'about.installPnpmMissing': 'pnpm не найден в системе. Установите pnpm и перезапустите DSH.',
   'about.installServiceUnavailable': 'Служба зависимостей DSH Desktop не готова. Перезапустите приложение.',
+  'about.installBusy': 'Другая установка уже выполняется. Дождитесь её завершения.',
+  'about.installSuiteUnsupported': 'Устаревшие компоненты пакета не могут быть перенесены автоматически. Управляйте ими через диспетчер плагинов хоста.',
   'about.installStoreMismatch': 'Каталог не совпадает с хранилищем pnpm. Закройте DSH Desktop и попробуйте снова.',
   'about.installStoreMismatchWeb': 'Каталог не совпадает с pnpm. Остановите DSH Web и повторите попытку; если ошибка повторяется, переустановите зависимости профиля.',
   'about.installTimeout': 'Тайм-аут установки плагина. Проверьте подключение к сети.',

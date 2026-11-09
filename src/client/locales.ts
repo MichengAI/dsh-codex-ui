@@ -122,6 +122,8 @@ export const zh = {
   'about.installPnpmMissing': '当前环境找不到 pnpm，请安装 pnpm 并重启 DSH 后重试。',
   'about.installTimeout': '插件安装超时，请检查网络后重试。',
   'about.installServiceUnavailable': 'DSH Desktop 依赖管理服务尚未就绪，请重启后重试。',
+  'about.installBusy': '已有安装任务正在进行，请等待完成后再试。',
+  'about.installSuiteUnsupported': '旧套件成员暂不支持自动迁移，请通过宿主插件管理器处理。',
   'about.applied': '依赖已安装或更新并生效。',
   'about.restartRequired': '依赖已安装或更新。请重启 DSH 宿主以应用更改。',
 
@@ -318,6 +320,8 @@ export const en: Record<keyof typeof zh, string> = {
   'about.installPnpmMissing': 'pnpm is not available. Install pnpm, restart DSH, and try again.',
   'about.installTimeout': 'Plugin installation timed out. Check the network and try again.',
   'about.installServiceUnavailable': 'The DSH Desktop dependency service is not ready. Restart DSH Desktop and try again.',
+  'about.installBusy': 'Another installation is already in progress. Please wait for it to complete.',
+  'about.installSuiteUnsupported': 'Legacy suite members cannot be automatically migrated. Please manage them via the host plugin manager.',
   'about.applied': 'Dependencies installed or updated and applied.',
   'about.restartRequired': 'Dependencies installed or updated. Restart the DSH host to apply changes.',
 

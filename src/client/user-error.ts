@@ -26,6 +26,8 @@ const INSTALL_ERROR_KEYS: readonly [RegExp, CodexUiKey][] = [
   [/找不到 pnpm|pnpm (?:is )?not (?:available|found)/i, 'about.installPnpmMissing'],
   [/安装超时|installation timed out/i, 'about.installTimeout'],
   [/服务尚未就绪|Profile 信息无效|dependency service is not ready/i, 'about.installServiceUnavailable'],
+  [/已有依赖安装正在进行|已有安装任务|already in progress/i, 'about.installBusy'],
+  [/旧套件成员|legacy suite/i, 'about.installSuiteUnsupported'],
 ]
 
 /** 安装错误保留用户可执行的处理建议，但不直接展示 Host 原文。 */

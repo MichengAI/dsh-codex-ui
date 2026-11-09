@@ -43,6 +43,8 @@ export const es: Record<CodexUiKey, string> = {
   'about.installFailed': 'Error al instalar el complemento. Vuelva a intentarlo más tarde.',
   'about.installPnpmMissing': 'No se encuentra pnpm en el entorno. Instale pnpm y reinicie DSH.',
   'about.installServiceUnavailable': 'El servicio de dependencias de DSH Desktop no está listo. Reinicie y pruebe de nuevo.',
+  'about.installBusy': 'Ya hay otra instalación en curso. Espere a que finalice.',
+  'about.installSuiteUnsupported': 'Los miembros del paquete heredado no se pueden migrar automáticamente. Adminístrelos a través del administrador de complementos del host.',
   'about.installStoreMismatch': 'El directorio no coincide con el almacén de pnpm. Cierre DSH Desktop por completo y reintente.',
   'about.installStoreMismatchWeb': 'El directorio no coincide con pnpm. Detenga DSH Web y reintente; si persiste, reinstale las dependencias del perfil.',
   'about.installTimeout': 'Tiempo de espera agotado al instalar. Compruebe su conexión a la red.',

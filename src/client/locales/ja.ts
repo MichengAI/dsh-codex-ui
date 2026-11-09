@@ -43,6 +43,8 @@ export const ja: Record<CodexUiKey, string> = {
   'about.installFailed': 'プラグインのインストールに失敗しました。後でもう一度お試しください。',
   'about.installPnpmMissing': '環境内に pnpm が見つかりません。pnpm をインストールして DSH を再起動してください。',
   'about.installServiceUnavailable': 'DSH Desktop 依存関係管理サービスが準備できていません。再起動してください。',
+  'about.installBusy': '別のインストールが既に進行中です。完了するまでお待ちください。',
+  'about.installSuiteUnsupported': 'レガシースイートメンバーは自動移行できません。ホストのプラグインマネージャーで処理してください。',
   'about.installStoreMismatch': 'プラグインディレクトリと pnpm リポジトリが一致しません。DSH Desktop を完全に終了してから再試行してください。',
   'about.installStoreMismatchWeb': 'プラグインディレクトリと pnpm リポジトリが一致しません。DSH Web を停止して再試行してください。失敗が続く場合はプロファイルの依存関係を再インストールしてください。',
   'about.installTimeout': 'プラグインのインストールがタイムアウトしました。ネットワーク接続を確認してください。',

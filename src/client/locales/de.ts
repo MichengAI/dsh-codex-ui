@@ -43,6 +43,8 @@ export const de: Record<CodexUiKey, string> = {
   'about.installFailed': 'Plugin-Installation fehlgeschlagen. Bitte versuchen Sie es später erneut.',
   'about.installPnpmMissing': 'pnpm wurde nicht gefunden. Bitte pnpm installieren und DSH neu starten.',
   'about.installServiceUnavailable': 'DSH Desktop-Dienst noch nicht bereit. Bitte neu starten.',
+  'about.installBusy': 'Eine andere Installation wird bereits ausgeführt. Bitte warten Sie, bis sie abgeschlossen ist.',
+  'about.installSuiteUnsupported': 'Legacy-Suite-Mitglieder können nicht automatisch migriert werden. Bitte verwalten Sie diese über den Host-Plugin-Manager.',
   'about.installStoreMismatch': 'Verzeichnis stimmt nicht mit pnpm-Store überein. Beenden Sie DSH Desktop und versuchen Sie es erneut.',
   'about.installStoreMismatchWeb': 'Verzeichnis stimmt nicht mit pnpm überein. Stoppen Sie DSH Web und versuchen Sie es erneut.',
   'about.installTimeout': 'Zeitüberschreitung bei der Plugin-Installation. Bitte Netzwerkverbindung prüfen.',

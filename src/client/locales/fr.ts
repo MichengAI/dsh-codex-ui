@@ -43,6 +43,8 @@ export const fr: Record<CodexUiKey, string> = {
   'about.installFailed': 'Échec de l\'installation du plugin. Veuillez réessayer plus tard.',
   'about.installPnpmMissing': 'pnpm est introuvable. Installez pnpm et redémarrez DSH.',
   'about.installServiceUnavailable': 'Le service de dépendances DSH Desktop n\'est pas prêt. Redémarrez et réessayez.',
+  'about.installBusy': 'Une autre installation est déjà en cours. Veuillez attendre qu\'elle se termine.',
+  'about.installSuiteUnsupported': 'Les membres de l\'ancienne suite ne peuvent pas être migrés automatiquement. Veuillez les gérer via le gestionnaire de plugins de l\'hôte.',
   'about.installStoreMismatch': 'Le dossier ne correspond pas au dépôt pnpm. Quittez complètement DSH Desktop et réessayez.',
   'about.installStoreMismatchWeb': 'Le dossier ne correspond pas à pnpm. Arrêtez DSH Web et réessayez ; si le problème persiste, réinstallez les dépendances.',
   'about.installTimeout': 'Délai d\'installation dépassé. Vérifiez votre connexion réseau.',
