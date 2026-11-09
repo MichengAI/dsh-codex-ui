@@ -28,7 +28,7 @@ type DesktopProfilesService = {
 }
 
 export type PluginManagerHostService = {
-  installBundle?: (spec: string, options?: { requestId?: string; registry?: string; approvedBuilds?: Record<string, boolean> }) => Promise<unknown>
+  installBundle?: (spec: string, options?: { requestId?: string; registry?: string; approvedBuilds?: string[] }) => Promise<unknown>
   updateBundle?: (name: string, version: string, options?: { requestId?: string }) => Promise<unknown>
   listBundles?: () => Promise<{ status: string; data?: Array<{ name: string; version?: string; installed: boolean }> }>
 }
