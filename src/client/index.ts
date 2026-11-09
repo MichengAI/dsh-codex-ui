@@ -1,3 +1,4 @@
+import { createElement } from 'react'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
@@ -99,5 +100,5 @@ export function apply(ctx: ClientContext): void {
     order: Number.MAX_SAFE_INTEGER,
     label: () => t('about.nav'),
     locale: NS,
-  }, AboutSection))
+  }, (props: any) => createElement(AboutSection, { ctx, t, ...props })))
 }

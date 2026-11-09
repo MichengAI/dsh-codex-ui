@@ -159,7 +159,8 @@ function progressLabel(progress: InstallProgress, t: TranslateNS<typeof NS>): st
 }
 
 /** Codex UI 的功能说明、配套管理插件状态与受限安装入口。 */
-export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
+export function AboutSection(props: { t: TranslateNS<typeof NS>; close?: () => void; ctx?: any }) {
+  const { t, close, ctx } = props
   const [dependencies, setDependencies] = useState<readonly DependencyStatus[]>([])
   const [state, setState] = useState<LoadState>('loading')
   const [installing, setInstalling] = useState<InstallTarget>()
@@ -239,8 +240,40 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
       window.clearInterval(timer)
     }
   }, [installing])
+  const openOfficialPlugin = (packageName?: string): boolean => {
+    try {
+      close?.()
+    } catch {
+      // 忽略关闭异常
+    }
+    const pluginNav = ctx?.reflect?.get?.('pluginNavigation') ?? ctx?.get?.('pluginNavigation') ?? ctx?.pluginNavigation
+    if (typeof pluginNav?.openBundle === 'function' && packageName !== undefined && packageName !== '') {
+      pluginNav.openBundle(packageName)
+      return true
+    }
+    if (typeof pluginNav?.openList === 'function') {
+      pluginNav.openList()
+      return true
+    }
+    const layout = ctx?.layout ?? ctx?.get?.('layout')
+    if (typeof layout?.selectPanel === 'function') {
+      layout.selectPanel('plugins')
+      return true
+    }
+    if (typeof document !== 'undefined') {
+      const btn = document.querySelector('[data-panel="plugins"], button[aria-label*="插件"], button[aria-label*="Plugin"]') as HTMLElement | null
+      if (btn !== null) {
+        btn.click()
+        return true
+      }
+    }
+    return false
+  }
+
   const install = async (id: ManagedDependencyId): Promise<void> => {
     if (installingRef.current !== undefined) return
+    const dependency = dependencies.find(dep => dep.id === id)
+    if (openOfficialPlugin(dependency?.packageName)) return
     installingRef.current = id
     setInstalling(id)
     setMessage(undefined)
@@ -264,6 +297,7 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
   }
   const updateAll = async (): Promise<void> => {
     if (installingRef.current !== undefined) return
+    if (openOfficialPlugin()) return
     installingRef.current = 'all'
     setInstalling('all')
     setMessage(undefined)
