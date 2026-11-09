@@ -89,8 +89,10 @@ test('关于页已有数据刷新失败时保留内容并显示非阻断提示',
 test.each([
   ['single', 'applied', 'about.applied'],
   ['single', 'restart-required', 'about.restartRequired'],
+  ['single', 'overridden', 'about.applied'],
   ['all', 'applied', 'about.applied'],
   ['all', 'restart-required', 'about.restartRequired'],
+  ['all', 'overridden', 'about.applied'],
   ['all', 'up-to-date', 'about.upToDate'],
   ['all', 'restart-zero', 'about.restartRequired'],
 ])('dependency %s click shows actual %s outcome', async (target, outcome, expected) => {
@@ -152,6 +154,47 @@ test.each([
     await act(async () => { button!.click() })
     await flush()
     expect(container.querySelector('.dcu-card-dependencies [role=alert]')?.textContent).toBe('about.installFailed')
+  } finally {
+    await act(async () => { root.unmount() })
+    container.remove()
+  }
+})
+
+test('install failure still commits partial dependency updates into UI state', async () => {
+  const initial = [
+    { id: 'schedule', packageName: '@michengai/dsh-automation', installed: false, updateAvailable: false },
+    { id: 'pua', packageName: '@michengai/dsh-pua', installed: false, updateAvailable: false },
+  ]
+  const partialUpdated = [
+    { id: 'schedule', packageName: '@michengai/dsh-automation', installed: true, updateAvailable: false },
+    { id: 'pua', packageName: '@michengai/dsh-pua', installed: false, updateAvailable: false },
+  ]
+  const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    if (init?.method === 'POST') {
+      return new Response(JSON.stringify({
+        dependencies: partialUpdated,
+        application: 'failed',
+        error: '插件安装超时，请检查网络后重试。',
+      }), { status: 503 })
+    }
+    return new Response(JSON.stringify({ dependencies: initial }), { status: 200 })
+  })
+  vi.stubGlobal('fetch', fetcher)
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+  try {
+    await act(async () => { root.render(createElement(AboutSection, { t: ((key: string) => key) as never })) })
+    await flush()
+    const button = container.querySelector<HTMLButtonElement>('.dcu-card-dependencies button')
+    expect(button).toBeDefined()
+    await act(async () => { button!.click() })
+    await flush()
+    // 错误提示展示
+    expect(container.querySelector('.dcu-card-dependencies [role=alert]')?.textContent).toBe('about.installTimeout')
+    // 但界面依赖列表必须已更新：schedule 已变为已安装状态
+    const scheduleRow = container.querySelector('.dcu-about-dependency[data-dependency-id=\"schedule\"]') ?? container.querySelectorAll('.dcu-about-dependency')[0]
+    expect(scheduleRow?.querySelector('[data-installed="true"]')).toBeDefined()
   } finally {
     await act(async () => { root.unmount() })
     container.remove()

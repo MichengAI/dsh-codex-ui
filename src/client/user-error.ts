@@ -36,8 +36,5 @@ export function installErrorText(error: unknown, t: Translator): string {
   const message = error instanceof Error ? error.message : String(error)
   const match = INSTALL_ERROR_KEYS.find(([pattern]) => pattern.test(message))
   if (match !== undefined) return t(match[1])
-  if (message.startsWith('安装') || message.startsWith('更新') || message.includes('@michengai/') || message.includes('旧套件')) {
-    return message
-  }
   return t('about.installFailed')
 }

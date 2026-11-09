@@ -17,7 +17,7 @@ import { observeSessionUnread } from './sidebar/session-unread/index.tsx'
 import { observeTheme } from './theme/index.ts'
 import { observeDesktopTitlebarMenus, checkDesktopMenuEnabled } from './desktop-menu/index.ts'
 
-export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTriggers', 'layout', 'uiWorkspace', 'workspaces']
+export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTriggers', 'layout', 'uiWorkspace', 'workspaces', 'remote']
 
 let clientContext: ClientContext | undefined
 export function getClientContext(): ClientContext | undefined {

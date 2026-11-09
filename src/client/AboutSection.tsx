@@ -160,8 +160,8 @@ function progressLabel(progress: InstallProgress, t: TranslateNS<typeof NS>): st
 }
 
 /** Codex UI 的功能说明、配套管理插件状态与受限安装入口。 */
-export function AboutSection(props: { t?: TranslateNS<typeof NS>; close?: () => void }) {
-  const t = props.t ?? ((key: string) => key)
+export function AboutSection(props: { t: TranslateNS<typeof NS>; close?: () => void }) {
+  const { t } = props
   const ctx = getClientContext()
   const [dependencies, setDependencies] = useState<readonly DependencyStatus[]>([])
   const [state, setState] = useState<LoadState>('loading')
@@ -296,7 +296,7 @@ export function AboutSection(props: { t?: TranslateNS<typeof NS>; close?: () => 
       if (!alive.current) return
       setState('ready')
       setRefreshFailed(false)
-      setMessage({ error: false, text: payload.application === 'applied' ? t('about.applied') : t('about.restartRequired') })
+      setMessage({ error: false, text: payload.application === 'overridden' ? t('about.applied') : (payload.application === 'applied' ? t('about.applied') : t('about.restartRequired')) })
     } catch (error) {
       if (!alive.current) return
       setMessage({ error: true, text: installErrorText(error, t) })
@@ -328,9 +328,9 @@ export function AboutSection(props: { t?: TranslateNS<typeof NS>; close?: () => 
       if (!alive.current) return
       setState('ready')
       setRefreshFailed(false)
-      setMessage({ error: false, text: payload.application === 'applied' && payload.updatedCount === 0 && Array.isArray(payload.results) && payload.results.length === 0
+      setMessage({ error: false, text: (payload.application === 'applied' || payload.application === 'overridden') && payload.updatedCount === 0 && Array.isArray(payload.results) && payload.results.length === 0
         ? t('about.upToDate')
-        : payload.application === 'applied' ? t('about.applied') : t('about.restartRequired') })
+        : (payload.application === 'overridden' ? t('about.applied') : (payload.application === 'applied' ? t('about.applied') : t('about.restartRequired'))) })
     } catch (error) {
       if (!alive.current) return
       setMessage({ error: true, text: installErrorText(error, t) })

@@ -90,6 +90,9 @@ it('preserves update restore outcome on failure', async () => {
 it('preserves diagnostic error info on failure and names failing package in HTTP error', async () => {
   const { apply } = await import('../src/index.ts')
   const { CODEX_UI_API_ENDPOINTS } = await import('../src/business-api.ts')
+  const { installErrorText } = await import('../src/client/user-error.ts')
+  const { en } = await import('../src/client/locales.ts')
+  const tEn = (key: string) => (en as Record<string, string>)[key] ?? key
   const dir = await mkdtemp(join(tmpdir(), 'dcu-diag-'))
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ version: '1.0.0' })))
   const routes = new Map<string, any>()
@@ -102,7 +105,7 @@ it('preserves diagnostic error info on failure and names failing package in HTTP
         application: 'failed',
         stage: 'install',
         target: '@michengai/dsh-automation',
-        error: { code: 'operation-error', message: 'connection timeout' },
+        error: { code: 'operation-error', message: 'connection timed out at D:\\Repo\\host\\pnpm.log' },
         packageResult: { kind: 'timeout' },
       }),
     },
@@ -120,7 +123,9 @@ it('preserves diagnostic error info on failure and names failing package in HTTP
     const parsed = JSON.parse(body)
     expect(parsed.application).toBe('failed')
     expect(parsed.results[0].error).toMatchObject({ code: 'operation-error', kind: 'timeout' })
-    expect(parsed.error).toContain('@michengai/dsh-automation')
-    expect(parsed.error).toMatch(/超时|timeout|失败/i)
+    expect(parsed.results[0].error.message).not.toContain('D:\\Repo')
+    expect(parsed.error).toContain('超时')
+    expect(parsed.error).not.toContain('构建脚本')
+    expect(installErrorText(new Error(parsed.error), tEn as never)).toBe('Plugin installation timed out. Check the network and try again.')
   } finally { fetchMock.mockRestore(); await rm(dir, { recursive: true, force: true }) }
 })

@@ -77,13 +77,6 @@ function detectHostRuntimeRoot(env: NodeJS.ProcessEnv): string | undefined {
   if (typeof env.DSH_RUNTIME_DIR === 'string' && isAbsolute(env.DSH_RUNTIME_DIR)) {
     return resolve(env.DSH_RUNTIME_DIR)
   }
-  const candidates = [
-    resolve(process.execPath, '..', 'resources', 'app', 'node_modules', '@deepseek-ai', 'dsh'),
-    resolve(process.cwd(), 'node_modules', '@deepseek-ai', 'dsh'),
-  ]
-  for (const candidate of candidates) {
-    if (existsSync(resolve(candidate, 'package.json'))) return candidate
-  }
   return undefined
 }
 
