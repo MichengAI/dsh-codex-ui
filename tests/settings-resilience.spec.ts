@@ -193,8 +193,9 @@ test('install failure still commits partial dependency updates into UI state', a
     // 错误提示展示
     expect(container.querySelector('.dcu-card-dependencies [role=alert]')?.textContent).toBe('about.installTimeout')
     // 但界面依赖列表必须已更新：schedule 已变为已安装状态
-    const scheduleRow = container.querySelector('.dcu-about-dependency[data-dependency-id=\"schedule\"]') ?? container.querySelectorAll('.dcu-about-dependency')[0]
-    expect(scheduleRow?.querySelector('[data-installed="true"]')).toBeDefined()
+    const scheduleRow = container.querySelector('.dcu-about-dependency[data-dependency-id="schedule"]')
+    expect(scheduleRow).not.toBeNull()
+    expect(scheduleRow?.querySelector('.dcu-about-status')?.getAttribute('data-installed')).toBe('true')
   } finally {
     await act(async () => { root.unmount() })
     container.remove()
