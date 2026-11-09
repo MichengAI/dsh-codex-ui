@@ -287,11 +287,13 @@ export function AboutSection(props: { t?: TranslateNS<typeof NS>; close?: () => 
         // ignore
       }
       if ([401, 403].includes(response.status)) throw new BusinessRequestError(response.status)
-      if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus) || (payload.application !== 'applied' && payload.application !== 'restart-required')) {
+      if (Array.isArray(payload.dependencies) && payload.dependencies.every(isDependencyStatus) && alive.current) {
+        setDependencies(payload.dependencies)
+      }
+      if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus) || (payload.application !== 'applied' && payload.application !== 'restart-required' && payload.application !== 'overridden')) {
         throw new Error(typeof payload.error === 'string' ? payload.error : t('about.installFailed'))
       }
       if (!alive.current) return
-      setDependencies(payload.dependencies)
       setState('ready')
       setRefreshFailed(false)
       setMessage({ error: false, text: payload.application === 'applied' ? t('about.applied') : t('about.restartRequired') })
@@ -317,11 +319,13 @@ export function AboutSection(props: { t?: TranslateNS<typeof NS>; close?: () => 
         // ignore
       }
       if ([401, 403].includes(response.status)) throw new BusinessRequestError(response.status)
-      if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus) || (payload.application !== 'applied' && payload.application !== 'restart-required')) {
+      if (Array.isArray(payload.dependencies) && payload.dependencies.every(isDependencyStatus) && alive.current) {
+        setDependencies(payload.dependencies)
+      }
+      if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus) || (payload.application !== 'applied' && payload.application !== 'restart-required' && payload.application !== 'overridden')) {
         throw new Error(typeof payload.error === 'string' ? payload.error : t('about.installFailed'))
       }
       if (!alive.current) return
-      setDependencies(payload.dependencies)
       setState('ready')
       setRefreshFailed(false)
       setMessage({ error: false, text: payload.application === 'applied' && payload.updatedCount === 0 && Array.isArray(payload.results) && payload.results.length === 0

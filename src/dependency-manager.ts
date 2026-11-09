@@ -78,8 +78,6 @@ function detectHostRuntimeRoot(env: NodeJS.ProcessEnv): string | undefined {
     return resolve(env.DSH_RUNTIME_DIR)
   }
   const candidates = [
-    'D:/Tools/nodejs/node_global/node_modules/@deepseek-ai/dsh',
-    'C:/Tools/nodejs/node_global/node_modules/@deepseek-ai/dsh',
     resolve(process.execPath, '..', 'resources', 'app', 'node_modules', '@deepseek-ai', 'dsh'),
     resolve(process.cwd(), 'node_modules', '@deepseek-ai', 'dsh'),
   ]
@@ -132,8 +130,7 @@ export function resolveDependencyRuntime(ctx?: OptionalServiceContext, options: 
       ...(pluginManager === undefined ? {} : { pluginManager }),
     }
   }
-  const launchedDir = undefined
-  const profileDir = launchedDir ?? resolve(env.DSH_PROFILE_DIR ?? resolve(home, '.dsh', 'profiles', 'web'))
+  const profileDir = resolve(env.DSH_PROFILE_DIR ?? resolve(home, '.dsh', 'profiles', 'web'))
   const selected = profileNameFromArgv(argv)
   const profileName = validProfileName(selected) ? selected : validProfileName(basename(profileDir)) ? basename(profileDir) : 'web'
   const detectedRoot = detectHostRuntimeRoot(env)
@@ -413,7 +410,21 @@ export type DependencyOperationResult = {
   updatedCount: number
   results: readonly DependencyTargetResult[]
 }
-export type DependencyTargetResult = { packageName: string; application: DependencyApplication; changed: boolean | null; restartReason?: string; restore?: { application: DependencyApplication; changed: boolean } }
+export type DependencyTargetError = {
+  code?: string
+  diagnostic?: string
+  kind?: string
+  message?: string
+}
+
+export type DependencyTargetResult = {
+  packageName: string
+  application: DependencyApplication
+  changed: boolean | null
+  restartReason?: string
+  restore?: { application: DependencyApplication; changed: boolean }
+  error?: DependencyTargetError
+}
 export type UpdateAllDependenciesResult = DependencyOperationResult
 
 /** 顶部批量操作同时安装缺失插件并更新落后版本。 */
@@ -482,18 +493,42 @@ async function installDependenciesLocked(
         } else {
           raw = await runtime.pluginManager.installBundle(`${target.packageName}@${target.version}`)
         }
-      } catch {
-        results.push({ packageName: target.packageName, application: 'failed', changed: null })
+      } catch (caught) {
+        results.push({
+          packageName: target.packageName,
+          application: 'failed',
+          changed: null,
+          error: { message: caught instanceof Error ? caught.message : String(caught) },
+        })
         break
       }
-      const change = raw !== null && typeof raw === 'object' ? raw as { application?: unknown; changed?: unknown; restartReason?: unknown } : undefined
+      const change = raw !== null && typeof raw === 'object' ? raw as Record<string, unknown> : undefined
       const valid = change && typeof change.changed === 'boolean' && ['applied', 'restart-required', 'overridden', 'failed', 'cancelled'].includes(String(change.application))
       const application = valid ? change.application as DependencyApplication : 'failed'
       const restored = restore !== null && typeof restore === 'object' ? restore as { application?: unknown; changed?: unknown } : undefined
       const validRestore = restored && typeof restored.changed === 'boolean' && ['applied', 'restart-required', 'overridden', 'failed', 'cancelled'].includes(String(restored.application))
+      let errorInfo: DependencyTargetError | undefined
+      if (change !== undefined) {
+        const errObj = change.error && typeof change.error === 'object' ? change.error as Record<string, unknown> : undefined
+        const pkgResult = change.packageResult && typeof change.packageResult === 'object' ? change.packageResult as Record<string, unknown> : undefined
+        const code = typeof errObj?.code === 'string' ? errObj.code : typeof change.code === 'string' ? change.code : undefined
+        const diagnostic = typeof errObj?.diagnostic === 'string' ? errObj.diagnostic : typeof change.diagnostic === 'string' ? change.diagnostic : undefined
+        const message = typeof errObj?.message === 'string' ? errObj.message : typeof change.error === 'string' ? change.error : undefined
+        const kind = typeof pkgResult?.kind === 'string' ? pkgResult.kind : undefined
+        if (code !== undefined || diagnostic !== undefined || message !== undefined || kind !== undefined) {
+          errorInfo = {
+            ...(code !== undefined ? { code } : {}),
+            ...(diagnostic !== undefined ? { diagnostic } : {}),
+            ...(message !== undefined ? { message } : {}),
+            ...(kind !== undefined ? { kind } : {}),
+          }
+        }
+      }
       results.push({ packageName: target.packageName, application, changed: valid ? change.changed as boolean : null,
         ...(validRestore ? { restore: { application: restored.application as DependencyApplication, changed: restored.changed as boolean } } : {}),
-        ...(application === 'restart-required' && typeof change?.restartReason === 'string' && ['no-hmr', 'package-moved', 'host-module', 'unmanaged-plugin', 'module-comparison'].includes(change.restartReason) ? { restartReason: change.restartReason } : {}) })
+        ...(application === 'restart-required' && typeof change?.restartReason === 'string' && ['no-hmr', 'package-moved', 'host-module', 'unmanaged-plugin', 'module-comparison'].includes(change.restartReason) ? { restartReason: change.restartReason } : {}),
+        ...(errorInfo !== undefined ? { error: errorInfo } : {}),
+      })
       if (application === 'failed' || application === 'cancelled') break
     }
     const application = results.find(r => r.application === 'failed' || r.application === 'cancelled')?.application

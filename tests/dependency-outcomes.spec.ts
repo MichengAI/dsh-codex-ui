@@ -86,3 +86,41 @@ it('preserves update restore outcome on failure', async () => {
     expect(result.results[0]?.restore).toEqual({ application: 'restart-required', changed: true })
   } finally { fetchMock.mockRestore(); await rm(dir, { recursive: true, force: true }) }
 })
+
+it('preserves diagnostic error info on failure and names failing package in HTTP error', async () => {
+  const { apply } = await import('../src/index.ts')
+  const { CODEX_UI_API_ENDPOINTS } = await import('../src/business-api.ts')
+  const dir = await mkdtemp(join(tmpdir(), 'dcu-diag-'))
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ version: '1.0.0' })))
+  const routes = new Map<string, any>()
+  const services: Record<string, unknown> = {
+    webServer: { register: (route: any) => { routes.set(route.path, route); return () => {} } },
+    profileContext: { name: 'test', dir }, connection: { requestRejection: () => undefined },
+    pluginManager: {
+      installBundle: async () => ({
+        changed: false,
+        application: 'failed',
+        stage: 'install',
+        target: '@michengai/dsh-automation',
+        error: { code: 'operation-error', message: 'connection timeout' },
+        packageResult: { kind: 'timeout' },
+      }),
+    },
+  }
+  try {
+    await writeFile(join(dir, 'package.json'), JSON.stringify({ dsh: { profile: { bundles: [] } } }))
+    apply({ get: (key: string) => services[key], effect: (fn: () => unknown) => fn(), logger: { warn: () => {} } } as never)
+    let status = 0
+    let body = ''
+    await routes.get(CODEX_UI_API_ENDPOINTS.dependencies).handler(
+      { method: 'POST', url: '?dependency=schedule' },
+      { writeHead: (code: number) => { status = code }, end: (value: string) => { body = value } },
+    )
+    expect(status).toBe(503)
+    const parsed = JSON.parse(body)
+    expect(parsed.application).toBe('failed')
+    expect(parsed.results[0].error).toMatchObject({ code: 'operation-error', kind: 'timeout' })
+    expect(parsed.error).toContain('@michengai/dsh-automation')
+    expect(parsed.error).toMatch(/超时|timeout|失败/i)
+  } finally { fetchMock.mockRestore(); await rm(dir, { recursive: true, force: true }) }
+})

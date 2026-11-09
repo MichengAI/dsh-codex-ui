@@ -132,12 +132,35 @@ export function apply(ctx: Context): void {
               ? await updateAllDependencies(runtime)
               : await installDependency(url.searchParams.get('dependency'), runtime)
             const failed = result.application === 'failed' || result.application === 'cancelled'
+            let failureMessage: string | undefined
+            if (failed) {
+              if (result.application === 'cancelled') {
+                failureMessage = '依赖安装已取消。'
+              } else {
+                const failedItem = result.results.find(item => item.application === 'failed' || item.application === 'cancelled')
+                const pkg = failedItem?.packageName
+                const errKind = failedItem?.error?.kind
+                const errCode = failedItem?.error?.code
+                const errMsg = failedItem?.error?.message ?? failedItem?.error?.diagnostic
+                if (pkg) {
+                  if (errKind === 'timeout' || errCode === 'timeout' || /timeout|timed out/i.test(errMsg ?? '')) {
+                    failureMessage = `安装 ${pkg} 超时，请检查网络后重试。`
+                  } else if (errKind === 'build-blocked' || errCode === 'build-blocked' || /build-blocked|构建脚本/i.test(errMsg ?? '')) {
+                    failureMessage = `安装 ${pkg} 时构建脚本被阻止，请通过宿主插件管理器处理。`
+                  } else {
+                    failureMessage = `安装或更新 ${pkg} 失败。请检查网络或 npm registry 后重试。`
+                  }
+                } else {
+                  failureMessage = '从 npm 安装或更新依赖失败。请检查网络或 npm registry 后重试。'
+                }
+              }
+            }
             response.writeHead(failed ? 503 : 200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
             response.end(JSON.stringify({
               ...result,
               restartRequired: result.results.some(item => item.application === 'restart-required' || item.restore?.application === 'restart-required'),
               autoReload: false,
-              ...(failed ? { error: publicDependencyError(new Error(result.application === 'cancelled' ? '依赖安装已取消。' : '从 npm 安装或更新依赖失败。请检查网络或 npm registry 后重试。')) } : {}),
+              ...(failed && failureMessage !== undefined ? { error: publicDependencyError(new Error(failureMessage)) } : {}),
             }))
             return
           }
