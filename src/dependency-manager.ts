@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { readFile, rm, unlink, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { basename, isAbsolute, join, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { npmTotalDownloads } from './npm-downloads.ts'
 import { MANAGED_DEPENDENCIES, SUITE_MEMBER_PACKAGES, SUITE_PACKAGE, managedDependency, type ManagedDependencyId } from './dependencies.ts'
 
@@ -436,11 +437,39 @@ export async function updateAllDependencies(
   }
 }
 
+export type HostPluginOperations = {
+  runPluginCommand: (context: unknown, args: readonly string[], options: unknown) => Promise<{ exitCode: number | null; output: string }>
+}
+
+export async function resolveHostPluginOperations(runtime: DependencyRuntime): Promise<HostPluginOperations | undefined> {
+  if (runtime.runtimeRoots.length === 0) return undefined
+  const candidates = [
+    ...runtime.runtimeRoots.map(root => resolve(root, '..')),
+    dirname(process.execPath),
+    resolve(dirname(process.execPath), '..'),
+    'D:/Tools/nodejs/node_global/node_modules/@deepseek-ai/dsh',
+    'C:/Tools/nodejs/node_global/node_modules/@deepseek-ai/dsh',
+  ]
+  for (const candidate of candidates) {
+    const file = resolve(candidate, 'node_modules', '@deepseek-ai', 'dsh-plugin-manager', 'lib', 'types', 'operations.js')
+    if (existsSync(file)) {
+      try {
+        const mod = await import(pathToFileURL(file).href)
+        if (typeof mod.runPluginCommand === 'function') return mod as HostPluginOperations
+      } catch {
+        // ignore
+      }
+    }
+  }
+  return undefined
+}
+
 async function installDependenciesLocked(
   ids: readonly (string | null)[],
   runtime: DependencyRuntime,
 ): Promise<readonly DependencyStatus[]> {
-  if (typeof runtime.pluginManager?.installBundle !== 'function') {
+  const ops = await resolveHostPluginOperations(runtime)
+  if (typeof runtime.pluginManager?.installBundle !== 'function' && typeof ops?.runPluginCommand !== 'function') {
     throw new Error('DSH 宿主插件管理服务尚未就绪，请重启 DSH 后重试。')
   }
   const dependencies = [...new Set(ids)].map((id) => {
@@ -465,15 +494,41 @@ async function installDependenciesLocked(
   }))
   beginInstallProgress(targets.map(target => `${target.packageName}@${target.version}`).join(', '))
   try {
-    for (const target of targets) {
-      noteInstallOutput(`dsh: delegating ${target.packageName}@${target.version} to host pluginManager\n`)
-      if (typeof runtime.pluginManager.updateBundle === 'function' && isManagedPackageDeclared(target.packageName, declared)) {
-        await runtime.pluginManager.updateBundle(target.packageName, target.version)
-      } else {
-        await runtime.pluginManager.installBundle(`${target.packageName}@${target.version}`)
+    if (typeof runtime.pluginManager?.installBundle === 'function') {
+      for (const target of targets) {
+        noteInstallOutput(`dsh: delegating ${target.packageName}@${target.version} to host pluginManager\n`)
+        if (typeof runtime.pluginManager.updateBundle === 'function' && isManagedPackageDeclared(target.packageName, declared)) {
+          await runtime.pluginManager.updateBundle(target.packageName, target.version)
+        } else {
+          await runtime.pluginManager.installBundle(`${target.packageName}@${target.version}`)
+        }
+        await waitUntilPluginMounted(target.packageName, target.version, runtime)
       }
-      await waitUntilPluginMounted(target.packageName, target.version, runtime)
+      return dependencyStatuses(runtime)
     }
+
+    if (typeof ops?.runPluginCommand === 'function') {
+      const context = {
+        profile: runtime.profileName,
+        dir: runtime.profileDir,
+        cwd: runtime.profileDir,
+        installAnchor: runtime.runtimeRoots[0] ?? resolve(runtime.profileDir, 'package.json'),
+      }
+      const options = {
+        execution: 'service',
+        outputBytes: 16384,
+        activateNewBundles: true,
+        onOutput: (text: string) => noteInstallOutput(text),
+      }
+      for (const target of targets) {
+        noteInstallOutput(`dsh: installing ${target.packageName}@${target.version} via official runPluginCommand\n`)
+        const res = await ops.runPluginCommand(context, ['add', `${target.packageName}@${target.version}`], options)
+        if (res.exitCode !== 0) throw new Error(res.output || '官方插件安装命令执行失败。')
+        await waitUntilPluginMounted(target.packageName, target.version, runtime)
+      }
+      return dependencyStatuses(runtime)
+    }
+
     return dependencyStatuses(runtime)
   } finally {
     endInstallProgress()

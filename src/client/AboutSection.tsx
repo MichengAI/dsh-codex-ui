@@ -279,30 +279,6 @@ export function AboutSection(props: { t?: TranslateNS<typeof NS>; close?: () => 
     setInstalling(id)
     setMessage(undefined)
     try {
-      const pm = (ctx as any)?.remote?.pluginManager
-      if (typeof pm?.installBundle === 'function') {
-        setProgress({
-          active: true,
-          target: `${dependency.packageName}@${dependency.latestVersion ?? 'latest'}`,
-          seconds: 0,
-          lastLine: '',
-          phase: 'resolving',
-          done: 0,
-          total: null,
-          percent: null,
-          currentPackage: dependency.packageName,
-        })
-        if (dependency.installed && dependency.updateAvailable && typeof pm.updateBundle === 'function' && dependency.latestVersion) {
-          await pm.updateBundle(dependency.packageName, dependency.latestVersion)
-        } else {
-          await pm.installBundle(`${dependency.packageName}@latest`, { enabled: true })
-        }
-        if (!alive.current) return
-        await load()
-        setMessage({ error: false, text: t('about.restartRequired') })
-        return
-      }
-
       const response = await fetch(`${endpoint}?dependency=${encodeURIComponent(id)}`, { method: 'POST' })
       if ([401, 403, 503].includes(response.status)) throw new BusinessRequestError(response.status)
       const payload = await response.json() as { dependencies?: unknown; error?: unknown; autoReload?: unknown }
@@ -326,33 +302,6 @@ export function AboutSection(props: { t?: TranslateNS<typeof NS>; close?: () => 
     setInstalling('all')
     setMessage(undefined)
     try {
-      const pm = (ctx as any)?.remote?.pluginManager
-      if (typeof pm?.installBundle === 'function') {
-        const actionable = dependencies.filter(dep => !dep.installed || dep.updateAvailable)
-        for (const dep of actionable) {
-          setProgress({
-            active: true,
-            target: `${dep.packageName}@${dep.latestVersion ?? 'latest'}`,
-            seconds: 0,
-            lastLine: '',
-            phase: 'resolving',
-            done: 0,
-            total: null,
-            percent: null,
-            currentPackage: dep.packageName,
-          })
-          if (dep.installed && dep.updateAvailable && typeof pm.updateBundle === 'function' && dep.latestVersion) {
-            await pm.updateBundle(dep.packageName, dep.latestVersion)
-          } else {
-            await pm.installBundle(`${dep.packageName}@latest`, { enabled: true })
-          }
-        }
-        if (!alive.current) return
-        await load()
-        setMessage({ error: false, text: t('about.restartRequired') })
-        return
-      }
-
       const response = await fetch(`${endpoint}?action=update-all`, { method: 'POST' })
       if ([401, 403, 503].includes(response.status)) throw new BusinessRequestError(response.status)
       const payload = await response.json() as { dependencies?: unknown; error?: unknown; restartRequired?: unknown; autoReload?: unknown }
