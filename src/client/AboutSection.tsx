@@ -280,9 +280,16 @@ export function AboutSection(props: { t?: TranslateNS<typeof NS>; close?: () => 
     setMessage(undefined)
     try {
       const response = await fetch(`${endpoint}?dependency=${encodeURIComponent(id)}`, { method: 'POST' })
-      if ([401, 403, 503].includes(response.status)) throw new BusinessRequestError(response.status)
-      const payload = await response.json() as { dependencies?: unknown; error?: unknown; autoReload?: unknown }
-      if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) throw new Error(typeof payload.error === 'string' ? payload.error : t('about.installFailed'))
+      let payload: { dependencies?: unknown; error?: unknown; autoReload?: unknown } = {}
+      try {
+        payload = await response.json() as { dependencies?: unknown; error?: unknown; autoReload?: unknown }
+      } catch {
+        // ignore
+      }
+      if ([401, 403].includes(response.status)) throw new BusinessRequestError(response.status)
+      if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) {
+        throw new Error(typeof payload.error === 'string' ? payload.error : t('about.installFailed'))
+      }
       if (!alive.current) return
       setDependencies(payload.dependencies)
       setState('ready')
@@ -303,9 +310,16 @@ export function AboutSection(props: { t?: TranslateNS<typeof NS>; close?: () => 
     setMessage(undefined)
     try {
       const response = await fetch(`${endpoint}?action=update-all`, { method: 'POST' })
-      if ([401, 403, 503].includes(response.status)) throw new BusinessRequestError(response.status)
-      const payload = await response.json() as { dependencies?: unknown; error?: unknown; restartRequired?: unknown; autoReload?: unknown }
-      if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) throw new Error(typeof payload.error === 'string' ? payload.error : t('about.installFailed'))
+      let payload: { dependencies?: unknown; error?: unknown; restartRequired?: unknown; autoReload?: unknown } = {}
+      try {
+        payload = await response.json() as { dependencies?: unknown; error?: unknown; restartRequired?: unknown; autoReload?: unknown }
+      } catch {
+        // ignore
+      }
+      if ([401, 403].includes(response.status)) throw new BusinessRequestError(response.status)
+      if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) {
+        throw new Error(typeof payload.error === 'string' ? payload.error : t('about.installFailed'))
+      }
       if (!alive.current) return
       setDependencies(payload.dependencies)
       setState('ready')

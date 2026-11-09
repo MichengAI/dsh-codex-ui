@@ -75,6 +75,22 @@ function profileNameFromArgv(argv: readonly string[]): string | undefined {
   return argv[2] === 'web' ? 'web' : undefined
 }
 
+function detectHostRuntimeRoot(env: NodeJS.ProcessEnv): string | undefined {
+  if (typeof env.DSH_RUNTIME_DIR === 'string' && isAbsolute(env.DSH_RUNTIME_DIR)) {
+    return resolve(env.DSH_RUNTIME_DIR)
+  }
+  const candidates = [
+    'D:/Tools/nodejs/node_global/node_modules/@deepseek-ai/dsh',
+    'C:/Tools/nodejs/node_global/node_modules/@deepseek-ai/dsh',
+    resolve(process.execPath, '..', 'resources', 'app', 'node_modules', '@deepseek-ai', 'dsh'),
+    resolve(process.cwd(), 'node_modules', '@deepseek-ai', 'dsh'),
+  ]
+  for (const candidate of candidates) {
+    if (existsSync(resolve(candidate, 'package.json'))) return candidate
+  }
+  return undefined
+}
+
 /**
  * 运行时解析：优先通过宿主 service 提取当前 Profile 与官方 pluginManager 服务，
  * 不再自建 CLI 探测与包管理 spawn。
@@ -91,9 +107,8 @@ export function resolveDependencyRuntime(ctx?: OptionalServiceContext, options: 
       throw new Error('DSH Desktop 当前 Profile 信息无效，请重启 Desktop 后重试。')
     }
     const profileDir = resolve(current.dir)
-    const runtimeRoots = typeof env.DSH_RUNTIME_DIR === 'string' && isAbsolute(env.DSH_RUNTIME_DIR)
-      ? [resolve(env.DSH_RUNTIME_DIR)]
-      : []
+    const detectedRoot = detectHostRuntimeRoot(env)
+    const runtimeRoots = detectedRoot !== undefined ? [detectedRoot] : []
     return {
       environmentKind: 'desktop',
       profileName: current.name,
@@ -108,7 +123,8 @@ export function resolveDependencyRuntime(ctx?: OptionalServiceContext, options: 
   const profileDir = launchedDir ?? resolve(env.DSH_PROFILE_DIR ?? resolve(home, '.dsh', 'profiles', 'web'))
   const selected = profileNameFromArgv(argv)
   const profileName = launchedName ?? (validProfileName(selected) ? selected : validProfileName(basename(profileDir)) ? basename(profileDir) : 'web')
-  const runtimeRoots = [env.DSH_RUNTIME_DIR].filter((root): root is string => root !== undefined && root !== '')
+  const detectedRoot = detectHostRuntimeRoot(env)
+  const runtimeRoots = detectedRoot !== undefined ? [detectedRoot] : []
   return {
     environmentKind: 'cli',
     profileName,
