@@ -1,4 +1,3 @@
-import { createElement } from 'react'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
@@ -20,8 +19,14 @@ import { observeDesktopTitlebarMenus, checkDesktopMenuEnabled } from './desktop-
 
 export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTriggers', 'layout', 'uiWorkspace', 'workspaces']
 
+let clientContext: ClientContext | undefined
+export function getClientContext(): ClientContext | undefined {
+  return clientContext
+}
+
 /** 浏览器客户端插件入口；保留官方原生侧边栏与工作区树，提供输入框增强、设置美化与生态关于页。 */
 export function apply(ctx: ClientContext): void {
+  clientContext = ctx
   ctx.effect(() => ctx.locale.register(NS, { zh, en, ja, es, fr, de, ru, pt }), 'michengai-codex-ui: dictionaries')
   const t = ctx.locale.bind(NS)
   // 侧栏增强共用一次探活：分区标题与会话未读都随 sidebar 子插件启停，但不需要各发一次请求。
@@ -100,5 +105,5 @@ export function apply(ctx: ClientContext): void {
     order: Number.MAX_SAFE_INTEGER,
     label: () => t('about.nav'),
     locale: NS,
-  }, (props: any) => createElement(AboutSection, { ctx, t, ...props })))
+  }, AboutSection))
 }

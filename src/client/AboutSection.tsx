@@ -9,6 +9,7 @@ import { NS } from './locales.ts'
 import { installErrorText } from './user-error.ts'
 import { ThemeSettingsCard } from './theme/ThemeSettingsCard.tsx'
 import { ComposerSettingsCard } from './composer/ComposerSettingsCard.tsx'
+import { getClientContext } from './index.ts'
 
 type DependencyStatus = { id: ManagedDependencyId; packageName: string; installed: boolean; version?: string; latestVersion?: string; updateAvailable: boolean; totalDownloads?: number }
 const PROJECT_HOMEPAGES = Object.fromEntries(MANAGED_DEPENDENCIES.map(({ id, packageName }) => [
@@ -159,8 +160,9 @@ function progressLabel(progress: InstallProgress, t: TranslateNS<typeof NS>): st
 }
 
 /** Codex UI 的功能说明、配套管理插件状态与受限安装入口。 */
-export function AboutSection(props: { t: TranslateNS<typeof NS>; close?: () => void; ctx?: any }) {
-  const { t, close, ctx } = props
+export function AboutSection(props: { t?: TranslateNS<typeof NS>; close?: () => void }) {
+  const t = props.t ?? ((key: string) => key)
+  const ctx = getClientContext()
   const [dependencies, setDependencies] = useState<readonly DependencyStatus[]>([])
   const [state, setState] = useState<LoadState>('loading')
   const [installing, setInstalling] = useState<InstallTarget>()
@@ -241,20 +243,31 @@ export function AboutSection(props: { t: TranslateNS<typeof NS>; close?: () => v
     }
   }, [installing])
   useEffect(() => {
-    const remote = (ctx as any)?.remote
-    if (typeof remote?.$on !== 'function') return
-    const unsubs = [
-      remote.$on('plugin-manager/install-state', (data: any) => {
-        if (data?.phase && typeof data.phase === 'string') {
-          setProgress(prev => prev ? { ...prev, phase: data.phase } : undefined)
-        }
-      }),
-      remote.$on('plugin-manager/changed', () => {
-        void load()
-      }),
-    ]
-    return () => {
-      unsubs.forEach(unsub => unsub?.())
+    try {
+      const remote = (ctx as any)?.remote
+      if (typeof remote?.$on !== 'function') return
+      const unsubs: Array<(() => void) | undefined> = []
+      try {
+        unsubs.push(remote.$on('plugin-manager/install-state', (data: any) => {
+          if (data?.phase && typeof data.phase === 'string') {
+            setProgress(prev => prev ? { ...prev, phase: data.phase } : undefined)
+          }
+        }))
+      } catch {
+        // ignore
+      }
+      try {
+        unsubs.push(remote.$on('plugin-manager/changed', () => {
+          void load()
+        }))
+      } catch {
+        // ignore
+      }
+      return () => {
+        unsubs.forEach(unsub => { try { unsub?.() } catch {} })
+      }
+    } catch {
+      // ignore
     }
   }, [ctx, load])
 
