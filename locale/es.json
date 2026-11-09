@@ -1,6 +1,7 @@
 {
   "meta": {
     "title": "Codex UI",
-    "description": "Mejoras de entrada e historial, interfaz de configuración en pantalla completa, menú de ventana de escritorio y gestión de complementos."
+    "description": "Mejoras de entrada e historial, interfaz de configuración en pantalla completa, menú de ventana de escritorio y gestión de complementos.",
+    "detail": "README.es.md"
   }
 }

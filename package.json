@@ -97,7 +97,13 @@
     "LICENSE",
     "README.md",
     "README.en.md",
-    "README.zh-CN.md"
+    "README.zh-CN.md",
+    "README.ja.md",
+    "README.es.md",
+    "README.fr.md",
+    "README.de.md",
+    "README.ru.md",
+    "README.pt.md"
   ],
   "dsh": {
     "manifestVersion": 1,

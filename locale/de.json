@@ -1,6 +1,7 @@
 {
   "meta": {
     "title": "Codex UI",
-    "description": "Eingabeverlauf- und Breitenanpassung, Vollbild-Einstellungs-Workbench, Desktop-Fenstermenü und Ökosystem-Plugin-Verwaltung."
+    "description": "Eingabeverlauf- und Breitenanpassung, Vollbild-Einstellungs-Workbench, Desktop-Fenstermenü und Ökosystem-Plugin-Verwaltung.",
+    "detail": "README.de.md"
   }
 }

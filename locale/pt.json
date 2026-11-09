@@ -1,6 +1,7 @@
 {
   "meta": {
     "title": "Codex UI",
-    "description": "Aprimoramentos de entrada e histórico, tela de configurações em tela cheia, menu da janela da área de trabalho e gerenciamento de plugins."
+    "description": "Aprimoramentos de entrada e histórico, tela de configurações em tela cheia, menu da janela da área de trabalho e gerenciamento de plugins.",
+    "detail": "README.pt.md"
   }
 }

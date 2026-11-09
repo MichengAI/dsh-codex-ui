@@ -1,6 +1,7 @@
 {
   "meta": {
     "title": "Codex UI",
-    "description": "Améliorations de saisie et historique, interface des paramètres plein écran, menu de fenêtre de bureau et gestion des plugins."
+    "description": "Améliorations de saisie et historique, interface des paramètres plein écran, menu de fenêtre de bureau et gestion des plugins.",
+    "detail": "README.fr.md"
   }
 }
