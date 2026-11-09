@@ -151,21 +151,30 @@ export function isInstallProgress(value: unknown): value is InstallProgress {
 function triggerOfficialInstallDialog(packageName: string): void {
   if (typeof document === 'undefined') return
   let attempts = 0
-  const maxAttempts = 25
+  const maxAttempts = 30
   const poll = () => {
     attempts += 1
+    // 先检查是否已经弹出了官方安装输入框
     let input = document.querySelector(
-      '[class*="installDialog"] input[type="text"], [class*="installBody"] input[type="text"], [class*="installField"] input[type="text"]'
+      '[role="dialog"] input[type="text"], [class*="installDialog"] input[type="text"], [class*="installBody"] input[type="text"], [class*="installField"] input[type="text"]'
     ) as HTMLInputElement | null
+
     if (input === null) {
-      const addBtn = document.querySelector(
-        'button[aria-label*="添加"], button[aria-label*="Add"], button[aria-label*="Install"], button[class*="addButton"]'
-      ) as HTMLElement | null
-      addBtn?.click()
+      // 严格在插件管理容器或非侧栏范围内查找「添加插件」按钮，严禁误触工作区侧栏的文件选择器
+      const candidates = Array.from(document.querySelectorAll<HTMLElement>(
+        '[class*="PluginManagerPage"] [class*="addButton"], [class*="PluginManagerPage"] button, button[aria-label*="插件"], button[aria-label*="plugin" i], button[aria-label*="Plugin"], button[aria-label*="плагин"], button[aria-label*="complemento"]'
+      ))
+      const safeAddBtn = candidates.find(btn => {
+        // 排除侧栏工作区、导航栏等任何外部容器，防止触发添加工作区目录/文件选择器
+        return btn.closest('aside, nav, [class*="sidebar"], [class*="workspace"], [class*="rail"]') === null
+      })
+      safeAddBtn?.click()
     }
+
     input = document.querySelector(
-      '[class*="installDialog"] input[type="text"], [class*="installBody"] input[type="text"], [class*="installField"] input[type="text"]'
+      '[role="dialog"] input[type="text"], [class*="installDialog"] input[type="text"], [class*="installBody"] input[type="text"], [class*="installField"] input[type="text"]'
     ) as HTMLInputElement | null
+
     if (input !== null) {
       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
       if (setter !== undefined) {
@@ -178,11 +187,12 @@ function triggerOfficialInstallDialog(packageName: string): void {
       input.focus()
       return
     }
+
     if (attempts < maxAttempts) {
-      setTimeout(poll, 80)
+      setTimeout(poll, 100)
     }
   }
-  setTimeout(poll, 50)
+  setTimeout(poll, 80)
 }
 
 function progressLabel(progress: InstallProgress, t: TranslateNS<typeof NS>): string {
