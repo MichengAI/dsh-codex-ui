@@ -60,8 +60,9 @@ export const ja: Record<CodexUiKey, string> = {
   'about.progress.resolving': '依存関係の解決中',
   'about.progressHint': 'プラグインをインストール中…',
   'about.refreshFailed': '依存関係の更新に失敗しました。前回の結果を表示しています。',
-  'about.restartManually': 'インストールが完了しました。DSH Web を再起動してページを更新してください。',
-  'about.restartRequired': 'プラグインをホットアップデート中です。ウィンドウは自動的に更新されます。',
+
+  'about.applied': '依存プラグインのインストールまたは更新が適用されました。',
+  'about.restartRequired': '依存プラグインをインストールまたは更新しました。変更を適用するには DSH ホストを再起動してください。',
   'about.statusFailed': '依存関係の状態を読み込めません。',
   'about.title': 'Codex UI',
   'about.totalDownloads': 'npm 累計ダウンロード',

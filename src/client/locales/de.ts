@@ -60,8 +60,9 @@ export const de: Record<CodexUiKey, string> = {
   'about.progress.resolving': 'Abhängigkeiten auflösen',
   'about.progressHint': 'Plugin wird installiert…',
   'about.refreshFailed': 'Aktualisierung fehlgeschlagen; letztes erfolgreiches Ergebnis wird angezeigt.',
-  'about.restartManually': 'Installation abgeschlossen. Starten Sie DSH Web neu und aktualisieren Sie die Seite.',
-  'about.restartRequired': 'Plugins werden aktualisiert. Das Fenster lädt sich automatisch neu.',
+
+  'about.applied': 'Abhängigkeiten installiert oder aktualisiert und angewendet.',
+  'about.restartRequired': 'Abhängigkeiten installiert oder aktualisiert. Starten Sie den DSH-Host neu, um Änderungen anzuwenden.',
   'about.statusFailed': 'Abhängigkeitsstatus kann nicht gelesen werden.',
   'about.title': 'Codex UI',
   'about.totalDownloads': 'npm Gesamtdownloads',

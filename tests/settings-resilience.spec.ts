@@ -2,6 +2,7 @@ import { createRequire } from 'node:module'
 import { act, createElement, type ReactNode } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { AboutSection } from '../src/client/AboutSection.tsx'
+import { zh, en, ja, es, fr, de, ru, pt } from '../src/client/locales.ts'
 
 const createRoot = (createRequire(import.meta.url)('react-dom/client') as {
   createRoot: (container: Element) => { render: (node: ReactNode) => void; unmount: () => void }
@@ -83,3 +84,76 @@ test('关于页已有数据刷新失败时保留内容并显示非阻断提示',
   }
 })
 
+
+
+test.each([
+  ['single', 'applied', 'about.applied'],
+  ['single', 'restart-required', 'about.restartRequired'],
+  ['all', 'applied', 'about.applied'],
+  ['all', 'restart-required', 'about.restartRequired'],
+  ['all', 'up-to-date', 'about.upToDate'],
+  ['all', 'restart-zero', 'about.restartRequired'],
+])('dependency %s click shows actual %s outcome', async (target, outcome, expected) => {
+  const before = [{ id: 'schedule', packageName: '@michengai/dsh-automation', installed: false, updateAvailable: false }]
+  const after = [{ ...before[0], installed: true }]
+  const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (init?.method === 'POST') return new Response(JSON.stringify({
+      dependencies: after, application: outcome === 'up-to-date' ? 'applied' : outcome === 'restart-zero' ? 'restart-required' : outcome,
+      updatedCount: outcome === 'up-to-date' || outcome === 'restart-zero' ? 0 : 1,
+      results: outcome === 'up-to-date' ? [] : [{ packageName: before[0].packageName }],
+    }), { status: 200 })
+    if (String(input).includes('action=progress')) return new Response('{}', { status: 200 })
+    return new Response(JSON.stringify({ dependencies: before }), { status: 200 })
+  })
+  vi.stubGlobal('fetch', fetcher)
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+  try {
+    await act(async () => { root.render(createElement(AboutSection, { t: ((key: string) => key) as never })) })
+    await flush()
+    const scope = target === 'single' ? container.querySelector('.dcu-about-dependency') : container.querySelector('.dcu-card-dependencies')
+    const button = [...(scope?.querySelectorAll('button') ?? [])].find(node => node.textContent?.includes(target === 'single' ? 'about.install' : 'about.updateAll'))
+    expect(button).toBeDefined()
+    await act(async () => { button!.click() })
+    await flush()
+    expect(fetcher.mock.calls.some(([url, init]) => init?.method === 'POST' && String(url).includes(target === 'single' ? 'dependency=schedule' : 'action=update-all'))).toBe(true)
+    const message = container.querySelector('.dcu-card-dependencies .dcu-about-message[role=status]')
+    expect(message?.textContent).toBe(expected)
+  } finally {
+    await act(async () => { root.unmount() })
+    container.remove()
+  }
+})
+
+
+test.each([zh, en, ja, es, fr, de, ru, pt])('every locale describes applied and restart outcomes distinctly', locale => {
+  expect(locale['about.applied']).toBeTruthy()
+  expect(locale['about.restartRequired']).toBeTruthy()
+  expect(locale['about.applied']).not.toBe(locale['about.restartRequired'])
+})
+
+test.each([
+  [200, {}],
+  [503, { application: 'applied' }],
+  [200, { application: 'failed' }],
+])('install rejects unconfirmed outcome HTTP %s', async (status, outcome) => {
+  const dependencies = [{ id: 'schedule', packageName: '@michengai/dsh-automation', installed: false, updateAvailable: false }]
+  vi.stubGlobal('fetch', vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) =>
+    new Response(JSON.stringify({ dependencies, ...(init?.method === 'POST' ? outcome : {}) }), { status: init?.method === 'POST' ? status : 200 })))
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+  try {
+    await act(async () => { root.render(createElement(AboutSection, { t: ((key: string) => key) as never })) })
+    await flush()
+    const button = [...container.querySelectorAll<HTMLButtonElement>('.dcu-about-dependency button')].find(node => node.textContent?.includes('about.install'))
+    expect(button).toBeDefined()
+    await act(async () => { button!.click() })
+    await flush()
+    expect(container.querySelector('.dcu-card-dependencies [role=alert]')?.textContent).toBe('about.installFailed')
+  } finally {
+    await act(async () => { root.unmount() })
+    container.remove()
+  }
+})

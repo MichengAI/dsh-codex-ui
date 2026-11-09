@@ -280,21 +280,21 @@ export function AboutSection(props: { t?: TranslateNS<typeof NS>; close?: () => 
     setMessage(undefined)
     try {
       const response = await fetch(`${endpoint}?dependency=${encodeURIComponent(id)}`, { method: 'POST' })
-      let payload: { dependencies?: unknown; error?: unknown; autoReload?: unknown } = {}
+      let payload: { dependencies?: unknown; error?: unknown; application?: unknown } = {}
       try {
-        payload = await response.json() as { dependencies?: unknown; error?: unknown; autoReload?: unknown }
+        payload = await response.json() as { dependencies?: unknown; error?: unknown; application?: unknown }
       } catch {
         // ignore
       }
       if ([401, 403].includes(response.status)) throw new BusinessRequestError(response.status)
-      if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) {
+      if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus) || (payload.application !== 'applied' && payload.application !== 'restart-required')) {
         throw new Error(typeof payload.error === 'string' ? payload.error : t('about.installFailed'))
       }
       if (!alive.current) return
       setDependencies(payload.dependencies)
       setState('ready')
       setRefreshFailed(false)
-      setMessage({ error: false, text: payload.autoReload === false ? t('about.restartManually') : t('about.restartRequired') })
+      setMessage({ error: false, text: payload.application === 'applied' ? t('about.applied') : t('about.restartRequired') })
     } catch (error) {
       if (!alive.current) return
       setMessage({ error: true, text: installErrorText(error, t) })
@@ -310,23 +310,23 @@ export function AboutSection(props: { t?: TranslateNS<typeof NS>; close?: () => 
     setMessage(undefined)
     try {
       const response = await fetch(`${endpoint}?action=update-all`, { method: 'POST' })
-      let payload: { dependencies?: unknown; error?: unknown; restartRequired?: unknown; autoReload?: unknown } = {}
+      let payload: { dependencies?: unknown; error?: unknown; application?: unknown; updatedCount?: unknown; results?: unknown } = {}
       try {
-        payload = await response.json() as { dependencies?: unknown; error?: unknown; restartRequired?: unknown; autoReload?: unknown }
+        payload = await response.json() as { dependencies?: unknown; error?: unknown; application?: unknown; updatedCount?: unknown; results?: unknown }
       } catch {
         // ignore
       }
       if ([401, 403].includes(response.status)) throw new BusinessRequestError(response.status)
-      if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus)) {
+      if (!response.ok || !Array.isArray(payload.dependencies) || !payload.dependencies.every(isDependencyStatus) || (payload.application !== 'applied' && payload.application !== 'restart-required')) {
         throw new Error(typeof payload.error === 'string' ? payload.error : t('about.installFailed'))
       }
       if (!alive.current) return
       setDependencies(payload.dependencies)
       setState('ready')
       setRefreshFailed(false)
-      setMessage({ error: false, text: payload.restartRequired === false
+      setMessage({ error: false, text: payload.application === 'applied' && payload.updatedCount === 0 && Array.isArray(payload.results) && payload.results.length === 0
         ? t('about.upToDate')
-        : payload.autoReload === false ? t('about.restartManually') : t('about.restartRequired') })
+        : payload.application === 'applied' ? t('about.applied') : t('about.restartRequired') })
     } catch (error) {
       if (!alive.current) return
       setMessage({ error: true, text: installErrorText(error, t) })

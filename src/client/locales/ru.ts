@@ -60,8 +60,9 @@ export const ru: Record<CodexUiKey, string> = {
   'about.progress.resolving': 'Разрешение зависимостей',
   'about.progressHint': 'Установка плагина…',
   'about.refreshFailed': 'Не удалось обновить статус; показан последний успешный результат.',
-  'about.restartManually': 'Установка завершена. Перезапустите DSH Web и обновите страницу.',
-  'about.restartRequired': 'Горячее обновление плагинов. Окно обновится автоматически.',
+
+  'about.applied': 'Зависимости установлены или обновлены и применены.',
+  'about.restartRequired': 'Зависимости установлены или обновлены. Перезапустите хост DSH, чтобы применить изменения.',
   'about.statusFailed': 'Не удалось прочитать статус зависимостей.',
   'about.title': 'Codex UI',
   'about.totalDownloads': 'Всего загрузок на npm',

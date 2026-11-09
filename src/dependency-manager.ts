@@ -1,13 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { readFile, rm, unlink, writeFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { basename, isAbsolute, join, resolve } from 'node:path'
 import { npmTotalDownloads } from './npm-downloads.ts'
 import { MANAGED_DEPENDENCIES, SUITE_MEMBER_PACKAGES, SUITE_PACKAGE, managedDependency, type ManagedDependencyId } from './dependencies.ts'
 
 export const PROFILE_PENDING_UPDATES_FILE = '.dsh-pending-updates.json'
-export const PLUGIN_MOUNT_TIMEOUT_MS = 15_000
 
 type PackageManifest = { version?: string }
 
@@ -153,19 +151,6 @@ function profileDirectory(runtime: DependencyRuntime): string {
   return runtime.profileDir
 }
 
-export async function removeUnmountedPackagePath(packageName: string, runtime: DependencyRuntime): Promise<void> {
-  const directory = profileDirectory(runtime)
-  const target = join(directory, 'node_modules', ...packageName.split('/'))
-  if (!existsSync(target)) return
-  try {
-    await unlink(target)
-    return
-  } catch {
-    // 不是软链接或无法 unlink 时尝试 rm
-  }
-  await rm(target, { recursive: true, force: true })
-}
-
 export function pluginsToRemoveBeforeInstall(declared: readonly string[], installingPackage: string): readonly string[] {
   if (installingPackage === SUITE_PACKAGE) return []
   return declared.includes(SUITE_PACKAGE) ? [SUITE_PACKAGE] : []
@@ -304,31 +289,6 @@ async function installedPackageVersion(packageName: string, runtime: DependencyR
   return undefined
 }
 
-export async function ensureProfileBundle(packageName: string, runtime: DependencyRuntime): Promise<void> {
-  const directory = profileDirectory(runtime)
-  const manifestPath = join(directory, 'package.json')
-  if (!existsSync(manifestPath)) return
-  try {
-    const raw = await readFile(manifestPath, 'utf8')
-    const content = JSON.parse(raw) as {
-      dsh?: { profile?: { bundles?: string[] } }
-    }
-    const currentBundles = Array.isArray(content.dsh?.profile?.bundles) ? content.dsh.profile.bundles : []
-    if (!currentBundles.includes(packageName)) {
-      content.dsh = {
-        ...content.dsh,
-        profile: {
-          ...content.dsh?.profile,
-          bundles: [...currentBundles, packageName],
-        },
-      }
-      await writeFile(manifestPath, JSON.stringify(content, null, 2) + '\n', 'utf8')
-    }
-  } catch {
-    // 忽略写入失败
-  }
-}
-
 export async function dependencyStatuses(runtime: DependencyRuntime = resolveDependencyRuntime()): Promise<readonly DependencyStatus[]> {
   const bundles = await profileBundleNames(runtime)
   return Promise.all(MANAGED_DEPENDENCIES.map(async (item) => {
@@ -431,37 +391,12 @@ export function noteInstallOutput(chunk: string): void {
   if (trimmed !== '') progressState.lastLine = trimmed.slice(0, 200)
 }
 
-export function pluginUnchangedError(): Error {
-  return new Error('安装命令已结束，但插件没有进入当前 Profile。请重试。')
-}
-
-async function waitUntilPluginMounted(
-  packageName: string,
-  version: string,
-  runtime: DependencyRuntime,
-  timeoutMs = PLUGIN_MOUNT_TIMEOUT_MS,
-): Promise<void> {
-  const deadline = Date.now() + Math.min(timeoutMs, 600)
-  while (Date.now() <= deadline) {
-    const declared = await declaredPluginNames(runtime)
-    const inBundles = isOfficialRuntimePackage(packageName) || isManagedPackageDeclared(packageName, declared)
-    const installed = await installedPackageVersion(packageName, runtime)
-    if (inBundles && installed !== undefined) {
-      await ensureProfileBundle(packageName, runtime)
-      return
-    }
-    await new Promise(resolve => setTimeout(resolve, 60))
-  }
-  // 官方安装命令已成功返回，自动确保登记 bundle 并平稳完成，绝不人为阻断
-  await ensureProfileBundle(packageName, runtime)
-}
-
 let installing = false
 
 export async function installDependency(
   id: string | null,
   runtime: DependencyRuntime = resolveDependencyRuntime(),
-): Promise<readonly DependencyStatus[]> {
+): Promise<DependencyOperationResult> {
   if (installing) throw new Error('已有依赖安装正在进行，请等待完成后再试。')
   installing = true
   try {
@@ -471,10 +406,15 @@ export async function installDependency(
   }
 }
 
-export type UpdateAllDependenciesResult = {
+export type DependencyApplication = 'applied' | 'restart-required' | 'overridden' | 'failed' | 'cancelled'
+export type DependencyOperationResult = {
   dependencies: readonly DependencyStatus[]
+  application: DependencyApplication
   updatedCount: number
+  results: readonly DependencyTargetResult[]
 }
+export type DependencyTargetResult = { packageName: string; application: DependencyApplication; changed: boolean | null; restartReason?: string; restore?: { application: DependencyApplication; changed: boolean } }
+export type UpdateAllDependenciesResult = DependencyOperationResult
 
 /** 顶部批量操作同时安装缺失插件并更新落后版本。 */
 export function updatableDependencyIds(statuses: readonly DependencyStatus[]): ManagedDependencyId[] {
@@ -489,47 +429,18 @@ export async function updateAllDependencies(
   try {
     const current = await dependencyStatuses(runtime)
     const ids = updatableDependencyIds(current)
-    if (ids.length === 0) return { dependencies: current, updatedCount: 0 }
-    const dependencies = await installDependenciesLocked(ids, runtime)
-    return { dependencies, updatedCount: ids.length }
+    if (ids.length === 0) return { dependencies: current, application: 'applied', updatedCount: 0, results: [] }
+    return await installDependenciesLocked(ids, runtime)
   } finally {
     installing = false
   }
 }
 
-export type HostPluginOperations = {
-  runPluginCommand: (context: unknown, args: readonly string[], options: unknown) => Promise<{ exitCode: number | null; output: string }>
-}
-
-export async function resolveHostPluginOperations(runtime: DependencyRuntime): Promise<HostPluginOperations | undefined> {
-  if (runtime.runtimeRoots.length === 0) return undefined
-  const candidates = [
-    ...runtime.runtimeRoots.map(root => resolve(root, '..')),
-    dirname(process.execPath),
-    resolve(dirname(process.execPath), '..'),
-    'D:/Tools/nodejs/node_global/node_modules/@deepseek-ai/dsh',
-    'C:/Tools/nodejs/node_global/node_modules/@deepseek-ai/dsh',
-  ]
-  for (const candidate of candidates) {
-    const file = resolve(candidate, 'node_modules', '@deepseek-ai', 'dsh-plugin-manager', 'lib', 'types', 'operations.js')
-    if (existsSync(file)) {
-      try {
-        const mod = await import(pathToFileURL(file).href)
-        if (typeof mod.runPluginCommand === 'function') return mod as HostPluginOperations
-      } catch {
-        // ignore
-      }
-    }
-  }
-  return undefined
-}
-
 async function installDependenciesLocked(
   ids: readonly (string | null)[],
   runtime: DependencyRuntime,
-): Promise<readonly DependencyStatus[]> {
-  const ops = await resolveHostPluginOperations(runtime)
-  if (typeof runtime.pluginManager?.installBundle !== 'function' && typeof ops?.runPluginCommand !== 'function') {
+): Promise<DependencyOperationResult> {
+  if (typeof runtime.pluginManager?.installBundle !== 'function') {
     throw new Error('DSH 宿主插件管理服务尚未就绪，请重启 DSH 后重试。')
   }
   const dependencies = [...new Set(ids)].map((id) => {
@@ -538,6 +449,9 @@ async function installDependenciesLocked(
     return dependency
   })
   const declared = await declaredPluginNames(runtime)
+  if (declared.includes(SUITE_PACKAGE) && dependencies.some(dependency => (SUITE_MEMBER_PACKAGES as readonly string[]).includes(dependency.packageName))) {
+    throw new Error('旧套件成员暂不支持自动迁移，请通过宿主插件管理器处理。')
+  }
   const requestedTargets = await Promise.all(dependencies.map(async (dependency) => {
     const latestVersion = await npmLatestVersion(dependency.packageName)
     if (latestVersion === undefined) throw new Error('无法获取 npm 最新版本，请检查网络或 npm registry 后重试。')
@@ -553,44 +467,38 @@ async function installDependenciesLocked(
     return { packageName, version }
   }))
   beginInstallProgress(targets.map(target => `${target.packageName}@${target.version}`).join(', '))
+  const results: DependencyTargetResult[] = []
   try {
-    if (typeof runtime.pluginManager?.installBundle === 'function') {
-      for (const target of targets) {
-        noteInstallOutput(`dsh: delegating ${target.packageName}@${target.version} to host pluginManager\n`)
-        if (typeof runtime.pluginManager.updateBundle === 'function' && isManagedPackageDeclared(target.packageName, declared)) {
-          await runtime.pluginManager.updateBundle(target.packageName, target.version)
+    for (const target of targets) {
+      noteInstallOutput(`dsh: delegating ${target.packageName}@${target.version} to host pluginManager`)
+      let raw: unknown
+      let restore: unknown
+      try {
+        const installed = await installedPackageVersion(target.packageName, runtime)
+        if (installed !== undefined && declared.includes(target.packageName) && typeof runtime.pluginManager.updateBundle === 'function') {
+          const update = await runtime.pluginManager.updateBundle(target.packageName, target.version)
+          raw = update !== null && typeof update === 'object' ? (update as { result?: unknown }).result : undefined
+          restore = update !== null && typeof update === 'object' ? (update as { restore?: unknown }).restore : undefined
         } else {
-          await runtime.pluginManager.installBundle(`${target.packageName}@${target.version}`)
+          raw = await runtime.pluginManager.installBundle(`${target.packageName}@${target.version}`)
         }
-        await waitUntilPluginMounted(target.packageName, target.version, runtime)
+      } catch {
+        results.push({ packageName: target.packageName, application: 'failed', changed: null })
+        break
       }
-      return dependencyStatuses(runtime)
+      const change = raw !== null && typeof raw === 'object' ? raw as { application?: unknown; changed?: unknown; restartReason?: unknown } : undefined
+      const valid = change && typeof change.changed === 'boolean' && ['applied', 'restart-required', 'overridden', 'failed', 'cancelled'].includes(String(change.application))
+      const application = valid ? change.application as DependencyApplication : 'failed'
+      const restored = restore !== null && typeof restore === 'object' ? restore as { application?: unknown; changed?: unknown } : undefined
+      const validRestore = restored && typeof restored.changed === 'boolean' && ['applied', 'restart-required', 'overridden', 'failed', 'cancelled'].includes(String(restored.application))
+      results.push({ packageName: target.packageName, application, changed: valid ? change.changed as boolean : null,
+        ...(validRestore ? { restore: { application: restored.application as DependencyApplication, changed: restored.changed as boolean } } : {}),
+        ...(application === 'restart-required' && typeof change?.restartReason === 'string' && ['no-hmr', 'package-moved', 'host-module', 'unmanaged-plugin', 'module-comparison'].includes(change.restartReason) ? { restartReason: change.restartReason } : {}) })
+      if (application === 'failed' || application === 'cancelled') break
     }
-
-    if (typeof ops?.runPluginCommand === 'function') {
-      const context = {
-        profile: runtime.profileName,
-        dir: runtime.profileDir,
-        cwd: runtime.profileDir,
-        installAnchor: runtime.runtimeRoots[0] ?? resolve(runtime.profileDir, 'package.json'),
-      }
-      const options = {
-        execution: 'service',
-        outputBytes: 16384,
-        activateNewBundles: true,
-        onOutput: (text: string) => noteInstallOutput(text),
-      }
-      for (const target of targets) {
-        noteInstallOutput(`dsh: installing ${target.packageName}@${target.version} via official runPluginCommand\n`)
-        const res = await ops.runPluginCommand(context, ['add', `${target.packageName}@${target.version}`], options)
-        if (res.exitCode !== 0) throw new Error(res.output || '官方插件安装命令执行失败。')
-        await ensureProfileBundle(target.packageName, runtime)
-        await waitUntilPluginMounted(target.packageName, target.version, runtime)
-      }
-      return dependencyStatuses(runtime)
-    }
-
-    return dependencyStatuses(runtime)
+    const application = results.find(r => r.application === 'failed' || r.application === 'cancelled')?.application
+      ?? (results.some(r => r.application === 'overridden') ? 'overridden' : results.some(r => r.application === 'restart-required') ? 'restart-required' : 'applied')
+    return { dependencies: await dependencyStatuses(runtime), application, updatedCount: results.filter(r => r.changed && r.application !== 'failed' && r.application !== 'cancelled').length, results }
   } finally {
     endInstallProgress()
   }

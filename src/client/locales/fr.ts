@@ -60,8 +60,9 @@ export const fr: Record<CodexUiKey, string> = {
   'about.progress.resolving': 'Résolution des dépendances',
   'about.progressHint': 'Installation du plugin…',
   'about.refreshFailed': 'Échec de l\'actualisation ; affichage du dernier résultat valide.',
-  'about.restartManually': 'Installation terminée. Redémarrez DSH Web puis actualisez la page.',
-  'about.restartRequired': 'Mise à jour à chaud des plugins. La fenêtre va s\'actualiser automatiquement.',
+
+  'about.applied': 'Dépendances installées ou mises à jour et appliquées.',
+  'about.restartRequired': 'Dépendances installées ou mises à jour. Redémarrez DSH pour appliquer les modifications.',
   'about.statusFailed': 'Impossible de lire l\'état des dépendances.',
   'about.title': 'Codex UI',
   'about.totalDownloads': 'Téléchargements totaux npm',

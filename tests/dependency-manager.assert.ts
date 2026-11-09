@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
-import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import {
@@ -16,18 +16,12 @@ import {
   newerVersion,
   noteHostInstallState,
   noteInstallOutput,
-  PLUGIN_MOUNT_TIMEOUT_MS,
-  pluginUnchangedError,
   pluginsToRemoveBeforeInstall,
   resolveDependencyRuntime,
   resolveDshPluginTarget,
   updatableDependencyIds,
 } from '../src/dependency-manager.ts'
 import { publicDependencyError } from '../src/index.ts'
-
-const managerModule = await import('../src/dependency-manager.ts') as unknown as {
-  removeUnmountedPackagePath?: (packageName: string, runtime: ReturnType<typeof resolveDependencyRuntime>) => Promise<void>
-}
 
 const desktopProfileDir = resolve('fixtures', 'desktop-profile')
 const desktopRuntimeDir = resolve('fixtures', 'desktop-runtime')
@@ -52,28 +46,6 @@ const customRuntime = resolveDependencyRuntime(undefined, {
 assert.equal(customRuntime.environmentKind, 'cli')
 assert.equal(customRuntime.profileName, 'custom')
 assert.equal(customRuntime.profileDir, resolve('fixtures', 'profiles', 'custom'), '普通 Web/CLI 必须继续尊重 DSH_PROFILE_DIR')
-
-assert.equal(typeof managerModule.removeUnmountedPackagePath, 'function', '安装缺失插件前必须提供残留 node_modules 清理')
-if (managerModule.removeUnmountedPackagePath !== undefined) {
-  const staleRoot = await mkdtemp(join(tmpdir(), 'dcu-stale-plugin-'))
-  const staleProfile = join(staleRoot, 'profile')
-  const staleTarget = join(staleRoot, 'local-skills-manager')
-  const stalePath = join(staleProfile, 'node_modules', '@michengai', 'dsh-skills-manager')
-  await mkdir(join(staleProfile, 'node_modules', '@michengai'), { recursive: true })
-  await mkdir(staleTarget)
-  await writeFile(join(staleTarget, 'sentinel.txt'), 'preserve target')
-  await writeFile(join(staleProfile, 'package.json'), JSON.stringify({ dsh: { profile: { bundles: [] } } }))
-  await symlink(staleTarget, stalePath, process.platform === 'win32' ? 'junction' : 'dir')
-  await managerModule.removeUnmountedPackagePath('@michengai/dsh-skills-manager', {
-    environmentKind: 'cli',
-    profileName: 'profile',
-    profileDir: staleProfile,
-    runtimeRoots: [],
-  })
-  assert.equal(existsSync(stalePath), false, '未挂载插件的旧链接必须删除')
-  assert.equal(existsSync(join(staleTarget, 'sentinel.txt')), true, '删除 Junction 不得伤及本地源码目录')
-  await rm(staleRoot, { recursive: true, force: true })
-}
 
 const statusRoot = await mkdtemp(join(tmpdir(), 'dcu-desktop-status-'))
 const statusProfile = join(statusRoot, 'profiles', 'desktop')
@@ -214,12 +186,6 @@ assert.deepEqual(
   ['ui', 'archive'],
   '一键安装/更新必须同时包含缺失插件与存在新版本的插件',
 )
-assert.match(
-  pluginUnchangedError().message,
-  /没有进入当前 Profile/,
-  '命令成功但未写入 bundles 时必须给出明确失败',
-)
-
 assert.equal(isOfficialRuntimePackage('@deepseek-ai/dsh'), true)
 assert.equal(isOfficialRuntimePackage('@michengai/dsh-codex-ui'), false)
 assert.equal(newerVersion('0.1.0-rc.7', '0.1.0-rc.8'), true, '同号 rc 必须能看出可升级')
@@ -264,6 +230,7 @@ try {
     dsh: { profile: { bundles: ['@michengai/dsh-agency-agents'] } },
     dependencies: { '@michengai/dsh-agency-agents': '0.1.0' },
   }), 'utf8')
+  await writeManifest(delegateRoot, '@michengai/dsh-agency-agents', '0.1.0')
   const calls: string[] = []
   const trackingPluginManager = {
     installBundle: async (spec: string) => {
@@ -277,14 +244,14 @@ try {
       const dir = join(delegateRoot, 'node_modules', ...name.split('/'))
       await mkdir(dir, { recursive: true })
       await writeFile(join(dir, 'package.json'), JSON.stringify({ name, version }), 'utf8')
-      return { status: 'ok' }
+      return { changed: true, application: 'applied', stage: 'enable', target: spec }
     },
     updateBundle: async (name: string, version: string) => {
       calls.push(`update:${name}@${version}`)
       const dir = join(delegateRoot, 'node_modules', ...name.split('/'))
       await mkdir(dir, { recursive: true })
       await writeFile(join(dir, 'package.json'), JSON.stringify({ name, version }), 'utf8')
-      return { status: 'ok' }
+      return { from: '0.1.0', to: version, step: 'install', result: { changed: true, application: 'applied', stage: 'enable', target: name } }
     },
     listBundles: async () => ({ status: 'ok', data: [] }),
   }

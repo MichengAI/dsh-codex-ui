@@ -127,17 +127,18 @@ export function apply(ctx: Context): void {
             return
           }
           if (request.method === 'POST') {
-            if (url.searchParams.get('action') === 'update-all') {
-              const runtime = resolveDependencyRuntime(ctx)
-              const { dependencies, updatedCount } = await updateAllDependencies(runtime)
-              response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-              response.end(JSON.stringify({ dependencies, restartRequired: updatedCount > 0, autoReload: true }))
-              return
-            }
             const runtime = resolveDependencyRuntime(ctx)
-            const dependencies = await installDependency(url.searchParams.get('dependency'), runtime)
-            response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-            response.end(JSON.stringify({ dependencies, restartRequired: true, autoReload: true }))
+            const result = url.searchParams.get('action') === 'update-all'
+              ? await updateAllDependencies(runtime)
+              : await installDependency(url.searchParams.get('dependency'), runtime)
+            const failed = result.application === 'failed' || result.application === 'cancelled'
+            response.writeHead(failed ? 503 : 200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+            response.end(JSON.stringify({
+              ...result,
+              restartRequired: result.results.some(item => item.application === 'restart-required' || item.restore?.application === 'restart-required'),
+              autoReload: false,
+              ...(failed ? { error: publicDependencyError(new Error(result.application === 'cancelled' ? '依赖安装已取消。' : '从 npm 安装或更新依赖失败。请检查网络或 npm registry 后重试。')) } : {}),
+            }))
             return
           }
           response.writeHead(405)
