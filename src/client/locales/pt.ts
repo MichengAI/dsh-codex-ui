@@ -44,7 +44,7 @@ export const pt: Record<CodexUiKey, string> = {
   'about.installPnpmMissing': 'pnpm não encontrado. Instale o pnpm e reinicie o DSH.',
   'about.installServiceUnavailable': 'O serviço de dependências do DSH Desktop não está pronto. Reinicie e tente novamente.',
   'about.installStoreMismatch': 'O diretório não coincide com o repositório pnpm. Feche o DSH Desktop completamente e tente novamente.',
-  'about.installStoreMismatchWeb': 'O diretório não coincide com o pnpm. Pare o DSH Web e tente novamente.',
+  'about.installStoreMismatchWeb': 'O diretório não coincide com o pnpm. Pare o DSH Web e tente novamente; se persistir, reinstale as dependências deste Perfil.',
   'about.installTimeout': 'Tempo limite de instalação do plugin esgotado. Verifique sua conexão de rede.',
   'about.installUnchanged': 'O comando foi concluído, mas o plugin não entrou neste perfil. Tente novamente.',
   'about.installWebFailed': 'Falha ao atualizar o plugin. Verifique a saída do terminal do DSH Web.',

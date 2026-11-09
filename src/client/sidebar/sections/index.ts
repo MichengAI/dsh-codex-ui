@@ -1415,8 +1415,10 @@ export function observeWorkspaceSections(
       menuItemsText.includes('删除会话') ||
       menuItemsText.includes('Session ID') ||
       menuItemsText.includes('移动到工作区') ||
-      /\b(session|fork|sitzung|séance|сесси|sessão)\b/i.test(menuItemsText) ||
-      menuItemsText.includes('セッション')
+      /\b(session|fork|sitzung|séance|сесси|сеанс|sessão|sesión)\b/i.test(menuItemsText) ||
+      menuItemsText.includes('セッション') ||
+      menuItemsText.includes('сеанс') ||
+      menuItemsText.includes('sesión')
     ) {
       assigningWorkspaceId = undefined
       return

@@ -81,6 +81,26 @@ describe('resolveSessionTitleLocale', () => {
   test('宿主 settings 的 locale.preference 优先于用户消息语言', () => {
     expect(resolveSessionTitleLocale({ preference: 'en' }, '评估一下项目')).toBe('en')
     expect(resolveSessionTitleLocale({ preference: 'zh-CN' }, 'review the login timeout')).toBe('zh')
+    expect(resolveSessionTitleLocale({ preference: 'ja' }, 'review')).toBe('ja')
+    expect(resolveSessionTitleLocale({ preference: 'de' }, 'review')).toBe('de')
+  })
+
+  test('settings 无 preference 时回退读取 host.locale 快照的 active 属性', () => {
+    const mockService = {
+      getSnapshot: () => ({ active: 'de', locales: [], revision: 1 }),
+    }
+    expect(resolveSessionTitleLocale({}, 'Baue eine neue Funktion', mockService)).toBe('de')
+    const mockJaService = {
+      getSnapshot: () => ({ active: 'ja', locales: [], revision: 1 }),
+    }
+    expect(resolveSessionTitleLocale(undefined, 'English text', mockJaService)).toBe('ja')
+  })
+
+  test('从消息文本智能推断日文假名与俄文西里尔字母', () => {
+    expect(resolveSessionTitleLocale(undefined, '認証フローを実装してください')).toBe('ja')
+    expect(resolveSessionTitleLocale(undefined, 'Добавь модульные тесты')).toBe('ru')
+    expect(resolveSessionTitleLocale(undefined, '实现一项新功能')).toBe('zh')
+    expect(resolveSessionTitleLocale(undefined, 'implement a new feature')).toBe('en')
   })
 })
 

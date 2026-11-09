@@ -114,7 +114,7 @@ function collectText(chunks: AsyncIterable<unknown>): Promise<string> {
 function hostLocale(host: SessionTitleHost, message?: string): SessionTitleLocale {
   const settings = host.get('settings') as { get?: (ns: string) => unknown } | undefined
   const section = typeof settings?.get === 'function' ? settings.get('locale') : undefined
-  return resolveSessionTitleLocale(section ?? host.get('locale'), message)
+  return resolveSessionTitleLocale(section, message, host.get('locale'))
 }
 
 export async function generateCodexSessionTitle(llm: TitleLlm, request: TitleRequest, locale: SessionTitleLocale = 'zh'): Promise<{ title: string; messageSeqs: number[]; model?: TitleRoute }> {

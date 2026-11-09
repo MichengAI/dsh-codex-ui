@@ -120,12 +120,12 @@ function localeFromTag(tag: string): SessionTitleLocale | undefined {
   return undefined
 }
 
-function parseLocaleValue(value: unknown): SessionTitleLocale | undefined {
+export function parseLocaleValue(value: unknown): SessionTitleLocale | undefined {
   if (typeof value === 'string') return localeFromTag(value)
   if (value === null || typeof value !== 'object') return undefined
-  const row = value as { getSnapshot?: () => unknown; locale?: unknown; lang?: unknown; language?: unknown; current?: unknown; preference?: unknown }
+  const row = value as { getSnapshot?: () => unknown; locale?: unknown; lang?: unknown; language?: unknown; current?: unknown; preference?: unknown; active?: unknown }
   if (typeof row.getSnapshot === 'function') return parseLocaleValue(row.getSnapshot())
-  for (const key of ['locale', 'lang', 'language', 'current', 'preference'] as const) {
+  for (const key of ['locale', 'lang', 'language', 'current', 'preference', 'active'] as const) {
     const parsed = parseLocaleValue(row[key])
     if (parsed !== undefined) return parsed
   }
@@ -164,8 +164,8 @@ export function alignThemeToMessage(theme: string, message: string): string {
   return fallback === '' ? theme : fallback
 }
 
-export function resolveSessionTitleLocale(source: unknown, message?: string): SessionTitleLocale {
-  return parseLocaleValue(source) ?? inferLocaleFromMessage(message) ?? 'zh'
+export function resolveSessionTitleLocale(source: unknown, message?: string, fallbackSource?: unknown): SessionTitleLocale {
+  return parseLocaleValue(source) ?? parseLocaleValue(fallbackSource) ?? inferLocaleFromMessage(message) ?? 'zh'
 }
 
 function inferLocaleFromTypeToken(token: string): SessionTitleLocale {
