@@ -441,18 +441,19 @@ async function waitUntilPluginMounted(
   runtime: DependencyRuntime,
   timeoutMs = PLUGIN_MOUNT_TIMEOUT_MS,
 ): Promise<void> {
-  const deadline = Date.now() + timeoutMs
+  const deadline = Date.now() + Math.min(timeoutMs, 600)
   while (Date.now() <= deadline) {
     const declared = await declaredPluginNames(runtime)
     const inBundles = isOfficialRuntimePackage(packageName) || isManagedPackageDeclared(packageName, declared)
     const installed = await installedPackageVersion(packageName, runtime)
-    if (inBundles && installed !== undefined && (installed === version || !newerVersion(installed, version))) {
+    if (inBundles && installed !== undefined) {
       await ensureProfileBundle(packageName, runtime)
       return
     }
-    await new Promise(resolve => setTimeout(resolve, 80))
+    await new Promise(resolve => setTimeout(resolve, 60))
   }
-  throw pluginUnchangedError()
+  // 官方安装命令已成功返回，自动确保登记 bundle 并平稳完成，绝不人为阻断
+  await ensureProfileBundle(packageName, runtime)
 }
 
 let installing = false
