@@ -148,53 +148,6 @@ export function isInstallProgress(value: unknown): value is InstallProgress {
     && (currentPackage === null || typeof currentPackage === 'string')
 }
 
-function triggerOfficialInstallDialog(packageName: string): void {
-  if (typeof document === 'undefined') return
-  let attempts = 0
-  const maxAttempts = 30
-  const poll = () => {
-    attempts += 1
-    // 先检查是否已经弹出了官方安装输入框
-    let input = document.querySelector(
-      '[role="dialog"] input[type="text"], [class*="installDialog"] input[type="text"], [class*="installBody"] input[type="text"], [class*="installField"] input[type="text"]'
-    ) as HTMLInputElement | null
-
-    if (input === null) {
-      // 严格在插件管理容器或非侧栏范围内查找「添加插件」按钮，严禁误触工作区侧栏的文件选择器
-      const candidates = Array.from(document.querySelectorAll<HTMLElement>(
-        '[class*="PluginManagerPage"] [class*="addButton"], [class*="PluginManagerPage"] button, button[aria-label*="插件"], button[aria-label*="plugin" i], button[aria-label*="Plugin"], button[aria-label*="плагин"], button[aria-label*="complemento"]'
-      ))
-      const safeAddBtn = candidates.find(btn => {
-        // 排除侧栏工作区、导航栏等任何外部容器，防止触发添加工作区目录/文件选择器
-        return btn.closest('aside, nav, [class*="sidebar"], [class*="workspace"], [class*="rail"]') === null
-      })
-      safeAddBtn?.click()
-    }
-
-    input = document.querySelector(
-      '[role="dialog"] input[type="text"], [class*="installDialog"] input[type="text"], [class*="installBody"] input[type="text"], [class*="installField"] input[type="text"]'
-    ) as HTMLInputElement | null
-
-    if (input !== null) {
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
-      if (setter !== undefined) {
-        setter.call(input, packageName)
-      } else {
-        input.value = packageName
-      }
-      input.dispatchEvent(new Event('input', { bubbles: true }))
-      input.dispatchEvent(new Event('change', { bubbles: true }))
-      input.focus()
-      return
-    }
-
-    if (attempts < maxAttempts) {
-      setTimeout(poll, 100)
-    }
-  }
-  setTimeout(poll, 80)
-}
-
 function progressLabel(progress: InstallProgress, t: TranslateNS<typeof NS>): string {
   if (progress.phase !== null) {
     const current = progress.currentPackage === null || progress.currentPackage === '' ? '' : ` · ${progress.currentPackage}`
@@ -287,62 +240,56 @@ export function AboutSection(props: { t: TranslateNS<typeof NS>; close?: () => v
       window.clearInterval(timer)
     }
   }, [installing])
-  const openOfficialPlugin = (packageName?: string, isInstalled?: boolean): boolean => {
-    try {
-      close?.()
-    } catch {
-      // 忽略关闭异常
+  useEffect(() => {
+    const remote = (ctx as any)?.remote
+    if (typeof remote?.$on !== 'function') return
+    const unsubs = [
+      remote.$on('plugin-manager/install-state', (data: any) => {
+        if (data?.phase && typeof data.phase === 'string') {
+          setProgress(prev => prev ? { ...prev, phase: data.phase } : undefined)
+        }
+      }),
+      remote.$on('plugin-manager/changed', () => {
+        void load()
+      }),
+    ]
+    return () => {
+      unsubs.forEach(unsub => unsub?.())
     }
-    const pluginNav = ctx?.reflect?.get?.('pluginNavigation') ?? ctx?.get?.('pluginNavigation') ?? ctx?.pluginNavigation
-    const layout = ctx?.layout ?? ctx?.get?.('layout')
-
-    // 场景 1：如果包已安装（更新场景），直达该包的官方详情页
-    if (isInstalled && typeof pluginNav?.openBundle === 'function' && packageName !== undefined && packageName !== '') {
-      pluginNav.openBundle(packageName)
-      return true
-    }
-
-    // 场景 2：如果包未安装（安装场景），先切到插件面板，并自动唤起官方安装弹窗填入包名
-    if (!isInstalled && packageName !== undefined && packageName !== '') {
-      if (typeof pluginNav?.openList === 'function') {
-        pluginNav.openList()
-      } else if (typeof layout?.selectPanel === 'function') {
-        layout.selectPanel('plugins')
-      } else if (typeof document !== 'undefined') {
-        const btn = document.querySelector('[data-panel="plugins"], button[aria-label*="插件"], button[aria-label*="Plugin"]') as HTMLElement | null
-        btn?.click()
-      }
-      triggerOfficialInstallDialog(packageName)
-      return true
-    }
-
-    // 场景 3：全部更新或通用导航，切到已安装列表
-    if (typeof pluginNav?.openList === 'function') {
-      pluginNav.openList()
-      return true
-    }
-    if (typeof layout?.selectPanel === 'function') {
-      layout.selectPanel('plugins')
-      return true
-    }
-    if (typeof document !== 'undefined') {
-      const btn = document.querySelector('[data-panel="plugins"], button[aria-label*="插件"], button[aria-label*="Plugin"]') as HTMLElement | null
-      if (btn !== null) {
-        btn.click()
-        return true
-      }
-    }
-    return false
-  }
+  }, [ctx, load])
 
   const install = async (id: ManagedDependencyId): Promise<void> => {
     if (installingRef.current !== undefined) return
     const dependency = dependencies.find(dep => dep.id === id)
-    if (openOfficialPlugin(dependency?.packageName, dependency?.installed)) return
+    if (dependency === undefined) return
     installingRef.current = id
     setInstalling(id)
     setMessage(undefined)
     try {
+      const pm = (ctx as any)?.remote?.pluginManager
+      if (typeof pm?.installBundle === 'function') {
+        setProgress({
+          active: true,
+          target: `${dependency.packageName}@${dependency.latestVersion ?? 'latest'}`,
+          seconds: 0,
+          lastLine: '',
+          phase: 'resolving',
+          done: 0,
+          total: null,
+          percent: null,
+          currentPackage: dependency.packageName,
+        })
+        if (dependency.installed && dependency.updateAvailable && typeof pm.updateBundle === 'function' && dependency.latestVersion) {
+          await pm.updateBundle(dependency.packageName, dependency.latestVersion)
+        } else {
+          await pm.installBundle(`${dependency.packageName}@latest`, { enabled: true })
+        }
+        if (!alive.current) return
+        await load()
+        setMessage({ error: false, text: t('about.restartRequired') })
+        return
+      }
+
       const response = await fetch(`${endpoint}?dependency=${encodeURIComponent(id)}`, { method: 'POST' })
       if ([401, 403, 503].includes(response.status)) throw new BusinessRequestError(response.status)
       const payload = await response.json() as { dependencies?: unknown; error?: unknown; autoReload?: unknown }
@@ -362,11 +309,37 @@ export function AboutSection(props: { t: TranslateNS<typeof NS>; close?: () => v
   }
   const updateAll = async (): Promise<void> => {
     if (installingRef.current !== undefined) return
-    if (openOfficialPlugin()) return
     installingRef.current = 'all'
     setInstalling('all')
     setMessage(undefined)
     try {
+      const pm = (ctx as any)?.remote?.pluginManager
+      if (typeof pm?.installBundle === 'function') {
+        const actionable = dependencies.filter(dep => !dep.installed || dep.updateAvailable)
+        for (const dep of actionable) {
+          setProgress({
+            active: true,
+            target: `${dep.packageName}@${dep.latestVersion ?? 'latest'}`,
+            seconds: 0,
+            lastLine: '',
+            phase: 'resolving',
+            done: 0,
+            total: null,
+            percent: null,
+            currentPackage: dep.packageName,
+          })
+          if (dep.installed && dep.updateAvailable && typeof pm.updateBundle === 'function' && dep.latestVersion) {
+            await pm.updateBundle(dep.packageName, dep.latestVersion)
+          } else {
+            await pm.installBundle(`${dep.packageName}@latest`, { enabled: true })
+          }
+        }
+        if (!alive.current) return
+        await load()
+        setMessage({ error: false, text: t('about.restartRequired') })
+        return
+      }
+
       const response = await fetch(`${endpoint}?action=update-all`, { method: 'POST' })
       if ([401, 403, 503].includes(response.status)) throw new BusinessRequestError(response.status)
       const payload = await response.json() as { dependencies?: unknown; error?: unknown; restartRequired?: unknown; autoReload?: unknown }
