@@ -29,5 +29,8 @@ describe('用户错误本地化', () => {
     expect(installErrorText(webStoreError, translator(zh))).toBe('插件目录与 pnpm 仓库不一致。请停止当前 DSH Web 后重试；仍失败时重新安装该 Profile 的依赖。')
     expect(installErrorText(webStoreError, translator(en))).toBe("The plugin directory and pnpm store do not match. Stop the current DSH Web host and try again; if it persists, reinstall this Profile's dependencies.")
     expect(installErrorText(new Error('unknown host detail'), translator(en))).toBe('Dependency installation failed. Try again later.')
+    expect(installErrorText(new Error('已有依赖安装正在进行，请等待完成后再试。'), translator(zh))).toBe('安装中')
+    expect(installErrorText(new Error('已有依赖安装正在进行，请等待完成后再试。'), translator(en))).toBe('Installing')
+    expect(installErrorText(new Error('旧套件成员暂不支持自动迁移，请通过宿主插件管理器处理。'), translator(zh))).toBe('DSH Desktop 依赖管理服务尚未就绪，请重启后重试。')
   })
 })
