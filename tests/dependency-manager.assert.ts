@@ -1,68 +1,38 @@
 import assert from 'node:assert/strict'
-import { EventEmitter } from 'node:events'
 import { existsSync, readFileSync } from 'node:fs'
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
-import type { ChildProcess } from 'node:child_process'
-import { dirname, join, resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
-import { PassThrough } from 'node:stream'
-import { pathToFileURL } from 'node:url'
-import { applyRequiredBuildPolicies, beginInstallProgress, canRequestParentReload, declareProfileBundle, dependencyStatuses, desktopPackageManagerFromArgv, directPackagesForInstall, endInstallProgress, ensurePnpmEntry, installProgressSnapshot, isManagedPackageDeclared, isManagedPackageInstalled, isOfficialDesktopHostEntry, isOfficialRuntimePackage, isRestartableInstallError, monitorPluginChild, newerVersion, noteInstallOutput, PLUGIN_MOUNT_TIMEOUT_MS, pluginCommandError, pluginExecArgv, pluginSpawnEnv, pluginToolSearchDirs, pluginUnchangedError, requestDesktopHotUpdate, pluginsToRemoveBeforeInstall, resolveCliBesideDesktopHost, resolveCliFromInstallAnchor, resolveDependencyRuntime, resolveDshPluginTarget, resolveDshCliEntry, resolveDshRuntimeRoot, runDshPlugin, updatableDependencyIds, withPnpmEntry } from '../src/dependency-manager.ts'
+import {
+  beginInstallProgress,
+  dependencyStatuses,
+  directPackagesForInstall,
+  endInstallProgress,
+  installDependency,
+  installProgressSnapshot,
+  isManagedPackageDeclared,
+  isManagedPackageInstalled,
+  isOfficialRuntimePackage,
+  newerVersion,
+  noteHostInstallState,
+  noteInstallOutput,
+  PLUGIN_MOUNT_TIMEOUT_MS,
+  pluginUnchangedError,
+  pluginsToRemoveBeforeInstall,
+  resolveDependencyRuntime,
+  resolveDshPluginTarget,
+  updatableDependencyIds,
+} from '../src/dependency-manager.ts'
 import { publicDependencyError } from '../src/index.ts'
 
-const sourceRoot = resolve('fixtures', 'deepseek-harness')
-const sourceEntry = join(sourceRoot, 'apps', 'cli', 'src', 'bin.ts')
-const installedRoot = resolve('fixtures', 'npm')
-const installedEntry = join(installedRoot, 'node_modules', '@deepseek-ai', 'dsh', 'dist', 'bin.mjs')
 const managerModule = await import('../src/dependency-manager.ts') as unknown as {
   removeUnmountedPackagePath?: (packageName: string, runtime: ReturnType<typeof resolveDependencyRuntime>) => Promise<void>
 }
 
-assert.equal(
-  resolveDshCliEntry(join('apps', 'cli', 'src', 'bin.ts'), sourceRoot),
-  sourceEntry,
-  '源码启动的相对 CLI 入口必须按当前工作目录收成绝对路径',
-)
-assert.equal(
-  resolveDshCliEntry(installedEntry, resolve('fixtures', 'elsewhere')),
-  installedEntry,
-  '已经是绝对路径的已安装 CLI 不得再拼接他人目录',
-)
-assert.equal(
-  resolveDshCliEntry(pathToFileURL(sourceEntry).href, resolve('fixtures', 'elsewhere')),
-  sourceEntry,
-  'file URL 入口必须转成当前机器的文件系统路径',
-)
-assert.equal(
-  resolveDshRuntimeRoot(installedEntry),
-  installedRoot,
-  '全局 npm 安装的 DSH 必须能从当前 CLI 入口识别包含 node_modules 的运行时目录',
-)
-assert.equal(
-  resolveDshRuntimeRoot(sourceEntry),
-  undefined,
-  '源码启动不应误判为全局 DSH 运行时',
-)
-
 const desktopProfileDir = resolve('fixtures', 'desktop-profile')
 const desktopRuntimeDir = resolve('fixtures', 'desktop-runtime')
-let desktopPluginArgs: readonly string[] | undefined
-let desktopPluginCwd: string | undefined
-const desktopPnpm = {
-  runPlugin(args: readonly string[], invokingDir: string) {
-    desktopPluginArgs = args
-    desktopPluginCwd = invokingDir
-    return {
-      stdout: new PassThrough(),
-      stderr: new PassThrough(),
-      done: Promise.resolve({ exitCode: 0, signal: null }),
-      cancel() {},
-    }
-  },
-}
 const desktopServices = new Map<string, unknown>([
   ['desktopProfiles', { current: { name: 'desktop', dir: desktopProfileDir } }],
-  ['desktopPnpm', desktopPnpm],
 ])
 const desktopRuntime = resolveDependencyRuntime({ get: name => desktopServices.get(name) }, {
   env: { DSH_RUNTIME_DIR: desktopRuntimeDir },
@@ -72,22 +42,11 @@ const desktopRuntime = resolveDependencyRuntime({ get: name => desktopServices.g
 assert.equal(desktopRuntime.environmentKind, 'desktop')
 assert.equal(desktopRuntime.profileName, 'desktop')
 assert.equal(desktopRuntime.profileDir, desktopProfileDir, 'Desktop 必须读取 Host 当前 profile，而不是回退到 web')
-assert.deepEqual(desktopRuntime.runtimeRoots, [desktopRuntimeDir], '旧 Desktop 明确提供的 DSH_RUNTIME_DIR 必须继续用于运行时版本检测')
-assert.equal(desktopRuntime.desktopPnpm, desktopPnpm, 'Desktop 安装必须复用 Host 提供的包管理服务')
-assert.throws(
-  () => resolveDependencyRuntime({ get: name => name === 'desktopProfiles' ? { current: { name: 'desktop', dir: desktopProfileDir } } : undefined }, { env: {} }),
-  /包管理服务尚未就绪/,
-  '检测到 Desktop 后若公开包管理服务缺失，必须失败而不是回退 ambient CLI',
-)
-assert.throws(
-  () => resolveDependencyRuntime({ get: name => name === 'desktopPnpm' ? desktopPnpm : undefined }, { env: {} }),
-  /Profile 服务尚未就绪/,
-  '检测到 Desktop 包管理服务后若 Profile 服务缺失，必须失败而不是回退 ambient CLI',
-)
+assert.deepEqual(desktopRuntime.runtimeRoots, [desktopRuntimeDir], 'Desktop 提供的 DSH_RUNTIME_DIR 必须继续用于运行时版本检测')
 
 const customRuntime = resolveDependencyRuntime(undefined, {
   env: { DSH_PROFILE_DIR: resolve('fixtures', 'profiles', 'custom') },
-  argv: ['/node', installedEntry, '--profile', 'custom'],
+  argv: ['/node', 'bin.mjs', '--profile', 'custom'],
   homeDir: resolve('fixtures', 'home'),
 })
 assert.equal(customRuntime.environmentKind, 'cli')
@@ -116,10 +75,6 @@ if (managerModule.removeUnmountedPackagePath !== undefined) {
   await rm(staleRoot, { recursive: true, force: true })
 }
 
-await runDshPlugin(['add', '@michengai/dsh-codex-ui@0.2.92'], desktopRuntime, 1_000)
-assert.deepEqual(desktopPluginArgs, ['add', '@michengai/dsh-codex-ui@0.2.92'])
-assert.equal(desktopPluginCwd, desktopProfileDir, 'Desktop 安装必须以当前 profile 作为调用目录')
-
 const statusRoot = await mkdtemp(join(tmpdir(), 'dcu-desktop-status-'))
 const statusProfile = join(statusRoot, 'profiles', 'desktop')
 const statusRuntimeRoot = join(statusRoot, 'app.asar.unpacked')
@@ -147,15 +102,6 @@ try {
   assert.equal(statuses.find(status => status.id === 'ui')?.installed, true, 'Desktop profile 中已声明且存在的 Codex UI 必须显示已安装')
   assert.equal(statuses.some(status => status.packageName === '@deepseek-ai/dsh'), false, '插件清单不应包含 DSH runtime')
   assert.equal(statuses.find(status => status.id === 'skills')?.installed, false, '当前 profile 未安装的精确包仍应显示缺失')
-
-  const statusesWithoutRuntimePath = await dependencyStatuses({
-    environmentKind: 'desktop',
-    profileName: 'desktop',
-    profileDir: statusProfile,
-    runtimeRoots: [],
-    desktopPnpm,
-  })
-  assert.equal(statusesWithoutRuntimePath.some(status => status.packageName === '@deepseek-ai/dsh'), false, '未公开 runtime 路径时也不显示 DSH')
 } finally {
   globalThis.fetch = previousFetch
   await rm(statusRoot, { recursive: true, force: true })
@@ -184,23 +130,6 @@ try {
 } finally {
   await rm(leftoverRoot, { recursive: true, force: true })
 }
-
-assert.equal(
-  applyRequiredBuildPolicies('packages:\n  - .\n'),
-  'packages:\n  - .\nallowBuilds:\n  protobufjs: false\n  koffi: false\n',
-  '干净 Profile 必须在安装前显式拒绝已知非必要构建脚本',
-)
-assert.equal(
-  applyRequiredBuildPolicies('allowBuilds:\n  esbuild: true\n'),
-  'allowBuilds:\n  protobufjs: false\n  koffi: false\n  esbuild: true\n',
-  '已有 allowBuilds 项必须保留',
-)
-assert.equal(
-  applyRequiredBuildPolicies('allowBuilds:\n  protobufjs: set this to true or false\n  koffi: true\n  protobufjs: false\n'),
-  'allowBuilds:\n  protobufjs: false\n  koffi: false\n',
-  'pnpm 占位值与重复项必须规范化成确定策略',
-)
-
 
 assert.equal(
   publicDependencyError(new Error('从 npm 安装或更新依赖失败。请检查网络或 npm registry 后重试。')),
@@ -286,216 +215,10 @@ assert.deepEqual(
   '一键安装/更新必须同时包含缺失插件与存在新版本的插件',
 )
 assert.match(
-  pluginCommandError('EPERM: unlink failed').message,
-  /完全退出桌面端/,
-  '文件占用必须提示先退出桌面端',
-)
-assert.match(
-  pluginCommandError('EPERM: unlink failed', 'cli').message,
-  /停止当前 DSH Web/,
-  'Web 文件占用不得提示退出 Desktop',
-)
-assert.match(
-  pluginCommandError('ERR_PNPM_UNEXPECTED_STORE Unexpected store location').message,
-  /pnpm 仓库不一致/,
-  'store 不一致必须给出明确原因',
-)
-assert.match(
-  pluginCommandError('ERR_PNPM_UNEXPECTED_STORE Unexpected store location', 'cli').message,
-  /停止当前 DSH Web/,
-  'Web store 不一致不得提示退出 Desktop',
-)
-assert.match(
-  pluginCommandError('unrecognized installer failure', 'cli').message,
-  /DSH Web 终端输出/,
-  'Web 未识别安装失败必须提示检查 Web 终端',
-)
-assert.match(
-  pluginCommandError('ERR_PNPM_IGNORED_BUILDS Ignored build scripts: protobufjs').message,
-  /allowBuilds/,
-  '未知构建脚本再次触发拦截时必须给出准确配置提示',
-)
-assert.match(
-  pluginCommandError('pnpm not found on PATH').message,
-  /找不到 pnpm/,
-  '英文 pnpm 缺失必须给出明确提示',
-)
-assert.match(
-  pluginCommandError('未找到 pnpm 入口，无法执行插件操作。').message,
-  /找不到 pnpm/,
-  'Desktop 桥接缺少 pnpm 入口时必须给出明确提示，不得误报成退出桌面端',
-)
-assert.equal(isRestartableInstallError(new Error('无法覆盖正在运行的插件文件。请先完全退出桌面端，再重新打开后更新。')), true)
-assert.match(
   pluginUnchangedError().message,
   /没有进入当前 Profile/,
   '命令成功但未写入 bundles 时必须给出明确失败',
 )
-assert.doesNotMatch(
-  readFileSync(new URL('../src/dependency-manager.ts', import.meta.url), 'utf8'),
-  /isRestartableInstallError\(error\)\) return dependencyStatuses/,
-  '文件占用不得假装安装成功并返回当前状态',
-)
-
-beginInstallProgress('@michengai/dsh-im-connect@0.1.29')
-noteInstallOutput('Progress: resolved 91, reused 90, downloaded 1, added 45\n')
-{
-  const snapshot = installProgressSnapshot()
-  assert.equal(snapshot.active, true, '安装过程中进度必须标记为进行中')
-  assert.equal(snapshot.target, '@michengai/dsh-im-connect@0.1.29')
-  assert.equal(snapshot.total, 91)
-  assert.equal(snapshot.done, 45)
-  assert.equal(snapshot.percent, 49)
-  assert.match(snapshot.lastLine, /resolved 91/)
-}
-endInstallProgress()
-assert.equal(installProgressSnapshot().active, false, '安装结束后进度必须结束')
-
-beginInstallProgress('dshmarket@1.38.1')
-noteInstallOutput('Progress: resolved 95, reused 91, downloaded 0, added 4\nDone in 1.4s using pnpm v11.24.0\n')
-assert.equal(installProgressSnapshot().percent, 100, 'pnpm Done 行必须把进度收成完成')
-assert.match(installProgressSnapshot().lastLine, /Done in 1\.4s/)
-endInstallProgress()
-
-beginInstallProgress('dshmarket@1.38.1')
-noteInstallOutput('未找到 pnpm 命令，无法执行插件操作')
-endInstallProgress()
-assert.match(installProgressSnapshot().lastLine, /未找到 pnpm/, '没有换行的最后一行输出也必须进入进度快照')
-
-assert.deepEqual(
-  pluginToolSearchDirs('win32', {
-    PNPM_HOME: 'D:\\pnpm',
-    LOCALAPPDATA: 'C:\\Local',
-    APPDATA: 'C:\\Roaming',
-  }, 'C:\\Users\\me', 'D:\\Tools\\nodejs'),
-  ['D:\\pnpm', join('C:\\Local', 'pnpm'), join('C:\\Roaming', 'npm'), 'D:\\Tools\\nodejs'],
-  'Windows 必须把独立安装器和 npm 全局目录补进 PATH',
-)
-{
-  const env = pluginSpawnEnv({
-    PATH: 'C:\\Windows\\system32',
-    PNPM_HOME: 'D:\\pnpm',
-    LOCALAPPDATA: 'C:\\Local',
-    APPDATA: 'C:\\Roaming',
-  }, 'win32', 'C:\\Users\\me', 'D:\\Tools\\nodejs')
-  assert.match(env.PATH ?? '', /D:\\pnpm/, '安装子进程必须能找到 PNPM_HOME')
-  assert.match(env.PATH ?? '', /nodejs/, '安装子进程必须能找到当前 Node 目录下的 pnpm')
-  assert.equal(env.CI, 'true')
-}
-
-{
-  const env: NodeJS.ProcessEnv = { DSH_PNPM_ENTRY: 'C:\\bundled\\pnpm.cjs' }
-  assert.equal(ensurePnpmEntry(env, 'D:\\missing-node'), 'C:\\bundled\\pnpm.cjs', '已有桌面 pnpm 入口不得被覆盖')
-}
-{
-  const corepackRoot = await mkdtemp(join(tmpdir(), 'dcu-corepack-'))
-  await mkdir(join(corepackRoot, 'node_modules', 'corepack', 'dist'), { recursive: true })
-  const candidate = join(corepackRoot, 'node_modules', 'corepack', 'dist', 'pnpm.js')
-  await writeFile(candidate, '')
-  const env: NodeJS.ProcessEnv = { npm_execpath: 'C:\\node_modules\\npm\\bin\\npm-cli.js' }
-  assert.equal(ensurePnpmEntry(env, corepackRoot), candidate, 'Web 下的 Desktop 桥接必须能找到 Node 自带的 corepack pnpm')
-  assert.equal(env.DSH_PNPM_ENTRY, undefined, '解析 pnpm 入口不得改写调用方环境')
-  let observedEntry
-  assert.equal(withPnpmEntry(() => {
-    observedEntry = env.DSH_PNPM_ENTRY
-    return 'called'
-  }, env, corepackRoot), 'called')
-  assert.equal(observedEntry, candidate, '调用 Desktop 桥接时必须临时提供 pnpm 入口')
-  assert.equal(env.DSH_PNPM_ENTRY, undefined, 'Desktop 桥接调用返回后必须恢复环境')
-  await rm(corepackRoot, { recursive: true, force: true })
-}
-
-assert.ok(PLUGIN_MOUNT_TIMEOUT_MS >= 15_000, '等待 Desktop 写入 bundles 至少保留 15 秒')
-assert.equal(requestDesktopHotUpdate(undefined), false)
-assert.equal(canRequestParentReload(desktopRuntime, () => true), false, 'Desktop 包管理服务负责重载，插件不得重复发送 IPC')
-assert.equal(canRequestParentReload(customRuntime, () => true), true, '独立 Web 子进程可以请求父进程重载')
-const desktopHostEntry = '/runtime/node_modules/@deepseek-ai/dsh-desktop-host/lib/index.js'
-assert.equal(isOfficialDesktopHostEntry(desktopHostEntry), true)
-assert.equal(canRequestParentReload(customRuntime, () => true, desktopHostEntry), false, '官方 Desktop Host 的父进程不接受 apply-plugin-updates，不得通知')
-assert.equal(requestDesktopHotUpdate(() => { throw new TypeError("Cannot read properties of undefined (reading 'connected')") }), false, '热更新通知失败必须吞掉，不能打崩宿主')
-let sent
-assert.equal(requestDesktopHotUpdate((message) => { sent = message; return true }), true)
-assert.equal(sent, 'apply-plugin-updates')
-const previousSend = process.send
-const previousConnected = process.connected
-try {
-  let receiver: unknown
-  process.send = function (this: unknown, message: unknown) {
-    receiver = this
-    sent = message
-    return true
-  } as typeof process.send
-  process.connected = true
-  assert.equal(requestDesktopHotUpdate(), true, '真实 IPC 发送必须保留 process 作为 this')
-  assert.equal(receiver, process)
-  assert.equal(sent, 'apply-plugin-updates')
-  process.connected = false
-  assert.equal(requestDesktopHotUpdate(), false, 'IPC 已断开时不得再发送')
-  assert.equal(canRequestParentReload(customRuntime), false, 'IPC 已断开时必须走本地安装，不能空等父进程')
-} finally {
-  process.send = previousSend
-  process.connected = previousConnected
-}
-
-const hostProfileRoot = await mkdtemp(join(tmpdir(), 'dcu-desktop-host-'))
-const hostProfileDir = join(hostProfileRoot, 'profiles', 'desktop')
-const hostCli = join(hostProfileRoot, 'runtime', 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
-const hostAnchor = join(hostProfileRoot, 'runtime', 'node_modules', '@deepseek-ai', 'dsh', 'package.json')
-await mkdir(dirname(hostCli), { recursive: true })
-await mkdir(hostProfileDir, { recursive: true })
-await writeFile(hostAnchor, JSON.stringify({ bin: { dsh: 'lib/bin.js' } }))
-await writeFile(hostCli, '')
-const hostRuntime = resolveDependencyRuntime({
-  get: name => name === 'profileContext' ? {
-    name: 'desktop',
-    dir: hostProfileDir,
-    installAnchor: hostAnchor,
-    packageManager: { env: { PATH: '/desktop/bin', ELECTRON_RUN_AS_NODE: '1', ignored: 1 } },
-  } : undefined,
-}, {
-  env: {},
-  argv: ['/node', desktopHostEntry, hostProfileRoot],
-  homeDir: join(hostProfileRoot, 'home'),
-})
-assert.equal(resolveCliFromInstallAnchor(hostAnchor), hostCli)
-assert.equal(hostRuntime.environmentKind, 'cli', '没有 Desktop 包管理服务时不能假装托管重载')
-assert.equal(hostRuntime.profileName, 'desktop')
-assert.equal(hostRuntime.profileDir, hostProfileDir, '官方 Desktop Host 必须安装到当前 profile，而不是默认 web')
-assert.equal(hostRuntime.cliEntry, hostCli, 'Desktop Host 入口不能拿来执行 dsh plugin')
-assert.equal(hostRuntime.pluginEnv?.PATH, '/desktop/bin')
-assert.equal(hostRuntime.pluginEnv?.ignored, undefined, '包管理环境只保留字符串项')
-assert.equal(canRequestParentReload(hostRuntime, () => true, desktopHostEntry), false)
-const besideHostEntry = join(hostProfileRoot, 'runtime', 'node_modules', '@deepseek-ai', 'dsh-desktop-host', 'lib', 'index.js')
-assert.equal(resolveCliBesideDesktopHost(besideHostEntry), hostCli, '没有 profileContext 时也必须从同一次安装定位 dsh CLI')
-await writeFile(join(hostProfileDir, 'package.json'), '{}')
-const cwdRuntime = resolveDependencyRuntime(undefined, {
-  env: {},
-  argv: ['/node', besideHostEntry],
-  cwd: hostProfileDir,
-  homeDir: join(hostProfileRoot, 'home'),
-})
-assert.equal(cwdRuntime.profileDir, hostProfileDir, '官方 Desktop Host 的工作目录就是当前 profile')
-assert.equal(cwdRuntime.cliEntry, hostCli)
-assert.equal(canRequestParentReload(cwdRuntime, () => true, besideHostEntry), false)
-const packagedPnpm = join(hostProfileRoot, 'runtime', 'pnpm', 'bin', 'pnpm.mjs')
-const packagedBin = join(hostProfileRoot, 'runtime', 'bin')
-await mkdir(dirname(packagedPnpm), { recursive: true })
-await writeFile(packagedPnpm, '')
-const packagedRuntime = resolveDependencyRuntime(undefined, {
-  env: { PATH: '/existing' },
-  argv: ['/node', besideHostEntry, hostProfileRoot, hostProfileDir, join(hostProfileRoot, 'runtime', 'primary-runtime'), packagedPnpm, packagedBin],
-  cwd: hostProfileDir,
-  homeDir: join(hostProfileRoot, 'home'),
-})
-assert.equal(packagedRuntime.packageManager?.command, process.execPath, '没有 desktopPnpm 时必须改用宿主带上的 pnpm')
-assert.deepEqual(packagedRuntime.packageManager?.args, ['--expose-internals', packagedPnpm])
-assert.equal(packagedRuntime.packageManager?.env?.ELECTRON_RUN_AS_NODE, '1')
-assert.equal(desktopPackageManagerFromArgv(['/node', '/not-a-host']), undefined, '普通 CLI 不得伪装成 Desktop pnpm')
-await declareProfileBundle('@michengai/dsh-im-connect', packagedRuntime)
-const declaredBundles = JSON.parse(readFileSync(join(hostProfileDir, 'package.json'), 'utf8')) as { dsh: { profile: { bundles: string[] } } }
-assert.deepEqual(declaredBundles.dsh.profile.bundles, ['@michengai/dsh-im-connect'], '直接调用宿主 pnpm 后必须把插件写进 bundles')
-await rm(hostProfileRoot, { recursive: true, force: true })
-
 
 assert.equal(isOfficialRuntimePackage('@deepseek-ai/dsh'), true)
 assert.equal(isOfficialRuntimePackage('@michengai/dsh-codex-ui'), false)
@@ -506,35 +229,97 @@ assert.equal(newerVersion('0.1.0-alpha.9', '0.1.0-beta.1'), true, '预发布标�
 assert.equal(newerVersion('0.1.0-rc.1', '0.1.0'), true, '正式版必须高于同号预发布版')
 assert.equal(newerVersion('0.1.0', '0.1.0-rc.1'), false, '不得把同号预发布版推荐给正式版用户')
 assert.equal(newerVersion('0.1.0+build.1', '0.1.0+build.2'), false, '构建元数据不得影响版本先后')
-assert.deepEqual(pluginExecArgv(['--inspect=9229', '--trace-warnings', '--inspect-brk']), ['--trace-warnings'], '安装子进程不得继承调试端口参数')
 
-function fakeChild(): ChildProcess & { killedSignal?: NodeJS.Signals | number } {
-  const child = new EventEmitter() as ChildProcess & { killedSignal?: NodeJS.Signals | number }
-  Object.assign(child, {
-    stdout: null,
-    stderr: null,
-    exitCode: null,
-    killed: false,
-    kill(signal: NodeJS.Signals | number = 'SIGTERM') {
-      child.killedSignal = signal
-      ;(child as unknown as { killed: boolean }).killed = true
-      return true
+// 验证宿主官方 plugin-manager/install-state 广播阶段接收与状态对齐
+beginInstallProgress('@michengai/dsh-agency-agents@latest')
+noteHostInstallState({ phase: 'resolving', requestId: 'req-1' })
+assert.equal(installProgressSnapshot().phase, 'resolving', '官方 resolving 广播必须正确写入安装阶段')
+noteHostInstallState({ phase: 'downloading', attempt: 1 })
+assert.equal(installProgressSnapshot().phase, 'downloading', '官方 downloading 广播必须正确写入安装阶段')
+noteHostInstallState({ phase: 'linking' })
+assert.equal(installProgressSnapshot().phase, 'linking', '官方 linking 广播必须正确写入安装阶段')
+noteHostInstallState({ phase: 'building' })
+assert.equal(installProgressSnapshot().phase, 'building', '官方 building 广播必须正确写入安装阶段')
+noteHostInstallState({ phase: 'unknown-phase' })
+assert.equal(installProgressSnapshot().phase, 'building', '未知广播阶段不得污染现有状态')
+noteHostInstallState(null)
+assert.equal(installProgressSnapshot().phase, 'building', '空广播不得导致异常')
+endInstallProgress()
+
+// 验证宿主官方 pluginManager 服务注入与探测
+const mockPluginManager = {
+  installBundle: async (spec: string) => ({ status: 'ok', spec }),
+  updateBundle: async (name: string, version: string) => ({ status: 'ok', name, version }),
+  listBundles: async () => ({ status: 'ok', data: [] }),
+}
+const runtimeWithPluginManager = resolveDependencyRuntime({
+  get: (name: string) => name === 'pluginManager' ? mockPluginManager : undefined,
+})
+assert.equal(runtimeWithPluginManager.pluginManager, mockPluginManager, '宿主 pluginManager 服务必须透传至 DependencyRuntime')
+
+// 验证真实委托执行：当 pluginManager 存在时，installDependency 委托调用宿主方法
+const delegateRoot = await mkdtemp(join(tmpdir(), 'dcu-delegate-test-'))
+try {
+  await writeFile(join(delegateRoot, 'package.json'), JSON.stringify({
+    dsh: { profile: { bundles: ['@michengai/dsh-agency-agents'] } },
+    dependencies: { '@michengai/dsh-agency-agents': '0.1.0' },
+  }), 'utf8')
+  const calls: string[] = []
+  const trackingPluginManager = {
+    installBundle: async (spec: string) => {
+      calls.push(`install:${spec}`)
+      const at = spec.lastIndexOf('@')
+      const name = at > 0 ? spec.slice(0, at) : spec
+      const version = at > 0 ? spec.slice(at + 1) : '1.0.0'
+      const current = JSON.parse(readFileSync(join(delegateRoot, 'package.json'), 'utf8')) as { dsh: { profile: { bundles: string[] } } }
+      if (!current.dsh.profile.bundles.includes(name)) current.dsh.profile.bundles.push(name)
+      await writeFile(join(delegateRoot, 'package.json'), JSON.stringify(current), 'utf8')
+      const dir = join(delegateRoot, 'node_modules', ...name.split('/'))
+      await mkdir(dir, { recursive: true })
+      await writeFile(join(dir, 'package.json'), JSON.stringify({ name, version }), 'utf8')
+      return { status: 'ok' }
     },
-  })
-  return child
-}
+    updateBundle: async (name: string, version: string) => {
+      calls.push(`update:${name}@${version}`)
+      const dir = join(delegateRoot, 'node_modules', ...name.split('/'))
+      await mkdir(dir, { recursive: true })
+      await writeFile(join(dir, 'package.json'), JSON.stringify({ name, version }), 'utf8')
+      return { status: 'ok' }
+    },
+    listBundles: async () => ({ status: 'ok', data: [] }),
+  }
+  const delegateRuntime = {
+    environmentKind: 'cli' as const,
+    profileName: 'web',
+    profileDir: delegateRoot,
+    runtimeRoots: [],
+    pluginManager: trackingPluginManager,
+  }
+  const prevFetch = globalThis.fetch
+  globalThis.fetch = async (url) => new Response(JSON.stringify({ version: '1.0.0' }))
+  try {
+    await installDependency('schedule', delegateRuntime)
+    assert.equal(calls.some(call => call.startsWith('install:@michengai/dsh-automation@')), true, '未声明依赖必须通过宿主 installBundle 安装')
 
-{
-  const child = fakeChild()
-  const keepAlive = setTimeout(() => {}, 50)
-  await assert.rejects(monitorPluginChild(child, 5), /安装超时/, '安装子进程超时必须拒绝并释放互斥流程')
-  clearTimeout(keepAlive)
-  assert.equal(child.killedSignal, 'SIGTERM', '超时必须终止子进程')
-}
-{
-  const child = fakeChild()
-  const result = monitorPluginChild(child, 1_000)
-  child.emit('error', new Error('spawn failed'))
-  child.emit('exit', 1, null)
-  await assert.rejects(result, /无法启动 DSH/, 'error 与 exit 连续到达时 Promise 只能由首个错误结算')
+    calls.length = 0
+    await installDependency('experts', delegateRuntime)
+    assert.equal(calls.some(call => call.startsWith('update:@michengai/dsh-agency-agents@')), true, '已声明依赖必须优先通过宿主 updateBundle 升级')
+  } finally {
+    globalThis.fetch = prevFetch
+  }
+
+  // 严禁任何自建包管理兜底：没有 pluginManager 时必须直接抛错拒绝！
+  const runtimeWithoutPluginManager = {
+    environmentKind: 'cli' as const,
+    profileName: 'web',
+    profileDir: delegateRoot,
+    runtimeRoots: [],
+  }
+  await assert.rejects(
+    installDependency('schedule', runtimeWithoutPluginManager),
+    /DSH 宿主插件管理服务尚未就绪/,
+    '没有官方插件管理服务时必须直接拒绝，严禁自建包管理兜底',
+  )
+} finally {
+  await rm(delegateRoot, { recursive: true, force: true })
 }

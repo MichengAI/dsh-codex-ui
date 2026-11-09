@@ -1,7 +1,7 @@
 /** 浏览器客户端插件的 Host 入口；客户端逻辑由 dsh.client 加载。 */
 import type { Context } from '@deepseek-ai/cordis'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
-import { canRequestParentReload, dependencyStatuses, disposeDependencyInstaller, installDependency, installProgressSnapshot, resolveDependencyRuntime, scheduleParentPluginReload, updateAllDependencies } from './dependency-manager.ts'
+import { dependencyStatuses, installDependency, installProgressSnapshot, noteHostInstallState, resolveDependencyRuntime, updateAllDependencies } from './dependency-manager.ts'
 import { hostServices } from './host-services.ts'
 import {
   SectionsDocumentError,
@@ -102,6 +102,12 @@ export const inject = ['webServer']
 export function apply(ctx: Context): void {
   const host = hostServices(ctx)
   ctx.effect(() => {
+    if (typeof ctx.on !== 'function') return () => {}
+    return (ctx.on as (event: string, listener: (arg: unknown) => void) => () => void)('plugin-manager/install-state', (event: unknown) => {
+      noteHostInstallState(event)
+    })
+  }, 'codex-ui: host plugin-manager install state')
+  ctx.effect(() => {
     const disposeDependencies = host.webServer.register({
       kind: 'exact',
       path: dependenciesEndpoint,
@@ -123,29 +129,15 @@ export function apply(ctx: Context): void {
           if (request.method === 'POST') {
             if (url.searchParams.get('action') === 'update-all') {
               const runtime = resolveDependencyRuntime(ctx)
-              const notifyParent = canRequestParentReload(runtime)
-              const autoReload = runtime.environmentKind === 'desktop' || notifyParent
-              let restartAfterResponse = false
-              const { dependencies, updatedCount } = await updateAllDependencies(() => {
-                restartAfterResponse = notifyParent
-                return restartAfterResponse
-              }, runtime)
+              const { dependencies, updatedCount } = await updateAllDependencies(runtime)
               response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-              response.end(JSON.stringify({ dependencies, restartRequired: updatedCount > 0, autoReload }))
-              if (restartAfterResponse) scheduleParentPluginReload()
+              response.end(JSON.stringify({ dependencies, restartRequired: updatedCount > 0, autoReload: true }))
               return
             }
             const runtime = resolveDependencyRuntime(ctx)
-            const notifyParent = canRequestParentReload(runtime)
-            const autoReload = runtime.environmentKind === 'desktop' || notifyParent
-            let restartAfterResponse = false
-            const dependencies = await installDependency(url.searchParams.get('dependency'), () => {
-              restartAfterResponse = notifyParent
-              return restartAfterResponse
-            }, runtime)
+            const dependencies = await installDependency(url.searchParams.get('dependency'), runtime)
             response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-            response.end(JSON.stringify({ dependencies, restartRequired: true, autoReload }))
-            if (restartAfterResponse) scheduleParentPluginReload()
+            response.end(JSON.stringify({ dependencies, restartRequired: true, autoReload: true }))
             return
           }
           response.writeHead(405)
@@ -212,7 +204,6 @@ export function apply(ctx: Context): void {
     })
 
     return () => {
-      disposeDependencyInstaller()
       disposeDependencies()
       disposeSections?.()
     }
