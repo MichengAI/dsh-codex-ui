@@ -92,15 +92,32 @@ function detectHostRuntimeRoot(env: NodeJS.ProcessEnv): string | undefined {
 }
 
 /**
- * 运行时解析：优先通过宿主 service 提取当前 Profile 与官方 pluginManager 服务，
+ * 运行时解析：优先通过宿主官方 profileContext 服务提取当前 Profile，
  * 不再自建 CLI 探测与包管理 spawn。
  */
 export function resolveDependencyRuntime(ctx?: OptionalServiceContext, options: DependencyRuntimeOptions = {}): DependencyRuntime {
   const env = options.env ?? process.env
   const argv = options.argv ?? process.argv
   const home = options.homeDir ?? homedir()
-  const profiles = optionalService<DesktopProfilesService>(ctx, 'desktopProfiles')
+  const profileContext = optionalService<LaunchedProfileService>(ctx, 'profileContext')
   const pluginManager = optionalService<PluginManagerHostService>(ctx, 'pluginManager')
+  if (profileContext !== undefined) {
+    if (typeof profileContext.dir !== 'string' || !isAbsolute(profileContext.dir)) {
+      throw new Error('DSH 当前 Profile 路径无效，请重启 DSH 后重试。')
+    }
+    const profileDir = resolve(profileContext.dir)
+    const profileName = validProfileName(profileContext.name) ? profileContext.name : validProfileName(basename(profileDir)) ? basename(profileDir) : 'web'
+    const detectedRoot = detectHostRuntimeRoot(env)
+    const runtimeRoots = detectedRoot !== undefined ? [detectedRoot] : []
+    return {
+      environmentKind: profileName === 'desktop' ? 'desktop' : 'cli',
+      profileName,
+      profileDir,
+      runtimeRoots,
+      ...(pluginManager === undefined ? {} : { pluginManager }),
+    }
+  }
+  const profiles = optionalService<DesktopProfilesService>(ctx, 'desktopProfiles')
   if (profiles !== undefined) {
     const current = profiles.current
     if (!validProfileName(current?.name) || typeof current.dir !== 'string' || !isAbsolute(current.dir)) {
@@ -117,12 +134,10 @@ export function resolveDependencyRuntime(ctx?: OptionalServiceContext, options: 
       ...(pluginManager === undefined ? {} : { pluginManager }),
     }
   }
-  const launched = optionalService<LaunchedProfileService>(ctx, 'profileContext')
-  const launchedDir = typeof launched?.dir === 'string' && isAbsolute(launched.dir) ? resolve(launched.dir) : undefined
-  const launchedName = validProfileName(launched?.name) ? launched.name : undefined
+  const launchedDir = undefined
   const profileDir = launchedDir ?? resolve(env.DSH_PROFILE_DIR ?? resolve(home, '.dsh', 'profiles', 'web'))
   const selected = profileNameFromArgv(argv)
-  const profileName = launchedName ?? (validProfileName(selected) ? selected : validProfileName(basename(profileDir)) ? basename(profileDir) : 'web')
+  const profileName = validProfileName(selected) ? selected : validProfileName(basename(profileDir)) ? basename(profileDir) : 'web'
   const detectedRoot = detectHostRuntimeRoot(env)
   const runtimeRoots = detectedRoot !== undefined ? [detectedRoot] : []
   return {

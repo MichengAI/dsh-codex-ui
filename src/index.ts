@@ -96,7 +96,7 @@ function authenticateBusinessRequest(
   }
 }
 
-export const inject = ['webServer']
+export const inject = ['webServer', 'profileContext']
 
 /** 提供不泄露地址、命令和凭证的连接器目录。 */
 export function apply(ctx: Context): void {
