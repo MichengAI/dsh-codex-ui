@@ -289,6 +289,31 @@ async function installedPackageVersion(packageName: string, runtime: DependencyR
   return undefined
 }
 
+export async function ensureProfileBundle(packageName: string, runtime: DependencyRuntime): Promise<void> {
+  const directory = profileDirectory(runtime)
+  const manifestPath = join(directory, 'package.json')
+  if (!existsSync(manifestPath)) return
+  try {
+    const raw = await readFile(manifestPath, 'utf8')
+    const content = JSON.parse(raw) as {
+      dsh?: { profile?: { bundles?: string[] } }
+    }
+    const currentBundles = Array.isArray(content.dsh?.profile?.bundles) ? content.dsh.profile.bundles : []
+    if (!currentBundles.includes(packageName)) {
+      content.dsh = {
+        ...content.dsh,
+        profile: {
+          ...content.dsh?.profile,
+          bundles: [...currentBundles, packageName],
+        },
+      }
+      await writeFile(manifestPath, JSON.stringify(content, null, 2) + '\n', 'utf8')
+    }
+  } catch {
+    // 忽略写入失败
+  }
+}
+
 export async function dependencyStatuses(runtime: DependencyRuntime = resolveDependencyRuntime()): Promise<readonly DependencyStatus[]> {
   const bundles = await profileBundleNames(runtime)
   return Promise.all(MANAGED_DEPENDENCIES.map(async (item) => {
@@ -403,10 +428,13 @@ async function waitUntilPluginMounted(
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs
   while (Date.now() <= deadline) {
-    const bundles = await profileBundleNames(runtime)
-    const inBundles = isOfficialRuntimePackage(packageName) || isManagedPackageDeclared(packageName, bundles)
+    const declared = await declaredPluginNames(runtime)
+    const inBundles = isOfficialRuntimePackage(packageName) || isManagedPackageDeclared(packageName, declared)
     const installed = await installedPackageVersion(packageName, runtime)
-    if (inBundles && installed === version) return
+    if (inBundles && installed !== undefined && (installed === version || !newerVersion(installed, version))) {
+      await ensureProfileBundle(packageName, runtime)
+      return
+    }
     await new Promise(resolve => setTimeout(resolve, 80))
   }
   throw pluginUnchangedError()
@@ -540,6 +568,7 @@ async function installDependenciesLocked(
         noteInstallOutput(`dsh: installing ${target.packageName}@${target.version} via official runPluginCommand\n`)
         const res = await ops.runPluginCommand(context, ['add', `${target.packageName}@${target.version}`], options)
         if (res.exitCode !== 0) throw new Error(res.output || '官方插件安装命令执行失败。')
+        await ensureProfileBundle(target.packageName, runtime)
         await waitUntilPluginMounted(target.packageName, target.version, runtime)
       }
       return dependencyStatuses(runtime)
