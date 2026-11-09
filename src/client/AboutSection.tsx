@@ -148,6 +148,43 @@ export function isInstallProgress(value: unknown): value is InstallProgress {
     && (currentPackage === null || typeof currentPackage === 'string')
 }
 
+function triggerOfficialInstallDialog(packageName: string): void {
+  if (typeof document === 'undefined') return
+  let attempts = 0
+  const maxAttempts = 25
+  const poll = () => {
+    attempts += 1
+    let input = document.querySelector(
+      '[class*="installDialog"] input[type="text"], [class*="installBody"] input[type="text"], [class*="installField"] input[type="text"]'
+    ) as HTMLInputElement | null
+    if (input === null) {
+      const addBtn = document.querySelector(
+        'button[aria-label*="添加"], button[aria-label*="Add"], button[aria-label*="Install"], button[class*="addButton"]'
+      ) as HTMLElement | null
+      addBtn?.click()
+    }
+    input = document.querySelector(
+      '[class*="installDialog"] input[type="text"], [class*="installBody"] input[type="text"], [class*="installField"] input[type="text"]'
+    ) as HTMLInputElement | null
+    if (input !== null) {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
+      if (setter !== undefined) {
+        setter.call(input, packageName)
+      } else {
+        input.value = packageName
+      }
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+      input.focus()
+      return
+    }
+    if (attempts < maxAttempts) {
+      setTimeout(poll, 80)
+    }
+  }
+  setTimeout(poll, 50)
+}
+
 function progressLabel(progress: InstallProgress, t: TranslateNS<typeof NS>): string {
   if (progress.phase !== null) {
     const current = progress.currentPackage === null || progress.currentPackage === '' ? '' : ` · ${progress.currentPackage}`
@@ -240,22 +277,40 @@ export function AboutSection(props: { t: TranslateNS<typeof NS>; close?: () => v
       window.clearInterval(timer)
     }
   }, [installing])
-  const openOfficialPlugin = (packageName?: string): boolean => {
+  const openOfficialPlugin = (packageName?: string, isInstalled?: boolean): boolean => {
     try {
       close?.()
     } catch {
       // 忽略关闭异常
     }
     const pluginNav = ctx?.reflect?.get?.('pluginNavigation') ?? ctx?.get?.('pluginNavigation') ?? ctx?.pluginNavigation
-    if (typeof pluginNav?.openBundle === 'function' && packageName !== undefined && packageName !== '') {
+    const layout = ctx?.layout ?? ctx?.get?.('layout')
+
+    // 场景 1：如果包已安装（更新场景），直达该包的官方详情页
+    if (isInstalled && typeof pluginNav?.openBundle === 'function' && packageName !== undefined && packageName !== '') {
       pluginNav.openBundle(packageName)
       return true
     }
+
+    // 场景 2：如果包未安装（安装场景），先切到插件面板，并自动唤起官方安装弹窗填入包名
+    if (!isInstalled && packageName !== undefined && packageName !== '') {
+      if (typeof pluginNav?.openList === 'function') {
+        pluginNav.openList()
+      } else if (typeof layout?.selectPanel === 'function') {
+        layout.selectPanel('plugins')
+      } else if (typeof document !== 'undefined') {
+        const btn = document.querySelector('[data-panel="plugins"], button[aria-label*="插件"], button[aria-label*="Plugin"]') as HTMLElement | null
+        btn?.click()
+      }
+      triggerOfficialInstallDialog(packageName)
+      return true
+    }
+
+    // 场景 3：全部更新或通用导航，切到已安装列表
     if (typeof pluginNav?.openList === 'function') {
       pluginNav.openList()
       return true
     }
-    const layout = ctx?.layout ?? ctx?.get?.('layout')
     if (typeof layout?.selectPanel === 'function') {
       layout.selectPanel('plugins')
       return true
@@ -273,7 +328,7 @@ export function AboutSection(props: { t: TranslateNS<typeof NS>; close?: () => v
   const install = async (id: ManagedDependencyId): Promise<void> => {
     if (installingRef.current !== undefined) return
     const dependency = dependencies.find(dep => dep.id === id)
-    if (openOfficialPlugin(dependency?.packageName)) return
+    if (openOfficialPlugin(dependency?.packageName, dependency?.installed)) return
     installingRef.current = id
     setInstalling(id)
     setMessage(undefined)
