@@ -2,8 +2,8 @@ import type { Context } from '@deepseek-ai/cordis'
 import React from 'react'
 import { render, unmountComponentAtNode } from 'react-dom'
 import { classifySettingsButton, SETTINGS_NAV_GROUPS } from './model.ts'
-import { getNavSearchQuery, setNavSearchQuery, subscribeNavSearch, setSkinEnabledState, SettingsNavHeader } from './SettingsNavHeader.tsx'
-import { en, zh, NS } from '../locales.ts'
+import { getNavSearchQuery, subscribeNavSearch, setSkinEnabledState, SettingsNavHeader } from './SettingsNavHeader.tsx'
+import { en, zh } from '../locales.ts'
 
 export const SETTINGS_SKIN_STYLE_ID = 'dcu-official-settings-skin'
 

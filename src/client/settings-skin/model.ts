@@ -23,18 +23,18 @@ export function classifySettingsButton(text: string): SettingsNavGroup {
   const normalized = text.trim().toLowerCase()
 
   // 1. 个人偏好组（置顶核心个人设置）
-  if (/^(账号|账户|余额|account|balance)/i.test(normalized)) {
+  if (/^(账号|账户|余额|account|balance|アカウント|残高|cuenta|saldo|compte|solde|konto|guthaben|аккаунт|баланс|conta)/i.test(normalized)) {
     return 'personal'
   }
-  if (/^(通用|常规|偏好|general|preferences)/i.test(normalized)) {
+  if (/^(通用|常规|偏好|general|preferences|一般|環境設定|preferencias|général|préférences|allgemein|общие|настройки|geral|preferências)/i.test(normalized)) {
     return 'personal'
   }
 
   // 2. 记录与应用组（置底固定记录与关于）
-  if (/^(归档|已归档|历史|archive|archived)/i.test(normalized)) {
+  if (/^(归档|已归档|历史|archive|archived|history|アーカイブ|履歴|archivo|archivado|historial|archives|archivé|historique|archiviert|verlauf|архив|история|arquivad)/i.test(normalized)) {
     return 'records'
   }
-  if (/^(关于|codex ui|about)/i.test(normalized)) {
+  if (/^(关于|codex ui|about|について|acerca de|à propos|über|о программе|sobre)/i.test(normalized)) {
     return 'records'
   }
 

@@ -5,7 +5,6 @@ import {
   changeGlass,
   changeTheme,
   getThemeSettingsState,
-  isThemeSubPluginEnabled,
   subscribeThemeSettings,
   type GlassMode,
   type GlassPreset,

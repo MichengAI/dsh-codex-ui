@@ -1,11 +1,24 @@
-import { en, zh, type CodexUiKey } from './client/locales.ts'
+import { de, en, es, fr, ja, pt, ru, zh, type CodexUiKey } from './client/locales.ts'
 
 const AUTOMATION_SESSION_PREFIX = 'dsh-automation-session-'
 const CHANNEL_SESSION_PREFIX = 'im:'
 
 export const SESSION_TITLE_KINDS = ['feature', 'design', 'fix', 'optimize', 'release', 'explore', 'docs', 'research'] as const
 export type SessionTitleKind = (typeof SESSION_TITLE_KINDS)[number]
-export type SessionTitleLocale = 'zh' | 'en'
+
+export const SUPPORTED_SESSION_TITLE_LOCALES = ['zh', 'en', 'ja', 'es', 'fr', 'de', 'ru', 'pt'] as const
+export type SessionTitleLocale = (typeof SUPPORTED_SESSION_TITLE_LOCALES)[number]
+
+export const SESSION_TITLE_LOCALES: Record<SessionTitleLocale, Record<CodexUiKey, string>> = {
+  zh,
+  en,
+  ja,
+  es,
+  fr,
+  de,
+  ru,
+  pt,
+}
 
 export const SESSION_TITLE_SEPARATOR = '｜'
 export const SESSION_TITLE_MAX_BYTES = 80
@@ -55,15 +68,20 @@ export type SessionTitleTarget = {
 
 function typeLabel(kind: SessionTitleKind, locale: SessionTitleLocale): string {
   const key = TYPE_KEYS[kind]
-  return locale === 'en' ? en[key] : zh[key]
+  const dict = SESSION_TITLE_LOCALES[locale] ?? zh
+  return dict[key]
 }
 
 function typeAliasMap(): Map<string, SessionTitleKind> {
   const aliases = new Map<string, SessionTitleKind>()
   for (const kind of SESSION_TITLE_KINDS) {
     aliases.set(kind, kind)
-    aliases.set(zh[TYPE_KEYS[kind]], kind)
-    aliases.set(en[TYPE_KEYS[kind]].toLowerCase(), kind)
+    for (const locale of SUPPORTED_SESSION_TITLE_LOCALES) {
+      const dict = SESSION_TITLE_LOCALES[locale]
+      const label = dict[TYPE_KEYS[kind]]
+      aliases.set(label, kind)
+      aliases.set(label.toLowerCase(), kind)
+    }
   }
   return aliases
 }
@@ -75,11 +93,12 @@ function resolveKind(raw: string): SessionTitleKind | undefined {
 }
 
 export function sessionTitleTypeLabels(locale: SessionTitleLocale): string {
-  return SESSION_TITLE_KINDS.map(kind => typeLabel(kind, locale)).join(locale === 'en' ? ', ' : '、')
+  const separator = locale === 'zh' || locale === 'ja' ? '、' : ', '
+  return SESSION_TITLE_KINDS.map(kind => typeLabel(kind, locale)).join(separator)
 }
 
 export function sessionTitlePrompt(locale: SessionTitleLocale): { system: string; userFrame: string } {
-  const dict = locale === 'en' ? en : zh
+  const dict = SESSION_TITLE_LOCALES[locale] ?? zh
   const types = sessionTitleTypeLabels(locale)
   return {
     system: dict['sessionTitle.system'].replaceAll('{types}', types),
@@ -90,8 +109,14 @@ export function sessionTitlePrompt(locale: SessionTitleLocale): { system: string
 function localeFromTag(tag: string): SessionTitleLocale | undefined {
   const lower = tag.trim().toLowerCase()
   if (lower === '' || lower === 'c' || lower === 'posix') return undefined
-  if (lower === 'en' || lower.startsWith('en-')) return 'en'
   if (lower === 'zh' || lower.startsWith('zh-')) return 'zh'
+  if (lower === 'en' || lower.startsWith('en-')) return 'en'
+  if (lower === 'ja' || lower.startsWith('ja-')) return 'ja'
+  if (lower === 'es' || lower.startsWith('es-')) return 'es'
+  if (lower === 'fr' || lower.startsWith('fr-')) return 'fr'
+  if (lower === 'de' || lower.startsWith('de-')) return 'de'
+  if (lower === 'ru' || lower.startsWith('ru-')) return 'ru'
+  if (lower === 'pt' || lower.startsWith('pt-')) return 'pt'
   return undefined
 }
 
@@ -109,6 +134,8 @@ function parseLocaleValue(value: unknown): SessionTitleLocale | undefined {
 
 function inferLocaleFromMessage(text: string | undefined): SessionTitleLocale | undefined {
   if (text === undefined || text.trim() === '') return undefined
+  if (/[\u3040-\u30ff]/.test(text)) return 'ja'
+  if (/[\u0400-\u04ff]/.test(text)) return 'ru'
   if (/[㐀-鿿]/.test(text)) return 'zh'
   if (/[A-Za-z]/.test(text)) return 'en'
   return undefined
@@ -143,9 +170,12 @@ export function resolveSessionTitleLocale(source: unknown, message?: string): Se
 
 function inferLocaleFromTypeToken(token: string): SessionTitleLocale {
   const lower = token.toLowerCase()
-  for (const kind of SESSION_TITLE_KINDS) {
-    if (en[TYPE_KEYS[kind]].toLowerCase() === lower) return 'en'
-    if (zh[TYPE_KEYS[kind]] === token) return 'zh'
+  for (const locale of SUPPORTED_SESSION_TITLE_LOCALES) {
+    const dict = SESSION_TITLE_LOCALES[locale]
+    for (const kind of SESSION_TITLE_KINDS) {
+      const val = dict[TYPE_KEYS[kind]]
+      if (val === token || val.toLowerCase() === lower) return locale
+    }
   }
   return 'zh'
 }
@@ -188,7 +218,10 @@ function isRedundantAgainst(type: string, theme: string): boolean {
 
 export function isRedundantTheme(type: string, theme: string): boolean {
   const kind = resolveKind(type)
-  const labels = kind === undefined ? [type] : [typeLabel(kind, 'zh'), typeLabel(kind, 'en'), kind]
+  const labels = kind === undefined ? [type] : [
+    ...SUPPORTED_SESSION_TITLE_LOCALES.map(loc => typeLabel(kind, loc)),
+    kind,
+  ]
   return labels.some(label => isRedundantAgainst(label, theme))
 }
 

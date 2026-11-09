@@ -1,7 +1,15 @@
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
+import { ja } from './locales/ja.ts'
+import { es } from './locales/es.ts'
+import { fr } from './locales/fr.ts'
+import { de } from './locales/de.ts'
+import { ru } from './locales/ru.ts'
+import { pt } from './locales/pt.ts'
 
 /** 本插件独占的界面文案命名空间。 */
 export const NS = 'michengai.codexUi'
+
+export { ja, es, fr, de, ru, pt }
 
 export const zh = {
   'home.resizeInput': '拖动调整输入区宽度',
@@ -58,8 +66,6 @@ export const zh = {
   'about.title': 'Codex UI',
   'about.viewProject': 'GitHub',
   'about.feedback': '问题反馈',
-  'about.checkUpdate': '检查更新',
-  'about.checking': '正在检查更新…',
   'about.description': '输入框增强、全屏设置工作台美化、桌面窗口菜单与生态插件管理。',
   'about.features': '包含子插件与功能',
   'about.feature.composer.name': '输入框增强 (Composer)',
@@ -255,8 +261,6 @@ export const en: Record<keyof typeof zh, string> = {
   'about.title': 'Codex UI',
   'about.viewProject': 'GitHub',
   'about.feedback': 'Issues',
-  'about.checkUpdate': 'Check for updates',
-  'about.checking': 'Checking…',
   'about.description': 'Input enhancement, fullscreen settings workbench skin, desktop titlebar menu, and ecosystem plugin management.',
   'about.features': 'Built-in Sub-plugins & Capabilities',
   'about.feature.composer.name': 'Composer Enhancements',
@@ -307,7 +311,7 @@ export const en: Record<keyof typeof zh, string> = {
   'about.installExitDesktop': 'Quit DSH Desktop completely, reopen it, and try the update again.',
   'about.installStoreMismatch': 'The plugin directory and pnpm store do not match. Quit DSH Desktop completely and try again.',
   'about.installExitWeb': 'Running plugin files cannot be replaced. Stop the current DSH Web host, update the plugin from a terminal, then restart DSH Web.',
-  'about.installStoreMismatchWeb': "The plugin directory and pnpm store do not match. Stop the current DSH Web host and try again; if it persists, reinstall this Profile's dependencies.",
+  'about.installStoreMismatchWeb': 'The plugin directory and pnpm store do not match. Stop the current DSH Web host and try again; if it persists, reinstall this Profile\'s dependencies.',
   'about.installWebFailed': 'Plugin update failed. Check the DSH Web terminal output and try again.',
   'about.installBuildPolicy': 'The pnpm build-script policy for this plugin is not configured. Update the Profile configuration and try again.',
   'about.installPnpmMissing': 'pnpm is not available. Install pnpm, restart DSH, and try again.',

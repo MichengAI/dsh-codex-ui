@@ -1,6 +1,6 @@
 {
   "name": "@michengai/dsh-codex-ui",
-  "version": "2.0.19",
+  "version": "2.0.20",
   "description": "DSH Codex UI — 为 DeepSeek Harness 提供极速历史召回、全屏设置皮肤、原生物理毛玻璃换肤、模块化侧栏与桌面原生窗口菜单 · Input enhancement, settings skin, native glass theme, modular sidebar, and desktop titlebar menu for DSH",
   "license": "Apache-2.0",
   "publishConfig": {
@@ -15,6 +15,22 @@
     "url": "https://github.com/MichengAI/dsh-codex-ui/issues"
   },
   "homepage": "https://github.com/MichengAI/dsh-codex-ui#readme",
+  "author": {
+    "name": "MichengAI",
+    "url": "https://github.com/MichengAI"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "codex",
+    "ui",
+    "theme",
+    "glass",
+    "composer",
+    "sidebar",
+    "settings"
+  ],
+  "icon": "./assets/icon.svg",
   "type": "module",
   "packageManager": "pnpm@11.22.0",
   "engines": {
@@ -56,6 +72,13 @@
       "default": "./lib/desktop-menu-plugin.mjs"
     },
     "./package.json": "./package.json",
+    "./icon": "./assets/icon.svg",
+    "./session-title/icon": "./assets/icon.svg",
+    "./settings-skin/icon": "./assets/icon.svg",
+    "./composer/icon": "./assets/icon.svg",
+    "./sidebar/icon": "./assets/icon.svg",
+    "./theme/icon": "./assets/icon.svg",
+    "./desktop-menu/icon": "./assets/icon.svg",
     "./locale/*.json": "./locale/*.json",
     "./session-title/locale/*.json": "./locale/session-title/*.json",
     "./settings-skin/locale/*.json": "./locale/settings-skin/*.json",
@@ -77,6 +100,7 @@
     "README.zh-CN.md"
   ],
   "dsh": {
+    "manifestVersion": 1,
     "bundle": {
       "patch": "./cordis.patch.yml"
     },

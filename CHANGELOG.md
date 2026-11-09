@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.20] - 2026-11-09
+
+- **Full Support for All 8 Official DeepSeek Harness Languages**: Seamlessly integrated with the official localization system, providing native translations for Chinese, English, Japanese, Spanish, French, German, Russian, and Portuguese (`zh`, `en`, `ja`, `es`, `fr`, `de`, `ru`, `pt`). All starter suggestions, fullscreen settings workbench, sidebar partitions, context menus, and desktop window controls adapt immediately when switching languages.
+- **Multilingual Semantic Session Titles**: Auto-generated session titles now fully support all 8 official languages. Starting a conversation in Japanese, Russian, German, or other supported languages produces natural, consistent category tags and themes tailored to the selected language.
+
 ## [2.0.19] - 2026-11-05
 
 - **Mark Sessions as Unread / Read from Row Menu**: Right-click any conversation row or open its action menu to toggle sessions between "Mark as unread" and "Mark as read". Marked unread conversations instantly restore native green status dots and update the sidebar unread counter badge; opening or remarking clears them cleanly. The action item is neatly placed directly after "Pin session" and works consistently across all host versions.

@@ -331,20 +331,3 @@ export function reconcileHostOrder(
 
   return { state: { sections }, changed }
 }
-
-/** 按归属把新顺序灌进各分区。 */
-function rebuild(
-  sections: readonly WorkspaceSection[],
-  order: readonly string[],
-  assignments: ReadonlyMap<string, string>,
-): WorkspaceSection[] {
-  const next = sections.map(section => ({ id: section.id, name: section.name, ids: [] as string[] }))
-  const byId = new Map(next.map(section => [section.id, section]))
-  for (const id of order) {
-    const sectionId = assignments.get(id) ?? DEFAULT_SECTION_ID
-    const section = byId.get(sectionId) ?? byId.get(DEFAULT_SECTION_ID)
-    if (section === undefined) continue
-    section.ids.push(id)
-  }
-  return next
-}

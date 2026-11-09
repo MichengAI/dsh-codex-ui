@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { en, zh } from '../src/client/locales.ts'
+import { de, en, es, fr, ja, pt, ru, zh } from '../src/client/locales.ts'
 
 const CJK = /[㐀-鿿]/
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), '../src')
@@ -10,7 +10,10 @@ const srcRoot = join(dirname(fileURLToPath(import.meta.url)), '../src')
 function collectSource(dir: string): string {
   return readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
     const path = join(dir, entry.name)
-    if (entry.isDirectory()) return [collectSource(path)]
+    if (entry.isDirectory()) {
+      if (entry.name === 'locales') return []
+      return [collectSource(path)]
+    }
     return entry.name.endsWith('.ts') || entry.name.endsWith('.tsx') ? [readFileSync(path, 'utf8')] : []
   }).join('\n')
 }
@@ -21,11 +24,18 @@ const clientIndex = readFileSync(join(srcRoot, 'client/index.ts'), 'utf8')
 const aboutSection = readFileSync(join(srcRoot, 'client/AboutSection.tsx'), 'utf8')
 const used = source.replace(locales, '')
 
-for (const [key, value] of Object.entries(en)) {
-  assert.doesNotMatch(value, CJK, `英文词典 ${key} 不得残留中日韩字符`)
-  const zhParams = [...zh[key as keyof typeof zh].matchAll(/\{([^}]+)\}/g)].map(match => match[1]).sort()
-  const enParams = [...value.matchAll(/\{([^}]+)\}/g)].map(match => match[1]).sort()
-  assert.deepEqual(enParams, zhParams, `中英文词典 ${key} 的占位符必须一致`)
+const allLanguages = { en, ja, es, fr, de, ru, pt } as const
+
+for (const [lang, dict] of Object.entries(allLanguages)) {
+  for (const [key, value] of Object.entries(dict)) {
+    assert.ok(typeof value === 'string' && value.trim() !== '', `${lang} 词典 ${key} 不得为空`)
+    if (lang !== 'ja') {
+      assert.doesNotMatch(value, CJK, `${lang} 词典 ${key} 不得残留中日韩汉字字符`)
+    }
+    const zhParams = [...zh[key as keyof typeof zh].matchAll(/\{([^}]+)\}/g)].map(match => match[1]).sort()
+    const langParams = [...value.matchAll(/\{([^}]+)\}/g)].map(match => match[1]).sort()
+    assert.deepEqual(langParams, zhParams, `${lang} 词典 ${key} 的占位符必须与中文一致`)
+  }
 }
 
 assert.doesNotMatch(clientIndex, /throw new Error\('[^']*[㐀-鿿][^']*'\)/, '示例 Prompt 错误不得硬编码中文')

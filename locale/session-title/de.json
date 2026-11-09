@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Codex Sitzungstitel",
+    "description": "Erzeugt einen strukturierten Sitzungstitel aus der ersten Nachricht."
+  }
+}

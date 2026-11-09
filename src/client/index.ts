@@ -7,7 +7,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import type {} from '@deepseek-ai/dsh-session'
 import { AboutSection } from './AboutSection.tsx'
-import { en, NS, zh } from './locales.ts'
+import { de, en, es, fr, ja, NS, pt, ru, zh } from './locales.ts'
 import { observeSettingsSkin } from './settings-skin/index.ts'
 import { CodexUiNavIcon, observeSettingsNavIcon } from './settings-nav-icon.ts'
 import { observeComposerEnhancements } from './composer/index.tsx'
@@ -21,7 +21,7 @@ export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTrig
 
 /** 浏览器客户端插件入口；保留官方原生侧边栏与工作区树，提供输入框增强、设置美化与生态关于页。 */
 export function apply(ctx: ClientContext): void {
-  ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'michengai-codex-ui: dictionaries')
+  ctx.effect(() => ctx.locale.register(NS, { zh, en, ja, es, fr, de, ru, pt }), 'michengai-codex-ui: dictionaries')
   const t = ctx.locale.bind(NS)
   // 侧栏增强共用一次探活：分区标题与会话未读都随 sidebar 子插件启停，但不需要各发一次请求。
   const sidebarReady = checkSidebarEnabled()

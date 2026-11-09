@@ -321,16 +321,6 @@ export function AboutSection({ t }: { t: TranslateNS<typeof NS> }) {
           >
             {t('about.feedback')}
           </PrimitiveButton>
-          <PrimitiveButton
-            variant="outline"
-            size="sm"
-            icon={state === 'loading' ? <IconLoadingOutlineMedium size={14} /> : <IconRefreshOutlineMedium size={14} />}
-            aria-label={t('about.checkUpdate')}
-            disabled={state === 'loading' || installing !== undefined}
-            onClick={() => { void load() }}
-          >
-            {state === 'loading' ? t('about.checking') : t('about.checkUpdate')}
-          </PrimitiveButton>
         </div>
       </div>
       <div className="dcu-section-subtitle-wrap">

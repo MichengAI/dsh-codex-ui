@@ -31,6 +31,7 @@ When working across complex projects in DeepSeek Harness, users often encounter 
 * 🎨 **Native Physical Glass Themes**: 7 built-in high-quality color schemes (featuring Codex Dark & Paper Light), dual layout modes (Stock Flat vs. Mica Floating), 3-tier material presets, and ground glow switch;
 * 🧭 **Modular Dynamic Sidebar**: In-place smooth accordion drawer and fluid drag-and-drop reordering; **100% aligned with host official 56px native rail** when collapsed, keeping all icons crisp and New Session permanently visible;
 * 🧠 **Intelligent Session Titles**: Semantic understanding of initial user prompts, supporting 4096-token reasoning model contexts;
+* 🌐 **Full Official Multilingual i18n Support**: Native localization across all 8 official DeepSeek Harness languages (`zh`, `en`, `ja`, `es`, `fr`, `de`, `ru`, `pt`) for starter suggestions, settings workbench, context menus, and session titles;
 * 🖥️ **Desktop Native Menus**: Injects a clean Help menu into the official desktop app titlebar, supporting native page reload and reliable cross-platform app/Host restart;
 * 📦 **Ecosystem Companion Hub**: Centralized inspection, version checking, and 1-click batch upgrades for all official and third-party companion plugins.
 

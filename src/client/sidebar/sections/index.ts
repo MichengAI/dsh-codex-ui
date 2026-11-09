@@ -1329,7 +1329,6 @@ export function observeWorkspaceSections(
   const iconPin = (): string => hostIconMarkup('IconPinOutlineRegular')
   const iconPinned = (): string => hostIconMarkup('IconPinFillRegular')
   const iconSection = (): string => hostIconMarkup('IconChecklistOutlineRegular')
-  const iconCheck = (): string => hostIconMarkup('IconCheckOutlineRegular')
   const iconPlus = (): string => hostIconMarkup('IconPlusOutlineRegular')
   /** 分区展开箭头：和宿主项目行同一颗 `IconTriangleRightFillRegular`，展开时旋转 90°。 */
   const iconChevron = (): string => hostIconMarkup('IconTriangleRightFillRegular')
@@ -1415,7 +1414,9 @@ export function observeWorkspaceSections(
       menuItemsText.includes('分叉会话') ||
       menuItemsText.includes('删除会话') ||
       menuItemsText.includes('Session ID') ||
-      menuItemsText.includes('移动到工作区')
+      menuItemsText.includes('移动到工作区') ||
+      /\b(session|fork|sitzung|séance|сесси|sessão)\b/i.test(menuItemsText) ||
+      menuItemsText.includes('セッション')
     ) {
       assigningWorkspaceId = undefined
       return
