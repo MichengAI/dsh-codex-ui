@@ -132,6 +132,8 @@ test.each([
 test.each([zh, en, ja, es, fr, de, ru, pt])('every locale describes applied and restart outcomes distinctly', locale => {
   expect(locale['about.applied']).toBeTruthy()
   expect(locale['about.restartRequired']).toBeTruthy()
+  expect(locale['about.installBusy']).toBeTruthy()
+  expect(locale['about.installSuiteUnsupported']).toBeTruthy()
   expect(locale['about.applied']).not.toBe(locale['about.restartRequired'])
 })
 
