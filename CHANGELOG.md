@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.21] - 2026-11-10
+
+- **Native Companion Plugin Installation and Updates**: The About section's companion plugin list now delegates directly to host native plugin management, enabling seamless in-place installation, version upgrades, and batch synchronization for all companion extensions with real-time progress indicators.
+- **Precise Diagnostic Feedback Across All 8 Languages**: When network timeouts, missing packages, or build blocks occur, error prompts clearly specify the underlying cause and actionable recommendations. Concurrent installation attempts and special plugin states present clear, localized guidance across all 8 supported languages.
+- **Immediate State Synchronization During Batch Updates**: Batch update operations now immediately reflect installed extensions in the UI as they finish, ensuring completed updates are visible right away without requiring a page reload.
+
 ## [2.0.20] - 2026-11-09
 
 - **Full Support for All 8 Official DeepSeek Harness Languages**: Seamlessly integrated with the official localization system, providing native translations for Chinese, English, Japanese, Spanish, French, German, Russian, and Portuguese (`zh`, `en`, `ja`, `es`, `fr`, `de`, `ru`, `pt`). All starter suggestions, fullscreen settings workbench, sidebar partitions, context menus, and desktop window controls adapt immediately when switching languages.
