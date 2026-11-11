@@ -161,7 +161,7 @@ Una vez instalado, reinicie su entorno DSH Web y fuerce la recarga del navegador
 | Función | Modo de Uso |
 | :--- | :--- |
 | **Aceptar predicción de entrada** | Pulse `Tab` cuando aparezca el texto proyectado tras el cursor; pulse `Alt + Abajo` / `Alt + Arriba` para alternar sugerencias o `Esc` para descartar. |
-| **Activar/desactivar predicción** | Vaya a **Configuración → Codex UI** y modifique el interruptor en la tarjeta «Mejoras de Entrada». Se puede bloquear en todo el perfil definiendo `config.prediction: false` en `cordis.patch.yml`. |
+| **Configurar modo de predicción** | Vaya a **Configuración → Codex UI** y elija el modo (Desactivado / Solo continuación / Suposición+continuación) en la tarjeta «Mejoras de Entrada». Se puede bloquear en todo el perfil definiendo `config.prediction: false` en `cordis.patch.yml`. |
 | **Historial de comandos** | Pulse `↑` / `↓` en un campo de entrada vacío para desplazarse por los últimos 200 comandos del espacio de trabajo actual. |
 | **Ajustar ancho del campo** | Pase el cursor sobre los bordes laterales de la tarjeta de entrada y arrastre los tiradores azules. |
 | **Cambiar temas y desenfoque** | Vaya a **Configuración → Codex UI**, seleccione una de las 13 paletas y alterne entre los modos de cristal Plano y Mica Flotante. |

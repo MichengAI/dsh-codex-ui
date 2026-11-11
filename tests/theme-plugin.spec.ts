@@ -658,4 +658,11 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     applyThemeToDocument('stock')
     expect(document.getElementById('dsh-codex-ui-theme-surface-style')).toBeNull()
   })
+
+  it('代码高亮预览样式必须精准使用宿主字体族变量 --dsw-font-markdown-code-block-font-family，严禁使用简写变量', () => {
+    const html = renderToString(React.createElement(ThemeSettingsCard, { t: (k: string) => k }))
+    expect(html).toContain('dcu-theme-code-sample')
+    expect(html).toContain('--dsw-font-markdown-code-block-font-family')
+    expect(html).not.toMatch(/font-family:[^;]*var\(--dsw-font-markdown-code-block,/)
+  })
 })

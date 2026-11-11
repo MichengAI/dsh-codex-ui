@@ -94,7 +94,7 @@ describe('composer prediction-state: 三态滑动开关模式管理', () => {
     expect(state.nextEnabled).toBe(false)
   })
 
-  it('Issue #87: 幽灵预测激活时，隐藏原生占位符的 CSS 规则精准契合 DOM 契约', () => {
+  it('Issue #87: 幽灵预测激活时，隐藏原生占位符的 CSS 规则精准契合 DOM 契约且包含完整选择器', () => {
     expect(PREDICTION_PLACEHOLDER_HIDE_CSS).toContain('[data-composer-card]:has([data-composer-prediction])')
     expect(PREDICTION_PLACEHOLDER_HIDE_CSS).toContain('[data-composer-placeholder]')
     expect(PREDICTION_PLACEHOLDER_HIDE_CSS).toContain('visibility:hidden !important')

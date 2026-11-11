@@ -161,7 +161,7 @@ Nach der Installation DSH Web neu starten und den Browser mit `Strg + Umschalt +
 | Funktion | Anleitung |
 | :--- | :--- |
 | **Eingabevorschlag übernehmen** | `Tab` drücken, wenn vorausschauender Geistertext hinter dem Cursor erscheint; mit `Alt + Ab` / `Alt + Auf` Varianten wechseln oder mit `Esc` verwerfen. |
-| **Vorhersage umschalten** | In **Einstellungen → Codex UI** auf der Karte „Eingabe-Erweiterungen“ umschalten. Kann für das gesamte Profil via `config.prediction: false` in `cordis.patch.yml` deaktiviert werden. |
+| **Vorhersagemodus einstellen** | In **Einstellungen → Codex UI** auf der Karte „Eingabe-Erweiterungen“ den Modus auswählen (Aus / Nur Fortsetzung / Schätzen+Fortsetzung). Kann für das gesamte Profil via `config.prediction: false` in `cordis.patch.yml` deaktiviert werden. |
 | **Eingabeverlauf abrufen** | In leerem Eingabefeld `↑` / `↓` drücken, um durch die letzten 200 Eingaben des aktuellen Arbeitsbereichs zu blättern. |
 | **Breite anpassen** | Bewegen Sie den Mauszeiger über die seitlichen Ränder der Eingabekarte und ziehen Sie die blauen Anfasser. |
 | **Design & Weichzeichnung** | Unter **Einstellungen → Codex UI** aus 13 Paletten wählen und zwischen Flat- und Mica-Karten sowie Unschärfe-Stufen wechseln. |

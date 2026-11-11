@@ -94,7 +94,7 @@ Amplo ambiente de trabalho organizado em cartões temáticos de acordo com os co
 ---
 
 ### 4. Personalização de tema e textura de vidro
-7 cartões de paleta de cores (Padrão, Codex Preto e Branco, Mocha, Macchiato, Frappé, Latte), seletores de modo de layout e nível de desfoque.
+13 cartões de paleta de cores (Padrão, Codex Preto e Branco, Mocha, Macchiato, Frappé, Latte), seletores de modo de layout e nível de desfoque.
 
 ---
 
@@ -161,7 +161,7 @@ Após a instalação, reinicie a instância do DSH Web e force a atualização d
 | Funcionalidade | Como Usar |
 | :--- | :--- |
 | **Aceitar previsão de digitação** | Pressione `Tab` quando o texto sugerido aparecer após o cursor; use `Alt + Abaixo` / `Alt + Acima` para alternar ou `Esc` para dispensar. |
-| **Alternar previsões** | Vá em **Configurações → Codex UI** e acione o interruptor no cartão «Melhorias de Entrada». Pode ser desativado no perfil via `config.prediction: false` em `cordis.patch.yml`. |
+| **Configurar modo de previsão** | Vá em **Configurações → Codex UI** e selecione o modo (Desativado / Somente continuação / Sugestão+continuação) no cartão «Melhorias de Entrada». Pode ser desativado no perfil via `config.prediction: false` em `cordis.patch.yml`. |
 | **Histórico de comandos** | Em um campo de entrada vazio, pressione `↑` / `↓` para navegar pelos últimos 200 comandos do espaço de trabalho atual. |
 | **Redimensionar largura** | Posicione o cursor sobre as bordas laterais da caixa de entrada e arraste as alças azuis. |
 | **Alternar temas e desfoque** | Em **Configurações → Codex UI**, selecione uma das 13 paletas e alterne entre os modos de vidro Plano e Mica Flutuante. |

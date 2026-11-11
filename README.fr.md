@@ -161,7 +161,7 @@ Une fois installé, redémarrez votre instance DSH Web et rechargez complètemen
 | Fonction | Utilisation |
 | :--- | :--- |
 | **Accepter la prédiction** | Appuyez sur `Tab` lorsque le texte d'aide apparaît en filigrane ; utilisez `Alt + Bas` / `Alt + Haut` pour parcourir les variantes ou `Échap` pour rejeter. |
-| **Activer/désactiver la prédiction** | Rendez-vous dans **Paramètres → Codex UI** et basculez l'interrupteur dans la carte « Améliorations de Saisie ». |
+| **Configurer le mode de prédiction** | Rendez-vous dans **Paramètres → Codex UI** et sélectionnez le mode (Désactivé / Continuer uniquement / Deviner+continuer) dans la carte « Améliorations de Saisie ». |
 | **Rappel de l'historique** | Dans une zone de saisie vide, appuyez sur `↑` / `↓` pour faire défiler les 200 dernières commandes de l'espace de travail. |
 | **Ajuster la largeur** | Survolez les bordures latérales de la zone de saisie et tirez sur les poignées bleues. |
 | **Changer de thème et de verre** | Dans **Paramètres → Codex UI**, choisissez parmi les 13 palettes et basculez entre les modes Plat et Cartes Mica. |
