@@ -30,6 +30,8 @@ const THEME_BUTTONS: readonly {
   { id: 'dracula', labelKey: 'theme.paletteDracula', subKey: 'theme.subDracula', accent: '#ff79c6', colorScheme: 'dark' },
   { id: 'solarized-dark', labelKey: 'theme.paletteSolarizedDark', subKey: 'theme.subSolarizedDark', accent: '#2aa198', colorScheme: 'dark' },
   { id: 'solarized-light', labelKey: 'theme.paletteSolarizedLight', subKey: 'theme.subSolarizedLight', accent: '#268bd2', colorScheme: 'light' },
+  { id: 'gruvbox-dark', labelKey: 'theme.paletteGruvboxDark', subKey: 'theme.subGruvboxDark', accent: '#fabd2f', colorScheme: 'dark' },
+  { id: 'gruvbox-light', labelKey: 'theme.paletteGruvboxLight', subKey: 'theme.subGruvboxLight', accent: '#b57614', colorScheme: 'light' },
   { id: 'catppuccin-mocha', labelKey: 'theme.paletteMocha', subKey: 'theme.subMocha', accent: '#cba6f7', colorScheme: 'dark' },
   { id: 'catppuccin-macchiato', labelKey: 'theme.paletteMacchiato', subKey: 'theme.subMacchiato', accent: '#c6a0f6', colorScheme: 'dark' },
   { id: 'catppuccin-frappe', labelKey: 'theme.paletteFrappe', subKey: 'theme.subFrappe', accent: '#ca9ee6', colorScheme: 'dark' },
