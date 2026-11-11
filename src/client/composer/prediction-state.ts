@@ -128,8 +128,16 @@ export function setPredictionMode(mode: PredictionMode): void {
   }
 }
 
+/**
+ * @deprecated 历史二态兼容入口，仅供旧用例过渡；生产侧请直接调用 setPredictionMode。
+ * 保护用户已有细分模式：当从关闭状态重新打开且传入 true 时兜底切为 'all'；已处于开启状态（如 continue）时不重置为 all；关闭时切为 'off'。
+ */
 export function setPredictionEnabled(enabled: boolean): void {
-  setPredictionMode(enabled ? 'all' : 'off')
+  if (!enabled) {
+    setPredictionMode('off')
+  } else if (currentMode === 'off') {
+    setPredictionMode('all')
+  }
 }
 
 /** Host 状态端点回报的配置位；缺省视为允许。 */

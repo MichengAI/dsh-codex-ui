@@ -30,7 +30,7 @@ When working across complex projects in DeepSeek Harness, users often encounter 
 
 * 🚀 **Instant Prompt Recall & Smart Prediction**: Intelligent inline input prediction (`Tab` to accept, `Alt+Down/Up` to cycle), terminal-style input history (`↑` / `↓` quick recall) with isolated workspace memory and adaptive width sizing;
 * 🪟 **Full-Screen Dual-Island Settings**: Replaces cramped dialogs with Ambient Ground diffuse lighting canvas and dual floating island cards;
-* 🎨 **Native Physical Glass Themes**: 7 built-in high-quality color schemes (featuring Codex Dark & Paper Light), dual layout modes (Stock Flat vs. Mica Floating), 3-tier material presets, and ground glow switch;
+* 🎨 **Native Physical Glass Themes**: 13 built-in high-quality color schemes (featuring Codex, Claude, Dracula, Solarized, Gruvbox, and Catppuccin series), dual layout modes (Stock Flat vs. Mica Floating), 3-tier material presets, and ground glow switch;
 * 🧭 **Modular Dynamic Sidebar**: In-place smooth accordion drawer and fluid drag-and-drop reordering; **100% aligned with host official 56px native rail** when collapsed, keeping all icons crisp and New Session permanently visible;
 * 🧠 **Intelligent Session Titles**: Semantic understanding of initial user prompts, supporting 4096-token reasoning model contexts;
 * 🌐 **Full Official Multilingual i18n Support**: Native localization across all 8 official DeepSeek Harness languages (`zh`, `en`, `ja`, `es`, `fr`, `de`, `ru`, `pt`) for starter suggestions, settings workbench, context menus, and session titles;
@@ -65,7 +65,7 @@ Faced with these compounding challenges, we made the decisive choice in v2.0.0 t
 | :--- | :--- | :--- |
 | `composer` | **Composer Enhancement** | Smart inline input prediction (`Tab` to accept, `Alt+Down/Up` to cycle), terminal-style input history (`↑`/`↓`), workspace-isolated storage, dual drag-resize handles, and contextual prompt hints. |
 | `settings-skin` | **Native Settings Skin** | Full-screen workbench layout, dual floating island system, Ambient Ground lighting canvas, and native search. |
-| `theme` | **Theme & Glassmorphism** | 7 built-in themes with Appearance Cubes, Stock Flat vs. Mica Floating modes, 3 material presets, and ground glow switch. |
+| `theme` | **Theme & Glassmorphism** | 13 built-in themes with Appearance Cubes, Stock Flat vs. Mica Floating modes, 3 material presets, and ground glow switch. |
 | `sidebar` | **Modular Sidebar** | In-place accordion expansion, smooth drag-and-drop reordering, and right-click “mark as unread / read” for sessions; collapses cleanly into host native 56px icon rail. |
 | `session-title` | **Intelligent Session Title** | Generates standardized session titles from initial prompt semantics, handling reasoning model outputs up to 4096 tokens. |
 | `desktop-menu` | **Desktop Native Menus** | Official desktop app titlebar menu integration with instant view reload and reliable cross-platform app/Host restart. |
@@ -166,10 +166,10 @@ Once installed, restart your DSH Web instance and hard-refresh your browser (`Ct
 | Feature | How to Use |
 | :--- | :--- |
 | **Accept Input Prediction** | Press `Tab` when predictive ghost text appears behind the caret; press `Alt + Down` / `Alt + Up` to cycle recommendations, or `Escape` to dismiss. |
-| **Toggle Predictions** | Go to **Settings → Codex UI** and toggle the switch in the "Composer Enhancements" card. Can also be locked off wholesale across a profile by setting `config.prediction: false` in `cordis.patch.yml`. |
+| **Configure Prediction Mode** | Go to **Settings → Codex UI** and select your prediction mode (Off, Continue Only, Guess & Continue) in the "Composer Enhancements" card. Can also be locked off wholesale across a profile by setting `config.prediction: false` in `cordis.patch.yml`. |
 | **Recall Input History** | Press `↑` / `↓` in an empty composer to cycle through past inputs submitted in the current workspace (up to 200 items). |
 | **Resize Composer Width** | Hover over either lateral border of the composer and drag the blue handles. |
-| **Switch Themes & Blur** | Navigate to **Settings → Codex UI**, choose from 7 palettes, and toggle Stock/Mica or blur presets. |
+| **Switch Themes & Blur** | Navigate to **Settings → Codex UI**, choose from 13 palettes, and toggle Stock/Mica or blur presets. |
 | **Reorder Sidebar Items** | Drag any item vertically; blue indicators guide drop positions into or out of the More drawer. |
 | **Collapse Sidebar** | Click the collapse button on top of the sidebar to switch to the official 56px native icon rail. |
 | **Batch Upgrade Plugins** | In **Settings → Codex UI**, click **Update All** on the Companion Plugins card. |

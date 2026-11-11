@@ -30,7 +30,7 @@ Bei der täglichen Nutzung von DeepSeek Harness kann die Standardoberfläche dur
 
 * 🚀 **Schneller Eingabeverlauf & smarte Vorhersage**: Intelligente Inline-Vorhersage (`Tab` zum Übernehmen, `Alt+Ab/Auf` zum Wechseln), Terminal-Eingabeverlauf (`↑` / `↓`) und anpassbare Breitenregler;
 * 🪟 **Vollbild-Einstellungs-Workbench**: Ersetzt beengte Dialoge durch eine Ambient Ground Diffuslicht-Fläche und schwebende Karten-Arbeitsbereiche;
-* 🎨 **Physisches Milchglas & Themes**: 7 hochwertige Farbpaletten (inklusive Codex Anthrazit und Papierweiß), flache vs. schwebende Glimmer-Layoutmodi, 3 Unschärfe-Stufen und Bodenglanz-Schalter;
+* 🎨 **Physisches Milchglas & Themes**: 13 hochwertige Farbpaletten (inklusive Codex Anthrazit und Papierweiß), flache vs. schwebende Glimmer-Layoutmodi, 3 Unschärfe-Stufen und Bodenglanz-Schalter;
 * 🧭 **Modulare Seitenleiste**: Sanftes Akkordeon-Menü und freies Drag-and-Drop-Sortieren; im eingeklappten Zustand **zu 100% am offiziellen 56px-Symbolstreifen ausgerichtet**;
 * 🧠 **Intelligente Sitzungstitel**: Semantische Analyse der ersten Nachricht für normierte Titel, passend für Reasoning-Modelle mit langen Kontexten;
 * 🌐 **Vollständige Unterstützung aller 8 offiziellen Sprachen**: Umfassender Support für Deutsch, Englisch, Chinesisch, Japanisch, Spanisch, Französisch, Russisch und Portugiesisch (`de`, `en`, `zh`, `ja`, `es`, `fr`, `ru`, `pt`), inklusive UI-Texten, Vorschlagskarten, Kontextmenüs und Sitzungstiteln;
@@ -60,7 +60,7 @@ Mit Version 2.0.0 wurde der alte Überschreibungscode vollständig **verworfen**
 | :--- | :--- | :--- |
 | `composer` | **Eingabe-Erweiterung (Composer)** | Inline-Vorhersage (`Tab`), Terminal-Verlauf (`↑`/`↓`), Arbeitsbereich-Speicher, Breitenregler und Startkarten. |
 | `settings-skin` | **Natives Einstellungs-Skin (Settings Skin)** | Vollbild-Workbench, schwebendes Kartensystem, Ambient Ground-Hintergrund und native Suche. |
-| `theme` | **Theme & Glasmorphismus (Theme)** | 7 Farbpaletten, Flat vs. Mica-Karten, 3 Material-Presets und Bodenglanz-Effekte. |
+| `theme` | **Theme & Glasmorphismus (Theme)** | 13 Farbpaletten, Flat vs. Mica-Karten, 3 Material-Presets und Bodenglanz-Effekte. |
 | `sidebar` | **Modulare Seitenleiste (Sidebar)** | Akkordeon-Schublade, Drag-and-Drop-Sortierung, ungelesen/gelesen-Markierung und 56px-Leisten-Treue. |
 | `session-title` | **Sitzungstitel (Session Title)** | Automatische semantische Titelgenerierung mit 8-Sprachen-Support und bis zu 4096 Tokens. |
 | `desktop-menu` | **Desktop-Menüs (Desktop Menus)** | Titelleisten-Hilfemenü für Desktop mit Seiten-Reload und sicherem Neustart von Host und App. |
@@ -94,7 +94,7 @@ Großzügige Einstellungs-Workbench mit modular strukturierten Karten, passend z
 ---
 
 ### 4. Erscheinungsbild und Milchglas-Anpassung
-7 Farbauswahlkarten, Segmented Controls für Layout-Modus und Material-Weichzeichnung sowie Bodenglanz-Schalter.
+13 Farbauswahlkarten, Segmented Controls für Layout-Modus und Material-Weichzeichnung sowie Bodenglanz-Schalter.
 
 ---
 
@@ -164,7 +164,7 @@ Nach der Installation DSH Web neu starten und den Browser mit `Strg + Umschalt +
 | **Vorhersage umschalten** | In **Einstellungen → Codex UI** auf der Karte „Eingabe-Erweiterungen“ umschalten. Kann für das gesamte Profil via `config.prediction: false` in `cordis.patch.yml` deaktiviert werden. |
 | **Eingabeverlauf abrufen** | In leerem Eingabefeld `↑` / `↓` drücken, um durch die letzten 200 Eingaben des aktuellen Arbeitsbereichs zu blättern. |
 | **Breite anpassen** | Bewegen Sie den Mauszeiger über die seitlichen Ränder der Eingabekarte und ziehen Sie die blauen Anfasser. |
-| **Design & Weichzeichnung** | Unter **Einstellungen → Codex UI** aus 7 Paletten wählen und zwischen Flat- und Mica-Karten sowie Unschärfe-Stufen wechseln. |
+| **Design & Weichzeichnung** | Unter **Einstellungen → Codex UI** aus 13 Paletten wählen und zwischen Flat- und Mica-Karten sowie Unschärfe-Stufen wechseln. |
 | **Seitenleiste sortieren** | Elemente vertikal ziehen; blaue Linien signalisieren die genaue Ablageposition innerhalb oder außerhalb des Mehr-Fachs. |
 | **Seitenleiste einklappen** | Oben auf der Seitenleiste auf Einklappen klicken, um zum offiziellen 56px-Symbolstreifen zu wechseln. |
 | **Plugins aktualisieren** | In **Einstellungen → Codex UI** auf der Karte für Begleit-Plugins auf **Alle installieren/aktualisieren** klicken. |

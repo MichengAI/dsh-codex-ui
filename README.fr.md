@@ -30,7 +30,7 @@ Dans l'utilisation quotidienne de DeepSeek Harness, l'interface standard peut pr
 
 * 🚀 **Rappel d'historique instantané et prédiction intelligente** : Prédiction et complétion de saisie en ligne (`Tab` pour accepter, `Alt+Bas/Haut` pour faire défiler), historique de commandes de style terminal (`↑` / `↓`), et poignées de redimensionnement adaptatif ;
 * 🪟 **Atelier des paramètres en plein écran** : Remplace les boîtes de dialogue exiguës par un canevas à diffusion lumineuse Ambient Ground et des cartes flottantes ;
-* 🎨 **Thèmes en verre dépoli physique et mica** : 7 palettes d'apparence de haute qualité (avec Codex Noir Carbone et Blanc Papier), modes d'agencement plat ou flottant mica, 3 préréglages de flou et reflets au sol ;
+* 🎨 **Thèmes en verre dépoli physique et mica** : 13 palettes d'apparence de haute qualité (avec Codex Noir Carbone et Blanc Papier), modes d'agencement plat ou flottant mica, 3 préréglages de flou et reflets au sol ;
 * 🧭 **Barre latérale modulaire** : Tiroir accordéon fluide et réorganisation libre par glisser-déposer ; s'aligne rigoureusement sur le rail compact officiel de 56px une fois repliée ;
 * 🧠 **Titres de session intelligents** : Analyse sémantique du premier message pour extraire des titres standardisés adaptés aux modèles de raisonnement longs ;
 * 🌐 **Prise en charge intégrale des 8 langues officielles** : Support complet pour le français, l'anglais, le chinois, le japonais, l'espagnol, l'allemand, le russe et le portugais (`fr`, `en`, `zh`, `ja`, `es`, `de`, `ru`, `pt`), adaptant textes, cartes d'accueil, menus contextuels et titres ;
@@ -60,7 +60,7 @@ Avec la version 2.0.0, l'ensemble du code de surcharge a été **supprimé** au 
 | :--- | :--- | :--- |
 | `composer` | **Améliorations de Saisie (Composer)** | Prédiction en ligne (`Tab`), historique terminal (`↑`/`↓`), isolation par espace de travail, poignées de largeur et cartes de suggestions. |
 | `settings-skin` | **Habillage des Paramètres (Settings Skin)** | Atelier plein écran, cartes d'options flottantes, arrière-plan Ambient Ground et recherche native. |
-| `theme` | **Thème et Verre Dépoli (Theme)** | 7 palettes de couleurs, modes Plat vs. Cartes Mica, 3 niveaux de flou et contrôle des reflets au sol. |
+| `theme` | **Thème et Verre Dépoli (Theme)** | 13 palettes de couleurs, modes Plat vs. Cartes Mica, 3 niveaux de flou et contrôle des reflets au sol. |
 | `sidebar` | **Barre Latérale Modulaire (Sidebar)** | Déploiement accordéon, réorganisation par glisser-déposer, marquage lu/non-lu et alignement parfait avec le rail 56px. |
 | `session-title` | **Titres de Session (Session Title)** | Génération intelligente de titres selon la sémantique de départ avec prise en charge de 8 langues et jusqu'à 4096 jetons. |
 | `desktop-menu` | **Menus de Bureau (Desktop Menus)** | Menu d'aide dans la barre de titre avec actualisation de la vue et redémarrage sécurisé de l'application et de l'hôte. |
@@ -94,7 +94,7 @@ Espace de configuration généreux structuré en cartes thématiques adaptées a
 ---
 
 ### 4. Personnalisation de l'apparence et verre dépoli
-7 cartes de sélection de palette, contrôles segmentés pour le mode de disposition et la force du flou d'arrière-plan.
+13 cartes de sélection de palette, contrôles segmentés pour le mode de disposition et la force du flou d'arrière-plan.
 
 ---
 
@@ -164,7 +164,7 @@ Une fois installé, redémarrez votre instance DSH Web et rechargez complètemen
 | **Activer/désactiver la prédiction** | Rendez-vous dans **Paramètres → Codex UI** et basculez l'interrupteur dans la carte « Améliorations de Saisie ». |
 | **Rappel de l'historique** | Dans une zone de saisie vide, appuyez sur `↑` / `↓` pour faire défiler les 200 dernières commandes de l'espace de travail. |
 | **Ajuster la largeur** | Survolez les bordures latérales de la zone de saisie et tirez sur les poignées bleues. |
-| **Changer de thème et de verre** | Dans **Paramètres → Codex UI**, choisissez parmi les 7 palettes et basculez entre les modes Plat et Cartes Mica. |
+| **Changer de thème et de verre** | Dans **Paramètres → Codex UI**, choisissez parmi les 13 palettes et basculez entre les modes Plat et Cartes Mica. |
 | **Réorganiser la barre latérale** | Glissez verticalement les éléments ; les repères bleus indiquent l'emplacement exact d'insertion ou de retrait. |
 | **Replier la barre latérale** | Cliquez sur le bouton de réduction en haut de la barre pour passer au rail officiel de 56px. |
 | **Mettre à jour les extensions** | Dans **Paramètres → Codex UI**, cliquez sur **Tout installer/mettre à jour** dans la carte des dépendances. |

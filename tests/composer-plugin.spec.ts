@@ -8,7 +8,7 @@ import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { name, apply, isSubPluginDisabledOnDisk, resolvePredictionAllowed } from '../src/composer-plugin.ts'
 import { checkComposerEnabled, COMPOSER_ENHANCEMENT_STYLE_ID, observeComposerEnhancements } from '../src/client/composer/index.tsx'
 import { ComposerSettingsCard } from '../src/client/composer/ComposerSettingsCard.tsx'
-import { setPredictionEnabled, setSubPluginEnabled } from '../src/client/composer/prediction-state.ts'
+import { setPredictionEnabled, setPredictionMode, setSubPluginEnabled } from '../src/client/composer/prediction-state.ts'
 import { CODEX_UI_API_ENDPOINTS } from '../src/business-api.ts'
 
 describe('codex-ui-composer sub-plugin', () => {
@@ -139,7 +139,7 @@ describe('codex-ui-composer sub-plugin', () => {
       container.remove()
     })
 
-    it('插槽接线防护：PredictionSlot 必须把 prediction.enabled 真实透传给 ComposerPredictionOverlay', () => {
+    it('插槽接线防护：PredictionSlot 必须把 prediction 状态（enabled/mode/next/continue）真实透传给 ComposerPredictionOverlay', () => {
       let registeredSlotComponent: any = null
       const fakeCtx = {
         locale: { bind: () => (k: string) => k },
@@ -168,18 +168,31 @@ describe('codex-ui-composer sub-plugin', () => {
           return null
         }
 
-        // 1. 默认开启状态下，透传给底层组件的 enabled 必须为 true
-        setPredictionEnabled(true)
+        // 1. 默认 all 模式下，透传给底层组件的 enabled/next/continue 全部为 true
+        setPredictionMode('all')
         renderToString(React.createElement(TestWrapper))
         expect(capturedProps.enabled).toBe(true)
+        expect(capturedProps.mode).toBe('all')
+        expect(capturedProps.nextEnabled).toBe(true)
+        expect(capturedProps.continueEnabled).toBe(true)
 
-        // 2. 当用户关闭预测时，透传给底层组件的 enabled 必须切换为 false
-        // 若 index.tsx 漏传 enabled 或写死 true，此断言必红
-        setPredictionEnabled(false)
+        // 2. continue（仅续写）模式下，next 为 false，continue 为 true
+        setPredictionMode('continue')
+        renderToString(React.createElement(TestWrapper))
+        expect(capturedProps.enabled).toBe(true)
+        expect(capturedProps.mode).toBe('continue')
+        expect(capturedProps.nextEnabled).toBe(false)
+        expect(capturedProps.continueEnabled).toBe(true)
+
+        // 3. 当用户关闭预测时，透传给底层组件的 enabled/next/continue 均关闭
+        setPredictionMode('off')
         renderToString(React.createElement(TestWrapper))
         expect(capturedProps.enabled).toBe(false)
+        expect(capturedProps.mode).toBe('off')
+        expect(capturedProps.nextEnabled).toBe(false)
+        expect(capturedProps.continueEnabled).toBe(false)
       } finally {
-        setPredictionEnabled(true)
+        setPredictionMode('all')
         dispose()
       }
     })

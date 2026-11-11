@@ -30,7 +30,7 @@ En el uso diario de DeepSeek Harness, la interfaz original puede presentar venta
 
 * 🚀 **Recuperación rápida y predicción inteligente**: Predicción de entrada en línea (`Tab` para aceptar, `Alt+Abajo/Arriba` para alternar opciones), historial estilo terminal (`↑` / `↓`), y ajuste de ancho adaptable;
 * 🪟 **Panel de configuración en pantalla completa**: Sustituye cuadros de diálogo reducidos por un lienzo con iluminación difusa Ambient Ground y tarjetas flotantes;
-* 🎨 **Temas de cristal físico y mica**: 7 paletas de alta calidad (incluyendo Codex Negro Carbón y Blanco Papel), modos de diseño plano y flotante, 3 niveles de desenfoque y destellos en el suelo;
+* 🎨 **Temas de cristal físico y mica**: 13 paletas de alta calidad (incluyendo Codex Negro Carbón y Blanco Papel), modos de diseño plano y flotante, 3 niveles de desenfoque y destellos en el suelo;
 * 🧭 **Barra lateral modular**: Acordeón suave y reordenación libre por arrastre; cuando se colapsa, se alinea al 100% con el riel oficial de 56px;
 * 🧠 **Títulos inteligentes de sesión**: Extracción semántica del primer mensaje para generar títulos estructurados adaptados a modelos de razonamiento;
 * 🌐 **Compatibilidad multilingüe con los 8 idiomas oficiales**: Soporte completo para español, inglés, chino, japonés, francés, alemán, ruso y portugués (`es`, `en`, `zh`, `ja`, `fr`, `de`, `ru`, `pt`), adaptando textos, tarjetas de inicio, menús contextuales y títulos de sesión;
@@ -60,7 +60,7 @@ En 2.0.0 eliminamos todo el código de sobrescritura de 1.x y adoptamos una arqu
 | :--- | :--- | :--- |
 | `composer` | **Mejoras de Entrada (Composer)** | Predicción inteligente (`Tab`), historial terminal (`↑`/`↓`), almacenamiento por espacio de trabajo, tiradores de ancho y tarjetas de sugerencias. |
 | `settings-skin` | **Configuración Nativa (Settings Skin)** | Distribución en pantalla completa, tarjetas flotantes, fondo Ambient Ground y búsqueda nativa. |
-| `theme` | **Temas y Cristal (Theme)** | 7 paletas de colores, modos Plano vs. Mica Flotante, 3 preajustes de desenfoque y destellos de suelo. |
+| `theme` | **Temas y Cristal (Theme)** | 13 paletas de colores, modos Plano vs. Mica Flotante, 3 preajustes de desenfoque y destellos de suelo. |
 | `sidebar` | **Barra Lateral Modular (Sidebar)** | Acordeón integrado, reordenación por arrastre, marcado como no leído/leído y alineación exacta con el riel nativo de 56px. |
 | `session-title` | **Título de Sesión (Session Title)** | Generación estandarizada de títulos según la semántica inicial con soporte de 8 idiomas y hasta 4096 tokens de razonamiento. |
 | `desktop-menu` | **Menús de Escritorio (Desktop Menus)** | Menú de ayuda en la barra de títulos con recarga de página y reinicio seguro del sistema y del Host. |
@@ -94,7 +94,7 @@ Amplio espacio de trabajo organizado en tarjetas dinámicas según los módulos 
 ---
 
 ### 4. Personalización de temas y textura de cristal
-7 tarjetas de paleta de color (Oficial, Codex Negro y Blanco, Mocha, Macchiato, Frappé, Latte), controles de distribución y niveles de desenfoque.
+13 tarjetas de paleta de color (Oficial, Codex Negro y Blanco, Mocha, Macchiato, Frappé, Latte), controles de distribución y niveles de desenfoque.
 
 ---
 
@@ -164,7 +164,7 @@ Una vez instalado, reinicie su entorno DSH Web y fuerce la recarga del navegador
 | **Activar/desactivar predicción** | Vaya a **Configuración → Codex UI** y modifique el interruptor en la tarjeta «Mejoras de Entrada». Se puede bloquear en todo el perfil definiendo `config.prediction: false` en `cordis.patch.yml`. |
 | **Historial de comandos** | Pulse `↑` / `↓` en un campo de entrada vacío para desplazarse por los últimos 200 comandos del espacio de trabajo actual. |
 | **Ajustar ancho del campo** | Pase el cursor sobre los bordes laterales de la tarjeta de entrada y arrastre los tiradores azules. |
-| **Cambiar temas y desenfoque** | Vaya a **Configuración → Codex UI**, seleccione una de las 7 paletas y alterne entre los modos de cristal Plano y Mica Flotante. |
+| **Cambiar temas y desenfoque** | Vaya a **Configuración → Codex UI**, seleccione una de las 13 paletas y alterne entre los modos de cristal Plano y Mica Flotante. |
 | **Reordenar barra lateral** | Arrastre verticalmente los elementos; las guías azules indican la posición exacta para ingresar o extraer del cajón «Más». |
 | **Plegar barra lateral** | Haga clic en el botón superior de la barra para cambiar al riel oficial compacto de 56px. |
 | **Actualizar complementos** | En **Configuración → Codex UI**, pulse **Instalar/actualizar todo** dentro de la tarjeta de complementos. |

@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.0.22] - 2026-11-11
+
+- **Three-Way Input Prediction Control and Placeholder Overlap Fix (Issue #87)**: Upgraded prediction preferences to a 3-way segmented control supporting "Off", "Continue Only", and "Guess & Continue". In "Continue Only" mode, empty input boxes no longer show proactive question guesses, offering ghost completions solely while typing; completely fixed ghost text overlapping with native placeholder prompts when the input box is empty.
+- **4 Classic Built-in Theme Palettes (13 Themes in Total)**:
+  - **Claude Light & Dark**: Anthropic aesthetic featuring warm paper and warm evening backgrounds accented with terracotta clay;
+  - **Dracula**: Vampire slate-purple background with vibrant cyber pink and cyan accents;
+  - **Solarized Dark & Light**: Iconic deep teal dark background paired with classic parchment light tone;
+  - **Gruvbox Dark & Light**: Vintage earthy dark brown and retro kraft paper light twins with warm gold accents.
+- **Deep Syntax Highlighting Theme Adaptation with Live Code Preview**: Code syntax tokens now match the official color scales for all built-in themes. Added a real-time syntax highlighted code preview block directly in the Appearance settings card that updates immediately when switching themes.
+
 ## [2.0.21] - 2026-11-10
 
 - **Native Companion Plugin Installation and Updates**: The About section's companion plugin list now delegates directly to host native plugin management, enabling seamless in-place installation, version upgrades, and batch synchronization for all companion extensions with real-time progress indicators.
