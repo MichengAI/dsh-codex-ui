@@ -76,10 +76,14 @@ function mountFixture(ids: readonly string[]): HTMLElement {
 /** 假 workspaces 服务：insertBefore 同时重排 DOM，模拟宿主落库后的重渲染。 */
 function fakeWorkspaces(order: string[]) {
   const state = { order: order.slice() }
+  const listeners = new Set<() => void>()
   const service = {
     list: {
       getSnapshot: () => ({ items: state.order.map(workspaceId => ({ workspaceId })) }),
-      subscribe: vi.fn(() => () => {}),
+      subscribe: vi.fn((listener: () => void) => {
+        listeners.add(listener)
+        return () => listeners.delete(listener)
+      }),
     },
     insertBefore: vi.fn(async (workspaceId: string, beforeWorkspaceId?: string) => {
       const list = findWorkspaceList(document)
@@ -97,7 +101,8 @@ function fakeWorkspaces(order: string[]) {
       return {}
     }),
   }
-  return { service, state }
+  const notify = () => listeners.forEach(l => l())
+  return { service, state, notify }
 }
 
 /** 假宿主存储：分区文档现在由宿主接口持有，测试用它替代 localStorage。 */
@@ -1904,6 +1909,92 @@ describe('分区二级菜单的可访问性：', () => {
     items[0].dispatchEvent(end)
     expect(end.defaultPrevented).toBe(true)
     expect(document.activeElement).toBe(items[items.length - 1])
+  })
+
+  it('分区标题更多菜单（···）提供新建工作区选项（自定义分区提供，内置分区除外）', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+        { id: 's1', name: '客户项目', ids: ['b'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['c'] },
+      ],
+    })
+    mountFixture(['a', 'b', 'c'])
+    mount(['a', 'b', 'c'])
+    await waitForSync()
+
+    // 1. 自定义分区 s1：包含「新建工作区」
+    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+    s1Header.querySelector<HTMLElement>('.dcu-ws-section-actions button')!.click()
+    await waitForSync()
+    let panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    let addWsBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '新建工作区')
+    expect(addWsBtn).toBeDefined()
+
+    // 2. 默认项目分区（内置）：不包含「新建工作区」
+    const defHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+    defHeader.querySelector<HTMLElement>('.dcu-ws-section-actions button')!.click()
+    await waitForSync()
+    panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    addWsBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '新建工作区')
+    expect(addWsBtn).toBeUndefined()
+
+    // 3. 置顶分区（内置）：不包含「新建工作区」
+    const pinHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === PINNED_SECTION_ID)!
+    pinHeader.querySelector<HTMLElement>('.dcu-ws-section-actions button')!.click()
+    await waitForSync()
+    panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    addWsBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '新建工作区')
+    expect(addWsBtn).toBeUndefined()
+  })
+
+  it('点击分区菜单的「新建工作区」后，新创建的工作区自动归属于该目标分区并重排', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '客户项目', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b'] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    const fake = mount(['a', 'b'])
+    await waitForSync()
+
+    // 模拟宿主的原生添加按钮
+    const hostAddBtn = document.createElement('button')
+    hostAddBtn.setAttribute('aria-label', '添加工作区')
+    hostAddBtn.setAttribute('class', 'iconButton')
+    const addClicked = vi.fn()
+    hostAddBtn.addEventListener('click', addClicked)
+    document.body.appendChild(hostAddBtn)
+
+    // 打开 s1 的标题菜单并点击「新建工作区」
+    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+    s1Header.querySelector<HTMLElement>('.dcu-ws-section-actions button')!.click()
+    await waitForSync()
+    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    const addWsBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '新建工作区')!
+    expect(addWsBtn).toBeDefined()
+    addWsBtn.click()
+
+    // 验证触发了宿主原生添加流程
+    expect(addClicked).toHaveBeenCalledTimes(1)
+
+    // 模拟宿主在已有 list 中追加了新工作区 'new-1'
+    const list = document.querySelector('.list')!
+    const newBlock = list.querySelector<HTMLElement>('[data-dcu-test-group="b"]')!.cloneNode(true) as HTMLElement
+    newBlock.setAttribute('data-dcu-test-group', 'new-1')
+    newBlock.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-1')
+    list.appendChild(newBlock)
+    fake.state.order = ['a', 'b', 'new-1']
+    fake.notify()
+    await waitForSync()
+
+    // 验证 new-1 直接被归属到了 s1 分区！
+    expect(hostSection('s1').ids).toContain('new-1')
+    expect(hostSection(DEFAULT_SECTION_ID).ids).not.toContain('new-1')
+
+    hostAddBtn.remove()
   })
 
 })

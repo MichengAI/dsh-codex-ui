@@ -199,6 +199,13 @@ describe('分区模型：宿主顺序同步与成员防交换', () => {
     expect(sectionOf(next, 'new')).toBe(DEFAULT_SECTION_ID)
   })
 
+  it('支持指定新工作区落入的目标分区（非默认项目分区）', () => {
+    const { state: next, changed } = reconcileHostOrder(sample(), ['a', 'b', 'c', 'd', 'new'], 's1')
+    expect(changed).toBe(true)
+    expect(sectionOf(next, 'new')).toBe('s1')
+    expect(idsOf(next, 's1')).toEqual(['b', 'c', 'new'])
+  })
+
   it('顺序未变化时 changed 为 false', () => {
     const { changed } = reconcileHostOrder(sample(), ['a', 'b', 'c', 'd'])
     expect(changed).toBe(false)

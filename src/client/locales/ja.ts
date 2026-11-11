@@ -137,6 +137,7 @@ export const ja: Record<CodexUiKey, string> = {
   'sections.pin': 'ピン留め',
   'sections.pinned': 'ピン留め',
   'sections.remove': 'セクションを削除',
+  'sections.addWorkspace': 'ワークスペースを新規作成',
   'sections.rename': '名前を変更',
   'sections.settings': 'セクション設定',
   'sections.unpin': 'ピン留めを解除',

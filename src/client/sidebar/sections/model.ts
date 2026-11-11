@@ -294,6 +294,7 @@ export function moveSection(
 export function reconcileHostOrder(
   state: SectionsState,
   order: readonly string[],
+  fallbackSectionId: string = DEFAULT_SECTION_ID,
 ): { state: SectionsState; changed: boolean } {
   // 1. 已有项目的归属完全以 state 现有记录为准（用户显式拖拽与菜单操作才是权威事实源），
   //    绝对不根据平铺序列里的邻居去“猜测”归属，彻底根除“拖进新分区后把对方一个项目交换回来”的 Bug！
@@ -302,11 +303,11 @@ export function reconcileHostOrder(
     for (const id of section.ids) assignments.set(id, section.id)
   }
 
-  // 2. 只有新出现且未记录的项（例如新创建的工作区），才默认进入兜底分区
+  // 2. 只有新出现且未记录的项（例如新创建的工作区），才默认进入目标/兜底分区
   let added = false
   for (const id of order) {
     if (!assignments.has(id)) {
-      assignments.set(id, DEFAULT_SECTION_ID)
+      assignments.set(id, fallbackSectionId)
       added = true
     }
   }

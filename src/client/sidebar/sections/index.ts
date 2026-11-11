@@ -339,6 +339,44 @@ export function observeWorkspaceSections(
   /** 当前二级菜单的锚点（「分区」那一行），悬停重复触发时用来去重。 */
   let assignAnchor: HTMLElement | undefined
 
+  /**
+   * 等待新工作区自动归属的目标分区 ID。
+   * 用户在某个分区的菜单里点击「新建工作区」后暂存，当宿主创建新工作区时自动将其分配到该分区。
+   */
+  let pendingTargetSectionId: string | undefined
+  let pendingTargetCleanupTimer: number | undefined
+
+  function schedulePendingTargetCleanup(): void {
+    if (pendingTargetCleanupTimer !== undefined) window.clearTimeout(pendingTargetCleanupTimer)
+    // 3 分钟后仍未完成新建，自动清除暂存目标
+    pendingTargetCleanupTimer = window.setTimeout(() => {
+      pendingTargetCleanupTimer = undefined
+      pendingTargetSectionId = undefined
+    }, 180000)
+  }
+
+  function triggerHostAddWorkspace(): void {
+    // 优先寻找宿主侧边栏原生的「添加工作区」按钮并点击
+    const hostAddBtn = document.querySelector<HTMLButtonElement>(
+      'button[aria-keyshortcuts*="O"], [class*="iconButton"][aria-label*="工作区"], [class*="iconButton"][aria-label*="workspace" i], [class*="iconButton"][aria-label*="Workspace"]',
+    )
+    if (hostAddBtn !== null) {
+      hostAddBtn.click()
+      return
+    }
+    // 兜底派发快捷键（Ctrl+O 或 Cmd+O）
+    const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
+    const event = new KeyboardEvent('keydown', {
+      code: 'KeyO',
+      key: 'o',
+      ctrlKey: !isMac,
+      metaKey: isMac,
+      bubbles: true,
+      cancelable: true,
+    })
+    document.dispatchEvent(event)
+  }
+
   const workspaces = (): WorkspacesLike | undefined => {
     const service = (ctx as unknown as { get?: (name: string) => unknown }).get?.('workspaces')
     if (service === undefined || service === null) return undefined
@@ -919,6 +957,16 @@ export function observeWorkspaceSections(
     const builtin = sectionId === PINNED_SECTION_ID || sectionId === DEFAULT_SECTION_ID
     const items: Array<{ label: string; icon: string; onSelect: () => void }> = []
     if (!builtin) {
+      items.push({
+        label: text('sections.addWorkspace', '新建工作区'),
+        icon: iconPlus(),
+        onSelect: () => {
+          closeSectionMenu()
+          pendingTargetSectionId = sectionId
+          schedulePendingTargetCleanup()
+          triggerHostAddWorkspace()
+        },
+      })
       items.push({
         label: text('sections.rename', '重命名'),
         icon: iconEdit(),
@@ -1669,12 +1717,20 @@ export function observeWorkspaceSections(
           const normalized = withHostWorkspaces(update.next, ids)
           if (!sameOrder(flattenSections(normalized), flattenSections(update.next))) {
             const original = new Set(flattenSections(update.next))
-            update.next = reconcileHostOrder(normalized, ids).state
+            const target = pendingTargetSectionId ?? DEFAULT_SECTION_ID
+            update.next = reconcileHostOrder(normalized, ids, target).state
             state = withHostWorkspaces(state, ids)
             update.motion?.dispose()
             update.motion = undefined
             update.layoutDone = false
             const additions = ids.filter(id => !original.has(id))
+            if (additions.length > 0 && pendingTargetSectionId !== undefined) {
+              pendingTargetSectionId = undefined
+              if (pendingTargetCleanupTimer !== undefined) {
+                window.clearTimeout(pendingTargetCleanupTimer)
+                pendingTargetCleanupTimer = undefined
+              }
+            }
             const moves = planWorkspaceMoves(ids, flattenSections(update.next), additions)
             if (moves.length > 0) {
               const service = workspaces()
@@ -1736,7 +1792,24 @@ export function observeWorkspaceSections(
         }
       } else {
         // 空闲时只采纳宿主的分区内顺序；原生拖拽不需要再写一次宿主。
-        state = reconcileHostOrder(state, ids).state
+        const target = pendingTargetSectionId
+        const reconciled = reconcileHostOrder(state, ids, target ?? DEFAULT_SECTION_ID)
+        state = reconciled.state
+        const hadNewItems = ids.some(id => sectionOf(committedState, id) === undefined)
+        if (hadNewItems && target !== undefined) {
+          pendingTargetSectionId = undefined
+          if (pendingTargetCleanupTimer !== undefined) {
+            window.clearTimeout(pendingTargetCleanupTimer)
+            pendingTargetCleanupTimer = undefined
+          }
+          committedState = state
+          persist()
+          placeHeaders(collectProjectBlocks(list, list))
+          if (target !== DEFAULT_SECTION_ID && !sameOrder(flattenSections(state), ids)) {
+            commitExplicit(state)
+            return
+          }
+        }
       }
       committedState = state
       if (serializeSections(state) !== before) persist()
@@ -1819,6 +1892,7 @@ export function observeWorkspaceSections(
     if (activeInstance === dispose) activeInstance = undefined
     window.clearInterval(boot)
     if (rafId !== 0) window.cancelAnimationFrame(rafId)
+    if (pendingTargetCleanupTimer !== undefined) window.clearTimeout(pendingTargetCleanupTimer)
     observer?.disconnect()
     clearWriteWait()
     updates.length = 0
