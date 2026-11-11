@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { renderToString } from 'react-dom/server'
-import { PREDICTION_PLACEHOLDER_HIDE_CSS, renderPredictionGhost } from '../src/client/composer/ComposerPredictionOverlay.tsx'
+import {
+  ComposerPredictionOverlay,
+  PREDICTION_PLACEHOLDER_HIDE_CSS,
+  renderPredictionGhost,
+} from '../src/client/composer/ComposerPredictionOverlay.tsx'
 import {
   PREDICTION_STORAGE_KEY,
   getPredictionSettingsState,
@@ -112,5 +116,11 @@ describe('composer prediction-state: 三态滑动开关模式管理', () => {
     expect(html).toContain('[data-composer-card]:has([data-composer-prediction])')
     expect(html).toContain('[data-composer-placeholder]')
     expect(html).toContain('visibility:hidden !important')
+  })
+
+  it('Issue #87: ComposerPredictionOverlay 组件必须严密装配并返回 renderPredictionGhost', () => {
+    // 杜绝组件内部整块删掉调用回退为 return anchor 的装配脱节风险
+    const fnStr = ComposerPredictionOverlay.toString()
+    expect(fnStr).toMatch(/return\s+renderPredictionGhost\s*\(/)
   })
 })
