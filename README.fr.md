@@ -94,7 +94,26 @@ Espace de configuration généreux structuré en cartes thématiques adaptées a
 ---
 
 ### 4. Personnalisation de l'apparence et verre dépoli
-13 cartes de sélection de palette, contrôles segmentés pour le mode de disposition et la force du flou d'arrière-plan.
+13 palettes de thèmes de haute qualité intégrées et 1 option officielle par défaut (couvrant les séries Codex, Claude, Dracula, Solarized, Gruvbox et Catppuccin). Prend en charge les modes de disposition verre plat standard et flottant Mica, 3 niveaux de préréglages de matériaux (Clair, Standard, Dépoli) et un commutateur de reflets au sol. Repose sur l'injection dynamique de Design Tokens avec nettoyage complet du cycle de vie sans aucune pollution de styles globaux.
+
+#### Liste des thèmes intégrés et schémas de couleurs
+
+| Série | Nom du thème | ID | Mode | Style visuel | Palette principale (Accent / Arrière-plan / Texte) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Officiel** | **Officiel par défaut** | `stock` | Auto | Selon le système Interface native | Accent: ![](https://img.shields.io/badge/-%233b82f6-3b82f6) `#3b82f6` (Suit le mode clair/sombre du système, sans variables injectées) |
+| **Codex** | **Codex Sombre** | `codex-dark` | Sombre | Noir immersif Texture épurée | Accent: ![](https://img.shields.io/badge/-%23339cff-339cff) `#339cff` · BG: ![](https://img.shields.io/badge/-%2309090b-09090b) `#09090b` · Text: ![](https://img.shields.io/badge/-%23fafafa-fafafa) `#fafafa` |
+|  | **Codex Clair** | `codex-light` | Clair | Blanc papier Lecture agréable | Accent: ![](https://img.shields.io/badge/-%230169cc-0169cc) `#0169cc` · BG: ![](https://img.shields.io/badge/-%23ffffff-ffffff) `#ffffff` · Text: ![](https://img.shields.io/badge/-%2318181b-18181b) `#18181b` |
+| **Claude** | **Claude Sombre** | `claude-dark` | Sombre | Tonalité sombre chaude et terre cuite | Accent: ![](https://img.shields.io/badge/-%23d97757-d97757) `#d97757` · BG: ![](https://img.shields.io/badge/-%23141414-141414) `#141414` · Text: ![](https://img.shields.io/badge/-%23fdfdfd-fdfdfd) `#fdfdfd` |
+|  | **Claude Clair** | `claude-light` | Clair | Papier chaud et terre cuite | Accent: ![](https://img.shields.io/badge/-%23d97757-d97757) `#d97757` · BG: ![](https://img.shields.io/badge/-%23faf9f5-faf9f5) `#faf9f5` · Text: ![](https://img.shields.io/badge/-%231f1e1d-1f1e1d) `#1f1e1d` |
+| **Dracula** | **Dracula** | `dracula` | Sombre | Rose vampire et lueur cyber | Accent: ![](https://img.shields.io/badge/-%23ff79c6-ff79c6) `#ff79c6` · BG: ![](https://img.shields.io/badge/-%23191a21-191a21) `#191a21` · Text: ![](https://img.shields.io/badge/-%23f8f8f2-f8f8f2) `#f8f8f2` |
+| **Solarized** | **Solarized Sombre** | `solarized-dark` | Sombre | Sarcelle profond et cyan | Accent: ![](https://img.shields.io/badge/-%232aa198-2aa198) `#2aa198` · BG: ![](https://img.shields.io/badge/-%23002b36-002b36) `#002b36` · Text: ![](https://img.shields.io/badge/-%2393a1a1-93a1a1) `#93a1a1` |
+|  | **Solarized Clair** | `solarized-light` | Clair | Parchemin chaud et bleu | Accent: ![](https://img.shields.io/badge/-%23268bd2-268bd2) `#268bd2` · BG: ![](https://img.shields.io/badge/-%23fdf6e3-fdf6e3) `#fdf6e3` · Text: ![](https://img.shields.io/badge/-%23586e75-586e75) `#586e75` |
+| **Gruvbox** | **Gruvbox Sombre** | `gruvbox-dark` | Sombre | Rétro sombre et or chaud | Accent: ![](https://img.shields.io/badge/-%23fabd2f-fabd2f) `#fabd2f` · BG: ![](https://img.shields.io/badge/-%23282828-282828) `#282828` · Text: ![](https://img.shields.io/badge/-%23fbf1c7-fbf1c7) `#fbf1c7` |
+|  | **Gruvbox Clair** | `gruvbox-light` | Clair | Papier kraft rétro et ambre | Accent: ![](https://img.shields.io/badge/-%23b57614-b57614) `#b57614` · BG: ![](https://img.shields.io/badge/-%23fbf1c7-fbf1c7) `#fbf1c7` · Text: ![](https://img.shields.io/badge/-%23282828-282828) `#282828` |
+| **Catppuccin** | **Mocha** | `catppuccin-mocha` | Sombre | Mocha sombre Reposant pour les yeux | Accent: ![](https://img.shields.io/badge/-%23cba6f7-cba6f7) `#cba6f7` · BG: ![](https://img.shields.io/badge/-%2311111b-11111b) `#11111b` · Text: ![](https://img.shields.io/badge/-%23cdd6f4-cdd6f4) `#cdd6f4` |
+|  | **Macchiato** | `catppuccin-macchiato` | Sombre | Macchiato sombre Doux et élégant | Accent: ![](https://img.shields.io/badge/-%23c6a0f6-c6a0f6) `#c6a0f6` · BG: ![](https://img.shields.io/badge/-%23181926-181926) `#181926` · Text: ![](https://img.shields.io/badge/-%23cad3f5-cad3f5) `#cad3f5` |
+|  | **Frappé** | `catppuccin-frappe` | Sombre | Frappé sombre Brume translucide | Accent: ![](https://img.shields.io/badge/-%23ca9ee6-ca9ee6) `#ca9ee6` · BG: ![](https://img.shields.io/badge/-%23232634-232634) `#232634` · Text: ![](https://img.shields.io/badge/-%23c6d0f5-c6d0f5) `#c6d0f5` |
+|  | **Latte** | `catppuccin-latte` | Clair | Latte chaud Lumineux et chaleureux | Accent: ![](https://img.shields.io/badge/-%238839ef-8839ef) `#8839ef` · BG: ![](https://img.shields.io/badge/-%23eff1f5-eff1f5) `#eff1f5` · Text: ![](https://img.shields.io/badge/-%234c4f69-4c4f69) `#4c4f69` |
 
 ---
 

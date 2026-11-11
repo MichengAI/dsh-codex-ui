@@ -94,7 +94,26 @@ Ambient Ground の拡散光グラデーションを採用した Codex Light 配�
 ---
 
 ### 4. 外観カスタマイズとフロストガラス
-13 種類のアピアランスキューブ（Stock、Codex クラシック、Mocha、Macchiato、Frappé、Latte）、レイアウトモードとマテリアルぼかしのセグメントコントロール。
+13 種類の高品質テーマ配色と 1 つの公式デフォルト（Codex、Claude、Dracula、Solarized、Gruvbox、Catppuccin シリーズを網羅）。公式フラットガラスと浮動 Mica のデュアルレイアウトモード、3 段階のマテリアルプリセット（Clear / Standard / Frosted）、地面反射グロースイッチに対応。純粋な Design Token 動的注入とクリーンな破棄により、グローバルスタイルの汚染を防止します。
+
+#### 内蔵テーマおよび配色スキーム一覧
+
+| シリーズ | テーマ名 | ID | モード | ビジュアルスタイル | コア配色 (アクセント / 背景 / テキスト) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **公式** | **公式デフォルト** | `stock` | 自動 | システムに追従 ネイティブUI | Accent: ![](https://img.shields.io/badge/-%233b82f6-3b82f6) `#3b82f6` (ホストの明暗モードに追従、カスタムトークン非注入) |
+| **Codex** | **Codex ダーク** | `codex-dark` | ダーク | 没入型カーボンダーク ギークな質感 | Accent: ![](https://img.shields.io/badge/-%23339cff-339cff) `#339cff` · BG: ![](https://img.shields.io/badge/-%2309090b-09090b) `#09090b` · Text: ![](https://img.shields.io/badge/-%23fafafa-fafafa) `#fafafa` |
+|  | **Codex ライト** | `codex-light` | ライト | ミニマルペーパーホワイト 快適な読書 | Accent: ![](https://img.shields.io/badge/-%230169cc-0169cc) `#0169cc` · BG: ![](https://img.shields.io/badge/-%23ffffff-ffffff) `#ffffff` · Text: ![](https://img.shields.io/badge/-%2318181b-18181b) `#18181b` |
+| **Claude** | **Claude ダーク** | `claude-dark` | ダーク | 温かみのある黒炭とテラコッタ | Accent: ![](https://img.shields.io/badge/-%23d97757-d97757) `#d97757` · BG: ![](https://img.shields.io/badge/-%23141414-141414) `#141414` · Text: ![](https://img.shields.io/badge/-%23fdfdfd-fdfdfd) `#fdfdfd` |
+|  | **Claude ライト** | `claude-light` | ライト | 温かみのある和紙感とテラコッタ | Accent: ![](https://img.shields.io/badge/-%23d97757-d97757) `#d97757` · BG: ![](https://img.shields.io/badge/-%23faf9f5-faf9f5) `#faf9f5` · Text: ![](https://img.shields.io/badge/-%231f1e1d-1f1e1d) `#1f1e1d` |
+| **Dracula** | **Dracula (ドラキュラ)** | `dracula` | ダーク | 吸血鬼ピンクとサイバーネオン | Accent: ![](https://img.shields.io/badge/-%23ff79c6-ff79c6) `#ff79c6` · BG: ![](https://img.shields.io/badge/-%23191a21-191a21) `#191a21` · Text: ![](https://img.shields.io/badge/-%23f8f8f2-f8f8f2) `#f8f8f2` |
+| **Solarized** | **Solarized ダーク** | `solarized-dark` | ダーク | 深海墨緑と青碧 | Accent: ![](https://img.shields.io/badge/-%232aa198-2aa198) `#2aa198` · BG: ![](https://img.shields.io/badge/-%23002b36-002b36) `#002b36` · Text: ![](https://img.shields.io/badge/-%2393a1a1-93a1a1) `#93a1a1` |
+|  | **Solarized ライト** | `solarized-light` | ライト | 羊皮紙と日光青 | Accent: ![](https://img.shields.io/badge/-%23268bd2-268bd2) `#268bd2` · BG: ![](https://img.shields.io/badge/-%23fdf6e3-fdf6e3) `#fdf6e3` · Text: ![](https://img.shields.io/badge/-%23586e75-586e75) `#586e75` |
+| **Gruvbox** | **Gruvbox ダーク** | `gruvbox-dark` | ダーク | 泥炭深茶と暖金レトロ | Accent: ![](https://img.shields.io/badge/-%23fabd2f-fabd2f) `#fabd2f` · BG: ![](https://img.shields.io/badge/-%23282828-282828) `#282828` · Text: ![](https://img.shields.io/badge/-%23fbf1c7-fbf1c7) `#fbf1c7` |
+|  | **Gruvbox ライト** | `gruvbox-light` | ライト | 牛皮紙黄とヴィンテージ | Accent: ![](https://img.shields.io/badge/-%23b57614-b57614) `#b57614` · BG: ![](https://img.shields.io/badge/-%23fbf1c7-fbf1c7) `#fbf1c7` · Text: ![](https://img.shields.io/badge/-%23282828-282828) `#282828` |
+| **Catppuccin** | **Mocha (モカ)** | `catppuccin-mocha` | ダーク | モカダーク 目に優しい落ち着き | Accent: ![](https://img.shields.io/badge/-%23cba6f7-cba6f7) `#cba6f7` · BG: ![](https://img.shields.io/badge/-%2311111b-11111b) `#11111b` · Text: ![](https://img.shields.io/badge/-%23cdd6f4-cdd6f4) `#cdd6f4` |
+|  | **Macchiato (マキアート)** | `catppuccin-macchiato` | ダーク | マキアートダーク 優雅で柔らかなトーン | Accent: ![](https://img.shields.io/badge/-%23c6a0f6-c6a0f6) `#c6a0f6` · BG: ![](https://img.shields.io/badge/-%23181926-181926) `#181926` · Text: ![](https://img.shields.io/badge/-%23cad3f5-cad3f5) `#cad3f5` |
+|  | **Frappé (フラッペ)** | `catppuccin-frappe` | ダーク | フラッペダーク 透明感のあるミスト | Accent: ![](https://img.shields.io/badge/-%23ca9ee6-ca9ee6) `#ca9ee6` · BG: ![](https://img.shields.io/badge/-%23232634-232634) `#232634` · Text: ![](https://img.shields.io/badge/-%23c6d0f5-c6d0f5) `#c6d0f5` |
+|  | **Latte (ラテ)** | `catppuccin-latte` | ライト | ラテウォームホワイト 暖かく軽快 | Accent: ![](https://img.shields.io/badge/-%238839ef-8839ef) `#8839ef` · BG: ![](https://img.shields.io/badge/-%23eff1f5-eff1f5) `#eff1f5` · Text: ![](https://img.shields.io/badge/-%234c4f69-4c4f69) `#4c4f69` |
 
 ---
 

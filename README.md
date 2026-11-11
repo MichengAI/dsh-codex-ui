@@ -99,7 +99,26 @@
 ---
 
 ### 4. 界面外观换肤与毛玻璃配置
-内置 13 款主题色盘（官方默认、Codex、Claude、Dracula、Solarized、Gruvbox 与 Catppuccin 系列），支持原版平铺玻璃与云母悬浮双模态，清透/标准/磨砂三档材质直选与地面反射光斑开关。
+内置 13 款高品质主题色盘与 1 款官方原生选项（涵盖 Codex、Claude、Dracula、Solarized、Gruvbox 与 Catppuccin 系列），支持原版平铺玻璃与云母悬浮双排版模态，提供清透/标准/磨砂三档材质直选与地面反射光斑开关。所有主题基于 Design Token 动态注入与无残留纯净销毁，绝无全局样式污染。
+
+#### 内置主题与配色方案一览
+
+| 主题系列 | 主题名称 | ID | 模式 | 视觉风格 | 核心配色方案 (强调色 / 底板色 / 文本色) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **官方原生** | **官方默认** | `stock` | 自动 | 跟随系统 原生界面 | Accent: ![](https://img.shields.io/badge/-%233b82f6-3b82f6) `#3b82f6` (保持宿主原生深浅模式，不注入自定义配色变量) |
+| **Codex** | **Codex 暗色** | `codex-dark` | 深色 | 沉浸炭黑 极客质感 | Accent: ![](https://img.shields.io/badge/-%23339cff-339cff) `#339cff` · BG: ![](https://img.shields.io/badge/-%2309090b-09090b) `#09090b` · Text: ![](https://img.shields.io/badge/-%23fafafa-fafafa) `#fafafa` |
+|  | **Codex 亮色** | `codex-light` | 浅色 | 极简纸白 纯净阅读 | Accent: ![](https://img.shields.io/badge/-%230169cc-0169cc) `#0169cc` · BG: ![](https://img.shields.io/badge/-%23ffffff-ffffff) `#ffffff` · Text: ![](https://img.shields.io/badge/-%2318181b-18181b) `#18181b` |
+| **Claude** | **Claude 暗色** | `claude-dark` | 深色 | 暖炭夜色 陶橙点缀 | Accent: ![](https://img.shields.io/badge/-%23d97757-d97757) `#d97757` · BG: ![](https://img.shields.io/badge/-%23141414-141414) `#141414` · Text: ![](https://img.shields.io/badge/-%23fdfdfd-fdfdfd) `#fdfdfd` |
+|  | **Claude 暖白** | `claude-light` | 浅色 | 暖米纸感 陶橙点缀 | Accent: ![](https://img.shields.io/badge/-%23d97757-d97757) `#d97757` · BG: ![](https://img.shields.io/badge/-%23faf9f5-faf9f5) `#faf9f5` · Text: ![](https://img.shields.io/badge/-%231f1e1d-1f1e1d) `#1f1e1d` |
+| **Dracula** | **Dracula (德古拉)** | `dracula` | 深色 | 吸血鬼粉 潮酷荧光 | Accent: ![](https://img.shields.io/badge/-%23ff79c6-ff79c6) `#ff79c6` · BG: ![](https://img.shields.io/badge/-%23191a21-191a21) `#191a21` · Text: ![](https://img.shields.io/badge/-%23f8f8f2-f8f8f2) `#f8f8f2` |
+| **Solarized** | **Solarized 暗色** | `solarized-dark` | 深色 | 深海墨绿 碧玉青蓝 | Accent: ![](https://img.shields.io/badge/-%232aa198-2aa198) `#2aa198` · BG: ![](https://img.shields.io/badge/-%23002b36-002b36) `#002b36` · Text: ![](https://img.shields.io/badge/-%2393a1a1-93a1a1) `#93a1a1` |
+|  | **Solarized 亮色** | `solarized-light` | 浅色 | 古籍羊皮 日光清蓝 | Accent: ![](https://img.shields.io/badge/-%23268bd2-268bd2) `#268bd2` · BG: ![](https://img.shields.io/badge/-%23fdf6e3-fdf6e3) `#fdf6e3` · Text: ![](https://img.shields.io/badge/-%23586e75-586e75) `#586e75` |
+| **Gruvbox** | **Gruvbox 暗色** | `gruvbox-dark` | 深色 | 泥炭深棕 暖金复古 | Accent: ![](https://img.shields.io/badge/-%23fabd2f-fabd2f) `#fabd2f` · BG: ![](https://img.shields.io/badge/-%23282828-282828) `#282828` · Text: ![](https://img.shields.io/badge/-%23fbf1c7-fbf1c7) `#fbf1c7` |
+|  | **Gruvbox 亮色** | `gruvbox-light` | 浅色 | 牛皮纸黄 复古工装 | Accent: ![](https://img.shields.io/badge/-%23b57614-b57614) `#b57614` · BG: ![](https://img.shields.io/badge/-%23fbf1c7-fbf1c7) `#fbf1c7` · Text: ![](https://img.shields.io/badge/-%23282828-282828) `#282828` |
+| **Catppuccin** | **Mocha (摩卡)** | `catppuccin-mocha` | 深色 | 摩卡暗色 舒适护眼 | Accent: ![](https://img.shields.io/badge/-%23cba6f7-cba6f7) `#cba6f7` · BG: ![](https://img.shields.io/badge/-%2311111b-11111b) `#11111b` · Text: ![](https://img.shields.io/badge/-%23cdd6f4-cdd6f4) `#cdd6f4` |
+|  | **Macchiato (玛奇朵)** | `catppuccin-macchiato` | 深色 | 玛奇朵暗色 典雅柔和 | Accent: ![](https://img.shields.io/badge/-%23c6a0f6-c6a0f6) `#c6a0f6` · BG: ![](https://img.shields.io/badge/-%23181926-181926) `#181926` · Text: ![](https://img.shields.io/badge/-%23cad3f5-cad3f5) `#cad3f5` |
+|  | **Frappé (冰吸)** | `catppuccin-frappe` | 深色 | 冰吸暗色 雾感通透 | Accent: ![](https://img.shields.io/badge/-%23ca9ee6-ca9ee6) `#ca9ee6` · BG: ![](https://img.shields.io/badge/-%23232634-232634) `#232634` · Text: ![](https://img.shields.io/badge/-%23c6d0f5-c6d0f5) `#c6d0f5` |
+|  | **Latte (拿铁)** | `catppuccin-latte` | 浅色 | 拿铁暖白 温润明快 | Accent: ![](https://img.shields.io/badge/-%238839ef-8839ef) `#8839ef` · BG: ![](https://img.shields.io/badge/-%23eff1f5-eff1f5) `#eff1f5` · Text: ![](https://img.shields.io/badge/-%234c4f69-4c4f69) `#4c4f69` |
 
 ---
 
