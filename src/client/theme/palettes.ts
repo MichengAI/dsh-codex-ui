@@ -4,6 +4,7 @@
  * 以及新增的 2 套 Codex 主题（Codex Dark, Codex Light）。
  */
 import type { ThemeDefinition } from "@deepseek-ai/dsh-client-ui-theme/client"
+import { SHIKI_TOKENS_BY_THEME } from "./shiki-tokens.ts"
 
 export const CODEX_DARK_THEME_ID = "codex-dark"
 export const CODEX_LIGHT_THEME_ID = "codex-light"
@@ -23,6 +24,7 @@ export const CATPPUCCIN_LATTE_THEME: ThemeDefinition = {
   id: "catppuccin-latte",
   colorScheme: "light",
   tokens: {
+  ...SHIKI_TOKENS_BY_THEME["catppuccin-latte"],
   "--dsw-static-amber-100": "color-mix(in srgb, #fe640b 20%, #eff1f5)",
   "--dsw-static-amber-400": "color-mix(in srgb, #fe640b 70%, #eff1f5)",
   "--dsw-static-amber-500": "#fe640b",
@@ -220,6 +222,7 @@ export const CATPPUCCIN_FRAPPE_THEME: ThemeDefinition = {
   id: "catppuccin-frappe",
   colorScheme: "dark",
   tokens: {
+  ...SHIKI_TOKENS_BY_THEME["catppuccin-frappe"],
   "--dsw-static-amber-100": "color-mix(in srgb, #ef9f76 20%, #303446)",
   "--dsw-static-amber-400": "color-mix(in srgb, #ef9f76 70%, #303446)",
   "--dsw-static-amber-500": "#ef9f76",
@@ -417,6 +420,7 @@ export const CATPPUCCIN_MACCHIATO_THEME: ThemeDefinition = {
   id: "catppuccin-macchiato",
   colorScheme: "dark",
   tokens: {
+  ...SHIKI_TOKENS_BY_THEME["catppuccin-macchiato"],
   "--dsw-static-amber-100": "color-mix(in srgb, #f5a97f 20%, #24273a)",
   "--dsw-static-amber-400": "color-mix(in srgb, #f5a97f 70%, #24273a)",
   "--dsw-static-amber-500": "#f5a97f",
@@ -614,6 +618,7 @@ export const CATPPUCCIN_MOCHA_THEME: ThemeDefinition = {
   id: "catppuccin-mocha",
   colorScheme: "dark",
   tokens: {
+  ...SHIKI_TOKENS_BY_THEME["catppuccin-mocha"],
   "--dsw-static-amber-100": "color-mix(in srgb, #fab387 20%, #1e1e2e)",
   "--dsw-static-amber-400": "color-mix(in srgb, #fab387 70%, #1e1e2e)",
   "--dsw-static-amber-500": "#fab387",
@@ -811,6 +816,7 @@ export const CODEX_DARK_THEME: ThemeDefinition = {
   id: "codex-dark",
   colorScheme: "dark",
   tokens: {
+  ...SHIKI_TOKENS_BY_THEME["codex-dark"],
   "--dsw-static-amber-100": "color-mix(in srgb, #f59e0b 20%, #18181b)",
   "--dsw-static-amber-400": "color-mix(in srgb, #f59e0b 70%, #18181b)",
   "--dsw-static-amber-500": "#f59e0b",
@@ -1008,6 +1014,7 @@ export const CODEX_LIGHT_THEME: ThemeDefinition = {
   id: "codex-light",
   colorScheme: "light",
   tokens: {
+  ...SHIKI_TOKENS_BY_THEME["codex-light"],
   "--dsw-static-amber-100": "color-mix(in srgb, #f59e0b 20%, #ffffff)",
   "--dsw-static-amber-400": "color-mix(in srgb, #f59e0b 70%, #ffffff)",
   "--dsw-static-amber-500": "#f59e0b",
@@ -1205,6 +1212,7 @@ export const CLAUDE_DARK_THEME: ThemeDefinition = {
   id: "claude-dark",
   colorScheme: "dark",
   tokens: {
+  ...SHIKI_TOKENS_BY_THEME["claude-dark"],
   "--dsw-static-amber-100": "color-mix(in srgb, #d97757 20%, #1f1f1f)",
   "--dsw-static-amber-400": "color-mix(in srgb, #d97757 70%, #1f1f1f)",
   "--dsw-static-amber-500": "#d97757",
@@ -1402,6 +1410,7 @@ export const CLAUDE_LIGHT_THEME: ThemeDefinition = {
   id: "claude-light",
   colorScheme: "light",
   tokens: {
+  ...SHIKI_TOKENS_BY_THEME["claude-light"],
   "--dsw-static-amber-100": "color-mix(in srgb, #d97757 20%, #faf9f5)",
   "--dsw-static-amber-400": "color-mix(in srgb, #d97757 70%, #faf9f5)",
   "--dsw-static-amber-500": "#d97757",
@@ -1599,6 +1608,7 @@ export const DRACULA_THEME: ThemeDefinition = {
   id: "dracula",
   colorScheme: "dark",
   tokens: {
+  ...SHIKI_TOKENS_BY_THEME["dracula"],
   "--dsw-static-amber-100": "color-mix(in srgb, #ffb86c 20%, #343746)",
   "--dsw-static-amber-400": "color-mix(in srgb, #ffb86c 70%, #343746)",
   "--dsw-static-amber-500": "#ffb86c",
@@ -1796,6 +1806,7 @@ export const SOLARIZED_DARK_THEME: ThemeDefinition = {
   id: "solarized-dark",
   colorScheme: "dark",
   tokens: {
+  ...SHIKI_TOKENS_BY_THEME["solarized-dark"],
   "--dsw-static-amber-100": "color-mix(in srgb, #b58900 20%, #073642)",
   "--dsw-static-amber-400": "color-mix(in srgb, #b58900 70%, #073642)",
   "--dsw-static-amber-500": "#b58900",
@@ -1993,6 +2004,7 @@ export const SOLARIZED_LIGHT_THEME: ThemeDefinition = {
   id: "solarized-light",
   colorScheme: "light",
   tokens: {
+  ...SHIKI_TOKENS_BY_THEME["solarized-light"],
   "--dsw-static-amber-100": "color-mix(in srgb, #b58900 20%, #fdf6e3)",
   "--dsw-static-amber-400": "color-mix(in srgb, #b58900 70%, #fdf6e3)",
   "--dsw-static-amber-500": "#b58900",
@@ -2190,6 +2202,7 @@ export const GRUVBOX_DARK_THEME: ThemeDefinition = {
   id: "gruvbox-dark",
   colorScheme: "dark",
   tokens: {
+  ...SHIKI_TOKENS_BY_THEME["gruvbox-dark"],
   "--dsw-static-amber-100": "color-mix(in srgb, #fe8019 20%, #3c3836)",
   "--dsw-static-amber-400": "color-mix(in srgb, #fe8019 70%, #3c3836)",
   "--dsw-static-amber-500": "#fe8019",
@@ -2387,6 +2400,7 @@ export const GRUVBOX_LIGHT_THEME: ThemeDefinition = {
   id: "gruvbox-light",
   colorScheme: "light",
   tokens: {
+  ...SHIKI_TOKENS_BY_THEME["gruvbox-light"],
   "--dsw-static-amber-100": "color-mix(in srgb, #af3a03 20%, #fbf1c7)",
   "--dsw-static-amber-400": "color-mix(in srgb, #af3a03 70%, #fbf1c7)",
   "--dsw-static-amber-500": "#af3a03",

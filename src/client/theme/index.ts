@@ -18,6 +18,7 @@ import {
 
 export * from './glass.ts'
 export * from './palettes.ts'
+export * from './shiki-tokens.ts'
 export * from './state.ts'
 
 let globalThemeRuntime: ThemeRuntime | undefined

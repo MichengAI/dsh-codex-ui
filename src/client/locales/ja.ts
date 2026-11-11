@@ -189,6 +189,7 @@ export const ja: Record<CodexUiKey, string> = {
   'theme.paletteGruvboxDark': 'Gruvbox ダーク',
   'theme.paletteGruvboxLight': 'Gruvbox ライト',
   'theme.paletteHint': '公式デフォルトまたは Codex スタイルの配色を選択',
+  'theme.codeHighlight': 'コード強調プレビュー',
   'theme.paletteLatte': 'Latte (ラテ)',
   'theme.paletteMacchiato': 'Macchiato (マキアート)',
   'theme.paletteMocha': 'Mocha (モカ)',

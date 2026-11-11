@@ -189,6 +189,7 @@ export const ru: Record<CodexUiKey, string> = {
   'theme.paletteGruvboxDark': 'Gruvbox Темная',
   'theme.paletteGruvboxLight': 'Gruvbox Светлая',
   'theme.paletteHint': 'Выберите официальную тему по умолчанию или классические стили Codex',
+  'theme.codeHighlight': 'Предпросмотр подсветки кода',
   'theme.paletteLatte': 'Latte',
   'theme.paletteMacchiato': 'Macchiato',
   'theme.paletteMocha': 'Mocha',

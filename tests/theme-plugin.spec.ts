@@ -175,44 +175,44 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(await checkThemeEnabled()).toBe(false)
   })
 
-  it('内置色盘包含完整的 13 套主题（4套Catppuccin + 2套Codex + 2套Claude + 1套Dracula + 2套Solarized + 2套Gruvbox），均覆盖全套 190 个 --dsw-* 设计变量', () => {
+  it('内置色盘包含完整的 13 套主题（4套Catppuccin + 2套Codex + 2套Claude + 1套Dracula + 2套Solarized + 2套Gruvbox），均覆盖全套 190 个 --dsw-* 设计变量与 11 个 --shiki-* 代码高亮 Token', () => {
     expect(ALL_BUILTIN_THEMES.length).toBe(13)
 
     expect(CODEX_DARK_THEME.id).toBe(CODEX_DARK_THEME_ID)
     expect(CODEX_DARK_THEME.colorScheme).toBe('dark')
-    expect(Object.keys(CODEX_DARK_THEME.tokens).length).toBe(190)
+    expect(Object.keys(CODEX_DARK_THEME.tokens).length).toBe(201)
 
     expect(CODEX_LIGHT_THEME.id).toBe(CODEX_LIGHT_THEME_ID)
     expect(CODEX_LIGHT_THEME.colorScheme).toBe('light')
-    expect(Object.keys(CODEX_LIGHT_THEME.tokens).length).toBe(190)
+    expect(Object.keys(CODEX_LIGHT_THEME.tokens).length).toBe(201)
 
     expect(CLAUDE_DARK_THEME.id).toBe(CLAUDE_DARK_THEME_ID)
     expect(CLAUDE_DARK_THEME.colorScheme).toBe('dark')
-    expect(Object.keys(CLAUDE_DARK_THEME.tokens).length).toBe(190)
+    expect(Object.keys(CLAUDE_DARK_THEME.tokens).length).toBe(201)
 
     expect(CLAUDE_LIGHT_THEME.id).toBe(CLAUDE_LIGHT_THEME_ID)
     expect(CLAUDE_LIGHT_THEME.colorScheme).toBe('light')
-    expect(Object.keys(CLAUDE_LIGHT_THEME.tokens).length).toBe(190)
+    expect(Object.keys(CLAUDE_LIGHT_THEME.tokens).length).toBe(201)
 
     expect(DRACULA_THEME.id).toBe(DRACULA_THEME_ID)
     expect(DRACULA_THEME.colorScheme).toBe('dark')
-    expect(Object.keys(DRACULA_THEME.tokens).length).toBe(190)
+    expect(Object.keys(DRACULA_THEME.tokens).length).toBe(201)
 
     expect(SOLARIZED_DARK_THEME.id).toBe(SOLARIZED_DARK_THEME_ID)
     expect(SOLARIZED_DARK_THEME.colorScheme).toBe('dark')
-    expect(Object.keys(SOLARIZED_DARK_THEME.tokens).length).toBe(190)
+    expect(Object.keys(SOLARIZED_DARK_THEME.tokens).length).toBe(201)
 
     expect(SOLARIZED_LIGHT_THEME.id).toBe(SOLARIZED_LIGHT_THEME_ID)
     expect(SOLARIZED_LIGHT_THEME.colorScheme).toBe('light')
-    expect(Object.keys(SOLARIZED_LIGHT_THEME.tokens).length).toBe(190)
+    expect(Object.keys(SOLARIZED_LIGHT_THEME.tokens).length).toBe(201)
 
     expect(GRUVBOX_DARK_THEME.id).toBe(GRUVBOX_DARK_THEME_ID)
     expect(GRUVBOX_DARK_THEME.colorScheme).toBe('dark')
-    expect(Object.keys(GRUVBOX_DARK_THEME.tokens).length).toBe(190)
+    expect(Object.keys(GRUVBOX_DARK_THEME.tokens).length).toBe(201)
 
     expect(GRUVBOX_LIGHT_THEME.id).toBe(GRUVBOX_LIGHT_THEME_ID)
     expect(GRUVBOX_LIGHT_THEME.colorScheme).toBe('light')
-    expect(Object.keys(GRUVBOX_LIGHT_THEME.tokens).length).toBe(190)
+    expect(Object.keys(GRUVBOX_LIGHT_THEME.tokens).length).toBe(201)
 
     // 验证核心底色、强调色与高对比度文字
     expect(CODEX_DARK_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#09090b')
@@ -226,6 +226,18 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(GRUVBOX_DARK_THEME.tokens['--dsw-alias-brand-primary-new-colorprimary-new-color']).toBe('#fabd2f')
     expect(GRUVBOX_DARK_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#282828')
     expect(GRUVBOX_LIGHT_THEME.tokens['--dsw-static-neutral-bluish-00']).toBe('#fbf1c7')
+
+    // 验证全套主题的 Shiki 语法高亮覆盖
+    expect(CODEX_DARK_THEME.tokens['--shiki-token-keyword']).toBe('#339cff')
+    expect(CODEX_LIGHT_THEME.tokens['--shiki-token-keyword']).toBe('#0169cc')
+    expect(CLAUDE_DARK_THEME.tokens['--shiki-token-keyword']).toBe('#d97757')
+    expect(CLAUDE_LIGHT_THEME.tokens['--shiki-token-keyword']).toBe('#b53a1a')
+    expect(DRACULA_THEME.tokens['--shiki-token-keyword']).toBe('#ff79c6')
+    expect(DRACULA_THEME.tokens['--shiki-token-string']).toBe('#f1fa8c')
+    expect(SOLARIZED_DARK_THEME.tokens['--shiki-token-keyword']).toBe('#859900')
+    expect(SOLARIZED_LIGHT_THEME.tokens['--shiki-token-keyword']).toBe('#859900')
+    expect(GRUVBOX_DARK_THEME.tokens['--shiki-token-keyword']).toBe('#fb4934')
+    expect(GRUVBOX_LIGHT_THEME.tokens['--shiki-token-keyword']).toBe('#9d0006')
 
     // 验证包含全部 13 套内置主题
     const themeIds = ALL_BUILTIN_THEMES.map((t) => t.id)

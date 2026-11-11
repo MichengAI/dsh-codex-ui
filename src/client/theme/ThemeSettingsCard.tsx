@@ -162,6 +162,59 @@ ${SECTION_CARD_CSS}
 .dcu-theme-sub-row [data-slot="segmented-control"] {
   min-width: 240px;
 }
+.dcu-theme-code-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+.dcu-theme-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dcu-theme-code-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
+}
+.dcu-theme-code-lang {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  font-family: var(--dsw-font-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+}
+.dcu-theme-code-sample {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  background: var(--dsw-alias-markdown-code-block, var(--dsw-alias-bg-layer-2));
+  color: var(--shiki-foreground, var(--dsw-alias-label-primary));
+  font-family: var(--dsw-font-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: pre;
+  overflow-x: auto;
+}
+.dcu-tok-keyword {
+  color: var(--shiki-token-keyword, var(--dsw-static-blue-500));
+}
+.dcu-tok-function {
+  color: var(--shiki-token-function, var(--dsw-static-amber-500));
+}
+.dcu-tok-parameter {
+  color: var(--shiki-token-parameter, var(--dsw-alias-label-primary));
+}
+.dcu-tok-string {
+  color: var(--shiki-token-string, var(--dsw-static-green-500));
+}
+.dcu-tok-punct {
+  color: var(--shiki-token-punctuation, var(--dsw-alias-label-secondary));
+}
+.dcu-tok-comment {
+  color: var(--shiki-token-comment, var(--dsw-alias-label-tertiary));
+  font-style: italic;
+}
 `
 
 export function ThemeSettingsCard({ t }: ThemeSettingsCardProps): React.JSX.Element | null {
@@ -210,6 +263,36 @@ export function ThemeSettingsCard({ t }: ThemeSettingsCardProps): React.JSX.Elem
               </button>
             )
           })}
+        </div>
+
+        {/* 代码高亮实时预览 */}
+        <div className="dcu-theme-code-preview">
+          <div className="dcu-theme-code-header">
+            <span className="dcu-theme-code-label">{t('theme.codeHighlight')}</span>
+            <span className="dcu-theme-code-lang">JavaScript</span>
+          </div>
+          <pre className="dcu-theme-code-sample" tabIndex={0} aria-label={t('theme.codeHighlight')}>
+            <code>
+              <span className="dcu-tok-comment">// A sample JavaScript code</span>
+              {'\n'}
+              <span className="dcu-tok-keyword">const</span>{' '}
+              <span className="dcu-tok-function">greet</span>
+              <span className="dcu-tok-punct">{' = ('}</span>
+              <span className="dcu-tok-parameter">name</span>
+              <span className="dcu-tok-punct">{') => '}</span>
+              <span className="dcu-tok-string">{'`hi ${name}`'}</span>
+              <span className="dcu-tok-punct">;</span>
+              {'\n'}
+              <span className="dcu-tok-keyword">console</span>
+              <span className="dcu-tok-punct">.</span>
+              <span className="dcu-tok-function">log</span>
+              <span className="dcu-tok-punct">(</span>
+              <span className="dcu-tok-function">greet</span>
+              <span className="dcu-tok-punct">(</span>
+              <span className="dcu-tok-string">'world'</span>
+              <span className="dcu-tok-punct">));</span>
+            </code>
+          </pre>
         </div>
       </div>
 

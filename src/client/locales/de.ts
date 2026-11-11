@@ -189,6 +189,7 @@ export const de: Record<CodexUiKey, string> = {
   'theme.paletteGruvboxDark': 'Gruvbox Dunkel',
   'theme.paletteGruvboxLight': 'Gruvbox Hell',
   'theme.paletteHint': 'Offizielle Standard- oder klassische Codex-Farbschemata auswählen',
+  'theme.codeHighlight': 'Code-Hervorhebungsvorschau',
   'theme.paletteLatte': 'Latte',
   'theme.paletteMacchiato': 'Macchiato',
   'theme.paletteMocha': 'Mocha',
