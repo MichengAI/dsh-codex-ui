@@ -4,6 +4,8 @@ export type ThemeOption =
   | 'stock'
   | 'codex-dark'
   | 'codex-light'
+  | 'claude-dark'
+  | 'claude-light'
   | 'catppuccin-mocha'
   | 'catppuccin-macchiato'
   | 'catppuccin-frappe'
@@ -32,6 +34,8 @@ const VALID_THEMES: readonly ThemeOption[] = [
   'stock',
   'codex-dark',
   'codex-light',
+  'claude-dark',
+  'claude-light',
   'catppuccin-mocha',
   'catppuccin-macchiato',
   'catppuccin-frappe',

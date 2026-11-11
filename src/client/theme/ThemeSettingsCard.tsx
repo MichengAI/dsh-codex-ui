@@ -25,6 +25,8 @@ const THEME_BUTTONS: readonly {
   { id: 'stock', labelKey: 'theme.paletteStock', subKey: 'theme.subStock', accent: '#3b82f6', colorScheme: 'auto' },
   { id: 'codex-dark', labelKey: 'theme.paletteCodexDark', subKey: 'theme.subCodexDark', accent: '#339cff', colorScheme: 'dark' },
   { id: 'codex-light', labelKey: 'theme.paletteCodexLight', subKey: 'theme.subCodexLight', accent: '#0169cc', colorScheme: 'light' },
+  { id: 'claude-dark', labelKey: 'theme.paletteClaudeDark', subKey: 'theme.subClaudeDark', accent: '#d97757', colorScheme: 'dark' },
+  { id: 'claude-light', labelKey: 'theme.paletteClaudeLight', subKey: 'theme.subClaudeLight', accent: '#d97757', colorScheme: 'light' },
   { id: 'catppuccin-mocha', labelKey: 'theme.paletteMocha', subKey: 'theme.subMocha', accent: '#cba6f7', colorScheme: 'dark' },
   { id: 'catppuccin-macchiato', labelKey: 'theme.paletteMacchiato', subKey: 'theme.subMacchiato', accent: '#c6a0f6', colorScheme: 'dark' },
   { id: 'catppuccin-frappe', labelKey: 'theme.paletteFrappe', subKey: 'theme.subFrappe', accent: '#ca9ee6', colorScheme: 'dark' },
