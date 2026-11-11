@@ -291,9 +291,14 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
       }
     }
 
+const PREDICTION_PLACEHOLDER_HIDE_CSS =
+  '[data-composer-card]:has([data-composer-prediction]) [data-composer-placeholder]{visibility:hidden !important;}'
+
     export function ComposerPredictionOverlay(props: any) {
-      const { sessionId, useSession, useInput, inputActions, enabled = true, t } = props
+      const { sessionId, useSession, useInput, inputActions, enabled = true, mode = 'all', nextEnabled, continueEnabled, t } = props
       const predictionsEnabled = enabled !== false
+      const allowNext = nextEnabled !== undefined ? nextEnabled : (predictionsEnabled && mode === 'all')
+      const allowContinue = continueEnabled !== undefined ? continueEnabled : (predictionsEnabled && (mode === 'continue' || mode === 'all'))
       const draft = useInput ? useInput((state: any) => (state === undefined ? '' : state.draft || '')) : ''
       const running = useSession ? useSession((state: any) => state?.running === true) : false
       const [ghost, setGhost] = React.useState(NO_GHOST)
@@ -397,6 +402,15 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
         setBox(null)
       }, [predictionsEnabled])
 
+      // 切换模式（如从 all 切到 continue 或 off）时，若当前处于 next 模式，立即终止请求并清空幽灵
+      React.useEffect(() => {
+        if (!allowNext && ghost.mode === 'next') {
+          abortRef.current?.abort()
+          setGhost(NO_GHOST)
+          setBox(null)
+        }
+      }, [allowNext, ghost.mode])
+
       // IME composition owns the draft until it commits: no prediction work.
       React.useEffect(() => {
         const onCompositionStart = () => {
@@ -446,19 +460,19 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
       // `next`: ask once the turn has settled and the composer is empty.
       React.useEffect(() => {
         if (sessionId === undefined || sessionId === null) return undefined
-        if (!predictionsEnabled || running || draft !== '') return undefined
+        if (!allowNext || running || draft !== '') return undefined
         if (dismissedRef.current !== null && dismissedRef.current.draft === draft) return undefined
         const timer = setTimeout(() => {
           if (composingRef.current) return
           void request('next', '')
         }, SETTLE_MS)
         return () => clearTimeout(timer)
-      }, [sessionId, running, draft, request, predictionsEnabled, compositionEnd])
+      }, [sessionId, running, draft, request, allowNext, compositionEnd])
 
       // `continue`: ask after a pause, only with the caret at the draft's end.
       React.useEffect(() => {
         if (sessionId === undefined || sessionId === null) return undefined
-        if (!predictionsEnabled || draft.trim() === '' || draft.length < CONTINUE_MIN_CHARS) return undefined
+        if (!allowContinue || draft.trim() === '' || draft.length < CONTINUE_MIN_CHARS) return undefined
         if (isTriggerToken(draft)) return undefined
         if (dismissedRef.current !== null && dismissedRef.current.draft === draft) return undefined
         const timer = setTimeout(() => {
@@ -469,12 +483,12 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
           void request('continue', draft.slice(-MAX_DRAFT_CHARS))
         }, TYPE_PAUSE_MS)
         return () => clearTimeout(timer)
-      }, [sessionId, draft, request, predictionsEnabled, compositionEnd])
+      }, [sessionId, draft, request, allowContinue, compositionEnd])
 
       // A prediction skipped while the page was hidden is retried on return.
       React.useEffect(() => {
         const onVisibility = () => {
-          if (!predictionsEnabled || document.hidden) return
+          if (!allowNext || document.hidden) return
           if (draft !== '' || running) return
           if (currentRef.current !== '' || dismissedRef.current !== null) return
           if (sessionId === undefined || sessionId === null) return
@@ -482,7 +496,7 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
         }
         document.addEventListener('visibilitychange', onVisibility)
         return () => document.removeEventListener('visibilitychange', onVisibility)
-      }, [draft, running, sessionId, request, predictionsEnabled])
+      }, [draft, running, sessionId, request, allowNext])
 
       const rawCandidate = ghost.items.length > 0
         ? ghost.items[Math.min(ghost.index, ghost.items.length - 1)] ?? ''
@@ -496,8 +510,8 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
         current !== '' &&
         box !== null &&
         (ghost.mode === 'next'
-          ? draft === '' && !running
-          : draft.trim() !== '' && !isTriggerToken(draft))
+          ? allowNext && draft === '' && !running
+          : allowContinue && draft.trim() !== '' && !isTriggerToken(draft))
 
       // `next` ghost spans the editor's text column.
       React.useLayoutEffect(() => {
@@ -709,6 +723,7 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
       const showBadge = ghost.items.length > 1
 
       return h(React.Fragment, null,
+        h('style', null, PREDICTION_PLACEHOLDER_HIDE_CSS),
         h('span', { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true', style: { position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' } }, ghost.active ? '' : (t('input.prediction.dismiss') || current)),
         h('div',
           {
@@ -725,5 +740,5 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
       )
     }
 
-// 导出被单测引用的算法
-export { joinContinuation, parseSseText, streamingCandidate, cleanLine, consumeStream }
+// 导出被单测引用的算法与样式
+export { joinContinuation, parseSseText, streamingCandidate, cleanLine, consumeStream, PREDICTION_PLACEHOLDER_HIDE_CSS }

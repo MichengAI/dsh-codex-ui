@@ -13,15 +13,23 @@ export const PREDICTION_STORAGE_KEY = 'codex-ui.composer.prediction'
 /** 同一窗口内跨标签页同步（storage 事件在写入方自身不触发）。 */
 export const PREDICTION_STORAGE_EVENT = 'codex-ui:prediction-change'
 
+export type PredictionMode = 'off' | 'continue' | 'all'
+
 export interface PredictionSettingsState {
   /** 子插件在 Host 侧是否启用；未启用时整个设置卡片不渲染（对齐 ThemeSettingsCard 规范）。 */
   readonly subPluginEnabled: boolean
-  /** 用户开关；`false` 表示用户主动关闭预测。 */
+  /** 用户开关；`false` 表示用户主动关闭预测（mode === 'off'）。保持兼容。 */
   readonly userEnabled: boolean
+  /** 预测模式：'off' 关闭 | 'continue' 仅续写 | 'all' 推测+续写 */
+  readonly mode: PredictionMode
   /** Host 侧是否允许预测（配置未声明时默认允许）。 */
   readonly hostAllowed: boolean
-  /** 最终生效值：子插件启用且两者同时为真才预测。 */
+  /** 最终生效值：子插件启用且未处于 off 且 Host 允许才预测。 */
   readonly enabled: boolean
+  /** 是否允许空输入框推测（next 模式）：仅在 all 模式且全局生效时启用。 */
+  readonly nextEnabled: boolean
+  /** 是否允许打字光标处行内续写（continue 模式）：在 continue 与 all 模式生效。 */
+  readonly continueEnabled: boolean
 }
 
 const listeners = new Set<() => void>()
@@ -43,21 +51,27 @@ function safeSetItem(key: string, value: string): void {
   }
 }
 
-function parseStored(raw: string | null): boolean {
-  if (raw === 'off' || raw === 'false' || raw === '0') return false
-  return true
+export function parseStoredMode(raw: string | null): PredictionMode {
+  if (raw === 'off' || raw === 'false' || raw === '0') return 'off'
+  if (raw === 'continue') return 'continue'
+  // 'all' / 'on' / 'true' / '1' 或未存储缺省值平滑兼容为 'all'
+  return 'all'
 }
 
 let subPluginEnabled = true
-let userEnabled = parseStored(safeGetItem(PREDICTION_STORAGE_KEY))
+let currentMode = parseStoredMode(safeGetItem(PREDICTION_STORAGE_KEY))
 let hostAllowed = true
 
 function snapshot(): PredictionSettingsState {
+  const effective = subPluginEnabled && hostAllowed && currentMode !== 'off'
   return {
     subPluginEnabled,
-    userEnabled,
+    userEnabled: currentMode !== 'off',
+    mode: currentMode,
     hostAllowed,
-    enabled: subPluginEnabled && userEnabled && hostAllowed,
+    enabled: effective,
+    nextEnabled: effective && currentMode === 'all',
+    continueEnabled: effective && (currentMode === 'continue' || currentMode === 'all'),
   }
 }
 
@@ -68,8 +82,11 @@ function publish(): void {
   if (
     next.subPluginEnabled === cached.subPluginEnabled &&
     next.userEnabled === cached.userEnabled &&
+    next.mode === cached.mode &&
     next.hostAllowed === cached.hostAllowed &&
-    next.enabled === cached.enabled
+    next.enabled === cached.enabled &&
+    next.nextEnabled === cached.nextEnabled &&
+    next.continueEnabled === cached.continueEnabled
   ) {
     return
   }
@@ -98,9 +115,9 @@ export function isPredictionEnabled(): boolean {
   return cached.enabled
 }
 
-export function setPredictionEnabled(enabled: boolean): void {
-  userEnabled = enabled
-  safeSetItem(PREDICTION_STORAGE_KEY, enabled ? 'on' : 'off')
+export function setPredictionMode(mode: PredictionMode): void {
+  currentMode = mode
+  safeSetItem(PREDICTION_STORAGE_KEY, mode)
   publish()
   if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
     try {
@@ -109,6 +126,10 @@ export function setPredictionEnabled(enabled: boolean): void {
       // 事件派发失败不影响本地状态
     }
   }
+}
+
+export function setPredictionEnabled(enabled: boolean): void {
+  setPredictionMode(enabled ? 'all' : 'off')
 }
 
 /** Host 状态端点回报的配置位；缺省视为允许。 */
@@ -125,7 +146,7 @@ export function setSubPluginEnabled(enabled: boolean): void {
 
 /** 测试用：按当前 localStorage 与默认 hostAllowed 重建内存状态。 */
 export function refreshPredictionSettingsSnapshot(): void {
-  userEnabled = parseStored(safeGetItem(PREDICTION_STORAGE_KEY))
+  currentMode = parseStoredMode(safeGetItem(PREDICTION_STORAGE_KEY))
   cached = snapshot()
 }
 
@@ -134,11 +155,11 @@ export function observePredictionSettings(): () => void {
   if (typeof window === 'undefined') return () => {}
   const onStorage = (event: StorageEvent): void => {
     if (event.key !== null && event.key !== PREDICTION_STORAGE_KEY) return
-    userEnabled = parseStored(safeGetItem(PREDICTION_STORAGE_KEY))
+    currentMode = parseStoredMode(safeGetItem(PREDICTION_STORAGE_KEY))
     publish()
   }
   const onLocal = (): void => {
-    userEnabled = parseStored(safeGetItem(PREDICTION_STORAGE_KEY))
+    currentMode = parseStoredMode(safeGetItem(PREDICTION_STORAGE_KEY))
     publish()
   }
   window.addEventListener('storage', onStorage)

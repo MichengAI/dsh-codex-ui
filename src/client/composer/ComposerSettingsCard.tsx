@@ -1,7 +1,12 @@
 import React, { useSyncExternalStore } from 'react'
-import { Switch } from '@deepseek-ai/dsh-client-ui-primitives'
+import { SegmentedControl } from '@deepseek-ai/dsh-client-ui-primitives'
 import { SECTION_CARD_CSS, SETTINGS_ROW_CSS } from '../section-card-styles.ts'
-import { getPredictionSettingsState, setPredictionEnabled, subscribePredictionSettings } from './prediction-state.ts'
+import {
+  PredictionMode,
+  getPredictionSettingsState,
+  setPredictionMode,
+  subscribePredictionSettings,
+} from './prediction-state.ts'
 
 export interface ComposerSettingsCardProps {
   t: (key: any) => string
@@ -40,13 +45,19 @@ export function ComposerSettingsCard({ t }: ComposerSettingsCardProps): React.JS
           <span className="dcu-settings-row-title">{t('composer.prediction')}</span>
           <span className="dcu-settings-row-hint">{lockedByHost ? t('composer.predictionLocked') : t('composer.predictionHint')}</span>
         </div>
-        <Switch
+        <SegmentedControl<PredictionMode>
+          id="codex-ui-composer-prediction-mode"
           label={t('composer.prediction')}
-          checked={state.enabled}
+          value={state.mode}
           disabled={lockedByHost}
-          onChange={(checked) => {
+          options={[
+            { value: 'off', label: t('composer.modeOff') },
+            { value: 'continue', label: t('composer.modeContinue') },
+            { value: 'all', label: t('composer.modeAll') },
+          ]}
+          onChange={(nextMode) => {
             if (lockedByHost) return
-            setPredictionEnabled(checked)
+            setPredictionMode(nextMode)
           }}
         />
       </div>

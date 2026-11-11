@@ -141,7 +141,17 @@ export function observeComposerEnhancements(ctx: Context): () => void {
     // 这里保留插槽注册以避免反复装卸 React 子树造成输入框抖动。
     function PredictionSlot(props: PropsRuntime<'conversation.input.overlay'>) {
       const prediction = useSyncExternalStore(subscribePredictionSettings, getPredictionSettingsState, getPredictionSettingsState)
-      return <ComposerPredictionOverlay {...props} enabled={prediction.enabled} ctx={ctx} t={t} />
+      return (
+        <ComposerPredictionOverlay
+          {...props}
+          enabled={prediction.enabled}
+          mode={prediction.mode}
+          nextEnabled={prediction.nextEnabled}
+          continueEnabled={prediction.continueEnabled}
+          ctx={ctx}
+          t={t}
+        />
+      )
     }
     const unregisterPrediction = ctx.slots.inject('conversation.input.overlay', () => ctx.slots.register({
       name: 'conversation.input.overlay',

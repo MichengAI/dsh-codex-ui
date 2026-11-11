@@ -26,7 +26,7 @@ describe('预测开关：客户端偏好', () => {
   beforeEach(reset)
 
   it('默认开启，且没有任何偏好写入时不会凭空关闭预测', () => {
-    expect(getPredictionSettingsState()).toEqual({ subPluginEnabled: true, userEnabled: true, hostAllowed: true, enabled: true })
+    expect(getPredictionSettingsState()).toMatchObject({ subPluginEnabled: true, userEnabled: true, hostAllowed: true, enabled: true, mode: 'all', nextEnabled: true, continueEnabled: true })
     expect(isPredictionEnabled()).toBe(true)
   })
 
@@ -55,7 +55,7 @@ describe('预测开关：客户端偏好', () => {
   it('站点级关闭时压过用户偏好，用户关不掉也开不了', () => {
     setPredictionEnabled(true)
     setHostPredictionAllowed(false)
-    expect(getPredictionSettingsState()).toEqual({ subPluginEnabled: true, userEnabled: true, hostAllowed: false, enabled: false })
+    expect(getPredictionSettingsState()).toMatchObject({ subPluginEnabled: true, userEnabled: true, hostAllowed: false, enabled: false, nextEnabled: false, continueEnabled: false })
     expect(isPredictionEnabled()).toBe(false)
 
     setPredictionEnabled(false)
@@ -124,6 +124,9 @@ describe('预测开关：设置卡片', () => {
     expect(html).toContain('dcu-composer-settings')
     expect(html).toContain('composer.prediction')
     expect(html).toContain('composer.predictionHint')
+    expect(html).toContain('composer.modeOff')
+    expect(html).toContain('composer.modeContinue')
+    expect(html).toContain('composer.modeAll')
     expect(html).not.toContain('composer.predictionLocked')
   })
 
