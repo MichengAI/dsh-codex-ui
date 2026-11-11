@@ -192,4 +192,16 @@ export const SHIKI_TOKENS_BY_THEME: Record<string, ShikiTokens> = {
     '--shiki-token-punctuation': '#9399b2',
     '--shiki-token-link': '#89b4fa',
   },
+  'cyberpunk': {
+    ...COMMON_SHIKI_SURFACE,
+    '--shiki-token-constant': '#00f0ff',
+    '--shiki-token-string': '#79ffe1',
+    '--shiki-token-comment': '#3d5c48',
+    '--shiki-token-keyword': '#00ff66',
+    '--shiki-token-parameter': '#ffe600',
+    '--shiki-token-function': '#00f0ff',
+    '--shiki-token-string-expression': '#79ffe1',
+    '--shiki-token-punctuation': '#709982',
+    '--shiki-token-link': '#00ff66',
+  },
 }

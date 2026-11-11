@@ -20,6 +20,8 @@ import {
   CODEX_DARK_THEME_ID,
   CODEX_LIGHT_THEME,
   CODEX_LIGHT_THEME_ID,
+  CYBERPUNK_THEME,
+  CYBERPUNK_THEME_ID,
   DRACULA_THEME,
   DRACULA_THEME_ID,
   SOLARIZED_DARK_THEME,
@@ -175,8 +177,8 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(await checkThemeEnabled()).toBe(false)
   })
 
-  it('内置色盘包含完整的 13 套主题（4套Catppuccin + 2套Codex + 2套Claude + 1套Dracula + 2套Solarized + 2套Gruvbox），均覆盖全套 190 个 --dsw-* 设计变量与 11 个 --shiki-* 代码高亮 Token', () => {
-    expect(ALL_BUILTIN_THEMES.length).toBe(13)
+  it('内置色盘包含完整的 14 套主题（4套Catppuccin + 2套Codex + 2套Claude + 1套Dracula + 2套Solarized + 2套Gruvbox + 1套Cyberpunk），均覆盖全套 190 个 --dsw-* 设计变量与 11 个 --shiki-* 代码高亮 Token', () => {
+    expect(ALL_BUILTIN_THEMES.length).toBe(14)
 
     expect(CODEX_DARK_THEME.id).toBe(CODEX_DARK_THEME_ID)
     expect(CODEX_DARK_THEME.colorScheme).toBe('dark')
@@ -197,6 +199,10 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(DRACULA_THEME.id).toBe(DRACULA_THEME_ID)
     expect(DRACULA_THEME.colorScheme).toBe('dark')
     expect(Object.keys(DRACULA_THEME.tokens).length).toBe(201)
+
+    expect(CYBERPUNK_THEME.id).toBe(CYBERPUNK_THEME_ID)
+    expect(CYBERPUNK_THEME.colorScheme).toBe('dark')
+    expect(Object.keys(CYBERPUNK_THEME.tokens).length).toBe(201)
 
     expect(SOLARIZED_DARK_THEME.id).toBe(SOLARIZED_DARK_THEME_ID)
     expect(SOLARIZED_DARK_THEME.colorScheme).toBe('dark')
@@ -221,6 +227,8 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(CLAUDE_LIGHT_THEME.tokens['--dsw-alias-brand-primary']).toBe('#d97757')
     expect(DRACULA_THEME.tokens['--dsw-alias-brand-primary-new-colorprimary-new-color']).toBe('#ff79c6')
     expect(DRACULA_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#191a21')
+    expect(CYBERPUNK_THEME.tokens['--dsw-alias-brand-primary-new-colorprimary-new-color']).toBe('#00ff66')
+    expect(CYBERPUNK_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#080a08')
     expect(SOLARIZED_DARK_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#002b36')
     expect(SOLARIZED_LIGHT_THEME.tokens['--dsw-static-neutral-bluish-00']).toBe('#fdf6e3')
     expect(GRUVBOX_DARK_THEME.tokens['--dsw-alias-brand-primary-new-colorprimary-new-color']).toBe('#fabd2f')
@@ -234,12 +242,14 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(CLAUDE_LIGHT_THEME.tokens['--shiki-token-keyword']).toBe('#b53a1a')
     expect(DRACULA_THEME.tokens['--shiki-token-keyword']).toBe('#ff79c6')
     expect(DRACULA_THEME.tokens['--shiki-token-string']).toBe('#f1fa8c')
+    expect(CYBERPUNK_THEME.tokens['--shiki-token-keyword']).toBe('#00ff66')
+    expect(CYBERPUNK_THEME.tokens['--shiki-token-string']).toBe('#79ffe1')
     expect(SOLARIZED_DARK_THEME.tokens['--shiki-token-keyword']).toBe('#859900')
     expect(SOLARIZED_LIGHT_THEME.tokens['--shiki-token-keyword']).toBe('#859900')
     expect(GRUVBOX_DARK_THEME.tokens['--shiki-token-keyword']).toBe('#fb4934')
     expect(GRUVBOX_LIGHT_THEME.tokens['--shiki-token-keyword']).toBe('#9d0006')
 
-    // 验证包含全部 13 套内置主题
+    // 验证包含全部 14 套内置主题
     const themeIds = ALL_BUILTIN_THEMES.map((t) => t.id)
     expect(themeIds).toContain('catppuccin-mocha')
     expect(themeIds).toContain('catppuccin-macchiato')
@@ -248,6 +258,7 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(themeIds).toContain('claude-dark')
     expect(themeIds).toContain('claude-light')
     expect(themeIds).toContain('dracula')
+    expect(themeIds).toContain('cyberpunk')
     expect(themeIds).toContain('solarized-dark')
     expect(themeIds).toContain('solarized-light')
     expect(themeIds).toContain('gruvbox-dark')
@@ -353,13 +364,14 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
 
     const dispose = observeTheme(ctx)
 
-    // 验证注册了全部 13 套主题
-    expect(fakeThemeRuntime.register).toHaveBeenCalledTimes(13)
+    // 验证注册了全部 14 套主题
+    expect(fakeThemeRuntime.register).toHaveBeenCalledTimes(14)
     expect(registeredThemes).toContain(CODEX_DARK_THEME_ID)
     expect(registeredThemes).toContain(CODEX_LIGHT_THEME_ID)
     expect(registeredThemes).toContain(CLAUDE_DARK_THEME_ID)
     expect(registeredThemes).toContain(CLAUDE_LIGHT_THEME_ID)
     expect(registeredThemes).toContain(DRACULA_THEME_ID)
+    expect(registeredThemes).toContain(CYBERPUNK_THEME_ID)
     expect(registeredThemes).toContain(SOLARIZED_DARK_THEME_ID)
     expect(registeredThemes).toContain(SOLARIZED_LIGHT_THEME_ID)
     expect(registeredThemes).toContain(GRUVBOX_DARK_THEME_ID)

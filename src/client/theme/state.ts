@@ -15,6 +15,7 @@ export type ThemeOption =
   | 'catppuccin-macchiato'
   | 'catppuccin-frappe'
   | 'catppuccin-latte'
+  | 'cyberpunk'
 
 export interface ThemeSettingsState {
   readonly themeOption: ThemeOption
@@ -50,6 +51,7 @@ const VALID_THEMES: readonly ThemeOption[] = [
   'catppuccin-macchiato',
   'catppuccin-frappe',
   'catppuccin-latte',
+  'cyberpunk',
 ]
 
 function safeGetItem(key: string): string | null {

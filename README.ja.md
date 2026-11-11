@@ -94,7 +94,7 @@ Ambient Ground の拡散光グラデーションを採用した Codex Light 配�
 ---
 
 ### 4. 外観カスタマイズとフロストガラス
-13 種類の高品質テーマ配色と 1 つの公式デフォルト（Codex、Claude、Dracula、Solarized、Gruvbox、Catppuccin シリーズを網羅）。公式フラットガラスと浮動 Mica のデュアルレイアウトモード、3 段階のマテリアルプリセット（Clear / Standard / Frosted）、地面反射グロースイッチに対応。純粋な Design Token 動的注入とクリーンな破棄により、グローバルスタイルの汚染を防止します。
+14 種類の高品質テーマ配色と 1 つの公式デフォルト（Codex、Claude、Dracula、Cyberpunk、Solarized、Gruvbox、Catppuccin シリーズを網羅）。公式フラットガラスと浮動 Mica のデュアルレイアウトモード、3 段階のマテリアルプリセット（Clear / Standard / Frosted）、地面反射グロースイッチに対応。純粋な Design Token 動的注入とクリーンな破棄により、グローバルスタイルの汚染を防止します。
 
 #### 内蔵テーマおよび配色スキーム一覧
 
@@ -106,6 +106,7 @@ Ambient Ground の拡散光グラデーションを採用した Codex Light 配�
 | **Claude** | **Claude ダーク** | `claude-dark` | ダーク | 温かみのある黒炭とテラコッタ | Accent: ![](https://img.shields.io/badge/-%23d97757-d97757) `#d97757` · BG: ![](https://img.shields.io/badge/-%23141414-141414) `#141414` · Text: ![](https://img.shields.io/badge/-%23fdfdfd-fdfdfd) `#fdfdfd` |
 |  | **Claude ライト** | `claude-light` | ライト | 温かみのある和紙感とテラコッタ | Accent: ![](https://img.shields.io/badge/-%23d97757-d97757) `#d97757` · BG: ![](https://img.shields.io/badge/-%23faf9f5-faf9f5) `#faf9f5` · Text: ![](https://img.shields.io/badge/-%231f1e1d-1f1e1d) `#1f1e1d` |
 | **Dracula** | **Dracula (ドラキュラ)** | `dracula` | ダーク | 吸血鬼ピンクとサイバーネオン | Accent: ![](https://img.shields.io/badge/-%23ff79c6-ff79c6) `#ff79c6` · BG: ![](https://img.shields.io/badge/-%23191a21-191a21) `#191a21` · Text: ![](https://img.shields.io/badge/-%23f8f8f2-f8f8f2) `#f8f8f2` |
+| **Cyberpunk** | **Cyberpunk (サイバーパンク)** | `cyberpunk` | ダーク | 黒地にネオングリーン · マトリックス端末 | Accent: ![](https://img.shields.io/badge/-%2300ff66-00ff66) `#00ff66` · BG: ![](https://img.shields.io/badge/-%23080a08-080a08) `#080a08` · Text: ![](https://img.shields.io/badge/-%23e6ffed-e6ffed) `#e6ffed` |
 | **Solarized** | **Solarized ダーク** | `solarized-dark` | ダーク | 深海墨緑と青碧 | Accent: ![](https://img.shields.io/badge/-%232aa198-2aa198) `#2aa198` · BG: ![](https://img.shields.io/badge/-%23002b36-002b36) `#002b36` · Text: ![](https://img.shields.io/badge/-%2393a1a1-93a1a1) `#93a1a1` |
 |  | **Solarized ライト** | `solarized-light` | ライト | 羊皮紙と日光青 | Accent: ![](https://img.shields.io/badge/-%23268bd2-268bd2) `#268bd2` · BG: ![](https://img.shields.io/badge/-%23fdf6e3-fdf6e3) `#fdf6e3` · Text: ![](https://img.shields.io/badge/-%23586e75-586e75) `#586e75` |
 | **Gruvbox** | **Gruvbox ダーク** | `gruvbox-dark` | ダーク | 泥炭深茶と暖金レトロ | Accent: ![](https://img.shields.io/badge/-%23fabd2f-fabd2f) `#fabd2f` · BG: ![](https://img.shields.io/badge/-%23282828-282828) `#282828` · Text: ![](https://img.shields.io/badge/-%23fbf1c7-fbf1c7) `#fbf1c7` |

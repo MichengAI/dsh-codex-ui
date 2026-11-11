@@ -36,6 +36,7 @@ const THEME_BUTTONS: readonly {
   { id: 'catppuccin-macchiato', labelKey: 'theme.paletteMacchiato', subKey: 'theme.subMacchiato', accent: '#c6a0f6', colorScheme: 'dark' },
   { id: 'catppuccin-frappe', labelKey: 'theme.paletteFrappe', subKey: 'theme.subFrappe', accent: '#ca9ee6', colorScheme: 'dark' },
   { id: 'catppuccin-latte', labelKey: 'theme.paletteLatte', subKey: 'theme.subLatte', accent: '#8839ef', colorScheme: 'light' },
+  { id: 'cyberpunk', labelKey: 'theme.paletteCyberpunk', subKey: 'theme.subCyberpunk', accent: '#00ff66', colorScheme: 'dark' },
 ]
 
 const stylesheet = `

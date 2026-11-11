@@ -94,7 +94,7 @@ Großzügige Einstellungs-Workbench mit modular strukturierten Karten, passend z
 ---
 
 ### 4. Erscheinungsbild und Milchglas-Anpassung
-13 integrierte hochwertige Farbschemata und 1 offizielle Standardoption (umfassend die Serien Codex, Claude, Dracula, Solarized, Gruvbox und Catppuccin). Unterstützt traditionelles flaches Glas und schwebendes Mica-Design, 3 Materialstufen (Klar, Standard, Mattiert) und Bodenreflexions-Schalter. Basiert auf dynamischer Design-Token-Injektion mit sauberem Lebenszyklus-Cleanup zur Vermeidung globaler Stilverschmutzung.
+14 integrierte hochwertige Farbschemata und 1 offizielle Standardoption (umfassend die Serien Codex, Claude, Dracula, Cyberpunk, Solarized, Gruvbox und Catppuccin). Unterstützt traditionelles flaches Glas und schwebendes Mica-Design, 3 Materialstufen (Klar, Standard, Mattiert) und Bodenreflexions-Schalter. Basiert auf dynamischer Design-Token-Injektion mit sauberem Lebenszyklus-Cleanup zur Vermeidung globaler Stilverschmutzung.
 
 #### Übersicht der integrierten Themes und Farbschemata
 
@@ -106,6 +106,7 @@ Großzügige Einstellungs-Workbench mit modular strukturierten Karten, passend z
 | **Claude** | **Claude Dunkel** | `claude-dark` | Dunkel | Warmer Dunkelton & Terrakotta | Accent: ![](https://img.shields.io/badge/-%23d97757-d97757) `#d97757` · BG: ![](https://img.shields.io/badge/-%23141414-141414) `#141414` · Text: ![](https://img.shields.io/badge/-%23fdfdfd-fdfdfd) `#fdfdfd` |
 |  | **Claude Hell** | `claude-light` | Hell | Warmes Papier & Terrakotta | Accent: ![](https://img.shields.io/badge/-%23d97757-d97757) `#d97757` · BG: ![](https://img.shields.io/badge/-%23faf9f5-faf9f5) `#faf9f5` · Text: ![](https://img.shields.io/badge/-%231f1e1d-1f1e1d) `#1f1e1d` |
 | **Dracula** | **Dracula** | `dracula` | Dunkel | Vampir-Pink & Cyber-Glow | Accent: ![](https://img.shields.io/badge/-%23ff79c6-ff79c6) `#ff79c6` · BG: ![](https://img.shields.io/badge/-%23191a21-191a21) `#191a21` · Text: ![](https://img.shields.io/badge/-%23f8f8f2-f8f8f2) `#f8f8f2` |
+| **Cyberpunk** | **Cyberpunk** | `cyberpunk` | Dunkel | Neongrün auf Schwarz · Matrix-Terminal | Accent: ![](https://img.shields.io/badge/-%2300ff66-00ff66) `#00ff66` · BG: ![](https://img.shields.io/badge/-%23080a08-080a08) `#080a08` · Text: ![](https://img.shields.io/badge/-%23e6ffed-e6ffed) `#e6ffed` |
 | **Solarized** | **Solarized Dunkel** | `solarized-dark` | Dunkel | Tiefes Blaugrün & Cyan | Accent: ![](https://img.shields.io/badge/-%232aa198-2aa198) `#2aa198` · BG: ![](https://img.shields.io/badge/-%23002b36-002b36) `#002b36` · Text: ![](https://img.shields.io/badge/-%2393a1a1-93a1a1) `#93a1a1` |
 |  | **Solarized Hell** | `solarized-light` | Hell | Warmes Pergament & Blau | Accent: ![](https://img.shields.io/badge/-%23268bd2-268bd2) `#268bd2` · BG: ![](https://img.shields.io/badge/-%23fdf6e3-fdf6e3) `#fdf6e3` · Text: ![](https://img.shields.io/badge/-%23586e75-586e75) `#586e75` |
 | **Gruvbox** | **Gruvbox Dunkel** | `gruvbox-dark` | Dunkel | Retro-Dunkel & Warmgold | Accent: ![](https://img.shields.io/badge/-%23fabd2f-fabd2f) `#fabd2f` · BG: ![](https://img.shields.io/badge/-%23282828-282828) `#282828` · Text: ![](https://img.shields.io/badge/-%23fbf1c7-fbf1c7) `#fbf1c7` |

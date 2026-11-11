@@ -30,7 +30,7 @@
 
 * 🚀 **极速输入召回与智能预测**：智能行内意图预测与续写（`Tab` 一键采纳，`Alt+↓/↑` 切换候选项），终端风格输入框历史（`↑` / `↓` 快捷召回），支持自适应宽度微调；
 * 🪟 **全屏悬浮双岛设置**：告别局促模态框，接入 Ambient Ground 漫反射画布与双岛卡片工作台；
-* 🎨 **物理级毛玻璃换肤**：内置 13 款高品质主题配色（含 Codex、Claude、Dracula、Solarized、Gruvbox 与 Catppuccin 系列），支持原版平铺玻璃与云母悬浮双排版模态、三档材质预设与独立地面光斑；
+* 🎨 **物理级毛玻璃换肤**：内置 14 款高品质主题配色（含 Codex、Claude、Dracula、Cyberpunk、Solarized、Gruvbox 与 Catppuccin 系列），支持原版平铺玻璃与云母悬浮双排版模态、三档材质预设与独立地面光斑；
 * 🧭 **模块化侧边栏**：展开态支持原位平滑折叠抽屉与自由拖拽排序；收缩折叠态 **100% 对齐宿主官方 56px 原生导轨**，所有图标整齐排列、新会话常驻高对比度；
 * 🧠 **智能会话标题**：首条消息语义解析，自动提炼精炼标题，完美适配推理大模型长上下文；
 * 🌐 **全量官方多语言国际化**：深度支持 DSH 官方全部 8 门内置语言（中、英、日、西、法、德、俄、葡），界面文案、建议卡片、右键菜单与会话标题随宿主环境自适应无缝切换；
@@ -99,7 +99,7 @@
 ---
 
 ### 4. 界面外观换肤与毛玻璃配置
-内置 13 款高品质主题色盘与 1 款官方原生选项（涵盖 Codex、Claude、Dracula、Solarized、Gruvbox 与 Catppuccin 系列），支持原版平铺玻璃与云母悬浮双排版模态，提供清透/标准/磨砂三档材质直选与地面反射光斑开关。所有主题基于 Design Token 动态注入与无残留纯净销毁，绝无全局样式污染。
+内置 14 款高品质主题色盘与 1 款官方原生选项（涵盖 Codex、Claude、Dracula、Cyberpunk、Solarized、Gruvbox 与 Catppuccin 系列），支持原版平铺玻璃与云母悬浮双排版模态，提供清透/标准/磨砂三档材质直选与地面反射光斑开关。所有主题基于 Design Token 动态注入与无残留纯净销毁，绝无全局样式污染。
 
 #### 内置主题与配色方案一览
 
@@ -111,6 +111,7 @@
 | **Claude** | **Claude 暗色** | `claude-dark` | 深色 | 暖炭夜色 陶橙点缀 | Accent: ![](https://img.shields.io/badge/-%23d97757-d97757) `#d97757` · BG: ![](https://img.shields.io/badge/-%23141414-141414) `#141414` · Text: ![](https://img.shields.io/badge/-%23fdfdfd-fdfdfd) `#fdfdfd` |
 |  | **Claude 暖白** | `claude-light` | 浅色 | 暖米纸感 陶橙点缀 | Accent: ![](https://img.shields.io/badge/-%23d97757-d97757) `#d97757` · BG: ![](https://img.shields.io/badge/-%23faf9f5-faf9f5) `#faf9f5` · Text: ![](https://img.shields.io/badge/-%231f1e1d-1f1e1d) `#1f1e1d` |
 | **Dracula** | **Dracula (德古拉)** | `dracula` | 深色 | 吸血鬼粉 潮酷荧光 | Accent: ![](https://img.shields.io/badge/-%23ff79c6-ff79c6) `#ff79c6` · BG: ![](https://img.shields.io/badge/-%23191a21-191a21) `#191a21` · Text: ![](https://img.shields.io/badge/-%23f8f8f2-f8f8f2) `#f8f8f2` |
+| **Cyberpunk** | **Cyberpunk (赛博朋克)** | `cyberpunk` | 深色 | 黑底霓虹绿 矩阵终端 | Accent: ![](https://img.shields.io/badge/-%2300ff66-00ff66) `#00ff66` · BG: ![](https://img.shields.io/badge/-%23080a08-080a08) `#080a08` · Text: ![](https://img.shields.io/badge/-%23e6ffed-e6ffed) `#e6ffed` |
 | **Solarized** | **Solarized 暗色** | `solarized-dark` | 深色 | 深海墨绿 碧玉青蓝 | Accent: ![](https://img.shields.io/badge/-%232aa198-2aa198) `#2aa198` · BG: ![](https://img.shields.io/badge/-%23002b36-002b36) `#002b36` · Text: ![](https://img.shields.io/badge/-%2393a1a1-93a1a1) `#93a1a1` |
 |  | **Solarized 亮色** | `solarized-light` | 浅色 | 古籍羊皮 日光清蓝 | Accent: ![](https://img.shields.io/badge/-%23268bd2-268bd2) `#268bd2` · BG: ![](https://img.shields.io/badge/-%23fdf6e3-fdf6e3) `#fdf6e3` · Text: ![](https://img.shields.io/badge/-%23586e75-586e75) `#586e75` |
 | **Gruvbox** | **Gruvbox 暗色** | `gruvbox-dark` | 深色 | 泥炭深棕 暖金复古 | Accent: ![](https://img.shields.io/badge/-%23fabd2f-fabd2f) `#fabd2f` · BG: ![](https://img.shields.io/badge/-%23282828-282828) `#282828` · Text: ![](https://img.shields.io/badge/-%23fbf1c7-fbf1c7) `#fbf1c7` |
