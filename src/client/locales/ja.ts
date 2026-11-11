@@ -190,6 +190,8 @@ export const ja: Record<CodexUiKey, string> = {
   'theme.paletteLatte': 'Latte (ラテ)',
   'theme.paletteMacchiato': 'Macchiato (マキアート)',
   'theme.paletteMocha': 'Mocha (モカ)',
+  'theme.paletteSolarizedDark': 'Solarized ダーク',
+  'theme.paletteSolarizedLight': 'Solarized ライト',
   'theme.paletteStock': '公式デフォルト',
   'theme.presetClear': 'クリア (高透明)',
   'theme.presetFrosted': 'フロスト (強ぼかし)',
@@ -203,6 +205,8 @@ export const ja: Record<CodexUiKey, string> = {
   'theme.subLatte': 'ラテウォームホワイト 暖かく軽快',
   'theme.subMacchiato': 'マキアートダーク 優雅で柔らかなトーン',
   'theme.subMocha': 'モカダーク 目に優しい落ち着き',
+  'theme.subSolarizedDark': '深海墨緑と青碧',
+  'theme.subSolarizedLight': '羊皮紙と日光青',
   'theme.subStock': 'システムに追従 ネイティブUI',
   'theme.title': '外観とテーマ',
 }

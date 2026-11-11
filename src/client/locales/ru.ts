@@ -190,6 +190,8 @@ export const ru: Record<CodexUiKey, string> = {
   'theme.paletteLatte': 'Latte',
   'theme.paletteMacchiato': 'Macchiato',
   'theme.paletteMocha': 'Mocha',
+  'theme.paletteSolarizedDark': 'Solarized Темная',
+  'theme.paletteSolarizedLight': 'Solarized Светлая',
   'theme.paletteStock': 'Официальная по умолчанию',
   'theme.presetClear': 'Прозрачный (Высокая прозрачность)',
   'theme.presetFrosted': 'Матовый (Сильное размытие)',
@@ -203,6 +205,8 @@ export const ru: Record<CodexUiKey, string> = {
   'theme.subLatte': 'Теплый латте Мягкий и светлый',
   'theme.subMacchiato': 'Темный макиато Мягкий и элегантный',
   'theme.subMocha': 'Темный мокко Защита для глаз',
+  'theme.subSolarizedDark': 'Глубокий бирюзовый и циан',
+  'theme.subSolarizedLight': 'Теплый пергамент и синий',
   'theme.subStock': 'Как в системе Нативный интерфейс',
   'theme.title': 'Внешний вид и темы',
 }

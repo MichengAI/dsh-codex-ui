@@ -190,6 +190,8 @@ export const fr: Record<CodexUiKey, string> = {
   'theme.paletteLatte': 'Latte',
   'theme.paletteMacchiato': 'Macchiato',
   'theme.paletteMocha': 'Mocha',
+  'theme.paletteSolarizedDark': 'Solarized Sombre',
+  'theme.paletteSolarizedLight': 'Solarized Clair',
   'theme.paletteStock': 'Officiel par défaut',
   'theme.presetClear': 'Clair (Haute transparence)',
   'theme.presetFrosted': 'Dépoli (Flou accentué)',
@@ -203,6 +205,8 @@ export const fr: Record<CodexUiKey, string> = {
   'theme.subLatte': 'Latte chaud Lumineux et chaleureux',
   'theme.subMacchiato': 'Macchiato sombre Doux et élégant',
   'theme.subMocha': 'Mocha sombre Reposant pour les yeux',
+  'theme.subSolarizedDark': 'Sarcelle profond et cyan',
+  'theme.subSolarizedLight': 'Parchemin chaud et bleu',
   'theme.subStock': 'Selon le système Interface native',
   'theme.title': 'Apparence et thèmes',
 }

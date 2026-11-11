@@ -22,6 +22,10 @@ import {
   CODEX_LIGHT_THEME_ID,
   DRACULA_THEME,
   DRACULA_THEME_ID,
+  SOLARIZED_DARK_THEME,
+  SOLARIZED_DARK_THEME_ID,
+  SOLARIZED_LIGHT_THEME,
+  SOLARIZED_LIGHT_THEME_ID,
   disposeGlassMode,
   GLASS_ATTRIBUTE,
   GLASS_COMPAT_ATTRIBUTE,
@@ -167,8 +171,8 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(await checkThemeEnabled()).toBe(false)
   })
 
-  it('内置色盘包含完整的 9 套主题（4套Catppuccin + 2套Codex + 2套Claude + 1套Dracula），均覆盖全套 190 个 --dsw-* 设计变量', () => {
-    expect(ALL_BUILTIN_THEMES.length).toBe(9)
+  it('内置色盘包含完整的 11 套主题（4套Catppuccin + 2套Codex + 2套Claude + 1套Dracula + 2套Solarized），均覆盖全套 190 个 --dsw-* 设计变量', () => {
+    expect(ALL_BUILTIN_THEMES.length).toBe(11)
 
     expect(CODEX_DARK_THEME.id).toBe(CODEX_DARK_THEME_ID)
     expect(CODEX_DARK_THEME.colorScheme).toBe('dark')
@@ -190,6 +194,14 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(DRACULA_THEME.colorScheme).toBe('dark')
     expect(Object.keys(DRACULA_THEME.tokens).length).toBe(190)
 
+    expect(SOLARIZED_DARK_THEME.id).toBe(SOLARIZED_DARK_THEME_ID)
+    expect(SOLARIZED_DARK_THEME.colorScheme).toBe('dark')
+    expect(Object.keys(SOLARIZED_DARK_THEME.tokens).length).toBe(190)
+
+    expect(SOLARIZED_LIGHT_THEME.id).toBe(SOLARIZED_LIGHT_THEME_ID)
+    expect(SOLARIZED_LIGHT_THEME.colorScheme).toBe('light')
+    expect(Object.keys(SOLARIZED_LIGHT_THEME.tokens).length).toBe(190)
+
     // 验证核心底色、强调色与高对比度文字
     expect(CODEX_DARK_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#09090b')
     expect(CODEX_LIGHT_THEME.tokens['--dsw-static-neutral-bluish-00']).toBe('#ffffff')
@@ -197,8 +209,10 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(CLAUDE_LIGHT_THEME.tokens['--dsw-alias-brand-primary']).toBe('#d97757')
     expect(DRACULA_THEME.tokens['--dsw-alias-brand-primary-new-colorprimary-new-color']).toBe('#ff79c6')
     expect(DRACULA_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#191a21')
+    expect(SOLARIZED_DARK_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#002b36')
+    expect(SOLARIZED_LIGHT_THEME.tokens['--dsw-static-neutral-bluish-00']).toBe('#fdf6e3')
 
-    // 验证包含全部 9 套内置主题
+    // 验证包含全部 11 套内置主题
     const themeIds = ALL_BUILTIN_THEMES.map((t) => t.id)
     expect(themeIds).toContain('catppuccin-mocha')
     expect(themeIds).toContain('catppuccin-macchiato')
@@ -207,6 +221,8 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(themeIds).toContain('claude-dark')
     expect(themeIds).toContain('claude-light')
     expect(themeIds).toContain('dracula')
+    expect(themeIds).toContain('solarized-dark')
+    expect(themeIds).toContain('solarized-light')
   })
 
   it('主题状态读写、持久化与广播订阅工作正常', () => {
@@ -308,15 +324,27 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
 
     const dispose = observeTheme(ctx)
 
-    // 验证注册了全部 9 套主题
-    expect(fakeThemeRuntime.register).toHaveBeenCalledTimes(9)
+    // 验证注册了全部 11 套主题
+    expect(fakeThemeRuntime.register).toHaveBeenCalledTimes(11)
     expect(registeredThemes).toContain(CODEX_DARK_THEME_ID)
     expect(registeredThemes).toContain(CODEX_LIGHT_THEME_ID)
     expect(registeredThemes).toContain(CLAUDE_DARK_THEME_ID)
     expect(registeredThemes).toContain(CLAUDE_LIGHT_THEME_ID)
     expect(registeredThemes).toContain(DRACULA_THEME_ID)
+    expect(registeredThemes).toContain(SOLARIZED_DARK_THEME_ID)
+    expect(registeredThemes).toContain(SOLARIZED_LIGHT_THEME_ID)
     expect(registeredThemes).toContain('catppuccin-mocha')
     expect(registeredThemes).toContain('catppuccin-latte')
+
+    // 用户通过 UI 调用 changeTheme 切换至 solarized-dark
+    changeTheme('solarized-dark')
+    expect(fakeThemeRuntime.setTheme).toHaveBeenCalledWith('solarized-dark')
+    expect(getThemeSettingsState().themeOption).toBe('solarized-dark')
+
+    // 切换至 solarized-light
+    changeTheme('solarized-light')
+    expect(fakeThemeRuntime.setTheme).toHaveBeenCalledWith('solarized-light')
+    expect(getThemeSettingsState().themeOption).toBe('solarized-light')
 
     // 用户通过 UI 调用 changeTheme 切换至 dracula
     changeTheme('dracula')
