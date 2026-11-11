@@ -58,7 +58,7 @@ Avec la version 2.0.0, l'ensemble du code de surcharge a été **supprimé** au 
 
 | ID du Sous-Plugin | Nom | Fonctionnalités |
 | :--- | :--- | :--- |
-| `composer` | **Améliorations de Saisie (Composer)** | Prédiction en ligne (`Tab`), historique terminal (`↑`/`↓`), isolation par espace de travail, poignées de largeur et cartes de suggestions. |
+| `composer` | **Améliorations de Saisie (Composer)** | Prédiction en ligne (`Tab`), historique terminal (`↑`/`↓`), isolation par conversation ou espace de travail, poignées de largeur et cartes de suggestions. |
 | `settings-skin` | **Habillage des Paramètres (Settings Skin)** | Atelier plein écran, cartes d'options flottantes, arrière-plan Ambient Ground et recherche native. |
 | `theme` | **Thème et Verre Dépoli (Theme)** | 13 palettes de couleurs, modes Plat vs. Cartes Mica, 3 niveaux de flou et contrôle des reflets au sol. |
 | `sidebar` | **Barre Latérale Modulaire (Sidebar)** | Déploiement accordéon, réorganisation par glisser-déposer, marquage lu/non-lu et alignement parfait avec le rail 56px. |

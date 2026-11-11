@@ -58,7 +58,7 @@ Na versão 2.0.0, todo o código antigo de sobreposição foi **descartado** em 
 
 | ID do Subplugin | Nome | Funcionalidades |
 | :--- | :--- | :--- |
-| `composer` | **Melhorias de Entrada (Composer)** | Previsão inteligente (`Tab`), histórico de terminal (`↑`/`↓`), isolamento por espaço de trabalho, alças de largura e sugestões. |
+| `composer` | **Melhorias de Entrada (Composer)** | Previsão inteligente (`Tab`), histórico de terminal (`↑`/`↓`), isolamento por conversa ou espaço de trabalho, alças de largura e sugestões. |
 | `settings-skin` | **Visual de Configurações (Settings Skin)** | Painel em tela cheia, cartões flutuantes de opções, fundo Ambient Ground e busca nativa. |
 | `theme` | **Temas e Vidro Fosco (Theme)** | 13 paletas de cores, modos Plano vs. Cartões Mica, 3 pré-definições de desfoque e brilhos de reflexo. |
 | `sidebar` | **Barra Lateral Modular (Sidebar)** | Expansão suave, reorganização por arrasto, marcador de lido/não lido e aderência estrita ao trilho de 56px. |

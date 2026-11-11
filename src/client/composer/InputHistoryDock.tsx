@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -6,6 +6,11 @@ import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots
 import type {} from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { InputHistory } from './input-history.ts'
+import {
+  getHistoryScope,
+  observeHistoryScope,
+  subscribeHistoryScope,
+} from './history-scope.ts'
 import { hasDraftAttachments } from './draft-attachments.ts'
 import { bindHistoryKeys, findComposer } from './input-history-keyboard.ts'
 import { NS } from '../locales.ts'
@@ -39,10 +44,14 @@ type HistoryDockProps = {
 /** 隐形输入扩展：使用宿主状态和编辑动作，不替换编辑器或创建旁问界面。 */
 export function InputHistoryDock({ ctx, sessionId, history, seen }: HistoryDockProps) {
   const anchor = useRef<HTMLSpanElement>(null)
+  // 会话级（默认）只召回本会话输入；工作区级沿用旧行为，与同一 cwd 的会话共享。
+  const scopeMode = useSyncExternalStore(subscribeHistoryScope, getHistoryScope, getHistoryScope)
   useEffect(() => {
     const binding = ctx.sessions.binding(sessionId)
     if (binding === undefined) return
-    const scope = ctx.sessions.list.getSnapshot().byId[sessionId]?.cwd ?? sessionId
+    const scope = scopeMode === 'workspace'
+      ? ctx.sessions.list.getSnapshot().byId[sessionId]?.cwd ?? sessionId
+      : sessionId
     const input = ctx.conversation.input.for(binding.ctx)
     const menu = ctx.inputTriggers.sessionOf(binding.ctx).menu
     // 挂载只建立版本基线，历史窗口和未挂载期间的输入不回灌；多实例共用版本去重。
@@ -94,7 +103,7 @@ export function InputHistoryDock({ ctx, sessionId, history, seen }: HistoryDockP
     const observer = new MutationObserver(connect)
     if (parent !== null && parent !== undefined) observer.observe(parent, { childList: true, subtree: true })
     return () => { observer.disconnect(); offKeys(); offInput(); offEvents() }
-  }, [ctx, sessionId, history, seen])
+  }, [ctx, sessionId, history, seen, scopeMode])
   return <span ref={anchor} hidden />
 }
 
@@ -103,6 +112,7 @@ export function registerInputHistory(ctx: Context): () => void {
   try { storage = window.localStorage } catch { console.warn('[michengai-codex-ui] 浏览器存储不可用，使用内存输入历史。') }
   const history = new InputHistory(storage)
   const seen = new WeakMap<object, number>()
+  const stopScope = observeHistoryScope()
   function Dock(props: PropsRuntime<'conversation.input.dock'>) {
     return <InputHistoryDock ctx={ctx} sessionId={props.session.sessionId} history={history} seen={seen} />
   }
@@ -113,6 +123,7 @@ export function registerInputHistory(ctx: Context): () => void {
     name: 'conversation.input.dock', id: 'codex-ui-input-history-hint', order: -100, locale: NS,
   }, InputHistoryHint))
   return () => {
+    stopScope()
     unregisterDock()
     unregisterHint()
   }

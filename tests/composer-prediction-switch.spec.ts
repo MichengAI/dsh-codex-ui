@@ -13,10 +13,13 @@ import {
   subscribePredictionSettings,
 } from '../src/client/composer/prediction-state.ts'
 import { ComposerSettingsCard } from '../src/client/composer/ComposerSettingsCard.tsx'
+import { HISTORY_SCOPE_STORAGE_KEY, refreshHistoryScopeSnapshot, setHistoryScope } from '../src/client/composer/history-scope.ts'
 
 /** 复位到「用户开启 + Host 允许 + 子插件启用」的干净起点。 */
 function reset(): void {
   localStorage.removeItem(PREDICTION_STORAGE_KEY)
+  localStorage.removeItem(HISTORY_SCOPE_STORAGE_KEY)
+  refreshHistoryScopeSnapshot()
   setPredictionEnabled(true)
   setHostPredictionAllowed(true)
   setSubPluginEnabled(true)
@@ -127,7 +130,20 @@ describe('预测开关：设置卡片', () => {
     expect(html).toContain('composer.modeOff')
     expect(html).toContain('composer.modeContinue')
     expect(html).toContain('composer.modeAll')
+    expect(html).toContain('composer.historyScope')
+    expect(html).toContain('composer.historyScopeHint')
+    expect(html).toContain('composer.historyScopeSession')
+    expect(html).toContain('composer.historyScopeWorkspace')
     expect(html).not.toContain('composer.predictionLocked')
+  })
+
+  it('历史作用域默认会话级，切换后卡片跟随偏好', () => {
+    const sessionHtml = renderToString(React.createElement(ComposerSettingsCard, { t }))
+    expect(sessionHtml).toContain('codex-ui-composer-history-scope')
+
+    setHistoryScope('workspace')
+    const workspaceHtml = renderToString(React.createElement(ComposerSettingsCard, { t }))
+    expect(workspaceHtml).toContain('codex-ui-composer-history-scope')
   })
 
   it('站点级关闭时渲染为关闭态并换用锁定说明', () => {

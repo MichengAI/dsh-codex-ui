@@ -7,6 +7,12 @@ import {
   setPredictionMode,
   subscribePredictionSettings,
 } from './prediction-state.ts'
+import {
+  HistoryScope,
+  getHistoryScope,
+  setHistoryScope,
+  subscribeHistoryScope,
+} from './history-scope.ts'
 
 export interface ComposerSettingsCardProps {
   t: (key: any) => string
@@ -15,7 +21,7 @@ export interface ComposerSettingsCardProps {
 /**
  * 输入框增强设置卡片。
  *
- * 只放预测开关：其他能力（↑/↓ 历史、宽度手柄、建议卡片）没有可调项，
+ * 放预测开关与 ↑/↓ 历史召回范围；宽度手柄、建议卡片没有可调项，
  * 用不到就不渲染成灰项，遵循插件「不残留死配置」的既有约定。
  *
  * 站点级关闭（profile `cordis.patch.yml` 里 `config: { prediction: false }`）时，
@@ -23,6 +29,7 @@ export interface ComposerSettingsCardProps {
  */
 export function ComposerSettingsCard({ t }: ComposerSettingsCardProps): React.JSX.Element | null {
   const state = useSyncExternalStore(subscribePredictionSettings, getPredictionSettingsState, getPredictionSettingsState)
+  const historyScope = useSyncExternalStore(subscribeHistoryScope, getHistoryScope, getHistoryScope)
 
   // 当输入增强子插件在 Host 侧被停用时，遵照规范：设置卡片直接全部隐藏，不渲染任何 DOM（与 ThemeSettingsCard 保持一致）
   if (!state.subPluginEnabled) {
@@ -59,6 +66,22 @@ export function ComposerSettingsCard({ t }: ComposerSettingsCardProps): React.JS
             if (lockedByHost) return
             setPredictionMode(nextMode)
           }}
+        />
+      </div>
+      <div className="dcu-settings-row">
+        <div className="dcu-settings-row-label">
+          <span className="dcu-settings-row-title">{t('composer.historyScope')}</span>
+          <span className="dcu-settings-row-hint">{t('composer.historyScopeHint')}</span>
+        </div>
+        <SegmentedControl<HistoryScope>
+          id="codex-ui-composer-history-scope"
+          label={t('composer.historyScope')}
+          value={historyScope}
+          options={[
+            { value: 'session', label: t('composer.historyScopeSession') },
+            { value: 'workspace', label: t('composer.historyScopeWorkspace') },
+          ]}
+          onChange={(nextScope) => { setHistoryScope(nextScope) }}
         />
       </div>
     </div>
