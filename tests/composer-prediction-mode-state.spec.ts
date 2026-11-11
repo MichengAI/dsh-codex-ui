@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { PREDICTION_PLACEHOLDER_HIDE_CSS } from '../src/client/composer/ComposerPredictionOverlay.tsx'
+import { renderToString } from 'react-dom/server'
+import { PREDICTION_PLACEHOLDER_HIDE_CSS, renderPredictionGhost } from '../src/client/composer/ComposerPredictionOverlay.tsx'
 import {
   PREDICTION_STORAGE_KEY,
   getPredictionSettingsState,
@@ -94,9 +95,22 @@ describe('composer prediction-state: 三态滑动开关模式管理', () => {
     expect(state.nextEnabled).toBe(false)
   })
 
-  it('Issue #87: 幽灵预测激活时，隐藏原生占位符的 CSS 规则精准契合 DOM 契约且包含完整选择器', () => {
+  it('Issue #87: 幽灵预测激活渲染时，必须在组件树中挂载 style 隐藏原生占位符（变异守护）', () => {
+    // 1. 验证导出的 CSS 规则契约
     expect(PREDICTION_PLACEHOLDER_HIDE_CSS).toContain('[data-composer-card]:has([data-composer-prediction])')
     expect(PREDICTION_PLACEHOLDER_HIDE_CSS).toContain('[data-composer-placeholder]')
     expect(PREDICTION_PLACEHOLDER_HIDE_CSS).toContain('visibility:hidden !important')
+
+    // 2. 真实渲染幽灵预测浮层，必须包含 <style> 标签且必须包含上述规则（若有人删除 style 注入必红）
+    const html = renderToString(renderPredictionGhost({
+      ghost: { mode: 'next', items: ['候选建议'], index: 0, active: false },
+      box: { top: 10, left: 20, width: 200, height: 30 },
+      current: '候选建议',
+      t: (k: string) => k,
+    }))
+    expect(html).toContain('<style>')
+    expect(html).toContain('[data-composer-card]:has([data-composer-prediction])')
+    expect(html).toContain('[data-composer-placeholder]')
+    expect(html).toContain('visibility:hidden !important')
   })
 })

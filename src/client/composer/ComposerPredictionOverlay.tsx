@@ -717,28 +717,45 @@ const PREDICTION_PLACEHOLDER_HIDE_CSS =
 
       if (!visible || box === null) return anchor
 
-      const continuation = ghost.mode === 'continue'
-      const style = continuation ? CONTINUE_GHOST_STYLE : NEXT_GHOST_STYLE
-      const showKeycap = !ghost.active && (!continuation || (box.maxWidth ?? 0) >= 96)
-      const showBadge = ghost.items.length > 1
-
-      return h(React.Fragment, null,
-        h('style', null, PREDICTION_PLACEHOLDER_HIDE_CSS),
-        h('span', { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true', style: { position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' } }, ghost.active ? '' : (t('input.prediction.dismiss') || current)),
-        h('div',
-          {
-            style: { ...style, ...box },
-            'aria-hidden': 'true',
-            'data-composer-prediction': ghost.mode,
-            title: current,
-          },
-          h('span', { style: continuation ? CONTINUE_TEXT_STYLE : TEXT_STYLE }, current),
-          showBadge ? h('span', { style: BADGE_STYLE, title: t('input.prediction.more') }, `${ghost.index + 1}/${ghost.items.length}`) : null,
-          showKeycap ? h('kbd', { style: KEYCAP_STYLE, title: t('input.prediction.tab') }, 'Tab') : null,
-        ),
+      return renderPredictionGhost({
+        ghost,
+        box,
+        current,
+        t,
         anchor,
-      )
+      })
     }
+
+export function renderPredictionGhost(options: {
+  ghost: { mode: string; items: string[]; index: number; active: boolean; stream?: string }
+  box: { top?: number; left?: number; width?: number; height?: number; maxWidth?: number }
+  current: string
+  t: (key: string) => string
+  anchor?: React.ReactNode
+}): React.ReactElement {
+  const { ghost, box, current, t, anchor } = options
+  const continuation = ghost.mode === 'continue'
+  const style = continuation ? CONTINUE_GHOST_STYLE : NEXT_GHOST_STYLE
+  const showKeycap = !ghost.active && (!continuation || (box.maxWidth ?? 0) >= 96)
+  const showBadge = ghost.items.length > 1
+
+  return h(React.Fragment, null,
+    h('style', null, PREDICTION_PLACEHOLDER_HIDE_CSS),
+    h('span', { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true', style: { position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' } }, ghost.active ? '' : (t('input.prediction.dismiss') || current)),
+    h('div',
+      {
+        style: { ...style, ...box },
+        'aria-hidden': 'true',
+        'data-composer-prediction': ghost.mode,
+        title: current,
+      },
+      h('span', { style: continuation ? CONTINUE_TEXT_STYLE : TEXT_STYLE }, current),
+      showBadge ? h('span', { style: BADGE_STYLE, title: t('input.prediction.more') }, `${ghost.index + 1}/${ghost.items.length}`) : null,
+      showKeycap ? h('kbd', { style: KEYCAP_STYLE, title: t('input.prediction.tab') }, 'Tab') : null,
+    ),
+    anchor ?? null,
+  )
+}
 
 // 导出被单测引用的算法与样式
 export { joinContinuation, parseSseText, streamingCandidate, cleanLine, consumeStream, PREDICTION_PLACEHOLDER_HIDE_CSS }
