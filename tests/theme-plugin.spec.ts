@@ -20,6 +20,8 @@ import {
   CODEX_DARK_THEME_ID,
   CODEX_LIGHT_THEME,
   CODEX_LIGHT_THEME_ID,
+  DRACULA_THEME,
+  DRACULA_THEME_ID,
   disposeGlassMode,
   GLASS_ATTRIBUTE,
   GLASS_COMPAT_ATTRIBUTE,
@@ -165,8 +167,8 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(await checkThemeEnabled()).toBe(false)
   })
 
-  it('内置色盘包含完整的 8 套主题（4套Catppuccin + 2套Codex + 2套Claude），均覆盖全套 190 个 --dsw-* 设计变量', () => {
-    expect(ALL_BUILTIN_THEMES.length).toBe(8)
+  it('内置色盘包含完整的 9 套主题（4套Catppuccin + 2套Codex + 2套Claude + 1套Dracula），均覆盖全套 190 个 --dsw-* 设计变量', () => {
+    expect(ALL_BUILTIN_THEMES.length).toBe(9)
 
     expect(CODEX_DARK_THEME.id).toBe(CODEX_DARK_THEME_ID)
     expect(CODEX_DARK_THEME.colorScheme).toBe('dark')
@@ -184,13 +186,19 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(CLAUDE_LIGHT_THEME.colorScheme).toBe('light')
     expect(Object.keys(CLAUDE_LIGHT_THEME.tokens).length).toBe(190)
 
+    expect(DRACULA_THEME.id).toBe(DRACULA_THEME_ID)
+    expect(DRACULA_THEME.colorScheme).toBe('dark')
+    expect(Object.keys(DRACULA_THEME.tokens).length).toBe(190)
+
     // 验证核心底色、强调色与高对比度文字
     expect(CODEX_DARK_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#09090b')
     expect(CODEX_LIGHT_THEME.tokens['--dsw-static-neutral-bluish-00']).toBe('#ffffff')
     expect(CLAUDE_DARK_THEME.tokens['--dsw-alias-brand-primary']).toBe('#d97757')
     expect(CLAUDE_LIGHT_THEME.tokens['--dsw-alias-brand-primary']).toBe('#d97757')
+    expect(DRACULA_THEME.tokens['--dsw-alias-brand-primary-new-colorprimary-new-color']).toBe('#ff79c6')
+    expect(DRACULA_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#191a21')
 
-    // 验证包含参考插件的四套及新增的 Claude 两套
+    // 验证包含全部 9 套内置主题
     const themeIds = ALL_BUILTIN_THEMES.map((t) => t.id)
     expect(themeIds).toContain('catppuccin-mocha')
     expect(themeIds).toContain('catppuccin-macchiato')
@@ -198,6 +206,7 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(themeIds).toContain('catppuccin-latte')
     expect(themeIds).toContain('claude-dark')
     expect(themeIds).toContain('claude-light')
+    expect(themeIds).toContain('dracula')
   })
 
   it('主题状态读写、持久化与广播订阅工作正常', () => {
@@ -273,7 +282,7 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(document.getElementById('dsh-codex-ui-glass-style')).toBeNull()
   })
 
-  it('observeTheme 生命周期正常：注册全部 8 套主题，直通 changeTheme/changeGlass，卸载时纯净还原', () => {
+  it('observeTheme 生命周期正常：注册全部 9 套主题，直通 changeTheme/changeGlass，卸载时纯净还原', () => {
     const registeredThemes: string[] = []
     let currentPreference = 'system'
 
@@ -299,14 +308,20 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
 
     const dispose = observeTheme(ctx)
 
-    // 验证注册了全部 8 套主题
-    expect(fakeThemeRuntime.register).toHaveBeenCalledTimes(8)
+    // 验证注册了全部 9 套主题
+    expect(fakeThemeRuntime.register).toHaveBeenCalledTimes(9)
     expect(registeredThemes).toContain(CODEX_DARK_THEME_ID)
     expect(registeredThemes).toContain(CODEX_LIGHT_THEME_ID)
     expect(registeredThemes).toContain(CLAUDE_DARK_THEME_ID)
     expect(registeredThemes).toContain(CLAUDE_LIGHT_THEME_ID)
+    expect(registeredThemes).toContain(DRACULA_THEME_ID)
     expect(registeredThemes).toContain('catppuccin-mocha')
     expect(registeredThemes).toContain('catppuccin-latte')
+
+    // 用户通过 UI 调用 changeTheme 切换至 dracula
+    changeTheme('dracula')
+    expect(fakeThemeRuntime.setTheme).toHaveBeenCalledWith('dracula')
+    expect(getThemeSettingsState().themeOption).toBe('dracula')
 
     // 用户通过 UI 调用 changeTheme 切换至 claude-dark
     changeTheme('claude-dark')

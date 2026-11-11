@@ -6,6 +6,7 @@ export type ThemeOption =
   | 'codex-light'
   | 'claude-dark'
   | 'claude-light'
+  | 'dracula'
   | 'catppuccin-mocha'
   | 'catppuccin-macchiato'
   | 'catppuccin-frappe'
@@ -36,6 +37,7 @@ const VALID_THEMES: readonly ThemeOption[] = [
   'codex-light',
   'claude-dark',
   'claude-light',
+  'dracula',
   'catppuccin-mocha',
   'catppuccin-macchiato',
   'catppuccin-frappe',
