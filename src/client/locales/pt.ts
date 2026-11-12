@@ -74,7 +74,7 @@ export const pt: Record<CodexUiKey, string> = {
   'about.updateAvailable': 'Atualização disponível',
   'about.updatingAll': 'Instalando/atualizando',
   'about.viewProject': 'GitHub',
-  'composer.desc': 'Previsão de entrada e continuação em linha; outros recursos (histórico ↑/↓, ajuste de largura) não são afetados.',
+  'composer.desc': 'Configure a previsão em linha e o escopo do histórico (↑/↓); outros recursos como o ajuste de largura continuam ativos.',
   'composer.prediction': 'Previsão de entrada em linha',
   'composer.predictionHint': 'Desativado, apenas continuação ao pausar, ou ambos; pressione Tab para aceitar.',
   'composer.predictionLocked': 'Desativado pela configuração do perfil (cordis.patch.yml → codex-ui-composer prediction); não pode ser ativado aqui.',

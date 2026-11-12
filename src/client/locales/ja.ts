@@ -74,7 +74,7 @@ export const ja: Record<CodexUiKey, string> = {
   'about.updateAvailable': '更新可能',
   'about.updatingAll': 'インストール/更新中',
   'about.viewProject': 'GitHub',
-  'composer.desc': 'インライン入力予測と入力補完。その他の機能（↑/↓ 履歴、幅調整）には影響しません。',
+  'composer.desc': 'インライン入力予測と履歴（↑/↓）の呼び出し範囲を設定します。幅調整ハンドルなどの機能は引き続き利用できます。',
   'composer.prediction': 'スマート入力予測',
   'composer.predictionHint': '無効、入力停止時の続きのみ、または予測＋続きの両方。Tab で採用。',
   'composer.predictionLocked': '現在のプロファイルのプラグイン設定で無効化されています（cordis.patch.yml → codex-ui-composer の prediction）。ここでは有効にできません。',

@@ -74,7 +74,7 @@ export const fr: Record<CodexUiKey, string> = {
   'about.updateAvailable': 'Mise à jour disponible',
   'about.updatingAll': 'Installation/mise à jour',
   'about.viewProject': 'GitHub',
-  'composer.desc': 'Prédiction et complétion en ligne ; les autres fonctionnalités (historique ↑/↓, poignées de largeur) restent inchangées.',
+  'composer.desc': 'Configurez la prédiction en ligne et la portée de l\'historique (↑/↓) ; les autres fonctions comme les poignées de largeur restent actives.',
   'composer.prediction': 'Prédiction de saisie en ligne',
   'composer.predictionHint': 'Désactivé, continuation seule lors d\'une pause de frappe, ou les deux ; Tab pour accepter.',
   'composer.predictionLocked': 'Désactivé dans la configuration du profil (cordis.patch.yml → codex-ui-composer prediction) ; ne peut pas être activé ici.',

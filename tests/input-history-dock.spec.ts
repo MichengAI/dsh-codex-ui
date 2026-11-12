@@ -206,20 +206,40 @@ test('工作区模式按 cwd 共享历史，同一工作区的会话互相召回
     expect(history.list('项目一')).toEqual(['A 的输入'])
     eventsB.append(userEvent(2, 'B 的输入'))
     expect(history.list('项目一')).toEqual(['A 的输入', 'B 的输入'])
+    expect(a.pressUp()).toBe(true)
+    expect(a.editor.value).toBe('B 的输入')
+    expect(b.pressUp()).toBe(true)
+    expect(b.editor.value).toBe('B 的输入')
   } finally { await a.unmount(); await b.unmount() }
 })
 
 test('切换作用域后立即生效，新输入写入新作用域且不补录旧消息', async () => {
   const history = new InputHistory()
+  history.add('project', '旧工作区历史')
   const events = eventStore()
   const fixture = await mountHistory(events, history)
   try {
     events.append(userEvent(1, '会话内输入'))
     expect(history.list('s')).toEqual(['会话内输入'])
+    expect(fixture.pressUp()).toBe(true)
+    expect(fixture.editor.value).toBe('会话内输入')
+    fixture.clearDraft()
+
     await act(async () => { setHistoryScope('workspace') })
+    expect(fixture.pressUp()).toBe(true)
+    expect(fixture.editor.value).toBe('旧工作区历史')
+    fixture.clearDraft()
+
     events.append(userEvent(2, '工作区输入'))
-    expect(history.list('project')).toEqual(['工作区输入'])
+    expect(history.list('project')).toEqual(['旧工作区历史', '工作区输入'])
     expect(history.list('s')).toEqual(['会话内输入'])
+    expect(fixture.pressUp()).toBe(true)
+    expect(fixture.editor.value).toBe('工作区输入')
+    fixture.clearDraft()
+
+    await act(async () => { setHistoryScope('session') })
+    expect(fixture.pressUp()).toBe(true)
+    expect(fixture.editor.value).toBe('会话内输入')
   } finally { await fixture.unmount() }
 })
 
@@ -228,15 +248,28 @@ async function mountHistory(events: ReturnType<typeof eventStore>, history: Inpu
   const cwd = options.cwd ?? 'project'
   const container = document.createElement('section')
   const slot = document.createElement('div')
-  container.append(slot, document.createElement('textarea'))
+  const editor = document.createElement('textarea')
+  container.append(slot, editor)
   document.body.append(container)
   const state = store(idle)
   const ctx = {
     sessions: { binding: () => binding, list: { getSnapshot: () => ({ byId: { [sessionId]: { cwd } } }) } },
-    conversation: { input: { for: () => ({ state, setDraft() {} }) } },
+    conversation: { input: { for: () => ({ state, setDraft(text: string) { editor.value = text; state.set({ ...idle, draft: text }) } }) } },
     inputTriggers: { sessionOf: () => ({ menu: { getSnapshot: () => ({ open: false }) } }) },
   }
   const root = createRoot(slot)
   await act(async () => root.render(createElement(InputHistoryDock, { ctx: ctx as never, sessionId: sessionId as never, history, seen })))
-  return { unmount: async () => { await act(async () => root.unmount()); container.remove() } }
+  return {
+    editor,
+    pressUp: () => {
+      const event = new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })
+      editor.dispatchEvent(event)
+      return event.defaultPrevented
+    },
+    clearDraft: () => {
+      editor.value = ''
+      state.set(idle)
+    },
+    unmount: async () => { await act(async () => root.unmount()); container.remove() },
+  }
 }

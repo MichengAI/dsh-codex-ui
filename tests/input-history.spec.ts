@@ -56,4 +56,23 @@ describe('输入历史', () => {
     expect(history.list('a')).toEqual(['输入'])
     expect(warning).not.toBe('')
   })
+  it('重启重载后完整保留最多 100 个作用域与旧工作区历史，第 101 个才按 LRU 淘汰最老作用域', () => {
+    const data = new Map<string, string>([
+      [HISTORY_KEY, JSON.stringify({ '/repo/legacy-ws': ['旧工作区提示'] })],
+    ])
+    const storage = { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => { data.set(key, value) } }
+    const history = new InputHistory(storage)
+    for (let index = 1; index <= 99; index++) history.add(`session-${index}`, `消息-${index}`)
+
+    const reloaded = new InputHistory(storage)
+    expect(reloaded.list('/repo/legacy-ws')).toEqual(['旧工作区提示'])
+    expect(reloaded.list('session-1')).toEqual(['消息-1'])
+    expect(reloaded.list('session-99')).toEqual(['消息-99'])
+
+    reloaded.add('session-100', '消息-100')
+    const afterEvict = new InputHistory(storage)
+    expect(afterEvict.list('/repo/legacy-ws')).toEqual([])
+    expect(afterEvict.list('session-1')).toEqual(['消息-1'])
+    expect(afterEvict.list('session-100')).toEqual(['消息-100'])
+  })
 })

@@ -74,7 +74,7 @@ export const ru: Record<CodexUiKey, string> = {
   'about.updateAvailable': 'Доступно обновление',
   'about.updatingAll': 'Установка/обновление',
   'about.viewProject': 'GitHub',
-  'composer.desc': 'Умное предсказание ввода и автодополнение; другие функции (история ↑/↓, изменение ширины) не затрагиваются.',
+  'composer.desc': 'Настройте умное предсказание ввода и область истории (↑/↓); остальные функции, включая изменение ширины, остаются активными.',
   'composer.prediction': 'Интеллектуальное предсказание ввода',
   'composer.predictionHint': 'Отключено, только автодополнение при паузе, или оба варианта; Tab для принятия.',
   'composer.predictionLocked': 'Отключено в настройках профиля (cordis.patch.yml → codex-ui-composer prediction); здесь включить невозможно.',

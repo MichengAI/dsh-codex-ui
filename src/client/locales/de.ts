@@ -74,7 +74,7 @@ export const de: Record<CodexUiKey, string> = {
   'about.updateAvailable': 'Update verfügbar',
   'about.updatingAll': 'Wird installiert/aktualisiert',
   'about.viewProject': 'GitHub',
-  'composer.desc': 'Inline-Vorhersage und Textvervollständigung; andere Funktionen (↑/↓ Verlauf, Breitenanpassung) bleiben unberührt.',
+  'composer.desc': 'Inline-Vorhersage und Verlaufsbereich (↑/↓) konfigurieren; weitere Funktionen wie die Breitenanpassung bleiben aktiv.',
   'composer.prediction': 'Intelligente Eingabevorhersage',
   'composer.predictionHint': 'Aus, nur Fortsetzung bei Tipppausen oder beides; mit Tab übernehmen.',
   'composer.predictionLocked': 'In der Profilkonfiguration deaktiviert (cordis.patch.yml → codex-ui-composer prediction); kann hier nicht aktiviert werden.',

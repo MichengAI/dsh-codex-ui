@@ -182,7 +182,8 @@ Nach der Installation DSH Web neu starten und den Browser mit `Strg + Umschalt +
 | :--- | :--- |
 | **Eingabevorschlag übernehmen** | `Tab` drücken, wenn vorausschauender Geistertext hinter dem Cursor erscheint; mit `Alt + Ab` / `Alt + Auf` Varianten wechseln oder mit `Esc` verwerfen. |
 | **Vorhersagemodus einstellen** | In **Einstellungen → Codex UI** auf der Karte „Eingabe-Erweiterungen“ den Modus auswählen (Aus / Nur Fortsetzung / Schätzen+Fortsetzung). Kann für das gesamte Profil via `config.prediction: false` in `cordis.patch.yml` deaktiviert werden. |
-| **Eingabeverlauf abrufen** | In leerem Eingabefeld `↑` / `↓` drücken, um durch die letzten 200 Eingaben des aktuellen Arbeitsbereichs zu blättern. |
+| **Eingabeverlauf abrufen** | In leerem Eingabefeld `↑` / `↓` drücken, um durch frühere Eingaben dieser Unterhaltung (oder des gesamten Arbeitsbereichs, in den Einstellungen umschaltbar; bis zu 200 Einträge pro Bereich) zu blättern. |
+| **Verlaufsbereich wechseln** | In **Einstellungen → Codex UI → Eingabe-Erweiterungen** unter „Verlaufsbereich“ wählen: „Diese Unterhaltung“ (Standard) ruft nur Eingaben dieser Unterhaltung ab; „Arbeitsbereich“ teilt den Verlauf mit allen Unterhaltungen desselben Arbeitsverzeichnisses und macht früher gespeicherte Arbeitsbereichsverläufe wieder sichtbar. |
 | **Breite anpassen** | Bewegen Sie den Mauszeiger über die seitlichen Ränder der Eingabekarte und ziehen Sie die blauen Anfasser. |
 | **Design & Weichzeichnung** | Unter **Einstellungen → Codex UI** aus 13 Paletten wählen und zwischen Flat- und Mica-Karten sowie Unschärfe-Stufen wechseln. |
 | **Seitenleiste sortieren** | Elemente vertikal ziehen; blaue Linien signalisieren die genaue Ablageposition innerhalb oder außerhalb des Mehr-Fachs. |

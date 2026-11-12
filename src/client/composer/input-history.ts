@@ -16,7 +16,7 @@ export class InputHistory {
       if (raw.length > MAX_STORAGE_LENGTH) throw new Error('历史数据过大')
       const data: unknown = JSON.parse(raw)
       if (typeof data !== 'object' || data === null || Array.isArray(data)) throw new Error('历史格式无效')
-      for (const [key, value] of Object.entries(data).slice(-20)) {
+      for (const [key, value] of Object.entries(data).slice(-MAX_SCOPES)) {
         if (Array.isArray(value)) this.scopes.set(key, value.filter((item): item is string => typeof item === 'string' && item.length <= 8_000).slice(-limit))
       }
       // 迁移后只写新键，保留旧数据供回退；已有新键时不重复导入。

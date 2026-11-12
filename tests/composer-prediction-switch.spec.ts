@@ -1,6 +1,7 @@
-import React from 'react'
+import { createRequire } from 'node:module'
+import React, { act, type ReactNode } from 'react'
 import { renderToString } from 'react-dom/server'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   getPredictionSettingsState,
   isPredictionEnabled,
@@ -13,7 +14,13 @@ import {
   subscribePredictionSettings,
 } from '../src/client/composer/prediction-state.ts'
 import { ComposerSettingsCard } from '../src/client/composer/ComposerSettingsCard.tsx'
-import { HISTORY_SCOPE_STORAGE_KEY, refreshHistoryScopeSnapshot, setHistoryScope } from '../src/client/composer/history-scope.ts'
+import { getHistoryScope, HISTORY_SCOPE_STORAGE_KEY, refreshHistoryScopeSnapshot, setHistoryScope } from '../src/client/composer/history-scope.ts'
+
+const { createRoot } = createRequire(import.meta.url)('react-dom/client') as {
+  createRoot(container: Element): { render(node: ReactNode): void; unmount(): void }
+}
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
+afterEach(() => document.body.replaceChildren())
 
 /** 复位到「用户开启 + Host 允许 + 子插件启用」的干净起点。 */
 function reset(): void {
@@ -137,13 +144,41 @@ describe('预测开关：设置卡片', () => {
     expect(html).not.toContain('composer.predictionLocked')
   })
 
-  it('历史作用域默认会话级，切换后卡片跟随偏好', () => {
+  it('历史作用域默认会话级，切换与点击按钮后卡片与持久化同步', async () => {
     const sessionHtml = renderToString(React.createElement(ComposerSettingsCard, { t }))
-    expect(sessionHtml).toContain('codex-ui-composer-history-scope')
+    expect(sessionHtml).toMatch(/id="codex-ui-composer-history-scope-session"[^>]*aria-selected="true"/)
+    expect(sessionHtml).toMatch(/id="codex-ui-composer-history-scope-workspace"[^>]*aria-selected="false"/)
 
     setHistoryScope('workspace')
     const workspaceHtml = renderToString(React.createElement(ComposerSettingsCard, { t }))
-    expect(workspaceHtml).toContain('codex-ui-composer-history-scope')
+    expect(workspaceHtml).toMatch(/id="codex-ui-composer-history-scope-workspace"[^>]*aria-selected="true"/)
+    expect(workspaceHtml).toMatch(/id="codex-ui-composer-history-scope-session"[^>]*aria-selected="false"/)
+
+    reset()
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(React.createElement(ComposerSettingsCard, { t })))
+      const sessionBtn = container.querySelector('#codex-ui-composer-history-scope-session') as HTMLButtonElement
+      const workspaceBtn = container.querySelector('#codex-ui-composer-history-scope-workspace') as HTMLButtonElement
+      expect(sessionBtn.getAttribute('aria-selected')).toBe('true')
+      expect(workspaceBtn.getAttribute('aria-selected')).toBe('false')
+
+      await act(async () => { workspaceBtn.click() })
+      expect(getHistoryScope()).toBe('workspace')
+      expect(localStorage.getItem(HISTORY_SCOPE_STORAGE_KEY)).toBe('workspace')
+      expect(workspaceBtn.getAttribute('aria-selected')).toBe('true')
+      expect(sessionBtn.getAttribute('aria-selected')).toBe('false')
+
+      await act(async () => { sessionBtn.click() })
+      expect(getHistoryScope()).toBe('session')
+      expect(localStorage.getItem(HISTORY_SCOPE_STORAGE_KEY)).toBe('session')
+      expect(sessionBtn.getAttribute('aria-selected')).toBe('true')
+      expect(workspaceBtn.getAttribute('aria-selected')).toBe('false')
+    } finally {
+      await act(async () => root.unmount())
+    }
   })
 
   it('站点级关闭时渲染为关闭态并换用锁定说明', () => {

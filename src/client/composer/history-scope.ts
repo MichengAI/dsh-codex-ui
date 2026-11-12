@@ -89,6 +89,7 @@ export function observeHistoryScope(): () => void {
     if (event.key !== null && event.key !== HISTORY_SCOPE_STORAGE_KEY) return
     sync()
   }
+  sync()
   window.addEventListener('storage', onStorage)
   window.addEventListener(HISTORY_SCOPE_STORAGE_EVENT, sync)
   return () => {

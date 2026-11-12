@@ -182,7 +182,8 @@ Une fois installé, redémarrez votre instance DSH Web et rechargez complètemen
 | :--- | :--- |
 | **Accepter la prédiction** | Appuyez sur `Tab` lorsque le texte d'aide apparaît en filigrane ; utilisez `Alt + Bas` / `Alt + Haut` pour parcourir les variantes ou `Échap` pour rejeter. |
 | **Configurer le mode de prédiction** | Rendez-vous dans **Paramètres → Codex UI** et sélectionnez le mode (Désactivé / Continuer uniquement / Deviner+continuer) dans la carte « Améliorations de Saisie ». |
-| **Rappel de l'historique** | Dans une zone de saisie vide, appuyez sur `↑` / `↓` pour faire défiler les 200 dernières commandes de l'espace de travail. |
+| **Rappel de l'historique** | Dans une zone de saisie vide, appuyez sur `↑` / `↓` pour faire défiler les entrées précédentes de cette conversation — ou de tout l'espace de travail, configurable dans les Paramètres (jusqu'à 200 éléments par portée). |
+| **Changer la portée de l'historique** | Dans la carte « Améliorations de saisie », choisissez « Portée de l'historique » : « Cette conversation » (par défaut) ne rappelle que cette conversation ; « Espace de travail » partage les entrées avec toutes les conversations du même répertoire de travail et rend à nouveau visible l'historique précédemment enregistré. |
 | **Ajuster la largeur** | Survolez les bordures latérales de la zone de saisie et tirez sur les poignées bleues. |
 | **Changer de thème et de verre** | Dans **Paramètres → Codex UI**, choisissez parmi les 13 palettes et basculez entre les modes Plat et Cartes Mica. |
 | **Réorganiser la barre latérale** | Glissez verticalement les éléments ; les repères bleus indiquent l'emplacement exact d'insertion ou de retrait. |

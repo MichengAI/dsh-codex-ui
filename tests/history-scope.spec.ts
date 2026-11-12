@@ -93,4 +93,19 @@ describe('输入历史作用域：默认会话级，可切工作区', () => {
     window.dispatchEvent(new Event(HISTORY_SCOPE_STORAGE_EVENT))
     expect(getHistoryScope()).toBe('session')
   })
+
+  it('停用期间外部写入 localStorage 后，重新挂载观察器时立即同步并通知订阅者', () => {
+    observeHistoryScope()()
+    localStorage.setItem(HISTORY_SCOPE_STORAGE_KEY, 'workspace')
+    const listener = vi.fn()
+    const unsubscribe = subscribeHistoryScope(listener)
+    const stop = observeHistoryScope()
+    try {
+      expect(getHistoryScope()).toBe('workspace')
+      expect(listener).toHaveBeenCalledTimes(1)
+    } finally {
+      unsubscribe()
+      stop()
+    }
+  })
 })

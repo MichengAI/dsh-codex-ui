@@ -182,7 +182,8 @@ Una vez instalado, reinicie su entorno DSH Web y fuerce la recarga del navegador
 | :--- | :--- |
 | **Aceptar predicción de entrada** | Pulse `Tab` cuando aparezca el texto proyectado tras el cursor; pulse `Alt + Abajo` / `Alt + Arriba` para alternar sugerencias o `Esc` para descartar. |
 | **Configurar modo de predicción** | Vaya a **Configuración → Codex UI** y elija el modo (Desactivado / Solo continuación / Suposición+continuación) en la tarjeta «Mejoras de Entrada». Se puede bloquear en todo el perfil definiendo `config.prediction: false` en `cordis.patch.yml`. |
-| **Historial de comandos** | Pulse `↑` / `↓` en un campo de entrada vacío para desplazarse por los últimos 200 comandos del espacio de trabajo actual. |
+| **Historial de comandos** | Pulse `↑` / `↓` en un campo de entrada vacío para desplazarse por las entradas anteriores de esta conversación —o de todo el espacio de trabajo, configurable en Ajustes (hasta 200 elementos por alcance)—. |
+| **Cambiar alcance del historial** | En la misma tarjeta «Mejoras de entrada», elija «Alcance del historial»: «Esta conversación» (predeterminado) solo recupera mensajes de la conversación actual; «Espacio de trabajo» los comparte con todas las conversaciones del mismo directorio de trabajo y vuelve a hacer visible el historial guardado anteriormente. |
 | **Ajustar ancho del campo** | Pase el cursor sobre los bordes laterales de la tarjeta de entrada y arrastre los tiradores azules. |
 | **Cambiar temas y desenfoque** | Vaya a **Configuración → Codex UI**, seleccione una de las 13 paletas y alterne entre los modos de cristal Plano y Mica Flotante. |
 | **Reordenar barra lateral** | Arrastre verticalmente los elementos; las guías azules indican la posición exacta para ingresar o extraer del cajón «Más». |

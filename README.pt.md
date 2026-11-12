@@ -182,7 +182,8 @@ Após a instalação, reinicie a instância do DSH Web e force a atualização d
 | :--- | :--- |
 | **Aceitar previsão de digitação** | Pressione `Tab` quando o texto sugerido aparecer após o cursor; use `Alt + Abaixo` / `Alt + Acima` para alternar ou `Esc` para dispensar. |
 | **Configurar modo de previsão** | Vá em **Configurações → Codex UI** e selecione o modo (Desativado / Somente continuação / Sugestão+continuação) no cartão «Melhorias de Entrada». Pode ser desativado no perfil via `config.prediction: false` em `cordis.patch.yml`. |
-| **Histórico de comandos** | Em um campo de entrada vazio, pressione `↑` / `↓` para navegar pelos últimos 200 comandos do espaço de trabalho atual. |
+| **Histórico de comandos** | Em um campo de entrada vazio, pressione `↑` / `↓` para navegar pelas entradas anteriores desta conversa — ou de todo o espaço de trabalho, alternável nas Configurações (até 200 itens por escopo). |
+| **Alterar escopo do histórico** | No mesmo cartão «Aprimoramentos de entrada», escolha «Escopo do histórico»: «Esta conversa» (padrão) recupera apenas entradas da conversa atual; «Espaço de trabalho» compartilha com todas as conversas do mesmo diretório de trabalho e torna novamente visível o histórico de espaço de trabalho salvo anteriormente. |
 | **Redimensionar largura** | Posicione o cursor sobre as bordas laterais da caixa de entrada e arraste as alças azuis. |
 | **Alternar temas e desfoque** | Em **Configurações → Codex UI**, selecione uma das 13 paletas e alterne entre os modos de vidro Plano e Mica Flutuante. |
 | **Reordenar barra lateral** | Arraste verticalmente os itens; os guias azuis indicam o ponto exato para mover para dentro ou fora do menu «Mais». |
