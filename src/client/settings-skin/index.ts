@@ -1586,6 +1586,44 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     max-width: 100% !important;
   }
 }
+
+/* Follow the visible viewport on mobile web, including iOS keyboard panning. */
+html[data-dcu-mobile-web] [data-shortcut-modal="settings"][role="dialog"] {
+  inset: auto !important;
+  left: var(--dcu-viewport-left, 0px) !important;
+  top: var(--dcu-viewport-top, 0px) !important;
+  width: var(--dcu-viewport-width, 100vw) !important;
+  height: var(--dcu-viewport-height, 100dvh) !important;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+}
+@media (max-width: 768px) {
+  html[data-dcu-mobile-web]:is([data-dsh-glass-float], [data-dsh-glass]) [data-shortcut-modal="settings"]:has(> [class*="options"]) {
+    padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
+  }
+  html[data-dcu-mobile-web] [data-shortcut-modal="settings"] > nav :is(button, [class*="navCell"]),
+  html[data-dcu-mobile-web] [data-shortcut-modal="settings"] button.dcu-settings-back-btn {
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+  }
+  html[data-dcu-mobile-web][data-dsh-glass-float] [data-shortcut-modal="settings"] > nav {
+    padding-inline: 4px !important;
+  }
+}
+
+/* Wrap wide controls before they squeeze descriptive settings text. */
+@media (max-width: 600px) {
+  html[data-dcu-mobile-web] [data-shortcut-modal="settings"] [class*="_row"]:has(> [class*="_rowText"] > [class*="_desc"]) {
+    flex-wrap: wrap;
+  }
+  html[data-dcu-mobile-web] [data-shortcut-modal="settings"] [class*="_rowText"]:has(> [class*="_desc"]) {
+    flex-basis: 160px;
+  }
+}
+
 `
 
 let lastSkinCheckTime = 0

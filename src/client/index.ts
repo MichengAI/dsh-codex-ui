@@ -15,6 +15,7 @@ import { observeSidebarNav, checkSidebarEnabled } from './sidebar/index.ts'
 import { observeWorkspaceSections } from './sidebar/sections/index.ts'
 import { observeSessionUnread } from './sidebar/session-unread/index.tsx'
 import { observeTheme } from './theme/index.ts'
+import { observeMobileWeb } from './mobile-web.ts'
 import { observeDesktopTitlebarMenus, checkDesktopMenuEnabled } from './desktop-menu/index.ts'
 
 export const inject = ['slots', 'locale', 'sessions', 'conversation', 'inputTriggers', 'layout', 'uiWorkspace', 'workspaces', 'remote']
@@ -32,6 +33,7 @@ export function apply(ctx: ClientContext): void {
   // 侧栏增强共用一次探活：分区标题与会话未读都随 sidebar 子插件启停，但不需要各发一次请求。
   const sidebarReady = checkSidebarEnabled()
 
+  ctx.effect(() => observeMobileWeb(), 'michengai-codex-ui: mobile web layout')
   ctx.effect(() => observeTheme(ctx), 'michengai-codex-ui: theme & appearance')
   ctx.effect(() => observeSidebarNav(ctx), 'michengai-codex-ui: sidebar navigation')
   ctx.effect(() => {
