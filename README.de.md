@@ -30,7 +30,7 @@ Bei der täglichen Nutzung von DeepSeek Harness kann die Standardoberfläche dur
 
 * 🚀 **Schneller Eingabeverlauf & smarte Vorhersage**: Intelligente Inline-Vorhersage (`Tab` zum Übernehmen, `Alt+Ab/Auf` zum Wechseln), Terminal-Eingabeverlauf (`↑` / `↓`) und anpassbare Breitenregler;
 * 🪟 **Vollbild-Einstellungs-Workbench**: Ersetzt beengte Dialoge durch eine Ambient Ground Diffuslicht-Fläche und schwebende Karten-Arbeitsbereiche;
-* 🎨 **Physisches Milchglas & Themes**: 13 hochwertige Farbpaletten (inklusive Codex Anthrazit und Papierweiß), flache vs. schwebende Glimmer-Layoutmodi, 3 Unschärfe-Stufen und Bodenglanz-Schalter;
+* 🎨 **Physisches Milchglas & Themes**: 14 hochwertige Farbpaletten (Serien Codex, Claude, Dracula, Cyberpunk, Solarized, Gruvbox und Catppuccin), flache vs. schwebende Glimmer-Layoutmodi, 3 Unschärfe-Stufen und Bodenglanz-Schalter;
 * 🧭 **Modulare Seitenleiste**: Sanftes Akkordeon-Menü und freies Drag-and-Drop-Sortieren; im eingeklappten Zustand **zu 100% am offiziellen 56px-Symbolstreifen ausgerichtet**;
 * 🧠 **Intelligente Sitzungstitel**: Semantische Analyse der ersten Nachricht für normierte Titel, passend für Reasoning-Modelle mit langen Kontexten;
 * 🌐 **Vollständige Unterstützung aller 8 offiziellen Sprachen**: Umfassender Support für Deutsch, Englisch, Chinesisch, Japanisch, Spanisch, Französisch, Russisch und Portugiesisch (`de`, `en`, `zh`, `ja`, `es`, `fr`, `ru`, `pt`), inklusive UI-Texten, Vorschlagskarten, Kontextmenüs und Sitzungstiteln;
@@ -60,8 +60,8 @@ Mit Version 2.0.0 wurde der alte Überschreibungscode vollständig **verworfen**
 | :--- | :--- | :--- |
 | `composer` | **Eingabe-Erweiterung (Composer)** | Inline-Vorhersage (`Tab`), Terminal-Verlauf (`↑`/`↓`), Speicher pro Unterhaltung oder Arbeitsbereich, Breitenregler und Startkarten. |
 | `settings-skin` | **Natives Einstellungs-Skin (Settings Skin)** | Vollbild-Workbench, schwebendes Kartensystem, Ambient Ground-Hintergrund und native Suche. |
-| `theme` | **Theme & Glasmorphismus (Theme)** | 13 Farbpaletten, Flat vs. Mica-Karten, 3 Material-Presets und Bodenglanz-Effekte. |
-| `sidebar` | **Modulare Seitenleiste (Sidebar)** | Akkordeon-Schublade, Drag-and-Drop-Sortierung, ungelesen/gelesen-Markierung und 56px-Leisten-Treue. |
+| `theme` | **Theme & Glasmorphismus (Theme)** | 14 Farbpaletten, Flat vs. Mica-Karten, 3 Material-Presets und Bodenglanz-Effekte. |
+| `sidebar` | **Modulare Seitenleiste (Sidebar)** | Arbeitsbereichs-Sektionen (inklusive direktem Button „Arbeitsbereich hinzufügen“ in jedem Abschnittskopf, sichtbar je nach Host-Ordnerauswahl und mit automatischer Zuordnung), Akkordeon-Schublade, Drag-and-Drop-Sortierung, ungelesen/gelesen-Markierung und 56px-Leisten-Treue. |
 | `session-title` | **Sitzungstitel (Session Title)** | Automatische semantische Titelgenerierung mit 8-Sprachen-Support und bis zu 4096 Tokens. |
 | `desktop-menu` | **Desktop-Menüs (Desktop Menus)** | Titelleisten-Hilfemenü für Desktop mit Seiten-Reload und sicherem Neustart von Host und App. |
 | `dependencies` | **Ökosystem-Verwaltung (Integriert)** | Dashboard für DSH-Plugins mit Live-npm-Download-Zahlen und synchronisierten 1-Klick-Updates. |
@@ -183,10 +183,11 @@ Nach der Installation DSH Web neu starten und den Browser mit `Strg + Umschalt +
 | **Eingabevorschlag übernehmen** | `Tab` drücken, wenn vorausschauender Geistertext hinter dem Cursor erscheint; mit `Alt + Ab` / `Alt + Auf` Varianten wechseln oder mit `Esc` verwerfen. |
 | **Vorhersagemodus einstellen** | In **Einstellungen → Codex UI** auf der Karte „Eingabe-Erweiterungen“ den Modus auswählen (Aus / Nur Fortsetzung / Schätzen+Fortsetzung). Kann für das gesamte Profil via `config.prediction: false` in `cordis.patch.yml` deaktiviert werden. |
 | **Eingabeverlauf abrufen** | In leerem Eingabefeld `↑` / `↓` drücken, um durch frühere Eingaben dieser Unterhaltung (oder des gesamten Arbeitsbereichs, in den Einstellungen umschaltbar; bis zu 200 Einträge pro Bereich) zu blättern. |
-| **Verlaufsbereich wechseln** | In **Einstellungen → Codex UI → Eingabe-Erweiterungen** unter „Verlaufsbereich“ wählen: „Diese Unterhaltung“ (Standard) ruft nur Eingaben dieser Unterhaltung ab; „Arbeitsbereich“ teilt den Verlauf mit allen Unterhaltungen desselben Arbeitsverzeichnisses und macht früher gespeicherte Arbeitsbereichsverläufe wieder sichtbar. |
+| **Verlaufsbereich wechseln** | In **Einstellungen → Codex UI → Eingabe-Erweiterungen** unter „Verlaufsbereich“ wählen: „Diese Unterhaltung“ (Standard) ruft nur Eingaben dieser Unterhaltung ab; „Arbeitsbereich“ teilt den Verlauf mit allen Unterhaltungen desselben Arbeitsverzeichnisses und macht früher gespeicherte Arbeitsbereichsverläufe wieder sichtbar (bis zu einem Limit der letzten 100 Bereiche vor dem Verwerfen). |
 | **Breite anpassen** | Bewegen Sie den Mauszeiger über die seitlichen Ränder der Eingabekarte und ziehen Sie die blauen Anfasser. |
-| **Design & Weichzeichnung** | Unter **Einstellungen → Codex UI** aus 13 Paletten wählen und zwischen Flat- und Mica-Karten sowie Unschärfe-Stufen wechseln. |
+| **Design & Weichzeichnung** | Unter **Einstellungen → Codex UI** aus 14 Paletten wählen und zwischen Flat- und Mica-Karten sowie Unschärfe-Stufen wechseln. |
 | **Seitenleiste sortieren** | Elemente vertikal ziehen; blaue Linien signalisieren die genaue Ablageposition innerhalb oder außerhalb des Mehr-Fachs. |
+| **Arbeitsbereich im Abschnitt hinzufügen** | Über den Titel eines beliebigen Abschnitts (Angeheftet, Projekte oder benutzerdefiniert) fahren oder fokussieren und rechts neben `···` auf „Arbeitsbereich hinzufügen“ klicken (sichtbar bei verfügbarer Host-Ordnerauswahl); der neue Arbeitsbereich wird dort automatisch einsortiert und aufgeklappt. |
 | **Seitenleiste einklappen** | Oben auf der Seitenleiste auf Einklappen klicken, um zum offiziellen 56px-Symbolstreifen zu wechseln. |
 | **Plugins aktualisieren** | In **Einstellungen → Codex UI** auf der Karte für Begleit-Plugins auf **Alle installieren/aktualisieren** klicken. |
 

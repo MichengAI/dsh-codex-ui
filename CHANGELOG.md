@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.0] - 2026-11-12
+
+- **Conversation-Scoped Input History by Default with Workspace Toggle (PR #91)**: `↑` / `↓` input history now defaults to **This conversation**, keeping prompt history cleanly separated between conversations. If you prefer sharing history across every conversation in the same directory, switch **History scope** back to **Workspace** in **Settings → Codex UI → Composer Enhancements** (existing workspace history remains preserved and becomes visible again when switching back, provided it has not been evicted by the 100-scope retention limit). Also fixed an issue where reloading could drop stored history beyond 20 scopes.
+- **Direct "Add Workspace" Shortcut on Sidebar Section Headers (Issue #90)**: Added a host-native **Add workspace** icon button next to `···` on every sidebar section header (Pinned, Projects, and custom sections; revealed on hover or keyboard focus and shown automatically when the host directory-picking capability is available). Workspaces added from a section are automatically placed at the top of that section and expanded smoothly without shifting other sections.
+- **Built-in "Cyberpunk" Theme Palette (14 Themes in Total)**: Added the **Cyberpunk** neon-green-on-black matrix terminal palette (bringing the built-in collection to 14 themes), complete with matching syntax highlighting and live Appearance code preview.
+
 ## [2.0.22] - 2026-11-11
 
 - **Three-Way Input Prediction Control and Placeholder Overlap Fix (Issue #87)**: Upgraded prediction preferences to a 3-way segmented control supporting "Off", "Continue Only", and "Guess & Continue". In "Continue Only" mode, empty input boxes no longer show proactive question guesses, offering ghost completions solely while typing; completely fixed ghost text overlapping with native placeholder prompts when the input box is empty.

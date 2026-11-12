@@ -71,7 +71,11 @@ export function setHistoryScope(scope: HistoryScope): void {
   }
 }
 
-/** 测试用：按当前 localStorage 重建内存状态。 */
+/**
+ * @internal
+ * 仅限单元测试在重置 `localStorage` 后同步刷新模块级缓存快照。
+ * 未经 `src/client/index.ts` 或包出口暴露到外部运行时 API。
+ */
 export function refreshHistoryScopeSnapshot(): void {
   currentScope = parseStoredHistoryScope(safeStorage()?.getItem(HISTORY_SCOPE_STORAGE_KEY))
 }

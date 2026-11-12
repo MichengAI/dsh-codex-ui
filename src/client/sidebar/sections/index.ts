@@ -11,6 +11,7 @@
  */
 
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 import { createElement } from 'react'
 import { flushSync, render, unmountComponentAtNode } from 'react-dom'
@@ -344,21 +345,17 @@ export function observeWorkspaceSections(
   let assignAnchor: HTMLElement | undefined
 
   /**
+   * 检查宿主是否已挂载目录选择流能力（`sidebar.workspaces.directoryFlow`）。
+   * 仅当官方 slots 服务就绪且该 slot 被占用时显示分区内「添加工作区」按钮；
+   * slots 缺失或未占用时不渲染无效入口，避免出现只能走兜底快捷键的残缺状态。
+   */
+  const isDirectoryFlowAvailable = (): boolean =>
+    typeof ctx.slots?.entries === 'function' && ctx.slots.entries('sidebar.workspaces.directoryFlow').length > 0
+
+  /**
    * 等待新工作区自动归属的目标分区 ID。
    * 用户在某个分区的菜单里点击「新建工作区」后暂存，当宿主创建新工作区时自动将其分配到该分区。
    */
-  const slotRegistry = (ctx as unknown as {
-    slots?: {
-      entries?: (name: string) => readonly unknown[]
-      subscribe?: (name: string, listener: () => void) => () => void
-    }
-  }).slots
-
-  const isDirectoryFlowAvailable = (): boolean => {
-    // 轻量测试夹具无 slots.entries 时默认视为可用；真实宿主精确对齐官方 directoryFlow slot 占用状态
-    if (typeof slotRegistry?.entries !== 'function') return true
-    return slotRegistry.entries('sidebar.workspaces.directoryFlow').length > 0
-  }
 
   let pendingTargetSectionId: string | undefined
   let pendingTargetCleanupTimer: number | undefined
@@ -1479,8 +1476,8 @@ export function observeWorkspaceSections(
 
   let unsubscribeDirectoryFlow: (() => void) | undefined
   try {
-    if (typeof slotRegistry?.subscribe === 'function') {
-      unsubscribeDirectoryFlow = slotRegistry.subscribe('sidebar.workspaces.directoryFlow', () => {
+    if (typeof ctx.slots?.subscribe === 'function') {
+      unsubscribeDirectoryFlow = ctx.slots.subscribe('sidebar.workspaces.directoryFlow', () => {
         if (disposed) return
         const available = isDirectoryFlowAvailable()
         if (!available) clearPendingTarget()

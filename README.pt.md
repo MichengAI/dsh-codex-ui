@@ -30,7 +30,7 @@ No uso diário do DeepSeek Harness, a interface padrão pode apresentar caixas d
 
 * 🚀 **Recuperação rápida e previsão inteligente**: Previsão de digitação em linha (`Tab` para aceitar, `Alt+Abaixo/Acima` para alternar opções), histórico de comandos estilo terminal (`↑` / `↓`) e alças de largura adaptáveis;
 * 🪟 **Painel de configurações em tela cheia**: Substitui diálogos estreitos por uma tela ampla com iluminação difusa Ambient Ground e cartões flutuantes;
-* 🎨 **Temas com vidro fosco físico e mica**: 13 paletas de alta qualidade (incluindo Codex Preto Carvão e Branco Papel), modos de layout plano e flutuante, 3 níveis de desfoque e brilhos de chão;
+* 🎨 **Temas com vidro fosco físico e mica**: 14 paletas de alta qualidade (séries Codex, Claude, Dracula, Cyberpunk, Solarized, Gruvbox e Catppuccin), modos de layout plano e flutuante, 3 níveis de desfoque e brilhos de chão;
 * 🧭 **Barra lateral modular**: Gaveta tipo sanfona fluida e reorganização livre por arrasto; quando recolhida, **alinha-se 100% ao trilho oficial nativo de 56px**;
 * 🧠 **Títulos de sessão inteligentes**: Extração semântica da primeira mensagem para gerar títulos padronizados adaptados a modelos de raciocínio de contexto longo;
 * 🌐 **Compatibilidade nativa com os 8 idiomas oficiais**: Suporte completo para português, inglês, chinês, japonês, espanhol, francês, alemão e russo (`pt`, `en`, `zh`, `ja`, `es`, `fr`, `de`, `ru`), adaptando textos, cartões iniciais, menus de contexto e títulos;
@@ -60,8 +60,8 @@ Na versão 2.0.0, todo o código antigo de sobreposição foi **descartado** em 
 | :--- | :--- | :--- |
 | `composer` | **Melhorias de Entrada (Composer)** | Previsão inteligente (`Tab`), histórico de terminal (`↑`/`↓`), isolamento por conversa ou espaço de trabalho, alças de largura e sugestões. |
 | `settings-skin` | **Visual de Configurações (Settings Skin)** | Painel em tela cheia, cartões flutuantes de opções, fundo Ambient Ground e busca nativa. |
-| `theme` | **Temas e Vidro Fosco (Theme)** | 13 paletas de cores, modos Plano vs. Cartões Mica, 3 pré-definições de desfoque e brilhos de reflexo. |
-| `sidebar` | **Barra Lateral Modular (Sidebar)** | Expansão suave, reorganização por arrasto, marcador de lido/não lido e aderência estrita ao trilho de 56px. |
+| `theme` | **Temas e Vidro Fosco (Theme)** | 14 paletas de cores, modos Plano vs. Cartões Mica, 3 pré-definições de desfoque e brilhos de reflexo. |
+| `sidebar` | **Barra Lateral Modular (Sidebar)** | Seções de espaços de trabalho (incluindo atalho direto «Adicionar espaço de trabalho» nos cabeçalhos, exibido conforme a disponibilidade do seletor de pastas do host com posicionamento automático), expansão suave, reorganização por arrasto, marcador de lido/não lido e aderência estrita ao trilho de 56px. |
 | `session-title` | **Títulos de Sessão (Session Title)** | Geração padronizada de títulos baseada na semântica da primeira solicitação, com suporte a 8 idiomas e até 4096 tokens. |
 | `desktop-menu` | **Menus do Desktop (Desktop Menus)** | Menu de ajuda integrado na barra de título do aplicativo desktop, com recarregamento e reinício seguro do Host. |
 | `dependencies` | **Gestão de Dependências (Integrado)** | Monitoramento de plugins integrados, contagem de downloads npm em tempo real e atualização em lote com um clique. |
@@ -183,10 +183,11 @@ Após a instalação, reinicie a instância do DSH Web e force a atualização d
 | **Aceitar previsão de digitação** | Pressione `Tab` quando o texto sugerido aparecer após o cursor; use `Alt + Abaixo` / `Alt + Acima` para alternar ou `Esc` para dispensar. |
 | **Configurar modo de previsão** | Vá em **Configurações → Codex UI** e selecione o modo (Desativado / Somente continuação / Sugestão+continuação) no cartão «Melhorias de Entrada». Pode ser desativado no perfil via `config.prediction: false` em `cordis.patch.yml`. |
 | **Histórico de comandos** | Em um campo de entrada vazio, pressione `↑` / `↓` para navegar pelas entradas anteriores desta conversa — ou de todo o espaço de trabalho, alternável nas Configurações (até 200 itens por escopo). |
-| **Alterar escopo do histórico** | No mesmo cartão «Aprimoramentos de entrada», escolha «Escopo do histórico»: «Esta conversa» (padrão) recupera apenas entradas da conversa atual; «Espaço de trabalho» compartilha com todas as conversas do mesmo diretório de trabalho e torna novamente visível o histórico de espaço de trabalho salvo anteriormente. |
+| **Alterar escopo do histórico** | No mesmo cartão «Aprimoramentos de entrada», escolha «Escopo do histórico»: «Esta conversa» (padrão) recupera apenas entradas da conversa atual; «Espaço de trabalho» compartilha com todas as conversas do mesmo diretório de trabalho e torna novamente visível o histórico de espaço de trabalho salvo anteriormente (mantido até o limite de 100 escopos recentes antes de ser descartado). |
 | **Redimensionar largura** | Posicione o cursor sobre as bordas laterais da caixa de entrada e arraste as alças azuis. |
-| **Alternar temas e desfoque** | Em **Configurações → Codex UI**, selecione uma das 13 paletas e alterne entre os modos de vidro Plano e Mica Flutuante. |
+| **Alternar temas e desfoque** | Em **Configurações → Codex UI**, selecione uma das 14 paletas e alterne entre os modos de vidro Plano e Mica Flutuante. |
 | **Reordenar barra lateral** | Arraste verticalmente os itens; os guias azuis indicam o ponto exato para mover para dentro ou fora do menu «Mais». |
+| **Adicionar espaço de trabalho pela seção** | Passe o mouse ou foque no título de qualquer seção (Fixados, Projetos ou personalizada) e clique no ícone «Adicionar espaço de trabalho» ao lado de `···` (exibido quando o seletor de diretórios do host está disponível); o novo espaço é inserido e expandido nela automaticamente. |
 | **Recolher barra lateral** | Clique no botão no topo da barra para alternar para o trilho oficial compacto de 56px. |
 | **Atualizar plugins em lote** | Em **Configurações → Codex UI**, clique em **Instalar/atualizar tudo** no cartão de extensões complementares. |
 

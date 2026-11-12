@@ -30,7 +30,7 @@ Dans l'utilisation quotidienne de DeepSeek Harness, l'interface standard peut pr
 
 * 🚀 **Rappel d'historique instantané et prédiction intelligente** : Prédiction et complétion de saisie en ligne (`Tab` pour accepter, `Alt+Bas/Haut` pour faire défiler), historique de commandes de style terminal (`↑` / `↓`), et poignées de redimensionnement adaptatif ;
 * 🪟 **Atelier des paramètres en plein écran** : Remplace les boîtes de dialogue exiguës par un canevas à diffusion lumineuse Ambient Ground et des cartes flottantes ;
-* 🎨 **Thèmes en verre dépoli physique et mica** : 13 palettes d'apparence de haute qualité (avec Codex Noir Carbone et Blanc Papier), modes d'agencement plat ou flottant mica, 3 préréglages de flou et reflets au sol ;
+* 🎨 **Thèmes en verre dépoli physique et mica** : 14 palettes d'apparence de haute qualité (séries Codex, Claude, Dracula, Cyberpunk, Solarized, Gruvbox et Catppuccin), modes d'agencement plat ou flottant mica, 3 préréglages de flou et reflets au sol ;
 * 🧭 **Barre latérale modulaire** : Tiroir accordéon fluide et réorganisation libre par glisser-déposer ; s'aligne rigoureusement sur le rail compact officiel de 56px une fois repliée ;
 * 🧠 **Titres de session intelligents** : Analyse sémantique du premier message pour extraire des titres standardisés adaptés aux modèles de raisonnement longs ;
 * 🌐 **Prise en charge intégrale des 8 langues officielles** : Support complet pour le français, l'anglais, le chinois, le japonais, l'espagnol, l'allemand, le russe et le portugais (`fr`, `en`, `zh`, `ja`, `es`, `de`, `ru`, `pt`), adaptant textes, cartes d'accueil, menus contextuels et titres ;
@@ -60,8 +60,8 @@ Avec la version 2.0.0, l'ensemble du code de surcharge a été **supprimé** au 
 | :--- | :--- | :--- |
 | `composer` | **Améliorations de Saisie (Composer)** | Prédiction en ligne (`Tab`), historique terminal (`↑`/`↓`), isolation par conversation ou espace de travail, poignées de largeur et cartes de suggestions. |
 | `settings-skin` | **Habillage des Paramètres (Settings Skin)** | Atelier plein écran, cartes d'options flottantes, arrière-plan Ambient Ground et recherche native. |
-| `theme` | **Thème et Verre Dépoli (Theme)** | 13 palettes de couleurs, modes Plat vs. Cartes Mica, 3 niveaux de flou et contrôle des reflets au sol. |
-| `sidebar` | **Barre Latérale Modulaire (Sidebar)** | Déploiement accordéon, réorganisation par glisser-déposer, marquage lu/non-lu et alignement parfait avec le rail 56px. |
+| `theme` | **Thème et Verre Dépoli (Theme)** | 14 palettes de couleurs, modes Plat vs. Cartes Mica, 3 niveaux de flou et contrôle des reflets au sol. |
+| `sidebar` | **Barre Latérale Modulaire (Sidebar)** | Sections d'espaces de travail (avec bouton direct « Ajouter un espace de travail » dans chaque en-tête, affiché selon la disponibilité du sélecteur de dossiers de l'hôte et placement automatique), déploiement accordéon, réorganisation par glisser-déposer, marquage lu/non-lu et alignement parfait avec le rail 56px. |
 | `session-title` | **Titres de Session (Session Title)** | Génération intelligente de titres selon la sémantique de départ avec prise en charge de 8 langues et jusqu'à 4096 jetons. |
 | `desktop-menu` | **Menus de Bureau (Desktop Menus)** | Menu d'aide dans la barre de titre avec actualisation de la vue et redémarrage sécurisé de l'application et de l'hôte. |
 | `dependencies` | **Gestion des Extensions (Intégré)** | Suivi des dépendances associées, compteur de téléchargements npm en direct et mise à jour groupée en un clic. |
@@ -94,7 +94,7 @@ Espace de configuration généreux structuré en cartes thématiques adaptées a
 ---
 
 ### 4. Personnalisation de l'apparence et verre dépoli
-13 palettes de thèmes de haute qualité intégrées et 1 option officielle par défaut (couvrant les séries Codex, Claude, Dracula, Solarized, Gruvbox et Catppuccin). Prend en charge les modes de disposition verre plat standard et flottant Mica, 3 niveaux de préréglages de matériaux (Clair, Standard, Dépoli) et un commutateur de reflets au sol. Repose sur l'injection dynamique de Design Tokens avec nettoyage complet du cycle de vie sans aucune pollution de styles globaux.
+14 palettes de thèmes de haute qualité intégrées et 1 option officielle par défaut (couvrant les séries Codex, Claude, Dracula, Cyberpunk, Solarized, Gruvbox et Catppuccin). Prend en charge les modes de disposition verre plat standard et flottant Mica, 3 niveaux de préréglages de matériaux (Clair, Standard, Dépoli) et un commutateur de reflets au sol. Repose sur l'injection dynamique de Design Tokens avec nettoyage complet du cycle de vie sans aucune pollution de styles globaux.
 
 #### Liste des thèmes intégrés et schémas de couleurs
 
@@ -183,10 +183,11 @@ Une fois installé, redémarrez votre instance DSH Web et rechargez complètemen
 | **Accepter la prédiction** | Appuyez sur `Tab` lorsque le texte d'aide apparaît en filigrane ; utilisez `Alt + Bas` / `Alt + Haut` pour parcourir les variantes ou `Échap` pour rejeter. |
 | **Configurer le mode de prédiction** | Rendez-vous dans **Paramètres → Codex UI** et sélectionnez le mode (Désactivé / Continuer uniquement / Deviner+continuer) dans la carte « Améliorations de Saisie ». |
 | **Rappel de l'historique** | Dans une zone de saisie vide, appuyez sur `↑` / `↓` pour faire défiler les entrées précédentes de cette conversation — ou de tout l'espace de travail, configurable dans les Paramètres (jusqu'à 200 éléments par portée). |
-| **Changer la portée de l'historique** | Dans la carte « Améliorations de saisie », choisissez « Portée de l'historique » : « Cette conversation » (par défaut) ne rappelle que cette conversation ; « Espace de travail » partage les entrées avec toutes les conversations du même répertoire de travail et rend à nouveau visible l'historique précédemment enregistré. |
+| **Changer la portée de l'historique** | Dans la carte « Améliorations de saisie », choisissez « Portée de l'historique » : « Cette conversation » (par défaut) ne rappelle que cette conversation ; « Espace de travail » partage les entrées avec toutes les conversations du même répertoire de travail et rend à nouveau visible l'historique précédemment enregistré (dans la limite de conservation des 100 portées les plus récentes). |
 | **Ajuster la largeur** | Survolez les bordures latérales de la zone de saisie et tirez sur les poignées bleues. |
-| **Changer de thème et de verre** | Dans **Paramètres → Codex UI**, choisissez parmi les 13 palettes et basculez entre les modes Plat et Cartes Mica. |
+| **Changer de thème et de verre** | Dans **Paramètres → Codex UI**, choisissez parmi les 14 palettes et basculez entre les modes Plat et Cartes Mica. |
 | **Réorganiser la barre latérale** | Glissez verticalement les éléments ; les repères bleus indiquent l'emplacement exact d'insertion ou de retrait. |
+| **Ajouter un espace de travail depuis une section** | Survolez ou focalisez l'en-tête de n'importe quelle section (Épinglés, Projets ou personnalisée) puis cliquez sur l'icône « Ajouter un espace de travail » à côté de `···` (affichée si le sélecteur de dossiers de l'hôte est actif) ; le nouvel espace s'y classe et s'ouvre automatiquement. |
 | **Replier la barre latérale** | Cliquez sur le bouton de réduction en haut de la barre pour passer au rail officiel de 56px. |
 | **Mettre à jour les extensions** | Dans **Paramètres → Codex UI**, cliquez sur **Tout installer/mettre à jour** dans la carte des dépendances. |
 

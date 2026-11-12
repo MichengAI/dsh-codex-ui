@@ -30,7 +30,7 @@ En el uso diario de DeepSeek Harness, la interfaz original puede presentar venta
 
 * 🚀 **Recuperación rápida y predicción inteligente**: Predicción de entrada en línea (`Tab` para aceptar, `Alt+Abajo/Arriba` para alternar opciones), historial estilo terminal (`↑` / `↓`), y ajuste de ancho adaptable;
 * 🪟 **Panel de configuración en pantalla completa**: Sustituye cuadros de diálogo reducidos por un lienzo con iluminación difusa Ambient Ground y tarjetas flotantes;
-* 🎨 **Temas de cristal físico y mica**: 13 paletas de alta calidad (incluyendo Codex Negro Carbón y Blanco Papel), modos de diseño plano y flotante, 3 niveles de desenfoque y destellos en el suelo;
+* 🎨 **Temas de cristal físico y mica**: 14 paletas de alta calidad (series Codex, Claude, Dracula, Cyberpunk, Solarized, Gruvbox y Catppuccin), modos de diseño plano y flotante, 3 niveles de desenfoque y destellos en el suelo;
 * 🧭 **Barra lateral modular**: Acordeón suave y reordenación libre por arrastre; cuando se colapsa, se alinea al 100% con el riel oficial de 56px;
 * 🧠 **Títulos inteligentes de sesión**: Extracción semántica del primer mensaje para generar títulos estructurados adaptados a modelos de razonamiento;
 * 🌐 **Compatibilidad multilingüe con los 8 idiomas oficiales**: Soporte completo para español, inglés, chino, japonés, francés, alemán, ruso y portugués (`es`, `en`, `zh`, `ja`, `fr`, `de`, `ru`, `pt`), adaptando textos, tarjetas de inicio, menús contextuales y títulos de sesión;
@@ -60,8 +60,8 @@ En 2.0.0 eliminamos todo el código de sobrescritura de 1.x y adoptamos una arqu
 | :--- | :--- | :--- |
 | `composer` | **Mejoras de Entrada (Composer)** | Predicción inteligente (`Tab`), historial terminal (`↑`/`↓`), almacenamiento por conversación o espacio de trabajo, tiradores de ancho y tarjetas de sugerencias. |
 | `settings-skin` | **Configuración Nativa (Settings Skin)** | Distribución en pantalla completa, tarjetas flotantes, fondo Ambient Ground y búsqueda nativa. |
-| `theme` | **Temas y Cristal (Theme)** | 13 paletas de colores, modos Plano vs. Mica Flotante, 3 preajustes de desenfoque y destellos de suelo. |
-| `sidebar` | **Barra Lateral Modular (Sidebar)** | Acordeón integrado, reordenación por arrastre, marcado como no leído/leído y alineación exacta con el riel nativo de 56px. |
+| `theme` | **Temas y Cristal (Theme)** | 14 paletas de colores, modos Plano vs. Mica Flotante, 3 preajustes de desenfoque y destellos de suelo. |
+| `sidebar` | **Barra Lateral Modular (Sidebar)** | Secciones de espacios de trabajo (con acceso directo «Agregar espacio de trabajo» en cada encabezado, mostrado según la capacidad de selección de carpetas del host y asignación automática), acordeón integrado, reordenación por arrastre, marcado como no leído/leído y alineación exacta con el riel nativo de 56px. |
 | `session-title` | **Título de Sesión (Session Title)** | Generación estandarizada de títulos según la semántica inicial con soporte de 8 idiomas y hasta 4096 tokens de razonamiento. |
 | `desktop-menu` | **Menús de Escritorio (Desktop Menus)** | Menú de ayuda en la barra de títulos con recarga de página y reinicio seguro del sistema y del Host. |
 | `dependencies` | **Gestor de Ecosistema (Integrado)** | Monitorización de dependencias, recuento de descargas npm en tiempo real y actualización en lote. |
@@ -183,10 +183,11 @@ Una vez instalado, reinicie su entorno DSH Web y fuerce la recarga del navegador
 | **Aceptar predicción de entrada** | Pulse `Tab` cuando aparezca el texto proyectado tras el cursor; pulse `Alt + Abajo` / `Alt + Arriba` para alternar sugerencias o `Esc` para descartar. |
 | **Configurar modo de predicción** | Vaya a **Configuración → Codex UI** y elija el modo (Desactivado / Solo continuación / Suposición+continuación) en la tarjeta «Mejoras de Entrada». Se puede bloquear en todo el perfil definiendo `config.prediction: false` en `cordis.patch.yml`. |
 | **Historial de comandos** | Pulse `↑` / `↓` en un campo de entrada vacío para desplazarse por las entradas anteriores de esta conversación —o de todo el espacio de trabajo, configurable en Ajustes (hasta 200 elementos por alcance)—. |
-| **Cambiar alcance del historial** | En la misma tarjeta «Mejoras de entrada», elija «Alcance del historial»: «Esta conversación» (predeterminado) solo recupera mensajes de la conversación actual; «Espacio de trabajo» los comparte con todas las conversaciones del mismo directorio de trabajo y vuelve a hacer visible el historial guardado anteriormente. |
+| **Cambiar alcance del historial** | En la misma tarjeta «Mejoras de entrada», elija «Alcance del historial»: «Esta conversación» (predeterminado) solo recupera mensajes de la conversación actual; «Espacio de trabajo» los comparte con todas las conversaciones del mismo directorio de trabajo y vuelve a hacer visible el historial guardado anteriormente (conservado hasta un límite de 100 alcances recientes antes de ser descartado). |
 | **Ajustar ancho del campo** | Pase el cursor sobre los bordes laterales de la tarjeta de entrada y arrastre los tiradores azules. |
-| **Cambiar temas y desenfoque** | Vaya a **Configuración → Codex UI**, seleccione una de las 13 paletas y alterne entre los modos de cristal Plano y Mica Flotante. |
+| **Cambiar temas y desenfoque** | Vaya a **Configuración → Codex UI**, seleccione una de las 14 paletas y alterne entre los modos de cristal Plano y Mica Flotante. |
 | **Reordenar barra lateral** | Arrastre verticalmente los elementos; las guías azules indican la posición exacta para ingresar o extraer del cajón «Más». |
+| **Agregar espacio de trabajo desde una sección** | Pase el cursor o enfoque el título de cualquier sección (Fijados, Proyectos o personalizada) y pulse el icono «Agregar espacio de trabajo» junto a `···` (visible cuando el selector de directorios del host está disponible); el nuevo espacio se colocará y expandirá automáticamente dentro de esa sección. |
 | **Plegar barra lateral** | Haga clic en el botón superior de la barra para cambiar al riel oficial compacto de 56px. |
 | **Actualizar complementos** | En **Configuración → Codex UI**, pulse **Instalar/actualizar todo** dentro de la tarjeta de complementos. |
 

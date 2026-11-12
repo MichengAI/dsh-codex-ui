@@ -175,10 +175,16 @@ describe('工作区分区：DOM 层', () => {
     vi.restoreAllMocks()
   })
 
+  const defaultSlots = {
+    entries: (name: string) => (name === 'sidebar.workspaces.directoryFlow' ? [{}] : []),
+    subscribe: () => () => {},
+  }
+
   const mount = (ids: string[], ctxExtra: Record<string, unknown> = {}) => {
     const fake = fakeWorkspaces(ids)
     const ctx = {
       get: (name: string) => (name === 'workspaces' ? fake.service : undefined),
+      slots: defaultSlots,
       ...ctxExtra,
     }
     dispose = observeWorkspaceSections(ctx as never)
@@ -2430,6 +2436,25 @@ describe('分区二级菜单的可访问性：', () => {
       expect(blockIdsInDomOrder()).toEqual(['p1', 'b1', 'new-1'])
     } finally {
       HTMLElement.prototype.animate = origAnimate
+    }
+  })
+
+  it('当 ctx.slots 尚未就绪（缺失或无 entries 方法）时不盲目渲染添加工作区按钮', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+        { id: 's1', name: '客户项目', ids: ['b'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['c'] },
+      ],
+    })
+    mountFixture(['a', 'b', 'c'])
+    mount(['a', 'b', 'c'], { slots: undefined })
+    await waitForSync()
+
+    for (const id of [PINNED_SECTION_ID, 's1', DEFAULT_SECTION_ID]) {
+      const header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === id)!
+      expect(header.querySelector('[data-dcu-action="more"]')).not.toBeNull()
+      expect(header.querySelector('[data-dcu-action="add-workspace"]')).toBeNull()
     }
   })
 
