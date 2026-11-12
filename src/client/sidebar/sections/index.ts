@@ -87,10 +87,13 @@ const SECTIONS_CSS = `
    这里再补 padding 会把整个项目块连同会话一起右移，跟原生不一致。成员标记只用于折叠隐藏。 */
 [data-dcu-section-member]{transition:max-height 180ms var(--ds-ease-in-out,cubic-bezier(.2,0,0,1)),opacity 180ms var(--ds-ease-in-out,cubic-bezier(.2,0,0,1))}
 [data-dcu-section-hidden='true']{display:none !important}
-.dcu-ws-section-actions{display:flex;gap:2px;opacity:.55;transition:opacity .12s ease;flex:none}
-.dcu-ws-section:hover .dcu-ws-section-actions,.dcu-ws-section:focus-within .dcu-ws-section-actions{opacity:1}
-.dcu-ws-section-action{width:22px;height:22px;border:0;border-radius:50%;background:transparent;color:inherit;font:inherit;font-size:12px;line-height:1;cursor:pointer;display:grid;place-items:center}
-.dcu-ws-section-action:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.16))}
+/* 与宿主行操作区完全一致：按钮自带 margin:-4px，gap:13px 使视觉净间距为 5px；平时隐藏，悬停/聚焦/菜单打开时显现 */
+.dcu-ws-section-actions{display:none;align-items:center;gap:13px;padding-right:6px;flex:none}
+@media (hover:hover){.dcu-ws-section:hover .dcu-ws-section-actions{display:inline-flex}}
+@media (hover:none){.dcu-ws-section-actions{display:inline-flex}}
+.dcu-ws-section:focus-within .dcu-ws-section-actions,.dcu-ws-section[data-menu-open='true'] .dcu-ws-section-actions{display:inline-flex}
+.dcu-ws-section-action{width:24px;height:24px;margin:-4px;padding:0;border:0;border-radius:var(--dsw-radius-xs,4px);background:transparent;color:var(--dsw-alias-label-tertiary,inherit);font:inherit;font-size:12px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.dcu-ws-section-action:hover{color:var(--dsw-alias-label-primary,inherit);background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.16))}
 [data-sidebar-collapsed='true'] .dcu-ws-section{display:none !important}
 /* z-index 取宿主顶级浮层的量级：分区标题 ··· 这条路径把面板挂在 body 上，宿主侧边栏/工作区树自己是
    更大的层级，1000 会让侧边栏的行文字压在面板上（表现为「菜单跑到侧边栏后面」）。
@@ -253,6 +256,7 @@ export function observeWorkspaceSections(
     next: SectionsState
     workspaceIds?: readonly string[]
     rpcDone: boolean
+    suppressMotion?: boolean
     layoutDone?: boolean
     motionDone?: boolean
     motion?: SectionLayoutMotion
@@ -343,38 +347,127 @@ export function observeWorkspaceSections(
    * 等待新工作区自动归属的目标分区 ID。
    * 用户在某个分区的菜单里点击「新建工作区」后暂存，当宿主创建新工作区时自动将其分配到该分区。
    */
+  const slotRegistry = (ctx as unknown as {
+    slots?: {
+      entries?: (name: string) => readonly unknown[]
+      subscribe?: (name: string, listener: () => void) => () => void
+    }
+  }).slots
+
+  const isDirectoryFlowAvailable = (): boolean => {
+    // 轻量测试夹具无 slots.entries 时默认视为可用；真实宿主精确对齐官方 directoryFlow slot 占用状态
+    if (typeof slotRegistry?.entries !== 'function') return true
+    return slotRegistry.entries('sidebar.workspaces.directoryFlow').length > 0
+  }
+
   let pendingTargetSectionId: string | undefined
   let pendingTargetCleanupTimer: number | undefined
+  let triggeringHostAdd = false
+
+  function clearPendingTarget(): void {
+    pendingTargetSectionId = undefined
+    if (pendingTargetCleanupTimer !== undefined) {
+      window.clearTimeout(pendingTargetCleanupTimer)
+      pendingTargetCleanupTimer = undefined
+    }
+  }
 
   function schedulePendingTargetCleanup(): void {
     if (pendingTargetCleanupTimer !== undefined) window.clearTimeout(pendingTargetCleanupTimer)
-    // 3 分钟后仍未完成新建，自动清除暂存目标
+    // 90 秒兜底过期，并配合全局手动入口即时清零机制，避免取消弹窗后误吞后续新建工作区
     pendingTargetCleanupTimer = window.setTimeout(() => {
       pendingTargetCleanupTimer = undefined
       pendingTargetSectionId = undefined
-    }, 180000)
+    }, 90000)
+  }
+
+  /**
+   * 宿主顶栏/侧栏头部原生「添加工作区」按钮的 8 门精确文案（同步自宿主 `workspace.add`）。
+   * 仅做精确全等匹配：既能绕开宿主工作区行右键菜单（`工作区“…”的操作`）与带省略号的菜单项（`添加工作区…`），
+   * 又与下方选择器对 `[data-context-menu-trigger]`、`[aria-haspopup="menu"]` 及 `[data-row-key]` 的排除构成双重防护。
+   */
+  const HOST_ADD_WORKSPACE_LABELS = new Set([
+    '添加工作区',
+    'Add workspace',
+    'ワークスペースを追加',
+    'Agregar espacio de trabajo',
+    'Ajouter un espace de travail',
+    'Arbeitsbereich hinzufügen',
+    'Добавить рабочую область',
+    'Adicionar espaço de trabalho',
+  ])
+
+  function isHostAddWorkspaceButton(btn: HTMLButtonElement): boolean {
+    if (btn.hasAttribute('data-dcu-action')) return false
+    if (btn.hasAttribute('data-context-menu-trigger') || btn.getAttribute('aria-haspopup') === 'menu') return false
+    if (btn.closest('[data-row-key]') !== null) return false
+    const shortcuts = btn.getAttribute('aria-keyshortcuts') ?? ''
+    if (/\bo\b/i.test(shortcuts) || /(?:^|\+)o$/i.test(shortcuts)) return true
+    const label = btn.getAttribute('aria-label')?.trim() ?? ''
+    return HOST_ADD_WORKSPACE_LABELS.has(label)
+  }
+
+  function findHostAddWorkspaceButton(): HTMLButtonElement | null {
+    const candidates = document.querySelectorAll<HTMLButtonElement>(
+      'button:not([data-dcu-action]):not([data-context-menu-trigger]):not([aria-haspopup="menu"])',
+    )
+    for (const btn of candidates) {
+      if (isHostAddWorkspaceButton(btn)) return btn
+    }
+    return null
   }
 
   function triggerHostAddWorkspace(): void {
-    // 优先寻找宿主侧边栏原生的「添加工作区」按钮并点击
-    const hostAddBtn = document.querySelector<HTMLButtonElement>(
-      'button[aria-keyshortcuts*="O"], [class*="iconButton"][aria-label*="工作区"], [class*="iconButton"][aria-label*="workspace" i], [class*="iconButton"][aria-label*="Workspace"]',
-    )
-    if (hostAddBtn !== null) {
-      hostAddBtn.click()
+    triggeringHostAdd = true
+    try {
+      // 优先寻找宿主侧边栏原生的「添加工作区」按钮并点击
+      const hostAddBtn = findHostAddWorkspaceButton()
+      if (hostAddBtn !== null) {
+        hostAddBtn.click()
+        return
+      }
+      // 兜底派发快捷键（Ctrl+O 或 Cmd+O）
+      const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
+      const event = new KeyboardEvent('keydown', {
+        code: 'KeyO',
+        key: 'o',
+        ctrlKey: !isMac,
+        metaKey: isMac,
+        bubbles: true,
+        cancelable: true,
+      })
+      document.dispatchEvent(event)
+    } finally {
+      triggeringHostAdd = false
+    }
+  }
+
+  function startAddWorkspaceToSection(sectionId: string): void {
+    pendingTargetSectionId = sectionId
+    schedulePendingTargetCleanup()
+    triggerHostAddWorkspace()
+  }
+
+  function onDocumentClickClearPending(event: MouseEvent): void {
+    if (triggeringHostAdd || pendingTargetSectionId === undefined) return
+    const target = event.target
+    if (!(target instanceof Element)) return
+    if (target.closest(`.${HEADER_CLASS}-actions`) !== null) return
+    const menuitem = target.closest('[role="menuitem"]')
+    if (menuitem !== null && !menuitem.hasAttribute('data-dcu-action')) {
+      const normalized = (menuitem.textContent ?? '').trim().replace(/[….]+\s*$/, '').trim()
+      if (HOST_ADD_WORKSPACE_LABELS.has(normalized)) clearPendingTarget()
       return
     }
-    // 兜底派发快捷键（Ctrl+O 或 Cmd+O）
-    const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
-    const event = new KeyboardEvent('keydown', {
-      code: 'KeyO',
-      key: 'o',
-      ctrlKey: !isMac,
-      metaKey: isMac,
-      bubbles: true,
-      cancelable: true,
-    })
-    document.dispatchEvent(event)
+    const btn = target.closest<HTMLButtonElement>('button')
+    if (btn !== null && isHostAddWorkspaceButton(btn)) clearPendingTarget()
+  }
+
+  function onDocumentKeydownClearPending(event: KeyboardEvent): void {
+    if (triggeringHostAdd || pendingTargetSectionId === undefined) return
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.code === 'KeyO') {
+      clearPendingTarget()
+    }
   }
 
   const workspaces = (): WorkspacesLike | undefined => {
@@ -429,21 +522,33 @@ export function observeWorkspaceSections(
   }
 
   /** 保留显式移动身份；在宿主确认且真实列表到位之前，不提前修改标题和折叠标记。 */
-  function commitExplicit(next: SectionsState, workspaceIds?: readonly string[]): void {
+  function commitExplicit(next: SectionsState, workspaceIds?: readonly string[], suppressMotion = false): void {
     if (disposed) return
     state = next
-    updates.push({ next, workspaceIds, rpcDone: false })
+    updates.push({ next, workspaceIds, rpcDone: false, suppressMotion })
     startNextUpdate()
   }
 
   /* ── 标题渲染 ── */
 
+  function syncHeaderAddButton(header: HTMLElement, sectionId: string, name: string, available: boolean): void {
+    const actions = header.querySelector<HTMLElement>(`.${HEADER_CLASS}-actions`)
+    if (actions === null) return
+    const existing = actions.querySelector<HTMLElement>('[data-dcu-action="add-workspace"]')
+    if (available) {
+      if (existing === null) actions.appendChild(buildAddWorkspaceActionButton(sectionId, name))
+    } else if (existing !== null) {
+      existing.remove()
+    }
+  }
+
   function ensureHeader(sectionId: string, name: string): HTMLElement {
+    const displayName = localizeBuiltinName(sectionId, name, text)
     let header = headers.get(sectionId)
     if (header !== undefined && header.isConnected) {
       const label = header.querySelector<HTMLElement>(`.${HEADER_CLASS}-label`)
-      const next = localizeBuiltinName(sectionId, name, text)
-      if (label !== null && label.textContent !== next) label.textContent = next
+      if (label !== null && label.textContent !== displayName) label.textContent = displayName
+      syncHeaderAddButton(header, sectionId, displayName, isDirectoryFlowAvailable())
       return header
     }
     header = document.createElement('div')
@@ -458,7 +563,7 @@ export function observeWorkspaceSections(
 
     const label = document.createElement('span')
     label.className = `${HEADER_CLASS}-label`
-    label.textContent = localizeBuiltinName(sectionId, name, text)
+    label.textContent = displayName
     header.appendChild(label)
 
     // 折叠箭头贴在名称右侧（对齐 Codex 的「你好 ›」），展开时朝下、折叠时朝右。
@@ -471,11 +576,12 @@ export function observeWorkspaceSections(
     grow.className = `${HEADER_CLASS}-grow`
     header.appendChild(grow)
 
-    // 所有分区都留一个 ··· 入口：内置分区只是少了「重命名 / 移除分区」，新建分区仍然从这里到达。
+    // 分区标题右侧操作区（与宿主项目行一致）：左边为「···」更多操作菜单，右边为「添加工作区」快捷按钮（按宿主 directoryFlow 能力门控）。
     const actions = document.createElement('span')
     actions.className = `${HEADER_CLASS}-actions`
-    actions.appendChild(buildHeaderActionButton(sectionId, name))
+    actions.appendChild(buildHeaderActionButton(sectionId, displayName))
     header.appendChild(actions)
+    syncHeaderAddButton(header, sectionId, displayName, isDirectoryFlowAvailable())
 
     header.addEventListener('click', event => {
       if (event.target instanceof Element && event.target.closest(`.${HEADER_CLASS}-actions`) !== null) return
@@ -490,6 +596,41 @@ export function observeWorkspaceSections(
 
     headers.set(sectionId, header)
     return header
+  }
+
+  /**
+   * 分区标题右侧的「添加工作区」快捷按钮（位于 `···` 右侧）：
+   * 复用宿主项目行图标按钮外壳与宿主原生 `IconProjectAddOutlineRegular` 图标。
+   * 置顶、项目和自定义分区均有此按钮。
+   */
+  function buildAddWorkspaceActionButton(sectionId: string, name: string): HTMLElement {
+    const hostButton = document.querySelector<HTMLButtonElement>(
+      '[data-row-key^="workspace:"] [class*="rowActions"] button',
+    )
+    let button: HTMLElement
+    if (hostButton !== null) {
+      button = hostButton.cloneNode(true) as HTMLElement
+      button.removeAttribute('aria-keyshortcuts')
+      button.removeAttribute('tabindex')
+      button.removeAttribute('aria-haspopup')
+      button.removeAttribute('aria-expanded')
+      button.removeAttribute('data-context-menu-trigger')
+    } else {
+      button = document.createElement('button')
+      button.className = `${HEADER_CLASS}-action`
+    }
+    button.innerHTML = iconProjectAdd()
+    button.setAttribute('type', 'button')
+    button.setAttribute('data-dcu-action', 'add-workspace')
+    const addLabel = text('sections.addWorkspace', '添加工作区')
+    button.setAttribute('aria-label', `${name} ${addLabel}`)
+    button.setAttribute('title', addLabel)
+    button.addEventListener('click', event => {
+      event.preventDefault()
+      event.stopPropagation()
+      startAddWorkspaceToSection(sectionId)
+    })
+    return button
   }
 
   /** 分区标题右侧的 `···`：直接克隆宿主项目行的原生图标按钮，样式与宿主完全一致。 */
@@ -508,6 +649,7 @@ export function observeWorkspaceSections(
       button.textContent = '···'
     }
     button.setAttribute('type', 'button')
+    button.setAttribute('data-dcu-action', 'more')
     button.setAttribute('aria-label', `${name} ${text('sections.settings', '分区设置')}`)
     button.addEventListener('click', event => {
       event.preventDefault()
@@ -784,6 +926,7 @@ export function observeWorkspaceSections(
     }
     assignExpanded = false
     assignAnchor?.setAttribute('aria-expanded', 'false')
+    for (const h of headers.values()) h.removeAttribute('data-menu-open')
     // 注意：只清面板自己的收起定时器。cancelAnchorLeave 属于「分区」行上的定时器，
     // 在这里清掉会让「指针移到面板上取消行侧收起」失效（面板 180ms 后自己消失）。
     cancelPanelLeave = undefined
@@ -958,16 +1101,6 @@ export function observeWorkspaceSections(
     const items: Array<{ label: string; icon: string; onSelect: () => void }> = []
     if (!builtin) {
       items.push({
-        label: text('sections.addWorkspace', '新建工作区'),
-        icon: iconPlus(),
-        onSelect: () => {
-          closeSectionMenu()
-          pendingTargetSectionId = sectionId
-          schedulePendingTargetCleanup()
-          triggerHostAddWorkspace()
-        },
-      })
-      items.push({
         label: text('sections.rename', '重命名'),
         icon: iconEdit(),
         onSelect: () => {
@@ -999,6 +1132,7 @@ export function observeWorkspaceSections(
       })
     }
     openHostPanel(anchor, items)
+    headers.get(sectionId)?.setAttribute('data-menu-open', 'true')
   }
 
   /** 标题原地改名：只把标签换成输入框，不碰宿主节点。 */
@@ -1339,7 +1473,26 @@ export function observeWorkspaceSections(
 
   document.addEventListener('pointerdown', onPointerdownToPrepareMenu, true)
   document.addEventListener('click', onClickToPrepareMenu, true)
+  document.addEventListener('click', onDocumentClickClearPending, true)
+  document.addEventListener('keydown', onDocumentKeydownClearPending, true)
   document.addEventListener('contextmenu', onContextMenuToPrepareMenu, true)
+
+  let unsubscribeDirectoryFlow: (() => void) | undefined
+  try {
+    if (typeof slotRegistry?.subscribe === 'function') {
+      unsubscribeDirectoryFlow = slotRegistry.subscribe('sidebar.workspaces.directoryFlow', () => {
+        if (disposed) return
+        const available = isDirectoryFlowAvailable()
+        if (!available) clearPendingTarget()
+        for (const [id, header] of headers.entries()) {
+          const rawName = state.sections.find(item => item.id === id)?.name ?? id
+          syncHeaderAddButton(header, id, localizeBuiltinName(id, rawName, text), available)
+        }
+      })
+    }
+  } catch {
+    unsubscribeDirectoryFlow = undefined
+  }
 
   /**
    * 用宿主自己的图标组件渲染出静态 SVG。
@@ -1347,11 +1500,12 @@ export function observeWorkspaceSections(
    */
   const iconCache = new Map<string, string>()
   function hostIconMarkup(name: string, size = 16): string {
-    const cached = iconCache.get(name)
+    const cacheKey = `${name}:${size}`
+    const cached = iconCache.get(cacheKey)
     if (cached !== undefined) return cached
     const Component = (primitives as unknown as Record<string, unknown>)[name]
     if (typeof Component !== 'function') {
-      iconCache.set(name, '')
+      iconCache.set(cacheKey, '')
       return ''
     }
     let markup = ''
@@ -1364,7 +1518,7 @@ export function observeWorkspaceSections(
     } finally {
       unmountComponentAtNode(host)
     }
-    iconCache.set(name, markup)
+    iconCache.set(cacheKey, markup)
     return markup
   }
 
@@ -1378,6 +1532,17 @@ export function observeWorkspaceSections(
   const iconPinned = (): string => hostIconMarkup('IconPinFillRegular')
   const iconSection = (): string => hostIconMarkup('IconChecklistOutlineRegular')
   const iconPlus = (): string => hostIconMarkup('IconPlusOutlineRegular')
+  const FALLBACK_PROJECT_ADD_SVG =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke-width="1.2">' +
+    '<path d="M5.54492 2.06738C5.91034 2.06754 6.26318 2.20149 6.53711 2.44336L7.94043 3.68164V4.7998C7.71462 4.74105 7.50367 4.63139 7.32617 4.47461L5.87598 3.19238C5.78477 3.11185 5.66658 3.06754 5.54492 3.06738H2.94922C2.67322 3.06738 2.44946 3.29145 2.44922 3.56738V12.4326C2.44927 12.7087 2.67311 12.9326 2.94922 12.9326H12.9326C13.2086 12.9325 13.4326 12.7086 13.4326 12.4326V8.53613H14.4326V12.4326C14.4326 13.2609 13.7609 13.9325 12.9326 13.9326H2.94922C2.12083 13.9326 1.44927 13.261 1.44922 12.4326V3.56738C1.44946 2.73916 2.12094 2.06738 2.94922 2.06738H5.54492Z" fill="currentColor"/>' +
+    '<path d="M9.75977 4.50208H14.5509" stroke="currentColor"/>' +
+    '<path d="M12.1492 6.89758L12.1492 2.10642" stroke="currentColor"/>' +
+    '</svg>'
+  /** 宿主原生「添加工作区」图标（带加号的工作区轮廓）。 */
+  const iconProjectAdd = (): string => {
+    const markup = hostIconMarkup('IconProjectAddOutlineRegular', 16)
+    return markup !== '' ? markup : FALLBACK_PROJECT_ADD_SVG
+  }
   /** 分区展开箭头：和宿主项目行同一颗 `IconTriangleRightFillRegular`，展开时旋转 90°。 */
   const iconChevron = (): string => hostIconMarkup('IconTriangleRightFillRegular')
   const iconEdit = (): string => hostIconMarkup('IconEditOutlineRegular')
@@ -1617,11 +1782,39 @@ export function observeWorkspaceSections(
 
   /* ── 顺序同步 ── */
 
-  /** 新增项目进入默认分区，删除项目及时裁剪；不改变既有成员的显式归属。 */
-  function withHostWorkspaces(value: SectionsState, ids: readonly string[]): SectionsState {
+  /**
+   * 消费正在等待中的新建工作区目标分区。
+   * 只要 ids 中出现了 referenceState 尚未记录的新增工作区，且 pendingTargetSectionId 有效，
+   * 即立刻消费并清除 pendingTargetSectionId（避免被后续写入吞掉或重复触发），同时自动展开目标分区。
+   */
+  function consumeTargetForNewIds(ids: readonly string[], referenceState: SectionsState): string | undefined {
+    const target = pendingTargetSectionId
+    if (target === undefined) return undefined
+    const hasNew = ids.some(id => sectionOf(referenceState, id) === undefined)
+    if (!hasNew) return undefined
+    pendingTargetSectionId = undefined
+    if (pendingTargetCleanupTimer !== undefined) {
+      window.clearTimeout(pendingTargetCleanupTimer)
+      pendingTargetCleanupTimer = undefined
+    }
+    if (collapsed[target] === true) {
+      collapsed[target] = false
+      persistCollapsed()
+      const targetHeader = headers.get(target)
+      if (targetHeader !== undefined) targetHeader.dataset.open = 'true'
+    }
+    return target
+  }
+
+  /** 新增项目进入指定或默认分区，删除项目及时裁剪；不改变既有成员的显式归属。 */
+  function withHostWorkspaces(
+    value: SectionsState,
+    ids: readonly string[],
+    fallbackSectionId: string = DEFAULT_SECTION_ID,
+  ): SectionsState {
     let next = normalizeSections(value, ids)
     for (const id of ids) {
-      if (sectionOf(next, id) === undefined) next = assignWorkspace(next, id, DEFAULT_SECTION_ID)
+      if (sectionOf(next, id) === undefined) next = assignWorkspace(next, id, fallbackSectionId)
     }
     return next
   }
@@ -1631,15 +1824,25 @@ export function observeWorkspaceSections(
     if (disposed || activeUpdate !== undefined) return
     const update = updates.shift()
     if (update === undefined) return
-    update.next = withHostWorkspaces(update.next, knownIds())
+    const ids = knownIds()
+    const original = new Set(flattenSections(update.next))
+    const target = consumeTargetForNewIds(ids, update.next) ?? DEFAULT_SECTION_ID
+    update.next = withHostWorkspaces(update.next, ids, target)
+    const additions = ids.filter(id => !original.has(id))
+    const movingIds =
+      update.workspaceIds === undefined
+        ? undefined
+        : additions.length === 0
+          ? update.workspaceIds
+          : [...update.workspaceIds, ...additions]
     if (updates.length === 0) state = update.next
     activeUpdate = update
-    if (list !== undefined) update.motion = new SectionLayoutMotion(list)
+    if (list !== undefined && update.suppressMotion !== true) update.motion = new SectionLayoutMotion(list)
     const service = workspaces()
     const write = async (): Promise<void> => {
       if (service === undefined) throw new Error('工作区服务未就绪')
       const desired = flattenSections(update.next)
-      for (const move of planWorkspaceMoves(knownIds(), desired, update.workspaceIds)) {
+      for (const move of planWorkspaceMoves(knownIds(), desired, movingIds)) {
         if (disposed || activeUpdate !== update) return
         await insertWorkspace(service, move.workspaceId, move.beforeWorkspaceId)
       }
@@ -1714,23 +1917,16 @@ export function observeWorkspaceSections(
       const update = activeUpdate
       if (update !== undefined) {
         if (update.rpcDone && sameVisibleOrder(ids, order)) {
-          const normalized = withHostWorkspaces(update.next, ids)
+          const original = new Set(flattenSections(update.next))
+          const target = consumeTargetForNewIds(ids, update.next) ?? DEFAULT_SECTION_ID
+          const normalized = withHostWorkspaces(update.next, ids, target)
           if (!sameOrder(flattenSections(normalized), flattenSections(update.next))) {
-            const original = new Set(flattenSections(update.next))
-            const target = pendingTargetSectionId ?? DEFAULT_SECTION_ID
             update.next = reconcileHostOrder(normalized, ids, target).state
-            state = withHostWorkspaces(state, ids)
+            state = reconcileHostOrder(withHostWorkspaces(state, ids, target), ids, target).state
             update.motion?.dispose()
             update.motion = undefined
             update.layoutDone = false
             const additions = ids.filter(id => !original.has(id))
-            if (additions.length > 0 && pendingTargetSectionId !== undefined) {
-              pendingTargetSectionId = undefined
-              if (pendingTargetCleanupTimer !== undefined) {
-                window.clearTimeout(pendingTargetCleanupTimer)
-                pendingTargetCleanupTimer = undefined
-              }
-            }
             const moves = planWorkspaceMoves(ids, flattenSections(update.next), additions)
             if (moves.length > 0) {
               const service = workspaces()
@@ -1782,8 +1978,9 @@ export function observeWorkspaceSections(
       state = normalizeSections(state, ids)
       if (!baselineSet) {
         baselineSet = true
+        const target = consumeTargetForNewIds(ids, state) ?? DEFAULT_SECTION_ID
         for (const id of ids) {
-          if (sectionOf(state, id) === undefined) state = assignWorkspace(state, id, DEFAULT_SECTION_ID)
+          if (sectionOf(state, id) === undefined) state = assignWorkspace(state, id, target)
         }
         committedState = state
         if (!sameOrder(flattenSections(state), ids)) {
@@ -1791,22 +1988,20 @@ export function observeWorkspaceSections(
           return
         }
       } else {
-        // 空闲时只采纳宿主的分区内顺序；原生拖拽不需要再写一次宿主。
-        const target = pendingTargetSectionId
+        // 空闲时先识别本轮新出现的工作区，再结合挂起的目标分区做归属校验。
+        // 真实宿主（dsh-workspace）新建工作区会直接 prepend 到列表首位（即「置顶」之上）；
+        // 因此只要新增导致平铺顺序与宿主不一致（含落在 DEFAULT_SECTION_ID 或全局新建），
+        // 必须先发 RPC 将新增工作区物理移入归属分区，绝不能提前按未重排的 DOM 放置标题，更不能跳过 DEFAULT_SECTION_ID。
+        const newIds = ids.filter(id => sectionOf(state, id) === undefined)
+        const target = consumeTargetForNewIds(ids, state)
         const reconciled = reconcileHostOrder(state, ids, target ?? DEFAULT_SECTION_ID)
         state = reconciled.state
-        const hadNewItems = ids.some(id => sectionOf(committedState, id) === undefined)
-        if (hadNewItems && target !== undefined) {
-          pendingTargetSectionId = undefined
-          if (pendingTargetCleanupTimer !== undefined) {
-            window.clearTimeout(pendingTargetCleanupTimer)
-            pendingTargetCleanupTimer = undefined
-          }
+        if (newIds.length > 0) {
           committedState = state
           persist()
-          placeHeaders(collectProjectBlocks(list, list))
-          if (target !== DEFAULT_SECTION_ID && !sameOrder(flattenSections(state), ids)) {
-            commitExplicit(state)
+          if (!sameOrder(flattenSections(state), ids)) {
+            // 方案 A：新工作区归位不叠插件 SectionLayoutMotion，避免与宿主 AnimatedRows 双动画打架造成二次闪烁
+            commitExplicit(state, newIds, true)
             return
           }
         }
@@ -1858,9 +2053,12 @@ export function observeWorkspaceSections(
         }
       }
       if (touched) {
-        // 宿主已提交 DOM 时在绘制前完成分区布局，不能再晚一帧补标题。
-        if (activeUpdate !== undefined) syncNow()
-        else scheduleSync()
+        // 宿主已提交 DOM 时在绘制前完成分区布局，绝不能再晚一帧暴露错位节点。
+        if (activeUpdate !== undefined || knownIds().some(id => sectionOf(state, id) === undefined)) {
+          syncNow()
+        } else {
+          scheduleSync()
+        }
       }
     })
     observer.observe(document.body, { childList: true, subtree: true })
@@ -1870,7 +2068,10 @@ export function observeWorkspaceSections(
     const service = workspaces()
     if (service === undefined) return
     try {
-      unsubscribe = service.list.subscribe(() => scheduleSync())
+      unsubscribe = service.list.subscribe(() => {
+        if (!disposed && knownIds().some(id => sectionOf(state, id) === undefined)) syncNow()
+        else scheduleSync()
+      })
     } catch {
       unsubscribe = undefined
     }
@@ -1906,7 +2107,10 @@ export function observeWorkspaceSections(
     document.removeEventListener('pointerdown', onPointerdownToCloseSectionMenu, true)
     document.removeEventListener('pointerdown', onPointerdownToPrepareMenu, true)
     document.removeEventListener('click', onClickToPrepareMenu, true)
+    document.removeEventListener('click', onDocumentClickClearPending, true)
+    document.removeEventListener('keydown', onDocumentKeydownClearPending, true)
     document.removeEventListener('contextmenu', onContextMenuToPrepareMenu, true)
+    unsubscribeDirectoryFlow?.()
     unsubscribe?.()
 
     closeSectionMenu()

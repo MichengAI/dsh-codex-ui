@@ -137,7 +137,7 @@ export const es: Record<CodexUiKey, string> = {
   'sections.pin': 'Fijar',
   'sections.pinned': 'Fijados',
   'sections.remove': 'Eliminar sección',
-  'sections.addWorkspace': 'Nuevo espacio de trabajo',
+  'sections.addWorkspace': 'Agregar espacio de trabajo',
   'sections.rename': 'Renombrar',
   'sections.settings': 'Ajustes de sección',
   'sections.unpin': 'Desfijar',

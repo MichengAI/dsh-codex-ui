@@ -227,8 +227,10 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(CLAUDE_LIGHT_THEME.tokens['--dsw-alias-brand-primary']).toBe('#d97757')
     expect(DRACULA_THEME.tokens['--dsw-alias-brand-primary-new-colorprimary-new-color']).toBe('#ff79c6')
     expect(DRACULA_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#191a21')
-    expect(CYBERPUNK_THEME.tokens['--dsw-alias-brand-primary-new-colorprimary-new-color']).toBe('#00ff66')
-    expect(CYBERPUNK_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#080a08')
+    expect(CYBERPUNK_THEME.tokens['--dsw-alias-brand-primary-new-colorprimary-new-color']).toBe('#00ff41')
+    expect(CYBERPUNK_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#000a00')
+    expect(CYBERPUNK_THEME.tokens['--dsw-static-neutral-bluish-900']).toBe('#000600')
+    expect(CYBERPUNK_THEME.tokens['--dsw-static-red-500']).toBe('#ff003c')
     expect(SOLARIZED_DARK_THEME.tokens['--dsw-static-neutral-bluish-950']).toBe('#002b36')
     expect(SOLARIZED_LIGHT_THEME.tokens['--dsw-static-neutral-bluish-00']).toBe('#fdf6e3')
     expect(GRUVBOX_DARK_THEME.tokens['--dsw-alias-brand-primary-new-colorprimary-new-color']).toBe('#fabd2f')
@@ -242,8 +244,8 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(CLAUDE_LIGHT_THEME.tokens['--shiki-token-keyword']).toBe('#b53a1a')
     expect(DRACULA_THEME.tokens['--shiki-token-keyword']).toBe('#ff79c6')
     expect(DRACULA_THEME.tokens['--shiki-token-string']).toBe('#f1fa8c')
-    expect(CYBERPUNK_THEME.tokens['--shiki-token-keyword']).toBe('#00ff66')
-    expect(CYBERPUNK_THEME.tokens['--shiki-token-string']).toBe('#79ffe1')
+    expect(CYBERPUNK_THEME.tokens['--shiki-token-keyword']).toBe('#00ff41')
+    expect(CYBERPUNK_THEME.tokens['--shiki-token-string']).toBe('#8cffb0')
     expect(SOLARIZED_DARK_THEME.tokens['--shiki-token-keyword']).toBe('#859900')
     expect(SOLARIZED_LIGHT_THEME.tokens['--shiki-token-keyword']).toBe('#859900')
     expect(GRUVBOX_DARK_THEME.tokens['--shiki-token-keyword']).toBe('#fb4934')
@@ -676,5 +678,86 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     expect(html).toContain('dcu-theme-code-sample')
     expect(html).toContain('--dsw-font-markdown-code-block-font-family')
     expect(html).not.toMatch(/font-family:[^;]*var\(--dsw-font-markdown-code-block,/)
+  })
+
+  it('全套 14 款内置主题不得包含跨主题脏残留，且 Cyberpunk 严格对齐 Hermes Agent 矩阵终端色阶与对比度', () => {
+    const resolveHex = (tokens: Record<string, string>, raw: string | undefined, depth = 0): string => {
+      if (!raw || depth > 6) return ''
+      const m = raw.trim().match(/^var\((--[a-z0-9-]+)\)$/i)
+      if (!m) return raw.trim()
+      return resolveHex(tokens, tokens[m[1]], depth + 1)
+    }
+    const luminance = (hex: string): number => {
+      const clean = hex.replace('#', '')
+      const [r, g, b] = [0, 2, 4]
+        .map((i) => parseInt(clean.slice(i, i + 2), 16) / 255)
+        .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+    const contrast = (a: string, b: string): number => {
+      const la = luminance(a)
+      const lb = luminance(b)
+      return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
+    }
+
+    // 1. 跨主题特征残留扫描（任何非 Dracula 主题不得混入 Dracula 粉/紫蓝残留，非对应家族不得泄漏品牌主色）
+    const crossSignatures: Record<string, readonly string[]> = {
+      dracula: ['#ff79c6', '#ff92d0', '255, 121, 198', '98, 114, 164', '#bd93f9', '#8be9fd', '#282a36'],
+      claude: ['#d97757', '#c46343', '#bf6446', '246, 136, 98'],
+      codex: ['#339cff', '#0169cc'],
+      solarized: ['#2aa198', '#268bd2', '#002b36', '#fdf6e3'],
+      gruvbox: ['#fabd2f', '#b57614', '#fbf1c7'],
+      catppuccin: ['#cba6f7', '#89b4fa', '#1e1e2e', '#eff1f5'],
+      cyberpunk: ['#00ff41', '#000a00', '#000600'],
+    }
+    for (const theme of ALL_BUILTIN_THEMES) {
+      const family = theme.id.split('-')[0]
+      for (const [key, value] of Object.entries(theme.tokens)) {
+        for (const [sigFamily, patterns] of Object.entries(crossSignatures)) {
+          if (sigFamily === family) continue
+          for (const pattern of patterns) {
+            expect(
+              value.toLowerCase(),
+              `${theme.id} 的 ${key} 疑似包含 ${sigFamily} 残留 (${pattern})`,
+            ).not.toContain(pattern)
+          }
+        }
+      }
+    }
+
+    // 2. Cyberpunk 对齐 Hermes Agent 矩阵终端规范（表面递增、文字梯度单调、无亮青辅助字乱窜、注释清晰）
+    const t = CYBERPUNK_THEME.tokens
+    const base = resolveHex(t, t['--dsw-alias-bg-base'])
+    const sidebar = resolveHex(t, t['--dsw-specific-sidebar-fill'])
+    const l1 = resolveHex(t, t['--dsw-alias-bg-layer-1'])
+    const l2 = resolveHex(t, t['--dsw-alias-bg-layer-2'])
+    const l3 = resolveHex(t, t['--dsw-alias-bg-layer-3'])
+    const codeBg = resolveHex(t, t['--dsw-alias-markdown-code-block'])
+
+    expect(base).toBe('#000a00')
+    expect(sidebar).toBe('#000600')
+    expect(luminance(l1)).toBeGreaterThan(luminance(base))
+    expect(luminance(l2)).toBeGreaterThan(luminance(l1))
+    expect(luminance(l3)).toBeGreaterThan(luminance(l2))
+
+    const pri = resolveHex(t, t['--dsw-alias-label-primary'])
+    const sec = resolveHex(t, t['--dsw-alias-label-secondary'])
+    const ter = resolveHex(t, t['--dsw-alias-label-tertiary'])
+    const cap = resolveHex(t, t['--dsw-alias-label-caption'])
+
+    expect(pri).toBe('#00ff41')
+    expect(sec).toBe('#00cc34')
+    expect(ter).not.toBe('#00c8d6')
+    expect(cap).toBe('#1a8a30')
+    expect(contrast(pri, base)).toBeGreaterThanOrEqual(contrast(sec, base))
+    expect(contrast(sec, base)).toBeGreaterThanOrEqual(contrast(ter, base))
+    expect(contrast(ter, base)).toBeGreaterThanOrEqual(contrast(cap, base))
+    expect(contrast(ter, base)).toBeGreaterThanOrEqual(4.5)
+    expect(contrast(cap, base)).toBeGreaterThanOrEqual(4.5)
+    expect(contrast(t['--shiki-token-comment'], codeBg)).toBeGreaterThanOrEqual(4.5)
+
+    // 3. 设置卡色块强调色同步为 #00ff41
+    const html = renderToString(React.createElement(ThemeSettingsCard, { t: (k: string) => k }))
+    expect(html).toContain('--cube-accent:#00ff41')
   })
 })

@@ -876,7 +876,7 @@ describe('工作区分区：DOM 层', () => {
     for (const id of [PINNED_SECTION_ID, DEFAULT_SECTION_ID]) {
       const header = headers().find(item => item.getAttribute(SECTION_HEADER_ATTR) === id)!
       expect(header.draggable).toBe(false)
-      const button = header.querySelector<HTMLElement>('.dcu-ws-section-actions button')
+      const button = header.querySelector<HTMLElement>('.dcu-ws-section-actions button[data-dcu-action="more"]')
       expect(button).not.toBeNull()
       button!.click()
       await waitForSync(2)
@@ -902,7 +902,7 @@ describe('工作区分区：DOM 层', () => {
     await waitForSync()
 
     const custom = headers().find(header => header.getAttribute(SECTION_HEADER_ATTR) === 's1')!
-    const button = custom.querySelector<HTMLElement>('.dcu-ws-section-actions button')!
+    const button = custom.querySelector<HTMLElement>('.dcu-ws-section-actions button[data-dcu-action="more"]')!
     const box = (left: number, top: number, width: number, height: number) =>
       ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON: () => ({}) }) as DOMRect
     // 宿主自己的行菜单是「左缘≈按钮左缘+4，向右铺」；这里把按钮放在右侧验证同一个规则。
@@ -1242,7 +1242,7 @@ describe('工作区分区：DOM 层', () => {
     expect(s1Header).toBeDefined()
 
     // 打开 s1 的标题 ··· 菜单
-    const actionsBtn = s1Header.querySelector<HTMLElement>('.dcu-ws-section-actions button')!
+    const actionsBtn = s1Header.querySelector<HTMLElement>('.dcu-ws-section-actions button[data-dcu-action="more"]')!
     actionsBtn.click()
     await waitForSync()
 
@@ -1636,7 +1636,7 @@ describe('分区菜单使用宿主原语渲染：', () => {
     expect(document.querySelectorAll('[role="menu"]').length).toBe(0)
 
     const header = headers().find(item => item.getAttribute(SECTION_HEADER_ATTR) === 's1')!
-    header.querySelector<HTMLElement>('.dcu-ws-section-actions button')!.click()
+    header.querySelector<HTMLElement>('.dcu-ws-section-actions button[data-dcu-action="more"]')!.click()
     await waitForSync(2)
     await new Promise<void>(resolve => window.requestAnimationFrame(() => resolve()))
 
@@ -1911,7 +1911,7 @@ describe('分区二级菜单的可访问性：', () => {
     expect(document.activeElement).toBe(items[items.length - 1])
   })
 
-  it('分区标题更多菜单（···）提供新建工作区选项（自定义分区提供，内置分区除外）', async () => {
+  it('所有分区（置顶、项目、自定义分区）均在 ··· 右侧提供添加工作区图标按钮，且 ··· 菜单内不再重复显示', async () => {
     seedSections({
       sections: [
         { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
@@ -1923,32 +1923,312 @@ describe('分区二级菜单的可访问性：', () => {
     mount(['a', 'b', 'c'])
     await waitForSync()
 
-    // 1. 自定义分区 s1：包含「新建工作区」
-    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
-    s1Header.querySelector<HTMLElement>('.dcu-ws-section-actions button')!.click()
-    await waitForSync()
-    let panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
-    let addWsBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '新建工作区')
-    expect(addWsBtn).toBeDefined()
+    for (const id of [PINNED_SECTION_ID, 's1', DEFAULT_SECTION_ID]) {
+      const header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === id)!
+      const buttons = Array.from(header.querySelectorAll<HTMLButtonElement>('.dcu-ws-section-actions button'))
+      expect(buttons.length).toBe(2)
+      // 第一个按钮（左侧）必须是 ··· 更多按钮
+      expect(buttons[0].getAttribute('data-dcu-action')).toBe('more')
+      // 第二个按钮（右侧）必须是添加工作区按钮，含 SVG 图标
+      expect(buttons[1].getAttribute('data-dcu-action')).toBe('add-workspace')
+      expect(buttons[1].getAttribute('title')).toBe('添加工作区')
+      expect(buttons[1].querySelector('svg')).not.toBeNull()
 
-    // 2. 默认项目分区（内置）：不包含「新建工作区」
-    const defHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
-    defHeader.querySelector<HTMLElement>('.dcu-ws-section-actions button')!.click()
-    await waitForSync()
-    panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
-    addWsBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '新建工作区')
-    expect(addWsBtn).toBeUndefined()
+      // 打开 ··· 菜单确认内部不再混入添加工作区，且标题标上 data-menu-open="true" 保持操作区可见
+      buttons[0].click()
+      await waitForSync()
+      expect(header.getAttribute('data-menu-open')).toBe('true')
+      const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+      const addWsInMenu = Array.from(panel.querySelectorAll('button')).find(b =>
+        b.textContent?.includes('添加工作区') || b.textContent?.includes('新建工作区'),
+      )
+      expect(addWsInMenu).toBeUndefined()
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+      await waitForSync(2)
+      expect(header.getAttribute('data-menu-open')).toBeNull()
+    }
 
-    // 3. 置顶分区（内置）：不包含「新建工作区」
-    const pinHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === PINNED_SECTION_ID)!
-    pinHeader.querySelector<HTMLElement>('.dcu-ws-section-actions button')!.click()
-    await waitForSync()
-    panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
-    addWsBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '新建工作区')
-    expect(addWsBtn).toBeUndefined()
+    // 校验操作区 CSS：与宿主行对齐的 gap:13px 与默认隐藏悬停显隐规则
+    const styleText = document.getElementById('michengai-codex-ui-sections-styles')?.textContent ?? ''
+    expect(styleText).toContain('.dcu-ws-section-actions{display:none;align-items:center;gap:13px;')
+    expect(styleText).toContain('.dcu-ws-section:hover .dcu-ws-section-actions{display:inline-flex}')
+    expect(styleText).toContain(".dcu-ws-section[data-menu-open='true'] .dcu-ws-section-actions{display:inline-flex}")
   })
 
-  it('点击分区菜单的「新建工作区」后，新创建的工作区自动归属于该目标分区并重排', async () => {
+  it('点击分区标题 ··· 右侧的「添加工作区」图标按钮后，触发宿主新建并自动归属且展开目标分区（含自定义与置顶）', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: 's1', name: '客户项目', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b'] },
+      ],
+    })
+    mountFixture(['p1', 'a', 'b'])
+    const fake = mount(['p1', 'a', 'b'])
+    await waitForSync()
+
+    // 先把 s1 折起，验证新建后会顺便自动展开
+    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+    s1Header.click()
+    await waitForSync()
+    expect(s1Header.dataset.open).toBe('false')
+
+    // 复用夹具自身头部操作栏里的宿主原生「添加工作区」按钮（不再额外往 body 伪造）
+    const hostAddBtn = document.querySelector<HTMLButtonElement>('.mock_headerActions button[aria-label="添加工作区"]')!
+    const addClicked = vi.fn()
+    hostAddBtn.addEventListener('click', addClicked)
+
+    // 1. 点击 s1 标题操作栏左侧的添加工作区按钮
+    const s1AddBtn = s1Header.querySelector<HTMLButtonElement>('.dcu-ws-section-actions button[data-dcu-action="add-workspace"]')!
+    s1AddBtn.click()
+    expect(addClicked).toHaveBeenCalledTimes(1)
+
+    // 模拟宿主创建新工作区 'new-1'
+    const list = document.querySelector('.list')!
+    const newBlock1 = list.querySelector<HTMLElement>('[data-dcu-test-group="b"]')!.cloneNode(true) as HTMLElement
+    newBlock1.setAttribute('data-dcu-test-group', 'new-1')
+    newBlock1.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-1')
+    list.appendChild(newBlock1)
+    fake.state.order = ['p1', 'a', 'b', 'new-1']
+    fake.notify()
+    await waitForSync()
+
+    // 验证 new-1 自动归入 s1 且 s1 自动展开
+    expect(hostSection('s1').ids).toContain('new-1')
+    expect(hostSection(DEFAULT_SECTION_ID).ids).not.toContain('new-1')
+    expect(s1Header.dataset.open).toBe('true')
+
+    // 2. 点击置顶分区标题操作栏左侧的添加工作区按钮
+    const pinHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === PINNED_SECTION_ID)!
+    const pinAddBtn = pinHeader.querySelector<HTMLButtonElement>('.dcu-ws-section-actions button[data-dcu-action="add-workspace"]')!
+    pinAddBtn.click()
+    expect(addClicked).toHaveBeenCalledTimes(2)
+
+    const newBlock2 = list.querySelector<HTMLElement>('[data-dcu-test-group="b"]')!.cloneNode(true) as HTMLElement
+    newBlock2.setAttribute('data-dcu-test-group', 'new-2')
+    newBlock2.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-2')
+    list.appendChild(newBlock2)
+    fake.state.order = ['p1', 'a', 'new-1', 'b', 'new-2']
+    fake.notify()
+    await waitForSync()
+
+    // 验证 new-2 自动归入置顶分区
+    expect(hostSection(PINNED_SECTION_ID).ids).toContain('new-2')
+  })
+
+  it('无头部添加按钮时绝不误点工作区行操作按钮（含「工作区」字样），并剥离克隆壳的错误菜单属性', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '客户项目', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b'] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    // 将夹具头部原生的添加按钮替换为无关按钮（既保留头部 >=2 颗按钮以通过区域识别，又构造「头部无添加按钮」且含模糊字样的严格测试场景）
+    const origHeaderAdd = document.querySelector<HTMLButtonElement>('.mock_headerActions button[aria-label="添加工作区"]')!
+    origHeaderAdd.setAttribute('aria-label', '筛选工作区')
+
+    // 给测试夹具的工作区行操作按钮加上真实宿主的属性：iconButton 类、包含「工作区」的 aria-label、菜单语义
+    const rowMenuBtn = document.querySelector<HTMLButtonElement>('[data-row-key="workspace:a"] [class*="rowActions"] button')!
+    rowMenuBtn.className = 'iconButton'
+    rowMenuBtn.setAttribute('aria-label', '工作区“a”的操作')
+    rowMenuBtn.setAttribute('aria-haspopup', 'menu')
+    rowMenuBtn.setAttribute('aria-expanded', 'false')
+    rowMenuBtn.setAttribute('data-context-menu-trigger', '')
+    const rowMenuClicked = vi.fn()
+    rowMenuBtn.addEventListener('click', rowMenuClicked)
+    origHeaderAdd.addEventListener('click', rowMenuClicked)
+
+    // 监听兜底快捷键 KeyO
+    const shortcutFired = vi.fn()
+    const onKeydown = (e: KeyboardEvent) => {
+      if (e.code === 'KeyO' && (e.ctrlKey || e.metaKey)) shortcutFired()
+    }
+    document.addEventListener('keydown', onKeydown)
+
+    mount(['a', 'b'])
+    await waitForSync()
+
+    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+    const addBtn = s1Header.querySelector<HTMLButtonElement>('.dcu-ws-section-actions button[data-dcu-action="add-workspace"]')!
+
+    // 1. 克隆外壳不得保留菜单错误属性（P3-3）
+    expect(addBtn.getAttribute('aria-haspopup')).toBeNull()
+    expect(addBtn.getAttribute('aria-expanded')).toBeNull()
+    expect(addBtn.getAttribute('data-context-menu-trigger')).toBeNull()
+
+    // 2. 点击「添加工作区」时，由于没有真正的头部添加按钮，绝不能误触发工作区行的 ··· 菜单（P2-1）
+    addBtn.click()
+    expect(rowMenuClicked).not.toHaveBeenCalled()
+    expect(shortcutFired).toHaveBeenCalledTimes(1)
+
+    // 3. 验证真实层叠样式（P3-4）：常态 display=none，menuOpen 时切为 inline-flex，gap 为 13px
+    const actions = s1Header.querySelector<HTMLElement>('.dcu-ws-section-actions')!
+    expect(window.getComputedStyle(actions).display).toBe('none')
+    expect(window.getComputedStyle(actions).gap).toBe('13px')
+    s1Header.setAttribute('data-menu-open', 'true')
+    expect(window.getComputedStyle(actions).display).toBe('inline-flex')
+
+    document.removeEventListener('keydown', onKeydown)
+  })
+
+  it('当分区移动 RPC 尚在途时点击「添加工作区」，新建项目仍准确归入目标分区、自动展开且不残留污染后续项', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '客户项目', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b', 'c'] },
+      ],
+    })
+    mountFixture(['a', 'b', 'c'])
+    const fake = mount(['a', 'b', 'c'])
+    await waitForSync()
+
+    // 把 s1 折叠，然后对 c 发起一次移动制造 RPC 在途（activeUpdate 阻塞）
+    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+    s1Header.click()
+    await waitForSync()
+    expect(s1Header.dataset.open).toBe('false')
+
+    let releaseRpc!: () => void
+    const origInsert = fake.service.insertBefore.getMockImplementation()!
+    fake.service.insertBefore.mockImplementationOnce(async (wsId: string, beforeId?: string) => {
+      await new Promise<void>(resolve => {
+        releaseRpc = resolve
+      })
+      return origInsert(wsId, beforeId)
+    })
+
+    // 通过工作区菜单把 c 置顶，使 activeUpdate 卡在等待 releaseRpc
+    const menu = await openWorkspaceMenu('c')
+    menu.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    await waitForSync(2)
+
+    // 在途窗口期间：用户点击 s1 的「添加工作区」并创建出 new-1
+    s1Header.querySelector<HTMLButtonElement>('.dcu-ws-section-actions button[data-dcu-action="add-workspace"]')!.click()
+
+    const list = document.querySelector('.list')!
+    const newBlock1 = list.querySelector<HTMLElement>('[data-dcu-test-group="b"]')!.cloneNode(true) as HTMLElement
+    newBlock1.setAttribute('data-dcu-test-group', 'new-1')
+    newBlock1.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-1')
+    list.appendChild(newBlock1)
+    fake.state.order = ['a', 'b', 'c', 'new-1']
+    fake.notify()
+
+    // 此时放行之前卡住的 RPC
+    releaseRpc()
+    await waitForSync(8)
+
+    // 断言 1：new-1 必须落入 s1（绝不能被 withHostWorkspaces 吞进 default！），且 s1 自动展开
+    expect(hostSection('s1').ids).toContain('new-1')
+    expect(hostSection(DEFAULT_SECTION_ID).ids).not.toContain('new-1')
+    expect(s1Header.dataset.open).toBe('true')
+
+    // 断言 2：pending 已被彻底消费，随后别处新增的 new-2 必须正常落入默认「项目」分区
+    const newBlock2 = list.querySelector<HTMLElement>('[data-dcu-test-group="b"]')!.cloneNode(true) as HTMLElement
+    newBlock2.setAttribute('data-dcu-test-group', 'new-2')
+    newBlock2.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-2')
+    list.appendChild(newBlock2)
+    fake.state.order = [...fake.state.order, 'new-2']
+    fake.notify()
+    await waitForSync()
+
+    expect(hostSection('s1').ids).not.toContain('new-2')
+    expect(hostSection(DEFAULT_SECTION_ID).ids).toContain('new-2')
+  })
+
+  it('startNextUpdate 拉起单项目移动写入时若已有新增项目出现，准确消费 pending、一起排入移动并自动展开', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '客户项目', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b', 'c'] },
+      ],
+    })
+    mountFixture(['a', 'b', 'c'])
+    const fake = mount(['a', 'b', 'c'])
+    await waitForSync()
+
+    // 折叠 s1 并点击其「添加工作区」（挂起 pendingTargetSectionId = 's1'）
+    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+    s1Header.click()
+    await waitForSync()
+    expect(s1Header.dataset.open).toBe('false')
+    s1Header.querySelector<HTMLButtonElement>('.dcu-ws-section-actions button[data-dcu-action="add-workspace"]')!.click()
+
+    // 紧接着先打开 c 的菜单，在菜单点击「置顶」前的一瞬间宿主快照与 DOM 已加入 new-1（尚未进入 syncNow 空闲同步）
+    const menu = await openWorkspaceMenu('c')
+    const list = document.querySelector('.list')!
+    const newBlock = list.querySelector<HTMLElement>('[data-dcu-test-group="b"]')!.cloneNode(true) as HTMLElement
+    newBlock.setAttribute('data-dcu-test-group', 'new-1')
+    newBlock.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-1')
+    list.appendChild(newBlock)
+    fake.state.order = ['a', 'b', 'c', 'new-1']
+
+    // 点击「置顶」立即调用 commitExplicit(..., ['c']) -> 同步进 startNextUpdate()
+    menu.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+    await waitForSync(8)
+
+    // 验证 c 已置顶、new-1 归入 s1 且 s1 自动展开（不卡死也不掉进 default）
+    expect(hostSection(PINNED_SECTION_ID).ids).toContain('c')
+    expect(hostSection('s1').ids).toContain('new-1')
+    expect(hostSection(DEFAULT_SECTION_ID).ids).not.toContain('new-1')
+    expect(s1Header.dataset.open).toBe('true')
+    expect(blockIdsInDomOrder()).toEqual(['c', 'a', 'new-1', 'b'])
+  })
+
+  it('当宿主 directoryFlow slot 为空时隐藏分区添加工作区按钮，并在热插拔启用/停用后实时同步显隐', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+        { id: 's1', name: '客户项目', ids: ['b'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['c'] },
+      ],
+    })
+    mountFixture(['a', 'b', 'c'])
+    let slotEntries: unknown[] = []
+    const slotListeners = new Set<() => void>()
+    const fakeSlots = {
+      entries: (name: string) => (name === 'sidebar.workspaces.directoryFlow' ? slotEntries : []),
+      subscribe: (name: string, listener: () => void) => {
+        if (name !== 'sidebar.workspaces.directoryFlow') return () => {}
+        slotListeners.add(listener)
+        return () => slotListeners.delete(listener)
+      },
+    }
+    const notifySlots = () => slotListeners.forEach(fn => fn())
+
+    mount(['a', 'b', 'c'], { slots: fakeSlots })
+    await waitForSync()
+
+    // 1. 初始 slot 为空：全部分区只有 ··· 按钮，不能渲染无效的「添加工作区」按钮
+    for (const id of [PINNED_SECTION_ID, 's1', DEFAULT_SECTION_ID]) {
+      const header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === id)!
+      expect(header.querySelector('[data-dcu-action="more"]')).not.toBeNull()
+      expect(header.querySelector('[data-dcu-action="add-workspace"]')).toBeNull()
+    }
+
+    // 2. 热插拔启用 directoryFlow 后，实时在 ··· 右侧补出「添加工作区」按钮
+    slotEntries = [{}]
+    notifySlots()
+    for (const id of [PINNED_SECTION_ID, 's1', DEFAULT_SECTION_ID]) {
+      const header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === id)!
+      const buttons = Array.from(header.querySelectorAll<HTMLButtonElement>('.dcu-ws-section-actions button'))
+      expect(buttons.map(b => b.getAttribute('data-dcu-action'))).toEqual(['more', 'add-workspace'])
+    }
+
+    // 3. 再次停用 directoryFlow 后，实时移除按钮
+    slotEntries = []
+    notifySlots()
+    for (const id of [PINNED_SECTION_ID, 's1', DEFAULT_SECTION_ID]) {
+      const header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === id)!
+      const buttons = Array.from(header.querySelectorAll<HTMLButtonElement>('.dcu-ws-section-actions button'))
+      expect(buttons.map(b => b.getAttribute('data-dcu-action'))).toEqual(['more'])
+    }
+  })
+
+  it('在分区点击添加后又取消，随后手动点击宿主全局入口或按 Ctrl+O 新建时不会误归入旧分区', async () => {
     seedSections({
       sections: [
         { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
@@ -1960,41 +2240,197 @@ describe('分区二级菜单的可访问性：', () => {
     const fake = mount(['a', 'b'])
     await waitForSync()
 
-    // 模拟宿主的原生添加按钮
-    const hostAddBtn = document.createElement('button')
-    hostAddBtn.setAttribute('aria-label', '添加工作区')
-    hostAddBtn.setAttribute('class', 'iconButton')
-    const addClicked = vi.fn()
-    hostAddBtn.addEventListener('click', addClicked)
-    document.body.appendChild(hostAddBtn)
-
-    // 打开 s1 的标题菜单并点击「新建工作区」
     const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
-    s1Header.querySelector<HTMLElement>('.dcu-ws-section-actions button')!.click()
-    await waitForSync()
-    const panel = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
-    const addWsBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '新建工作区')!
-    expect(addWsBtn).toBeDefined()
-    addWsBtn.click()
+    const s1AddBtn = s1Header.querySelector<HTMLButtonElement>('.dcu-ws-section-actions button[data-dcu-action="add-workspace"]')!
+    const hostAddBtn = document.querySelector<HTMLButtonElement>('.mock_headerActions button[aria-label="添加工作区"]')!
 
-    // 验证触发了宿主原生添加流程
-    expect(addClicked).toHaveBeenCalledTimes(1)
+    // 场景 A：点击 s1 添加工作区后假设弹窗被取消；随后用户手动点击宿主头部原生「添加工作区」按钮
+    s1AddBtn.click()
+    hostAddBtn.click()
 
-    // 模拟宿主在已有 list 中追加了新工作区 'new-1'
     const list = document.querySelector('.list')!
-    const newBlock = list.querySelector<HTMLElement>('[data-dcu-test-group="b"]')!.cloneNode(true) as HTMLElement
-    newBlock.setAttribute('data-dcu-test-group', 'new-1')
-    newBlock.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-1')
-    list.appendChild(newBlock)
-    fake.state.order = ['a', 'b', 'new-1']
+    const block1 = list.querySelector<HTMLElement>('[data-dcu-test-group="b"]')!.cloneNode(true) as HTMLElement
+    block1.setAttribute('data-dcu-test-group', 'new-global-1')
+    block1.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-global-1')
+    list.appendChild(block1)
+    fake.state.order = ['a', 'b', 'new-global-1']
     fake.notify()
     await waitForSync()
 
-    // 验证 new-1 直接被归属到了 s1 分区！
-    expect(hostSection('s1').ids).toContain('new-1')
-    expect(hostSection(DEFAULT_SECTION_ID).ids).not.toContain('new-1')
+    expect(hostSection('s1').ids).not.toContain('new-global-1')
+    expect(hostSection(DEFAULT_SECTION_ID).ids).toContain('new-global-1')
 
-    hostAddBtn.remove()
+    // 场景 B：再次点击 s1 添加工作区并取消，随后用户手动按 Ctrl/Cmd + O
+    s1AddBtn.click()
+    const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        code: 'KeyO',
+        key: 'o',
+        ctrlKey: !isMac,
+        metaKey: isMac,
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+
+    const block2 = list.querySelector<HTMLElement>('[data-dcu-test-group="b"]')!.cloneNode(true) as HTMLElement
+    block2.setAttribute('data-dcu-test-group', 'new-global-2')
+    block2.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-global-2')
+    list.appendChild(block2)
+    fake.state.order = ['a', 'b', 'new-global-1', 'new-global-2']
+    fake.notify()
+    await waitForSync()
+
+    expect(hostSection('s1').ids).not.toContain('new-global-2')
+    expect(hostSection(DEFAULT_SECTION_ID).ids).toContain('new-global-2')
+
+    // 场景 C：再次点击 s1 添加工作区并取消，随后用户在会话空页 Picker 菜单点击「添加工作区…」菜单项
+    s1AddBtn.click()
+    const pickerMenu = document.createElement('div')
+    pickerMenu.setAttribute('role', 'menu')
+    const pickerMenuItem = document.createElement('button')
+    pickerMenuItem.setAttribute('role', 'menuitem')
+    pickerMenuItem.textContent = '添加工作区…'
+    pickerMenu.appendChild(pickerMenuItem)
+    document.body.appendChild(pickerMenu)
+    pickerMenuItem.click()
+    pickerMenu.remove()
+
+    const block3 = list.querySelector<HTMLElement>('[data-dcu-test-group="b"]')!.cloneNode(true) as HTMLElement
+    block3.setAttribute('data-dcu-test-group', 'new-global-3')
+    block3.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-global-3')
+    list.appendChild(block3)
+    fake.state.order = ['a', 'b', 'new-global-1', 'new-global-2', 'new-global-3']
+    fake.notify()
+    await waitForSync()
+
+    expect(hostSection('s1').ids).not.toContain('new-global-3')
+    expect(hostSection(DEFAULT_SECTION_ID).ids).toContain('new-global-3')
+  })
+
+  it('真实宿主 prepend 语义：在「项目」分组点击添加工作区后，「项目」绝不跑到「置顶」上面且不丢失既有成员', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: 's1', name: '客户项目', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b1', 'b2'] },
+      ],
+    })
+    mountFixture(['p1', 'a', 'b1', 'b2'])
+    const fake = mount(['p1', 'a', 'b1', 'b2'])
+    await waitForSync()
+
+    // 在「项目」分区（DEFAULT_SECTION_ID）点击添加工作区按钮
+    const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+    defaultHeader.querySelector<HTMLButtonElement>('.dcu-ws-section-actions button[data-dcu-action="add-workspace"]')!.click()
+
+    // 真实 dsh-workspace 会把新工作区 prepend 到列表第 0 位（置顶之前！）
+    const list = document.querySelector('.list')!
+    const newBlock = list.querySelector<HTMLElement>('[data-dcu-test-group="b1"]')!.cloneNode(true) as HTMLElement
+    newBlock.setAttribute('data-dcu-test-group', 'new-1')
+    newBlock.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-1')
+    list.prepend(newBlock)
+    fake.state.order = ['new-1', 'p1', 'a', 'b1', 'b2']
+    fake.notify()
+    await waitForSync(8)
+
+    // 1. 标题顺序必须严格维持：置顶 -> 自定义 s1 -> 项目（「项目」绝不能跑到最上面！）
+    expect(headerIdsInDomOrder()).toEqual([PINNED_SECTION_ID, 's1', DEFAULT_SECTION_ID])
+    // 2. 新项目必须被物理移动进「项目」分区第一位，原有项目 b1/b2 紧随其后
+    expect(blockIdsInDomOrder()).toEqual(['p1', 'a', 'new-1', 'b1', 'b2'])
+    expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['new-1', 'b1', 'b2'])
+    expect(fake.service.insertBefore).toHaveBeenCalledWith('new-1', 'b1')
+
+    // 3. 验证真实 DOM 子节点顺序：每个标题之后紧跟该分区的全部成员块
+    const domFlow = Array.from(list.children).map(el => {
+      if (el.hasAttribute(SECTION_HEADER_ATTR)) return `H:${el.getAttribute(SECTION_HEADER_ATTR)}`
+      const row = el.querySelector('[data-row-key]')
+      return row ? row.getAttribute('data-row-key')!.slice('workspace:'.length) : '?'
+    })
+    expect(domFlow).toEqual(['H:pinned', 'p1', 'H:s1', 'a', 'H:default', 'new-1', 'b1', 'b2'])
+  })
+
+  it('真实宿主 prepend 语义：从全局入口新建工作区（无分区 target）且存在置顶分区时，新项目也自动归入「项目」而非停在「置顶」之上', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    })
+    mountFixture(['p1'])
+    const fake = mount(['p1'])
+    await waitForSync()
+
+    // 不点任何分区按钮，直接触发宿主全局添加，宿主 prepend 'new-global' 到第 0 位
+    const list = document.querySelector('.list')!
+    const newBlock = list.querySelector<HTMLElement>('[data-dcu-test-group="p1"]')!.cloneNode(true) as HTMLElement
+    newBlock.setAttribute('data-dcu-test-group', 'new-global')
+    newBlock.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-global')
+    list.prepend(newBlock)
+    fake.state.order = ['new-global', 'p1']
+    fake.notify()
+    await waitForSync(8)
+
+    expect(headerIdsInDomOrder()).toEqual([PINNED_SECTION_ID, DEFAULT_SECTION_ID])
+    expect(blockIdsInDomOrder()).toEqual(['p1', 'new-global'])
+    expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['new-global'])
+  })
+
+  it('方案 A：新增工作区归位时不额外触发 SectionLayoutMotion 避免与宿主 AnimatedRows 打架，且菜单主动移动仍保留动效', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b1'] },
+      ],
+    })
+    mountFixture(['p1', 'b1'])
+    const fake = mount(['p1', 'b1'])
+    await waitForSync()
+
+    const list = document.querySelector('.list')!
+    const origAnimate = HTMLElement.prototype.animate
+    const animateSpy = vi.fn(() => ({
+      finished: Promise.resolve(),
+      cancel: vi.fn(),
+      effect: null,
+    }))
+    HTMLElement.prototype.animate = animateSpy as unknown as typeof HTMLElement.prototype.animate
+    try {
+      // 赋予非零矩形以便 SectionLayoutMotion 真正走到 keyframes -> animate
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+        const idx = Array.from(this.parentElement?.children ?? []).indexOf(this)
+        return { left: 0, top: idx * 36, width: 200, height: 32, right: 200, bottom: idx * 36 + 32, x: 0, y: idx * 36, toJSON: () => ({}) } as DOMRect
+      })
+
+      // 1. 新建工作区从第 0 位自动归位进「项目」分区：绝不能调用插件 animate（完全交由宿主 AnimatedRows 单次平滑）
+      const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+      defaultHeader.querySelector<HTMLButtonElement>('.dcu-ws-section-actions button[data-dcu-action="add-workspace"]')!.click()
+
+      const newBlock = list.querySelector<HTMLElement>('[data-dcu-test-group="b1"]')!.cloneNode(true) as HTMLElement
+      newBlock.setAttribute('data-dcu-test-group', 'new-1')
+      newBlock.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-1')
+      newBlock.querySelector('button[aria-label="b1 操作"]')!.setAttribute('aria-label', 'new-1 操作')
+      list.prepend(newBlock)
+      fake.state.order = ['new-1', 'p1', 'b1']
+      fake.notify()
+      await waitForSync(8)
+
+      expect(animateSpy).not.toHaveBeenCalled()
+      expect(window.getComputedStyle(newBlock).display).not.toBe('none')
+      expect(headerIdsInDomOrder()).toEqual([PINNED_SECTION_ID, DEFAULT_SECTION_ID])
+      expect(blockIdsInDomOrder()).toEqual(['p1', 'new-1', 'b1'])
+
+      // 2. 用户通过菜单主动将 b1 置顶时，插件 SectionLayoutMotion 依然正常工作
+      const menu = await openWorkspaceMenu('b1')
+      menu.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
+      await waitForSync(8)
+
+      expect(animateSpy).toHaveBeenCalled()
+      expect(blockIdsInDomOrder()).toEqual(['p1', 'b1', 'new-1'])
+    } finally {
+      HTMLElement.prototype.animate = origAnimate
+    }
   })
 
 })

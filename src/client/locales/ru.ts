@@ -137,7 +137,7 @@ export const ru: Record<CodexUiKey, string> = {
   'sections.pin': 'Закрепить',
   'sections.pinned': 'Закрепленные',
   'sections.remove': 'Удалить секцию',
-  'sections.addWorkspace': 'Новое рабочее пространство',
+  'sections.addWorkspace': 'Добавить рабочую область',
   'sections.rename': 'Переименовать',
   'sections.settings': 'Настройки секции',
   'sections.unpin': 'Открепить',
