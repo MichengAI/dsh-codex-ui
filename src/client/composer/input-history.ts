@@ -1,6 +1,8 @@
 export const HISTORY_KEY = 'michengai.codex-ui.input-history.v1'
 const LEGACY_HISTORY_KEY = 'michengai.btw.history.v1'
 const MAX_STORAGE_LENGTH = 1_000_000
+/** 最多保留多少个作用域；会话级模式下即最近有输入的 100 个会话。 */
+const MAX_SCOPES = 100
 type StorageFace = Pick<Storage, 'getItem' | 'setItem'>
 
 /** 只保存已发送文本；浏览器存储失败时仍保留本次内存历史。 */
@@ -28,7 +30,7 @@ export class InputHistory {
     if (previous.at(-1) === text) return
     this.scopes.delete(scope)
     this.scopes.set(scope, [...previous, text].slice(-this.limit))
-    while (this.scopes.size > 20) this.scopes.delete(this.scopes.keys().next().value!)
+    while (this.scopes.size > MAX_SCOPES) this.scopes.delete(this.scopes.keys().next().value!)
     let serialized = JSON.stringify(Object.fromEntries(this.scopes))
     while (serialized.length > MAX_STORAGE_LENGTH && this.scopes.size) {
       const oldest = this.scopes.keys().next().value!

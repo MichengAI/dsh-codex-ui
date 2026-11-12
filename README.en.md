@@ -28,7 +28,7 @@
 
 When working across complex projects in DeepSeek Harness, users often encounter cramped settings modals, plain monocolor palettes, unstructured sidebars, and lost prompt history. **Codex UI 2.0 rearchitects the entire frontend experience through six decoupled sub-plugins and built-in companion management**, delivering a high-performance, non-intrusive, native-grade modern design:
 
-* 🚀 **Instant Prompt Recall & Smart Prediction**: Intelligent inline input prediction (`Tab` to accept, `Alt+Down/Up` to cycle), terminal-style input history (`↑` / `↓` quick recall) with isolated workspace memory and adaptive width sizing;
+* 🚀 **Instant Prompt Recall & Smart Prediction**: Intelligent inline input prediction (`Tab` to accept, `Alt+Down/Up` to cycle), terminal-style input history (`↑` / `↓` quick recall) with conversation- or workspace-scoped memory and adaptive width sizing;
 * 🪟 **Full-Screen Dual-Island Settings**: Replaces cramped dialogs with Ambient Ground diffuse lighting canvas and dual floating island cards;
 * 🎨 **Native Physical Glass Themes**: 13 built-in high-quality color schemes (featuring Codex, Claude, Dracula, Solarized, Gruvbox, and Catppuccin series), dual layout modes (Stock Flat vs. Mica Floating), 3-tier material presets, and ground glow switch;
 * 🧭 **Modular Dynamic Sidebar**: In-place smooth accordion drawer and fluid drag-and-drop reordering; **100% aligned with host official 56px native rail** when collapsed, keeping all icons crisp and New Session permanently visible;
@@ -63,7 +63,7 @@ Faced with these compounding challenges, we made the decisive choice in v2.0.0 t
 
 | Sub-Plugin ID | Name | Capabilities |
 | :--- | :--- | :--- |
-| `composer` | **Composer Enhancement** | Smart inline input prediction (`Tab` to accept, `Alt+Down/Up` to cycle), terminal-style input history (`↑`/`↓`), workspace-isolated storage, dual drag-resize handles, and contextual prompt hints. |
+| `composer` | **Composer Enhancement** | Smart inline input prediction (`Tab` to accept, `Alt+Down/Up` to cycle), terminal-style input history (`↑`/`↓`), conversation- or workspace-scoped storage, dual drag-resize handles, and contextual prompt hints. |
 | `settings-skin` | **Native Settings Skin** | Full-screen workbench layout, dual floating island system, Ambient Ground lighting canvas, and native search. |
 | `theme` | **Theme & Glassmorphism** | 13 built-in themes with Appearance Cubes, Stock Flat vs. Mica Floating modes, 3 material presets, and ground glow switch. |
 | `sidebar` | **Modular Sidebar** | In-place accordion expansion, smooth drag-and-drop reordering, and right-click “mark as unread / read” for sessions; collapses cleanly into host native 56px icon rail. |
@@ -187,7 +187,8 @@ Once installed, restart your DSH Web instance and hard-refresh your browser (`Ct
 | :--- | :--- |
 | **Accept Input Prediction** | Press `Tab` when predictive ghost text appears behind the caret; press `Alt + Down` / `Alt + Up` to cycle recommendations, or `Escape` to dismiss. |
 | **Configure Prediction Mode** | Go to **Settings → Codex UI** and select your prediction mode (Off, Continue Only, Guess & Continue) in the "Composer Enhancements" card. Can also be locked off wholesale across a profile by setting `config.prediction: false` in `cordis.patch.yml`. |
-| **Recall Input History** | Press `↑` / `↓` in an empty composer to cycle through past inputs submitted in the current workspace (up to 200 items). |
+| **Recall Input History** | Press `↑` / `↓` in an empty composer to cycle through past inputs from the current conversation — or the whole workspace, switchable in Settings (up to 200 items per scope). |
+| **Change History Scope** | In the same "Composer Enhancements" card, choose "History scope": "This conversation" (default) recalls only inputs from the current conversation; "Workspace" shares inputs with every conversation in the same working directory and makes previously stored workspace history visible again. |
 | **Resize Composer Width** | Hover over either lateral border of the composer and drag the blue handles. |
 | **Switch Themes & Blur** | Navigate to **Settings → Codex UI**, choose from 13 palettes, and toggle Stock/Mica or blur presets. |
 | **Reorder Sidebar Items** | Drag any item vertically; blue indicators guide drop positions into or out of the More drawer. |

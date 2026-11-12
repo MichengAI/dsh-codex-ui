@@ -58,7 +58,7 @@ Mit Version 2.0.0 wurde der alte Überschreibungscode vollständig **verworfen**
 
 | Sub-Plugin-ID | Name | Funktionen |
 | :--- | :--- | :--- |
-| `composer` | **Eingabe-Erweiterung (Composer)** | Inline-Vorhersage (`Tab`), Terminal-Verlauf (`↑`/`↓`), Arbeitsbereich-Speicher, Breitenregler und Startkarten. |
+| `composer` | **Eingabe-Erweiterung (Composer)** | Inline-Vorhersage (`Tab`), Terminal-Verlauf (`↑`/`↓`), Speicher pro Unterhaltung oder Arbeitsbereich, Breitenregler und Startkarten. |
 | `settings-skin` | **Natives Einstellungs-Skin (Settings Skin)** | Vollbild-Workbench, schwebendes Kartensystem, Ambient Ground-Hintergrund und native Suche. |
 | `theme` | **Theme & Glasmorphismus (Theme)** | 13 Farbpaletten, Flat vs. Mica-Karten, 3 Material-Presets und Bodenglanz-Effekte. |
 | `sidebar` | **Modulare Seitenleiste (Sidebar)** | Akkordeon-Schublade, Drag-and-Drop-Sortierung, ungelesen/gelesen-Markierung und 56px-Leisten-Treue. |

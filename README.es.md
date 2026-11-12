@@ -58,7 +58,7 @@ En 2.0.0 eliminamos todo el código de sobrescritura de 1.x y adoptamos una arqu
 
 | ID de Subcomplemento | Nombre | Funcionalidad |
 | :--- | :--- | :--- |
-| `composer` | **Mejoras de Entrada (Composer)** | Predicción inteligente (`Tab`), historial terminal (`↑`/`↓`), almacenamiento por espacio de trabajo, tiradores de ancho y tarjetas de sugerencias. |
+| `composer` | **Mejoras de Entrada (Composer)** | Predicción inteligente (`Tab`), historial terminal (`↑`/`↓`), almacenamiento por conversación o espacio de trabajo, tiradores de ancho y tarjetas de sugerencias. |
 | `settings-skin` | **Configuración Nativa (Settings Skin)** | Distribución en pantalla completa, tarjetas flotantes, fondo Ambient Ground y búsqueda nativa. |
 | `theme` | **Temas y Cristal (Theme)** | 13 paletas de colores, modos Plano vs. Mica Flotante, 3 preajustes de desenfoque y destellos de suelo. |
 | `sidebar` | **Barra Lateral Modular (Sidebar)** | Acordeón integrado, reordenación por arrastre, marcado como no leído/leído y alineación exacta con el riel nativo de 56px. |
