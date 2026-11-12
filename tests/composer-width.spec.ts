@@ -22,6 +22,6 @@ describe('输入区初始宽度', () => {
 
 it('宿主拖拽边界变更时明确失败，避免两套宽度规则漂移', () => {
   const host = readFileSync(createRequire(import.meta.url).resolve('@deepseek-ai/dsh-client-ui-conversation/client'), 'utf8')
-  expect(Number(host.match(/const CONTENT_MIN = (\d+);/)?.[1])).toBe(COMPOSER_MIN_WIDTH)
-  expect(Number(host.match(/const CONTENT_EDGE_BUDGET = (\d+);/)?.[1])).toBe(COMPOSER_EDGE_BUDGET)
+  expect(Number(host.match(/const CONTENT_MIN\s*=\s*(\d+);/)?.[1])).toBe(COMPOSER_MIN_WIDTH)
+  expect(Number(host.match(/const CONTENT_EDGE_BUDGET\s*=\s*(\d+);/)?.[1])).toBe(COMPOSER_EDGE_BUDGET)
 })

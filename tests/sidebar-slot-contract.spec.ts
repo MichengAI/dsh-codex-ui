@@ -25,16 +25,27 @@ it('official sidebar root owns its child declarations and releases them on dispo
       registrations.push(off)
       return off
     },
-    inject: (key: string, fn: () => void) => { if (core.specDynamic(key)) fn() },
+    registerFactory: (...args: Parameters<typeof core.registerFactory>) => {
+      const off = core.registerFactory(...args)
+      registrations.push(off)
+      return off
+    },
+    inject: (key: string, fn: () => unknown) => {
+      if (!core.specDynamic(key)) return
+      const res = fn()
+      if (res && typeof (res as Iterable<unknown>)[Symbol.iterator] === 'function') {
+        for (const _ of res as Iterable<unknown>) {}
+      }
+    },
   }
-  module.apply({ slots, get: () => ({}), effect: (fn: () => unknown) => fn(), locale: { register: () => () => {}, subscribe: () => () => {} } })
+  module.apply({ slots, get: () => ({}), effect: (fn: () => unknown) => fn(), locale: { register: () => () => {}, subscribe: () => () => {} }, layout: { toggleSidebar: () => {}, selectPanel: () => {} }, shortcuts: { catalog: [] } })
   const official = core.entriesOfSlot('sidebar')[0]!
   expect(official.children?.['sidebar.workspaces']).toBeDefined()
   expect(official.children?.['sidebar.settings']).toBeDefined()
   expect(() => core.register({ name: 'sidebar', priority: -1, children: official.children } as never, () => null)).toThrow(/already declared/)
   core.register({ name: 'sidebar.workspaces' } as never, () => null)
   expect(core.entriesOfSlot('sidebar.workspaces')).toHaveLength(1)
-  registrations[0]!()
+  for (const dispose of registrations) dispose()
   expect(core.specDynamic('sidebar.workspaces')).toBeUndefined()
   expect(core.entriesOfSlot('sidebar.workspaces')).toHaveLength(0)
 })

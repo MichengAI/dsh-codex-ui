@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { runInNewContext } from 'node:vm'
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
 import { tsImport } from 'tsx/esm/api'
@@ -16,10 +17,12 @@ const { zh } = await tsImport('../src/client/locales.ts', import.meta.url)
 const cards = renderToStaticMarkup(createElement(SuggestionCards, { t: key => zh[key] }))
 const host = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-conversation/client'), 'utf8')
 function moduleStyle(name) {
-  const css = host.match(new RegExp(`const css\\$?\\d* = ("(?:[^"\\\\]|\\\\.)*");\\s*const tagId\\$?\\d* = "@deepseek-ai/dsh-client-ui-conversation/${name}.module.css"`))?.[1]
-  const classes = host.match(new RegExp(`var ${name}_module_css_default = (\\{[\\s\\S]*?\\});`))?.[1]
-  assert.ok(css && classes, `${name} 宿主结构发生变化，需重新核对`)
-  return { css: JSON.parse(css), classes: JSON.parse(classes) }
+  const m = host.match(new RegExp(`const css(\\$?\\d*)\\s*=\\s*(["'\`])([\\s\\S]*?)\\2;\\s*const tagId\\1\\s*=\\s*(["'\`])@deepseek-ai/dsh-client-ui-conversation/${name}\\.module\\.css\\4`))
+  const classesMatch = host.match(new RegExp(`var ${name}_module_css_default\\s*=\\s*(\\{[\\s\\S]*?\\});`))
+  assert.ok(m && classesMatch, `${name} 宿主结构发生变化，需重新核对`)
+  const css = runInNewContext(`${m[2]}${m[3]}${m[2]}`)
+  const classes = runInNewContext(`(${classesMatch[1]})`)
+  return { css, classes }
 }
 const modules = ['ConversationRoot', 'HeroShell', 'InputBar'].map(moduleStyle)
 const [r, h, i] = modules.map(m => m.classes)

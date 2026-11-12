@@ -142,7 +142,7 @@ Acciones inmediatas en cada conversación: Fijar, Renombrar, Marcar como no leí
 ## Compatibilidad del Host
 
 * **Versiones Soportadas**: Familia DeepSeek Harness `0.2.x` (`>=0.2.0-rc.1 <0.3.0-0`);
-* **Compilaciones Verificadas**: Todos los RC de `0.2.x` (`0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-rc.1`–`0.2.1-rc.5`, `0.2.2-rc.1`);
+* **Compilaciones Verificadas**: Todos los RC de `0.2.x` (`0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-rc.1`–`0.2.1-rc.5`, `0.2.2-rc.1`, `0.2.2-rc.2`);
 * **Requisitos de Entorno**: Node.js `^22.19.0 || >=24.0.0`, pnpm `^11.0.0`.
 
 > ⚠️ **Aviso**: No active simultáneamente Codex UI y `ds-bot`. Ambos rediseñan ranuras de la barra lateral con mecánicas que pueden solaparse.

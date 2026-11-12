@@ -142,7 +142,7 @@ Ações imediatas na lista de conversas: Fixar, Renomear, Marcar como não lido/
 ## Compatibilidade com o Host
 
 * **Gerações Suportadas**: Linha completa DeepSeek Harness `0.2.x` (`>=0.2.0-rc.1 <0.3.0-0`);
-* **Compilações Verificadas**: Todas as versões Release Candidate `0.2.x` (`0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-rc.1`–`0.2.1-rc.5`, `0.2.2-rc.1`);
+* **Compilações Verificadas**: Todas as versões Release Candidate `0.2.x` (`0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-rc.1`–`0.2.1-rc.5`, `0.2.2-rc.1`, `0.2.2-rc.2`);
 * **Requisitos de Execução**: Node.js `^22.19.0 || >=24.0.0`, pnpm `^11.0.0`.
 
 > ⚠️ **Aviso**: Não habilite o Codex UI e o `ds-bot` simultaneamente, pois ambos alteram os slots da barra lateral com potenciais conflitos.

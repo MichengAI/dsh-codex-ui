@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.1.1] - 2026-11-12
+
+- **Compatibility & Dependencies**: Verified full compatibility with DeepSeek Harness `0.2.2-rc.2` (covering all `0.2.x` RC hosts from `0.2.0-rc.1` through `0.2.2-rc.2`), aligned development dependencies with `0.2.2-rc.2` and Cordis `4.1.0`, and updated verified host lists across all README manuals.
+
 ## [2.1.0] - 2026-11-12
 
 - **Conversation-Scoped Input History by Default with Workspace Toggle (PR #91)**: `↑` / `↓` input history now defaults to **This conversation**, keeping prompt history cleanly separated between conversations. If you prefer sharing history across every conversation in the same directory, switch **History scope** back to **Workspace** in **Settings → Codex UI → Composer Enhancements** (existing workspace history remains preserved and becomes visible again when switching back, provided it has not been evicted by the 100-scope retention limit). Also fixed an issue where reloading could drop stored history beyond 20 scopes.
