@@ -2458,6 +2458,197 @@ describe('分区二级菜单的可访问性：', () => {
     }
   })
 
+  it('滞后 create 流帧回滚时压制宿主位移动画并保持标题次序，待 insertBefore 确认后单步显现新工作区', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: 'secA', name: 'A分组', ids: ['a1'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d1'] },
+      ],
+    })
+    mountFixture(['p1', 'a1', 'd1'])
+    const fake = mount(['p1', 'a1', 'd1'])
+    await waitForSync()
+
+    let resolveInsert!: () => void
+    const insertGate = new Promise<void>(resolve => {
+      resolveInsert = resolve
+    })
+    fake.service.insertBefore.mockImplementation(async (workspaceId: string, beforeWorkspaceId?: string) => {
+      const applyOrder = () => {
+        fake.state.order = fake.state.order.filter(id => id !== workspaceId)
+        const at = beforeWorkspaceId === undefined ? fake.state.order.length : fake.state.order.indexOf(beforeWorkspaceId)
+        fake.state.order.splice(at === -1 ? fake.state.order.length : at, 0, workspaceId)
+      }
+      applyOrder()
+      await insertGate
+      applyOrder()
+      const listEl = findWorkspaceList(document)!
+      const blocks = new Map(collectProjectBlocks(document, listEl).map(item => [item.workspaceId, item.block]))
+      fake.state.order.forEach(id => {
+        const block = blocks.get(id)
+        if (block !== undefined) listEl.appendChild(block)
+      })
+      fake.notify()
+      return {}
+    })
+
+    const list = document.querySelector<HTMLElement>('.list')!
+    const secAHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 'secA')!
+    secAHeader.querySelector<HTMLButtonElement>('.dcu-ws-section-actions button[data-dcu-action="add-workspace"]')!.click()
+
+    // 模拟宿主 AnimatedRows 在列表行上挂载 transform 动画
+    const cancelSpy = vi.fn()
+    const rowEl = list.querySelector<HTMLElement>('[data-row-key="workspace:a1"]')!
+    ;(rowEl as unknown as { getAnimations: () => unknown[] }).getAnimations = () => [
+      {
+        effect: { getKeyframes: () => [{ transform: 'translate(0px, -38px)' }, { transform: 'translate(0, 0)' }] },
+        cancel: cancelSpy,
+      },
+    ]
+
+    // 1. 宿主先 prepend new-1 并触发 Commit #1（RPC 仍在飞）
+    const newBlock = list.querySelector<HTMLElement>('[data-dcu-test-group="a1"]')!.cloneNode(true) as HTMLElement
+    newBlock.setAttribute('data-dcu-test-group', 'new-1')
+    newBlock.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-1')
+    newBlock.querySelector('button[aria-label="a1 操作"]')!.setAttribute('aria-label', 'new-1 操作')
+    const p1Block = list.querySelector<HTMLElement>('[data-dcu-test-group="p1"]')!
+    const a1Block = list.querySelector<HTMLElement>('[data-dcu-test-group="a1"]')!
+    list.prepend(newBlock)
+    fake.state.order = ['new-1', 'p1', 'a1', 'd1']
+    fake.notify()
+    await waitForSync(4)
+
+    expect(cancelSpy).toHaveBeenCalled()
+    expect(newBlock.getAttribute('data-dcu-section-relocating')).toBe('true')
+    expect(window.getComputedStyle(newBlock).display).toBe('none')
+
+    // 2. 模拟 create() 滞后流帧到达：DOM 临时将 p1 放到 new-1 后面（企图把 secA 拽到 p1 上面）
+    list.insertBefore(p1Block, a1Block)
+    fake.state.order = ['new-1', 'p1', 'a1', 'd1']
+    fake.notify()
+    await waitForSync(4)
+
+    // H:secA 绝不能跃迁到 p1 之上，必须紧跟在 p1 后面（锚定 a1）
+    const childrenAfterStaleFrame = Array.from(list.children)
+    expect(childrenAfterStaleFrame.indexOf(p1Block)).toBeLessThan(childrenAfterStaleFrame.indexOf(secAHeader))
+    expect(headerIdsInDomOrder()).toEqual([PINNED_SECTION_ID, 'secA', DEFAULT_SECTION_ID])
+    expect(newBlock.getAttribute('data-dcu-section-relocating')).toBe('true')
+
+    // 3. insertBefore RPC 确认并返回最终顺序 ['p1', 'new-1', 'a1', 'd1']
+    resolveInsert()
+    await waitForSync(8)
+
+    expect(newBlock.hasAttribute('data-dcu-section-relocating')).toBe(false)
+    expect(window.getComputedStyle(newBlock).display).not.toBe('none')
+    expect(headerIdsInDomOrder()).toEqual([PINNED_SECTION_ID, 'secA', DEFAULT_SECTION_ID])
+    expect(blockIdsInDomOrder()).toEqual(['p1', 'new-1', 'a1', 'd1'])
+    const finalChildren = Array.from(list.children)
+    expect(finalChildren.indexOf(secAHeader)).toBeLessThan(finalChildren.indexOf(newBlock))
+  })
+
+  it('空闲态工作区展开触发宿主 AnimatedRows 时，同步为位移中的分区标题启动同频 200ms 补间', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: 'secA', name: 'A分组', ids: ['a1'] },
+        { id: 'secB', name: 'B分组', ids: ['b1'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d1'] },
+      ],
+    })
+    mountFixture(['p1', 'a1', 'b1', 'd1'])
+    mount(['p1', 'a1', 'b1', 'd1'])
+    await waitForSync()
+
+    const list = document.querySelector<HTMLElement>('.list')!
+    const pinnedHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === PINNED_SECTION_ID)!
+    const secAHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 'secA')!
+    const secBHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 'secB')!
+    const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+
+    // 初始记录各标题 offsetTop，随后模拟 a1 展开新会话使 B分组、项目 下移 34px
+    const tops = new Map<HTMLElement, number>([
+      [pinnedHeader, 265],
+      [secAHeader, 339],
+      [secBHeader, 413],
+      [defaultHeader, 487],
+    ])
+    for (const h of [pinnedHeader, secAHeader, secBHeader, defaultHeader]) {
+      Object.defineProperty(h, 'offsetParent', { configurable: true, get: () => list })
+      Object.defineProperty(h, 'offsetTop', { configurable: true, get: () => tops.get(h) ?? 0 })
+    }
+
+    const origAnimate = HTMLElement.prototype.animate
+    const animatedTargets: Array<{ el: HTMLElement; keyframes: Keyframe[]; options: KeyframeAnimationOptions }> = []
+    HTMLElement.prototype.animate = function (this: HTMLElement, keyframes: Keyframe[], options?: KeyframeAnimationOptions) {
+      animatedTargets.push({ el: this, keyframes, options: options ?? {} })
+      return { finished: Promise.resolve(), cancel: vi.fn(), playState: 'finished', effect: null } as unknown as Animation
+    } as typeof HTMLElement.prototype.animate
+
+    try {
+      // 触发一次同步以记录基线 offsetTop
+      const probe = document.createElement('div')
+      list.querySelector('[data-dcu-test-group="a1"]')!.appendChild(probe)
+      await waitForSync(4)
+
+      // 模拟宿主 AnimatedRows 在 b1 上启动位移补间，同时下方两分组 offsetTop 增加 34px
+      const b1Row = list.querySelector<HTMLElement>('[data-row-key="workspace:b1"]')!
+      ;(b1Row as unknown as { getAnimations: () => unknown[] }).getAnimations = () => [
+        {
+          effect: { getKeyframes: () => [{ transform: 'translate(0px, -34px)' }, { transform: 'translate(0, 0)' }] },
+          cancel: vi.fn(),
+        },
+      ]
+      tops.set(secBHeader, 447)
+      tops.set(defaultHeader, 521)
+      const sessionNode = document.createElement('div')
+      sessionNode.setAttribute('data-row-key', 'session:s1')
+      list.querySelector('[data-dcu-test-group="a1"]')!.appendChild(sessionNode)
+      await waitForSync(4)
+
+      expect(animatedTargets.some(item => item.el === pinnedHeader)).toBe(false)
+      expect(animatedTargets.some(item => item.el === secAHeader)).toBe(false)
+      const secBAnim = animatedTargets.find(item => item.el === secBHeader)
+      const defaultAnim = animatedTargets.find(item => item.el === defaultHeader)
+      expect(secBAnim?.keyframes).toEqual([{ transform: 'translateY(-34px)' }, { transform: 'translateY(0)' }])
+      expect(defaultAnim?.keyframes).toEqual([{ transform: 'translateY(-34px)' }, { transform: 'translateY(0)' }])
+      expect(secBAnim?.options).toEqual({ duration: 200, easing: 'ease-out' })
+    } finally {
+      HTMLElement.prototype.animate = origAnimate
+    }
+  })
+
+  it('新工作区归位 RPC 失败时立即清理暂隐标记，绝不使新增工作区长期隐藏', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d1'] },
+      ],
+    })
+    mountFixture(['p1', 'd1'])
+    const fake = mount(['p1', 'd1'])
+    await waitForSync()
+
+    fake.service.insertBefore.mockRejectedValueOnce(new Error('rpc failed'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const list = document.querySelector<HTMLElement>('.list')!
+      const newBlock = list.querySelector<HTMLElement>('[data-dcu-test-group="d1"]')!.cloneNode(true) as HTMLElement
+      newBlock.setAttribute('data-dcu-test-group', 'new-fail')
+      newBlock.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-fail')
+      newBlock.querySelector('button[aria-label="d1 操作"]')!.setAttribute('aria-label', 'new-fail 操作')
+      list.prepend(newBlock)
+      fake.state.order = ['new-fail', 'p1', 'd1']
+      fake.notify()
+      await waitForSync(8)
+
+      expect(newBlock.hasAttribute('data-dcu-section-relocating')).toBe(false)
+      expect(window.getComputedStyle(newBlock).display).not.toBe('none')
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
 })
 
 })

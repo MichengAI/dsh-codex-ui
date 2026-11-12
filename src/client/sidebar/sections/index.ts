@@ -87,7 +87,7 @@ const SECTIONS_CSS = `
 /* 分区成员不加缩进：项目行以下全是宿主自己的排版（会话行、缩进变量都在里面），
    这里再补 padding 会把整个项目块连同会话一起右移，跟原生不一致。成员标记只用于折叠隐藏。 */
 [data-dcu-section-member]{transition:max-height 180ms var(--ds-ease-in-out,cubic-bezier(.2,0,0,1)),opacity 180ms var(--ds-ease-in-out,cubic-bezier(.2,0,0,1))}
-[data-dcu-section-hidden='true']{display:none !important}
+[data-dcu-section-hidden='true'],[data-dcu-section-relocating='true']{display:none !important}
 /* 与宿主行操作区完全一致：按钮自带 margin:-4px，gap:13px 使视觉净间距为 5px；平时隐藏，悬停/聚焦/菜单打开时显现 */
 .dcu-ws-section-actions{display:none;align-items:center;gap:13px;padding-right:6px;flex:none}
 @media (hover:hover){.dcu-ws-section:hover .dcu-ws-section-actions{display:inline-flex}}
@@ -262,6 +262,111 @@ export function observeWorkspaceSections(
     motionDone?: boolean
     motion?: SectionLayoutMotion
   }
+  const RELOCATING_ATTR = 'data-dcu-section-relocating'
+  const RELOCATING_TIMEOUT_MS = 1500
+  /** 正在等候异步顺序落地的新建工作区 ID，避免延迟流帧造成置顶/相邻分组闪烁或错位。 */
+  const relocatingIds = new Set<string>()
+  let relocatingCleanupTimer: number | undefined
+  /** 记录上一次稳定布局后各分区标题的 offsetTop，用于与宿主 AnimatedRows 同步补间。 */
+  const lastHeaderOffsets = new WeakMap<HTMLElement, { parent: Element | null; top: number }>()
+  const syncedHostAnimations = new WeakSet<Animation>()
+  const activeHeaderSyncAnimations = new WeakMap<HTMLElement, Animation>()
+
+  function clearRelocating(): void {
+    relocatingIds.clear()
+    if (relocatingCleanupTimer !== undefined) {
+      window.clearTimeout(relocatingCleanupTimer)
+      relocatingCleanupTimer = undefined
+    }
+    for (const node of Array.from(document.querySelectorAll<HTMLElement>(`[${RELOCATING_ATTR}]`))) {
+      node.removeAttribute(RELOCATING_ATTR)
+    }
+  }
+
+  function markRelocating(ids: readonly string[]): void {
+    for (const id of ids) relocatingIds.add(id)
+    if (relocatingCleanupTimer !== undefined) window.clearTimeout(relocatingCleanupTimer)
+    relocatingCleanupTimer = window.setTimeout(() => {
+      relocatingCleanupTimer = undefined
+      if (disposed || relocatingIds.size === 0) return
+      if (list !== undefined) cancelHostRowAnimations(list)
+      clearRelocating()
+      syncNow()
+    }, RELOCATING_TIMEOUT_MS)
+  }
+
+  function cancelHostRowAnimations(container: HTMLElement): void {
+    for (const row of Array.from(container.querySelectorAll<HTMLElement>('[data-row-key]'))) {
+      for (const animation of row.getAnimations?.() ?? []) {
+        const effect = animation.effect as KeyframeEffect | null
+        if (typeof effect?.getKeyframes === 'function' && effect.getKeyframes().some(frame => frame.transform !== undefined)) {
+          animation.cancel()
+        }
+      }
+    }
+  }
+
+  function recordHeaderOffsets(): void {
+    for (const header of headers.values()) {
+      if (!header.isConnected) continue
+      lastHeaderOffsets.set(header, { parent: header.offsetParent, top: header.offsetTop })
+    }
+  }
+
+  /**
+   * 宿主展开/收起工作区或新建空白会话时，AnimatedRows 只对 [data-row-key] 行做 200ms 平滑位移；
+   * 若插件分区标题原地瞬移，就会与下方行发生错位/重影碰撞。在绘制前同步补间位移量即可同频共舞。
+   */
+  function syncHeadersWithHostMotion(container: HTMLElement): void {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      recordHeaderOffsets()
+      return
+    }
+    let hasFreshHostMove = false
+    for (const row of Array.from(container.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))) {
+      for (const animation of row.getAnimations?.() ?? []) {
+        if (syncedHostAnimations.has(animation)) continue
+        const effect = animation.effect as KeyframeEffect | null
+        if (typeof effect?.getKeyframes === 'function' && effect.getKeyframes().some(frame => frame.transform !== undefined)) {
+          syncedHostAnimations.add(animation)
+          hasFreshHostMove = true
+        }
+      }
+    }
+    const moves: Array<{ header: HTMLElement; dy: number }> = []
+    for (const header of headers.values()) {
+      if (!header.isConnected) continue
+      const prev = lastHeaderOffsets.get(header)
+      const currParent = header.offsetParent
+      const currTop = header.offsetTop
+      if (hasFreshHostMove && prev !== undefined && prev.parent === currParent && typeof header.animate === 'function') {
+        let currentTranslateY = 0
+        const running = activeHeaderSyncAnimations.get(header)
+        if (running !== undefined && running.playState === 'running') {
+          const transform = window.getComputedStyle(header).transform
+          if (transform !== '' && transform !== 'none' && typeof DOMMatrix === 'function') {
+            currentTranslateY = new DOMMatrix(transform).m42
+          }
+        }
+        const dy = prev.top + currentTranslateY - currTop
+        if (Math.abs(dy) >= 0.5) moves.push({ header, dy })
+      }
+      lastHeaderOffsets.set(header, { parent: currParent, top: currTop })
+    }
+    for (const { header, dy } of moves) {
+      activeHeaderSyncAnimations.get(header)?.cancel()
+      const anim = header.animate(
+        [{ transform: `translateY(${dy}px)` }, { transform: 'translateY(0)' }],
+        { duration: 200, easing: 'ease-out' },
+      )
+      activeHeaderSyncAnimations.set(header, anim)
+      void anim.finished.catch(() => {}).then(() => {
+        if (activeHeaderSyncAnimations.get(header) === anim) activeHeaderSyncAnimations.delete(header)
+        anim.cancel()
+      })
+    }
+  }
+
   let activeUpdate: SectionsUpdate | undefined
   let writeGen = 0
   let waitNotice: HTMLElement | undefined
@@ -779,11 +884,15 @@ export function observeWorkspaceSections(
       .map(row => (row instanceof HTMLElement ? blockOf(row, list!) : null))
       .find((block): block is HTMLElement => block !== null)
     const byId = new Map(blocks.map(item => [item.workspaceId, item.block]))
+    const visibleById =
+      relocatingIds.size === 0
+        ? byId
+        : new Map(blocks.filter(item => !relocatingIds.has(item.workspaceId)).map(item => [item.workspaceId, item.block]))
     let reference: Element | null = null
     // 从后向前确定边界：有成员贴自己的首项，空分区贴下一个标题；绝不插到上一区成员之前。
     for (let index = layoutState.sections.length - 1; index >= 0; index -= 1) {
       const section = layoutState.sections[index]!
-      const first = section.ids.map(id => byId.get(id)).find(block => block !== undefined)
+      const first = section.ids.map(id => visibleById.get(id)).find(block => block !== undefined)
       if (first !== undefined) reference = first
       else if (section.id === DEFAULT_SECTION_ID && ungrouped !== undefined) reference = ungrouped
       // 「置顶」没有成员时整行不渲染：空的置顶分区只剩一行标题，白占约 40px 高度，
@@ -815,6 +924,11 @@ export function observeWorkspaceSections(
       for (const id of section.ids) memberOf.set(id, section.id)
     }
     for (const block of blocks) {
+      if (relocatingIds.has(block.workspaceId)) {
+        block.block.setAttribute(RELOCATING_ATTR, 'true')
+      } else {
+        block.block.removeAttribute(RELOCATING_ATTR)
+      }
       const sectionId = memberOf.get(block.workspaceId)
       if (sectionId === undefined) {
         block.block.removeAttribute('data-dcu-section-member')
@@ -1836,16 +1950,20 @@ export function observeWorkspaceSections(
     activeUpdate = update
     if (list !== undefined && update.suppressMotion !== true) update.motion = new SectionLayoutMotion(list)
     const service = workspaces()
+    const desired = flattenSections(update.next)
+    const plannedMoves = planWorkspaceMoves(ids, desired, movingIds)
+    if (update.suppressMotion === true && movingIds !== undefined && movingIds.length > 0 && plannedMoves.length > 0) {
+      markRelocating(movingIds)
+    }
     const write = async (): Promise<void> => {
       if (service === undefined) throw new Error('工作区服务未就绪')
-      const desired = flattenSections(update.next)
-      for (const move of planWorkspaceMoves(knownIds(), desired, movingIds)) {
+      for (const move of plannedMoves) {
         if (disposed || activeUpdate !== update) return
         await insertWorkspace(service, move.workspaceId, move.beforeWorkspaceId)
       }
       if (disposed || activeUpdate !== update) return
       update.rpcDone = true
-      syncNow()
+      syncNow(true)
     }
     void write().catch(() => {
       if (disposed || activeUpdate !== update) return
@@ -1854,6 +1972,7 @@ export function observeWorkspaceSections(
       showAbortedNotice()
       updates.length = 0
       update.motion?.dispose()
+      clearRelocating()
       activeUpdate = undefined
       state = committedState
       scheduleSync()
@@ -1892,7 +2011,7 @@ export function observeWorkspaceSections(
     hostMenuRowTemplate = wrapper.cloneNode(true) as HTMLElement
   }
 
-  function syncNow(): void {
+  function syncNow(allowRevealRelocating: boolean = true): void {
     if (disposed || syncing) return
     cacheHostMenuTemplate()
     if (!sectionsLoaded) return
@@ -1929,6 +2048,7 @@ export function observeWorkspaceSections(
               const service = workspaces()
               if (service === undefined) throw new Error('工作区服务未就绪')
               update.rpcDone = false
+              if (update.suppressMotion === true && additions.length > 0) markRelocating(additions)
               void (async () => {
                 for (const move of moves) await insertWorkspace(service, move.workspaceId, move.beforeWorkspaceId)
                 if (activeUpdate !== update || disposed) return
@@ -1938,6 +2058,7 @@ export function observeWorkspaceSections(
                 console.warn('[codex-ui:sections] 同步新工作区顺序失败。')
                 if (activeUpdate !== update || disposed) return
                 updates.length = 0
+                clearRelocating()
                 activeUpdate = undefined
                 state = committedState
                 scheduleSync()
@@ -1947,17 +2068,44 @@ export function observeWorkspaceSections(
           }
         }
         const desired = flattenSections(update.next)
-        // 服务快照与 DOM 必须同时追平。中间序列不参与标题定位，也不反向覆盖菜单意图。
-        if (!sameOrder(ids, desired) || !sameVisibleOrder(desired, order)) return
+        const idsSet = new Set(ids)
+        const orderSet = new Set(order)
+        const relocatingInDom = Array.from(relocatingIds).every(id => !idsSet.has(id) || orderSet.has(id))
+        const settled =
+          sameOrder(ids, desired) &&
+          sameVisibleOrder(desired, order) &&
+          relocatingInDom &&
+          (relocatingIds.size === 0 || update.rpcDone)
+        // 服务快照与 DOM 必须同时追平（且新插入节点已出现在 DOM 中）；
+        // 在此期间若存在 relocatingIds，必须持续压制宿主 AnimatedRows 位移动画并维持标题忽略暂隐节点，
+        // 避免 create() 的滞后流帧把「置顶」拖入「A 分组」导致全部分组闪跳。
+        if (!settled) {
+          if (relocatingIds.size > 0) {
+            cancelHostRowAnimations(list)
+            placeHeaders(collectProjectBlocks(list, list), update.next)
+            recordHeaderOffsets()
+          }
+          return
+        }
+        // 仅在 DOM 提交完成后的路径（MutationObserver / rAF）解除暂隐并重排标题，
+        // 绝不在 subscribeWorkspaces 的提交前微任务中解除，彻底杜绝 AnimatedRows 读到 (0, 0) 空矩形。
+        if (relocatingIds.size > 0) {
+          if (!allowRevealRelocating) return
+          cancelHostRowAnimations(list)
+          clearRelocating()
+        }
         if (!update.layoutDone) {
           update.layoutDone = true
-          const layout = (): void => placeHeaders(collectProjectBlocks(list!, list), update.next)
+          const layout = (): void => {
+            placeHeaders(collectProjectBlocks(list!, list), update.next)
+            recordHeaderOffsets()
+          }
           const finished = update.motion?.play(layout)
           if (finished === undefined) layout()
           void (finished ?? Promise.resolve()).then(() => {
             if (disposed || activeUpdate !== update) return
             update.motionDone = true
-            syncNow()
+            syncNow(allowRevealRelocating)
           })
         }
         if (update.rpcDone && update.motionDone) {
@@ -1999,6 +2147,11 @@ export function observeWorkspaceSections(
           if (!sameOrder(flattenSections(state), ids)) {
             // 方案 A：新工作区归位不叠插件 SectionLayoutMotion，避免与宿主 AnimatedRows 双动画打架造成二次闪烁
             commitExplicit(state, newIds, true)
+            if (relocatingIds.size > 0) {
+              cancelHostRowAnimations(list)
+              placeHeaders(collectProjectBlocks(list, list), state)
+              recordHeaderOffsets()
+            }
             return
           }
         }
@@ -2006,6 +2159,11 @@ export function observeWorkspaceSections(
       committedState = state
       if (serializeSections(state) !== before) persist()
       placeHeaders(collectProjectBlocks(list, list))
+      if (relocatingIds.size === 0 && animatingSections.size === 0) {
+        syncHeadersWithHostMotion(list)
+      } else {
+        recordHeaderOffsets()
+      }
     } finally {
       syncing = false
     }
@@ -2052,8 +2210,11 @@ export function observeWorkspaceSections(
       if (touched) {
         // 宿主已提交 DOM 时在绘制前完成分区布局，绝不能再晚一帧暴露错位节点。
         if (activeUpdate !== undefined || knownIds().some(id => sectionOf(state, id) === undefined)) {
-          syncNow()
+          syncNow(true)
         } else {
+          if (list !== undefined && relocatingIds.size === 0 && animatingSections.size === 0) {
+            syncHeadersWithHostMotion(list)
+          }
           scheduleSync()
         }
       }
@@ -2066,7 +2227,7 @@ export function observeWorkspaceSections(
     if (service === undefined) return
     try {
       unsubscribe = service.list.subscribe(() => {
-        if (!disposed && knownIds().some(id => sectionOf(state, id) === undefined)) syncNow()
+        if (!disposed && knownIds().some(id => sectionOf(state, id) === undefined)) syncNow(false)
         else scheduleSync()
       })
     } catch {
@@ -2091,6 +2252,7 @@ export function observeWorkspaceSections(
     window.clearInterval(boot)
     if (rafId !== 0) window.cancelAnimationFrame(rafId)
     if (pendingTargetCleanupTimer !== undefined) window.clearTimeout(pendingTargetCleanupTimer)
+    clearRelocating()
     observer?.disconnect()
     clearWriteWait()
     updates.length = 0
