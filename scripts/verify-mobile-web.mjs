@@ -35,6 +35,8 @@ try {
       .host_settings_row { display: flex; align-items: center; gap: 8px; }
       .host_rowText { flex: 1; min-width: 0; }
       .host_permissionControl { width: 172px; flex: none; }
+      .host_segmented { display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; padding: 4px; }
+      .host_segmented button { white-space: nowrap; padding: 0 16px; }
       .host_projectRow [class*="_rowActions"] { display: none; }
       #composer { position: relative; flex: none; padding: 10px; border: 1px solid; }
       #composer [data-composer-input], #query, #settings-input { font-size: 12px; }
@@ -75,9 +77,25 @@ try {
     </div>
     <div role="presentation">
       <div data-shortcut-modal="settings" role="dialog" aria-modal="true">
-        <div class="host_navTitle"><div class="dcu-settings-nav-header-root"><button class="dcu-settings-back-btn">Back</button></div></div>
-        <nav><button class="host_navCell">General</button></nav>
-        <div class="host_header"></div>
+        <div class="host_navTitle">
+          <div class="dcu-settings-nav-header-root">
+            <div class="dcu-settings-nav-header-top">
+              <button class="dcu-settings-back-btn">Back</button>
+              <span class="dcu-settings-nav-header-title">Settings</span>
+            </div>
+          </div>
+        </div>
+        <nav>
+          <div class="host_navList">
+            <button class="host_navCell" aria-current="true"><span class="host_navLabel">General</span></button>
+            <button class="host_navCell"><span class="host_navLabel">Models</span></button>
+            <button class="host_navCell"><span class="host_navLabel">Built-in plugins</span></button>
+            <button class="host_navCell"><span class="host_navLabel">Agent presets</span></button>
+            <button class="host_navCell"><span class="host_navLabel">Plugin Market</span></button>
+            <button class="host_navCell"><span class="host_navLabel">Codex UI</span></button>
+          </div>
+        </nav>
+        <div class="host_header"><button>Open configuration file</button><button class="host_close">Close</button></div>
         <div class="host_options">
           <input id="settings-input">
           <div class="host_settings_row">
@@ -87,6 +105,15 @@ try {
             </div>
             <button class="host_permissionControl" id="permission-control">Workspace Write</button>
           </div>
+          <div class="dcu-settings-row">
+            <div class="dcu-settings-row-label">Suggestions</div>
+            <div class="host_segmented" role="tablist">
+              <button role="tab">Off</button>
+              <button role="tab">Continuation only</button>
+              <button role="tab">Prediction &amp; continuation</button>
+            </div>
+          </div>
+          <div style="padding-top: 1050px"><input id="deep-settings-input"></div>
         </div>
       </div>
     </div>
@@ -115,6 +142,13 @@ try {
       editorMaxHeight: getComputedStyle(document.querySelector('[data-input-scroll]')).maxHeight,
       settings: box('[data-shortcut-modal="settings"]'),
       settingsBack: box('.dcu-settings-back-btn'),
+      settingsHeader: box('.host_header'),
+      settingsNavigation: box('.host_navList'),
+      settingsTab: box('.host_navCell'),
+      settingsContent: box('.host_options'),
+      settingsContentScroll: document.querySelector('.host_options').scrollWidth,
+      settingsTitle: box('.host_navTitle'),
+      settingsTabsScroll: document.querySelector('.host_navList').scrollWidth,
       permissionHelp: box('#permission-help'),
       permissionControl: box('#permission-control'),
       workspaceMore: box('#workspace-more'),
@@ -129,8 +163,26 @@ try {
   assert.equal(initial.compact, false)
   assert.equal(initial.frame.width, 390)
   assert.equal(initial.frame.height, 844)
-  assert.ok(initial.permissionHelp.width >= 160, JSON.stringify(initial.permissionHelp))
-  assert.ok(initial.permissionControl.y >= initial.permissionHelp.bottom)
+  assert.equal(initial.settingsContent.width, initial.settings.width)
+  assert.ok(initial.settingsHeader.bottom <= initial.settingsNavigation.y)
+  assert.ok(initial.settingsBack.y >= initial.settingsTitle.y)
+  assert.ok(initial.settingsBack.bottom <= initial.settingsTitle.bottom)
+  assert.ok(initial.settingsNavigation.bottom <= initial.settingsContent.y)
+  assert.ok(initial.settingsTab.height >= 44)
+  assert.ok(initial.settingsTabsScroll > initial.settingsNavigation.width)
+  assert.equal(await page.getByRole('button', { name: 'Models', exact: true }).count(), 1)
+
+  await page.setViewportSize({ width: 320, height: 844 })
+  await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--dcu-viewport-width') === '320px')
+  const narrow = await measure()
+  assert.equal(narrow.settingsContent.width, 320)
+  assert.equal(narrow.settingsContentScroll, 320)
+  assert.ok(narrow.settingsBack.y >= narrow.settingsTitle.y)
+  assert.ok(narrow.settingsBack.bottom <= narrow.settingsTitle.bottom)
+  assert.ok(narrow.permissionHelp.width >= 160, JSON.stringify(narrow.permissionHelp))
+  assert.ok(narrow.permissionControl.y >= narrow.permissionHelp.bottom)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--dcu-viewport-width') === '390px')
   for (const name of ['settingsBack', 'workspaceMore', 'searchClose']) {
     const { width, height } = initial[name]
     assert.ok(width >= 44 && height >= 44, `${name}: ${width}x${height}`)
@@ -165,6 +217,16 @@ try {
   assert.equal(keyboard.frame.height, 420)
   assert.equal(keyboard.settings.y, 32)
   assert.equal(keyboard.settings.height, 420)
+  assert.ok(keyboard.settingsHeader.bottom <= keyboard.settingsNavigation.y)
+  assert.ok(keyboard.settingsNavigation.bottom <= keyboard.settingsContent.y)
+  assert.ok(keyboard.settingsContent.height > 200)
+  await page.locator('#deep-settings-input').scrollIntoViewIfNeeded()
+  await page.locator('#deep-settings-input').focus()
+  const scrolled = await measure()
+  assert.deepEqual(scrolled.settingsHeader, keyboard.settingsHeader)
+  assert.deepEqual(scrolled.settingsBack, keyboard.settingsBack)
+  assert.ok(await page.locator('.host_options').evaluate(el => el.scrollTop) > 0)
+  assert.equal(await page.locator('[data-shortcut-modal="settings"]').evaluate(el => el.scrollTop), 0)
   assert.equal(keyboard.compact, true)
   assert.ok(keyboard.composer.bottom < 452, JSON.stringify(keyboard.composer))
   assert.equal(keyboard.editorMaxHeight, '240px')

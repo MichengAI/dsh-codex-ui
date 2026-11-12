@@ -7,6 +7,8 @@ import { en, zh } from '../locales.ts'
 
 export const SETTINGS_SKIN_STYLE_ID = 'dcu-official-settings-skin'
 
+const MOBILE_SETTINGS_QUERY = '(max-width: 767px)'
+
 export const SETTINGS_SKIN_CSS = `
 /* 全屏工作台 Presentation 遮罩层铺满
    选择器必须精确落到“装着设置面板的那一层遮罩”：宿主所有 Modal（含确认框、插件弹窗）的
@@ -1624,6 +1626,222 @@ html[data-dcu-mobile-web] [data-shortcut-modal="settings"][role="dialog"] {
   }
 }
 
+/* Phone settings keep the host's tabs and action bar above one full-width scroller. */
+@media ${MOBILE_SETTINGS_QUERY} {
+  html[data-dcu-mobile-web] [data-shortcut-modal="settings"][role="dialog"]:has(> [class*="_options"]) {
+    grid-template-columns: minmax(140px, 1fr) minmax(0, auto) !important;
+    grid-template-rows: auto auto minmax(0, 1fr) !important;
+    gap: 0 !important;
+    overflow: clip !important;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+
+    & > [class*="_navTitle"],
+    & > [class*="_header"],
+    & > nav,
+    & > [class*="_options"] {
+      box-sizing: border-box !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: none !important;
+      height: auto !important;
+      max-height: none !important;
+      margin: 0 !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      backdrop-filter: none !important;
+    }
+    & > [class*="_navTitle"],
+    & > [class*="_header"] {
+      grid-row: 1 !important;
+      position: static !important;
+      min-height: 48px !important;
+      padding: 0 8px !important;
+    }
+    & > [class*="_navTitle"] {
+      grid-column: 1 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+    }
+    & > [class*="_header"] {
+      grid-column: 2 !important;
+      gap: 4px !important;
+      justify-content: end !important;
+      pointer-events: auto !important;
+    }
+    & > [class*="_header"] button {
+      min-height: 44px !important;
+      white-space: normal !important;
+    }
+    & > [class*="_header"] button[class*="_close"] {
+      min-width: 44px !important;
+    }
+    & .dcu-settings-nav-header-root,
+    & .dcu-settings-nav-header-top {
+      width: 100% !important;
+      max-width: none !important;
+      justify-content: flex-start !important;
+    }
+    & .dcu-settings-nav-header-top {
+      height: auto !important;
+      min-height: 44px !important;
+      gap: 4px !important;
+    }
+    & .dcu-settings-back-btn {
+      margin: 0 !important;
+    }
+    & .dcu-settings-nav-header-title {
+      display: block !important;
+      font-size: 15px !important;
+      line-height: 20px !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere;
+    }
+
+    & > nav {
+      grid-area: 2 / 1 / 3 / -1 !important;
+      padding: 0 !important;
+      border-bottom: 1px solid var(--dsw-alias-border-l1, #8883) !important;
+    }
+    & > nav [class*="_navList"] {
+      box-sizing: border-box !important;
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
+      gap: 4px !important;
+      width: 100% !important;
+      max-width: none !important;
+      padding: 2px 12px 6px !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+      overscroll-behavior-x: contain;
+      scroll-padding-inline: 12px;
+    }
+    & > nav [class*="_navList"] button[class*="_navCell"] {
+      flex: none !important;
+      justify-content: flex-start !important;
+      width: auto !important;
+      min-width: 44px !important;
+      max-width: none !important;
+      height: 44px !important;
+      min-height: 44px !important;
+      max-height: none !important;
+      gap: 6px !important;
+      margin: 0 !important;
+      padding: 0 10px !important;
+    }
+    & > nav [class*="_navList"] [class*="_navLabel"] {
+      display: inline !important;
+      white-space: nowrap !important;
+    }
+
+    & > [class*="_options"] {
+      grid-area: 3 / 1 / 4 / -1 !important;
+      min-height: 0 !important;
+      padding: 16px 16px 24px !important;
+      overflow: auto !important;
+      overscroll-behavior: contain;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  html[data-dcu-mobile-web] [data-shortcut-modal="settings"] {
+    & :is(.dcu-section-title-wrap, .dcu-settings-row-label) {
+      flex-basis: 180px;
+    }
+    & .dcu-section-card {
+      min-width: 0;
+      padding: 14px;
+    }
+    & :is(.dcu-section-title, .dcu-subplugin-header, .dcu-about-dependency, .dcu-about-actions, .dcu-about-name-row) {
+      flex-wrap: wrap;
+    }
+    & .dcu-subplugin-header {
+      max-width: 100%;
+    }
+    & .dcu-about-copy {
+      flex-basis: 160px;
+    }
+    & .dcu-about-actions {
+      min-width: 0;
+      justify-content: flex-start;
+    }
+    & .dcu-theme-code-sample {
+      min-width: 0;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+    & :is(.dcu-settings-row, .dcu-theme-sub-row) :is([role="tablist"], [data-slot="segmented-control"]) {
+      box-sizing: border-box;
+      min-width: 0;
+      max-width: 100%;
+      grid-auto-columns: minmax(0, 1fr);
+    }
+    & :is(.dcu-settings-row, .dcu-theme-sub-row) [role="tab"] {
+      min-width: 0;
+      min-height: 44px;
+      height: auto;
+      padding: 6px 8px;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    & [class*="_groupTitleRow"]:has(> [class*="_headerEnd"]) {
+      flex-wrap: wrap;
+    }
+    & [class*="_groupTitleRow"] > [class*="_headerEnd"] {
+      max-width: 100%;
+    }
+    & ul[class*="_cards"]:has(> li[class*="_card"]) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    & ul[class*="_cards"] > li[class*="_card"] {
+      min-width: 0;
+    }
+    & [class*="_cardHead"]:has(> [class*="_cardId"]) {
+      flex-wrap: wrap;
+    }
+    & [class*="_cardHead"] > [class*="_cardId"] {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    & [class*="_cardFoot"] button[class*="_iconButton"]::after {
+      inset-inline: auto 0;
+      transform: none;
+    }
+  }
+}
+
+/* Keep provider model IDs readable even with all three row actions present. */
+@media (max-width: 380px) {
+  html[data-dcu-mobile-web] [data-shortcut-modal="settings"] [class*="_modelRow"]:has(> [class*="_modelDragHandle"]) {
+    grid-template-columns: 44px minmax(0, 1fr) 44px 44px;
+
+    & > [class*="_modelField"]:not([class*="_modelName"]) {
+      grid-area: 1 / 2 / 2 / -1;
+    }
+    & > [class*="_modelName"] {
+      grid-area: 3 / 2 / 4 / -1;
+    }
+    & > button {
+      min-width: 44px;
+      min-height: 44px;
+    }
+    & > button[class*="_modelDragHandle"] {
+      grid-area: 1 / 1 / 2 / 2;
+    }
+    & > button:nth-of-type(2) {
+      grid-area: 2 / 3 / 3 / 4;
+    }
+    & > button:nth-of-type(3) {
+      grid-area: 2 / 4 / 3 / 5;
+    }
+  }
+}
+
 `
 
 let lastSkinCheckTime = 0
@@ -1795,6 +2013,22 @@ export function decorateSettingsNav(panelEl: HTMLElement): () => void {
     ?? panelEl.querySelector<HTMLElement>('nav > :nth-child(2)')
     ?? panelEl.querySelector<HTMLElement>('nav > :first-child')
   if (!navList) return () => {}
+  const doc = panelEl.ownerDocument
+  const phone = doc.defaultView?.matchMedia?.(MOBILE_SETTINGS_QUERY)
+  const hasHorizontalTabs = () => phone?.matches === true
+    && doc.documentElement.hasAttribute('data-dcu-mobile-web')
+    && panelEl.querySelector(':scope > [class*="_options"]') !== null
+
+  const revealActiveTab = () => {
+    if (!hasHorizontalTabs() || typeof navList.scrollBy !== 'function') return
+    const active = navList.querySelector<HTMLElement>(':scope > button[aria-current="true"], :scope > button[class*="_active"]')
+    if (active === null) return
+    const listBox = navList.getBoundingClientRect()
+    const tabBox = active.getBoundingClientRect()
+    const left = tabBox.left - listBox.left
+    const right = tabBox.right - listBox.right
+    if (left < 0 || right > 0) navList.scrollBy({ left: left < 0 ? left : right })
+  }
 
   const isZh = (document.documentElement.lang || 'zh').startsWith('zh')
 
@@ -1883,7 +2117,7 @@ export function decorateSettingsNav(panelEl: HTMLElement): () => void {
 
   // 5. 搜索过滤联动与空分组小标题动态自愈隐藏
   const applyFilter = (query: string) => {
-    const trimmed = query.trim().toLowerCase()
+    const trimmed = hasHorizontalTabs() ? '' : query.trim().toLowerCase()
     const buttons = navList.querySelectorAll<HTMLButtonElement>(':scope > button')
     let totalVisible = 0
 
@@ -1924,16 +2158,26 @@ export function decorateSettingsNav(panelEl: HTMLElement): () => void {
   applyFilter(getNavSearchQuery())
   const unsubSearch = subscribeNavSearch(applyFilter)
 
-  // 6. 监听宿主后续异步动态追加的 button
-  const navObserver = new MutationObserver(() => {
-    classifyButtons()
+  // Keep the active host tab in view when opened externally or via the keyboard.
+  const refreshTabLayout = () => {
     applyFilter(getNavSearchQuery())
+    revealActiveTab()
+  }
+  phone?.addEventListener('change', refreshTabLayout)
+  revealActiveTab()
+  const navObserver = new MutationObserver(records => {
+    if (records.some(record => record.type === 'childList' && record.target === navList)) {
+      classifyButtons()
+      applyFilter(getNavSearchQuery())
+    }
+    revealActiveTab()
   })
-  navObserver.observe(navList, { childList: true })
+  navObserver.observe(navList, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-current', 'class'] })
 
   return () => {
     cleanHeader()
     unsubSearch()
+    phone?.removeEventListener('change', refreshTabLayout)
     navObserver.disconnect()
     navList.querySelectorAll('[data-dcu-group-header], [data-dcu-group-empty]').forEach(el => el.remove())
     navList.querySelectorAll<HTMLButtonElement>(':scope > button').forEach(btn => {
