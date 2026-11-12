@@ -263,6 +263,8 @@ export function observeWorkspaceSections(
     motion?: SectionLayoutMotion
   }
   const RELOCATING_ATTR = 'data-dcu-section-relocating'
+  // 视觉暂隐的兜底上限：insertWorkspace 自身有 8s 提示 / 20s 超时；若流帧或 RPC 慢于 1.5s，
+  // 宁可提前显形再收敛，也绝不让新增工作区在界面上长时间隐身。
   const RELOCATING_TIMEOUT_MS = 1500
   /** 正在等候异步顺序落地的新建工作区 ID，避免延迟流帧造成置顶/相邻分组闪烁或错位。 */
   const relocatingIds = new Set<string>()
@@ -296,6 +298,8 @@ export function observeWorkspaceSections(
   }
 
   function cancelHostRowAnimations(container: HTMLElement): void {
+    // 沿用 SectionLayoutMotion 的 [data-row-key] 压制口径（含会话行）：
+    // 归位暂隐窗口内若同步触发新建空白会话等行动画，一并掐断可防止工作区不动而子行独自穿插闪烁。
     for (const row of Array.from(container.querySelectorAll<HTMLElement>('[data-row-key]'))) {
       for (const animation of row.getAnimations?.() ?? []) {
         const effect = animation.effect as KeyframeEffect | null
@@ -323,6 +327,8 @@ export function observeWorkspaceSections(
       return
     }
     let hasFreshHostMove = false
+    // 与上面的全行压制不同，此处仅扫描 workspace 级块（含未分组桶 workspace:）：
+    // 只有工作区块纵坐标受影响时才需要带动下方分组标题同步补间，避免单工作区内展开误触发标题动画。
     for (const row of Array.from(container.querySelectorAll<HTMLElement>('[data-row-key^="workspace:"]'))) {
       for (const animation of row.getAnimations?.() ?? []) {
         if (syncedHostAnimations.has(animation)) continue
