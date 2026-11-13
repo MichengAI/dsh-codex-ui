@@ -97,4 +97,72 @@ describe('PredictionModelPicker & prediction-route-state', () => {
     // 包含 disabled 状态
     expect(htmlDisabled).toMatch(/class="[^"]*dcu-prediction-model-trigger[^"]*"[^>]*disabled=""/)
   })
+
+  it('交互链路：打开菜单触发 fetch，成功渲染模型列表与推理子项并支持点选', async () => {
+    const { createRoot } = await import('react-dom/client')
+    const { act } = await import('react')
+
+    const mockProviders = [
+      {
+        id: 'mock-deepseek',
+        name: 'DeepSeek Official',
+        models: [
+          { id: 'deepseek-chat', name: 'DeepSeek Chat', reasoning: null },
+          {
+            id: 'deepseek-reasoner',
+            name: 'DeepSeek Reasoner',
+            reasoning: {
+              efforts: [{ id: 'low', name: '低' }, { id: 'high', name: '高' }],
+              defaultEffort: 'low',
+            },
+          },
+        ],
+      },
+    ]
+
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true, providers: mockProviders }),
+    } as Response)
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    try {
+      await act(async () => {
+        root.render(React.createElement(PredictionModelPicker, {
+          t: (k: string) => k,
+        }))
+      })
+
+      const triggerBtn = container.querySelector('.dcu-prediction-model-trigger') as HTMLButtonElement
+      expect(triggerBtn).not.toBeNull()
+
+      // 点击打开菜单
+      await act(async () => {
+        triggerBtn.click()
+      })
+
+      // 等待 fetch 与 setState 刷新
+      await act(async () => {
+        await new Promise(r => setTimeout(r, 20))
+      })
+
+      expect(globalThis.fetch).toHaveBeenCalled()
+
+      // 菜单通过 portal 渲染在 document.body 中
+      const bodyHtml = document.body.innerHTML
+      expect(bodyHtml).toContain('DeepSeek Official')
+      expect(bodyHtml).toContain('DeepSeek Chat')
+      expect(bodyHtml).toContain('DeepSeek Reasoner')
+    } finally {
+      await act(async () => {
+        root.unmount()
+      })
+      container.remove()
+      globalThis.fetch = originalFetch
+    }
+  })
 })

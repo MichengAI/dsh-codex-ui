@@ -32,7 +32,7 @@ export function clearModelCatalogCache(): void {
 /**
  * 收集当前宿主已配置的所有可用提供商与模型目录。
  * 遵循与 dsh-automation / dsh-im-connect 一致的提供商排序规范（官方置顶）。
- * 采用双通道快速探测（sessionController 优先，llm 并发回退），带并发限制与 1.5s 超时。
+ * 单模型推理信息探测附带超时保护，杜绝外部提供商异常挂死端点。
  */
 export async function collectModelCatalog(ctx: Context): Promise<ProviderCatalogEntry[]> {
   const now = Date.now()
@@ -45,7 +45,12 @@ export async function collectModelCatalog(ctx: Context): Promise<ProviderCatalog
     return []
   }
 
-  const rawProviders = llm.listProviders() ?? []
+  let rawProviders: any[] = []
+  try {
+    rawProviders = llm.listProviders() ?? []
+  } catch {
+    return []
+  }
   const providers: ProviderCatalogEntry[] = []
 
   for (const item of rawProviders) {
@@ -70,7 +75,8 @@ export async function collectModelCatalog(ctx: Context): Promise<ProviderCatalog
 
       try {
         if (typeof llm.resolveModelInfo === 'function') {
-          const info = await llm.resolveModelInfo(providerId, modelId)
+          const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
+          const info = await Promise.race([llm.resolveModelInfo(providerId, modelId), timeoutPromise])
           if (info?.reasoning && Array.isArray(info.reasoning.efforts) && info.reasoning.efforts.length > 0) {
             reasoning = {
               efforts: info.reasoning.efforts.map((e: any) => ({

@@ -10,6 +10,7 @@ import { checkComposerEnabled, COMPOSER_ENHANCEMENT_STYLE_ID, observeComposerEnh
 import { ComposerSettingsCard } from '../src/client/composer/ComposerSettingsCard.tsx'
 import { setPredictionEnabled, setPredictionMode, setSubPluginEnabled } from '../src/client/composer/prediction-state.ts'
 import { CODEX_UI_API_ENDPOINTS } from '../src/business-api.ts'
+import { clearModelCatalogCache } from '../src/composer-models.ts'
 
 describe('codex-ui-composer sub-plugin', () => {
   it('子插件元数据命名必须是 codex-ui-composer', () => {
@@ -434,6 +435,7 @@ describe('预测开关：站点级配置 (cordis.patch.yml → codex-ui-composer
   })
 
   it('向 webServer 注册 /api/michengai/dsh-codex-ui/composer/models 端点并返回可用模型目录', async () => {
+    clearModelCatalogCache()
     const ctx = new Context()
     const handlers = new Map<string, (req: unknown, res: { writeHead: Function; end: Function }) => void>()
     ctx.provide('webServer', {
@@ -467,6 +469,44 @@ describe('预测开关：站点级配置 (cordis.patch.yml → codex-ui-composer
     expect(json.providers).toHaveLength(1)
     expect(json.providers[0].id).toBe('mock-provider')
     expect(json.providers[0].models[0].id).toBe('mock-chat')
+  })
+
+  it('当某个模型的 resolveModelInfo 挂起时，超时兜底生效并不阻塞端点返回', async () => {
+    clearModelCatalogCache()
+    const ctx = new Context()
+    const handlers = new Map<string, (req: unknown, res: { writeHead: Function; end: Function }) => void>()
+    ctx.provide('webServer', {
+      register: (options: { kind: 'exact'; path: string; handler: any }) => {
+        handlers.set(options.path, options.handler)
+        return () => { handlers.delete(options.path) }
+      },
+    } as never)
+
+    ctx.provide('llm', {
+      listProviders: vi.fn(() => [{ id: 'hang-provider', name: 'Hang Provider' }]),
+      listModels: vi.fn(async () => [{ id: 'hang-model', name: 'Hang Model' }]),
+      // 永远不 resolve 的挂起调用
+      resolveModelInfo: vi.fn(() => new Promise(() => {})),
+    } as never)
+
+    apply(ctx)
+
+    const modelsHandler = handlers.get(CODEX_UI_API_ENDPOINTS.composerModels)
+    expect(modelsHandler).toBeDefined()
+
+    let statusCode = 0
+    let body = ''
+    await modelsHandler!({}, {
+      writeHead: (status: number) => { statusCode = status },
+      end: (content: string) => { body = content },
+    })
+
+    expect(statusCode).toBe(200)
+    const json = JSON.parse(body)
+    expect(json.ok).toBe(true)
+    expect(json.providers).toHaveLength(1)
+    expect(json.providers[0].models[0].id).toBe('hang-model')
+    expect(json.providers[0].models[0].reasoning).toBeNull()
   })
 
   it('当客户端请求显式指定 route 时，优先采用客户端指定的模型与推理强度', async () => {
