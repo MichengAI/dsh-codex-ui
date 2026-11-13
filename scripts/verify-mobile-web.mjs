@@ -181,6 +181,16 @@ try {
   assert.ok(narrow.settingsBack.bottom <= narrow.settingsTitle.bottom)
   assert.ok(narrow.permissionHelp.width >= 160, JSON.stringify(narrow.permissionHelp))
   assert.ok(narrow.permissionControl.y >= narrow.permissionHelp.bottom)
+  // Verify coarse pointer branch on landscape / tablet viewports where max-width: 767px is false
+  await page.setViewportSize({ width: 844, height: 390 })
+  await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--dcu-viewport-width') === '844px')
+  const landscape = await measure()
+  assert.equal(landscape.active, true, 'Coarse pointer viewport (844px wide) must activate mobile-web mode')
+  assert.equal(landscape.frame.width, 844)
+  assert.equal(landscape.frame.height, 390)
+  assert.equal(await page.evaluate(() => window.matchMedia('(max-width: 767px)').matches), false)
+  assert.equal(await page.evaluate(() => window.matchMedia('(max-width: 1023px) and (pointer: coarse)').matches), true)
+
   await page.setViewportSize({ width: 390, height: 844 })
   await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--dcu-viewport-width') === '390px')
   for (const name of ['settingsBack', 'workspaceMore', 'searchClose']) {
@@ -207,7 +217,7 @@ try {
     document.querySelector('#composer').append(commands)
     const tools = document.createElement('div')
     tools.setAttribute('data-context-menu', '')
-    tools.setAttribute('role', 'menu')
+    // Host omits role="menu" during transition phases; verify fitPopup still matches without role
     tools.innerHTML = '<button role="menuitem">Workspace tool</button>'
     document.body.append(tools)
   })

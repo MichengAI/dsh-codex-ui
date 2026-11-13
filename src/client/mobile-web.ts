@@ -3,7 +3,10 @@ const NATIVE_CHROME = '[data-windows-titlebar], [data-platform="darwin"]'
 const MOBILE_ATTR = 'data-dcu-mobile-web'
 const SHORT_VIEWPORT_ATTR = 'data-dcu-short-viewport'
 const MENU_ATTR = 'data-dcu-viewport-menu'
-const POPUPS = '[data-trigger-menu], [role="menu"]:is([data-anchor-side], [data-context-menu]), [data-gitgraph-popover]'
+// Popovers, context menus, and slash-command trigger dropdowns.
+// Matches anchor-side / context-menu popovers even during phase transitions where host omits role="menu".
+// data-gitgraph-popover reserves viewport fitting for GitGraph popovers.
+const POPUPS = '[data-trigger-menu], :is([data-anchor-side], [data-context-menu]), [data-gitgraph-popover]'
 const POPUP_MARGIN = 8
 
 const MOBILE_WEB_CSS = `
