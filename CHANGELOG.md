@@ -7,7 +7,6 @@
   - **44px Touch Targets**: Sidebar session actions, workspace buttons, search clear controls, and popup menu items adopt standard 44px touch targets for effortless fingertip tapping.
   - **Horizontal Tabs Settings Layout**: In narrow screens, the fullscreen settings modal transforms its left vertical navigation into a sleek top horizontal scrolling tab bar with full-width options, eliminating horizontal overflow and cramped columns.
 - **Unified Settings Header & Action Alignment**: Standardized the About section title to 24px and aligned GitHub and feedback button layouts across all devices, removing redundant version labels.
-- **Refined Light Theme Contrast**: Calibrated sidebar background fills and input field tones across Codex Light, Claude Light, and Catppuccin Latte palettes for cleaner separation and comfortable contrast.
 
 ## [2.1.1] - 2026-11-12
 
