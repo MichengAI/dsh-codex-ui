@@ -14,6 +14,24 @@ type ComposerPluginConfig = {
    * @default true
    */
   prediction?: boolean;
+  /** 固定预测调用的 LLM provider（例如 deepseek） */
+  provider?: string;
+  /** 固定预测调用的 LLM model（例如 deepseek-chat） */
+  model?: string;
+  /** 预测调用的 reasoning effort（off | low | high | max） */
+  reasoningEffort?: string;
+  /** 预测生成的最大 token 数（16 ~ 4096，默认 220） */
+  maxOutputTokens?: number;
+  /** 单次预测超时时间毫秒数（1000 ~ 120000，默认 20000） */
+  timeoutMs?: number;
+  /** 纳入上下文的最大历史消息条数（2 ~ 40，默认 10） */
+  maxMessages?: number;
+  /** 纳入上下文的最大字符数（500 ~ 40000，默认 8000） */
+  maxChars?: number;
+  /** 返回的最大候选数（1 ~ 5，默认 3） */
+  maxSuggestions?: number;
+  /** 提取的工具活动摘要条数（0 ~ 20，默认 6） */
+  maxToolNotes?: number;
 };
 /** 严格读取配置：只有显式 `false` 才关闭，其余（含未声明、类型错误）一律视为开启。 */
 declare function resolvePredictionAllowed(config: ComposerPluginConfig | undefined): boolean;

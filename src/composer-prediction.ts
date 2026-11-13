@@ -334,6 +334,10 @@ async function predict(ctx: any, options: any, session: any, sessionId: string, 
           targetEffort = requested
         } else if (effortIds.includes('off')) {
           targetEffort = 'off'
+        } else if (effortIds.includes('low')) {
+          targetEffort = 'low'
+        } else {
+          targetEffort = effortIds[0]
         }
       }
     }

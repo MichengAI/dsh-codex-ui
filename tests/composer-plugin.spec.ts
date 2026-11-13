@@ -275,4 +275,161 @@ describe('预测开关：站点级配置 (cordis.patch.yml → codex-ui-composer
     expect(resolvePredictionAllowed({ prediction: 'false' } as never)).toBe(true)
     expect(resolvePredictionAllowed(null as never)).toBe(true)
   })
+
+  it('透传预测配置至底层引擎：provider/model/reasoningEffort/maxOutputTokens 均生效', async () => {
+    const ctx = new Context()
+    const handlers = new Map<string, (req: unknown, res: unknown) => void>()
+    ctx.provide('webServer', {
+      register: (options: { kind: 'exact'; path: string; handler: any }) => {
+        handlers.set(options.path, options.handler)
+        return () => { handlers.delete(options.path) }
+      },
+    } as never)
+
+    let capturedCallConfig: any = null
+    ctx.provide('llm', {
+      resolveModelInfo: vi.fn(async () => ({
+        id: 'fast-chat',
+        reasoning: { efforts: [{ id: 'low' }, { id: 'high' }] },
+      })),
+      prepareCall: vi.fn(async (config: any) => {
+        capturedCallConfig = config
+        return {
+          config,
+          stream: async function* () {
+            yield { type: 'text-delta', text: '建议继续' }
+            yield { type: 'finish', reason: { kind: 'stop' } }
+          },
+        }
+      }),
+    } as never)
+
+    const mockSession = {
+      seq: 1,
+      deriveMessages: () => [
+        { role: 'user', content: [{ type: 'text', text: 'hello' }] },
+        { role: 'assistant', content: [{ type: 'text', text: 'world' }] },
+      ],
+      requestHeader: () => ({
+        // 当前会话使用的是 default-ai / default-model
+        config: { provider: 'default-ai', model: 'default-model' },
+      }),
+    }
+    ctx.provide('sessions', {
+      get: vi.fn((id: string) => (id === 'sess_override' ? mockSession : undefined)),
+    } as never)
+    ctx.provide('connection', {
+      admit: vi.fn(() => ({ peer: { principal: { kind: 'owner' } } })),
+    } as never)
+
+    // 在 cordis.patch.yml 传入固定路由与高级配置
+    apply(ctx, {
+      prediction: true,
+      provider: 'custom-ai',
+      model: 'fast-chat',
+      reasoningEffort: 'low',
+      maxOutputTokens: 64,
+    } as any)
+
+    const streamHandler = handlers.get(CODEX_UI_API_ENDPOINTS.composerPredictionStream)
+    expect(streamHandler).toBeDefined()
+
+    const response = {
+      writeHead: vi.fn(),
+      write: vi.fn(),
+      end: vi.fn(),
+      on: vi.fn(),
+    }
+
+    await streamHandler!(
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        [Symbol.asyncIterator]: async function* () {
+          yield Buffer.from(JSON.stringify({ sessionId: 'sess_override', mode: 'continue', draft: '测试' }))
+        },
+      },
+      response,
+    )
+
+    expect(capturedCallConfig).not.toBeNull()
+    // 关键验证：必须覆盖当前会话模型，走配置好的固定路由
+    expect(capturedCallConfig.provider).toBe('custom-ai')
+    expect(capturedCallConfig.model).toBe('fast-chat')
+    expect(capturedCallConfig.maxTokens).toBe(64)
+    expect(capturedCallConfig.reasoningEffort).toBe('low')
+  })
+
+  it('当模型不支持 off 档且未指定 reasoningEffort 时，自动降级至最低档位而非 undefined', async () => {
+    const ctx = new Context()
+    const handlers = new Map<string, (req: unknown, res: unknown) => void>()
+    ctx.provide('webServer', {
+      register: (options: { kind: 'exact'; path: string; handler: any }) => {
+        handlers.set(options.path, options.handler)
+        return () => { handlers.delete(options.path) }
+      },
+    } as never)
+
+    let capturedCallConfig: any = null
+    ctx.provide('llm', {
+      resolveModelInfo: vi.fn(async () => ({
+        id: 'no-off-model',
+        // 只有 low/high/max，没有 off
+        reasoning: { efforts: [{ id: 'low' }, { id: 'high' }, { id: 'max' }] },
+      })),
+      prepareCall: vi.fn(async (config: any) => {
+        capturedCallConfig = config
+        return {
+          config,
+          stream: async function* () {
+            yield { type: 'text-delta', text: '建议继续' }
+            yield { type: 'finish', reason: { kind: 'stop' } }
+          },
+        }
+      }),
+    } as never)
+
+    const mockSession = {
+      seq: 1,
+      deriveMessages: () => [
+        { role: 'user', content: [{ type: 'text', text: 'hello' }] },
+        { role: 'assistant', content: [{ type: 'text', text: 'world' }] },
+      ],
+      requestHeader: () => ({
+        config: { provider: 'test-ai', model: 'no-off-model' },
+      }),
+    }
+    ctx.provide('sessions', {
+      get: vi.fn((id: string) => (id === 'sess_no_off' ? mockSession : undefined)),
+    } as never)
+    ctx.provide('connection', {
+      admit: vi.fn(() => ({ peer: { principal: { kind: 'owner' } } })),
+    } as never)
+
+    // 不传 reasoningEffort，使用默认
+    apply(ctx)
+
+    const streamHandler = handlers.get(CODEX_UI_API_ENDPOINTS.composerPredictionStream)
+    const response = {
+      writeHead: vi.fn(),
+      write: vi.fn(),
+      end: vi.fn(),
+      on: vi.fn(),
+    }
+
+    await streamHandler!(
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        [Symbol.asyncIterator]: async function* () {
+          yield Buffer.from(JSON.stringify({ sessionId: 'sess_no_off', mode: 'continue', draft: '测试' }))
+        },
+      },
+      response,
+    )
+
+    expect(capturedCallConfig).not.toBeNull()
+    // 当模型没有 off 时，必须降级到最低支持档位 'low'，不能留空导致跑高推理
+    expect(capturedCallConfig.reasoningEffort).toBe('low')
+  })
 })
