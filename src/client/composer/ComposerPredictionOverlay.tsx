@@ -4,6 +4,7 @@
  */
 import React from 'react'
 import { CODEX_UI_API_ENDPOINTS } from '../../business-api.ts'
+import { getPredictionRoute } from './prediction-route-state.ts'
 
 const h = React.createElement
 
@@ -333,10 +334,15 @@ const PREDICTION_PLACEHOLDER_HIDE_CSS =
           }
 
           try {
+            const selectedRoute = getPredictionRoute()
+            const payload: Record<string, any> = { sessionId, mode, draft: draftText }
+            if (selectedRoute && selectedRoute.provider && selectedRoute.model) {
+              payload.route = selectedRoute
+            }
             const response = await fetch(ENDPOINT, {
               method: 'POST',
               headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
-              body: JSON.stringify({ sessionId, mode, draft: draftText }),
+              body: JSON.stringify(payload),
               signal: controller.signal,
             })
             if (!response.ok || controller.signal.aborted) {

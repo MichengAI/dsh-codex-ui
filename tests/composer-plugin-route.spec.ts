@@ -27,8 +27,9 @@ describe('composer-plugin: 路由与鉴权契约', () => {
 
     apply(mockCtx)
 
-    expect(routes).toHaveLength(3)
+    expect(routes).toHaveLength(4)
     expect(routes.map(r => r.path)).toContain(CODEX_UI_API_ENDPOINTS.composer)
+    expect(routes.map(r => r.path)).toContain(CODEX_UI_API_ENDPOINTS.composerModels)
     expect(routes.map(r => r.path)).toContain(CODEX_UI_API_ENDPOINTS.composerPrediction)
     expect(routes.map(r => r.path)).toContain(CODEX_UI_API_ENDPOINTS.composerPredictionStream)
   })

@@ -432,4 +432,116 @@ describe('预测开关：站点级配置 (cordis.patch.yml → codex-ui-composer
     // 当模型没有 off 时，必须降级到最低支持档位 'low'，不能留空导致跑高推理
     expect(capturedCallConfig.reasoningEffort).toBe('low')
   })
+
+  it('向 webServer 注册 /api/michengai/dsh-codex-ui/composer/models 端点并返回可用模型目录', async () => {
+    const ctx = new Context()
+    const handlers = new Map<string, (req: unknown, res: { writeHead: Function; end: Function }) => void>()
+    ctx.provide('webServer', {
+      register: (options: { kind: 'exact'; path: string; handler: any }) => {
+        handlers.set(options.path, options.handler)
+        return () => { handlers.delete(options.path) }
+      },
+    } as never)
+
+    ctx.provide('llm', {
+      listProviders: vi.fn(() => [{ id: 'mock-provider', name: 'Mock Provider' }]),
+      listModels: vi.fn(async () => [{ id: 'mock-chat', name: 'Mock Chat' }]),
+      resolveModelInfo: vi.fn(async () => ({ reasoning: { efforts: [{ id: 'low', name: 'Low' }] } })),
+    } as never)
+
+    apply(ctx)
+
+    const modelsHandler = handlers.get(CODEX_UI_API_ENDPOINTS.composerModels)
+    expect(modelsHandler).toBeDefined()
+
+    let statusCode = 0
+    let body = ''
+    await modelsHandler!({}, {
+      writeHead: (status: number) => { statusCode = status },
+      end: (content: string) => { body = content },
+    })
+
+    expect(statusCode).toBe(200)
+    const json = JSON.parse(body)
+    expect(json.ok).toBe(true)
+    expect(json.providers).toHaveLength(1)
+    expect(json.providers[0].id).toBe('mock-provider')
+    expect(json.providers[0].models[0].id).toBe('mock-chat')
+  })
+
+  it('当客户端请求显式指定 route 时，优先采用客户端指定的模型与推理强度', async () => {
+    const ctx = new Context()
+    const handlers = new Map<string, (req: unknown, res: unknown) => void>()
+    ctx.provide('webServer', {
+      register: (options: { kind: 'exact'; path: string; handler: any }) => {
+        handlers.set(options.path, options.handler)
+        return () => { handlers.delete(options.path) }
+      },
+    } as never)
+
+    let capturedCallConfig: any = null
+    ctx.provide('llm', {
+      resolveModelInfo: vi.fn(async () => ({
+        id: 'client-model',
+        reasoning: { efforts: [{ id: 'low' }, { id: 'high' }] },
+      })),
+      prepareCall: vi.fn(async (config: any) => {
+        capturedCallConfig = config
+        return {
+          config,
+          stream: async function* () {
+            yield { type: 'text-delta', text: '建议继续' }
+            yield { type: 'finish', reason: { kind: 'stop' } }
+          },
+        }
+      }),
+    } as never)
+
+    const mockSession = {
+      seq: 1,
+      deriveMessages: () => [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }],
+      requestHeader: () => ({ config: { provider: 'session-provider', model: 'session-model' } }),
+    }
+    ctx.provide('sessions', {
+      get: vi.fn(() => mockSession),
+    } as never)
+    ctx.provide('connection', {
+      admit: vi.fn(() => ({ peer: { principal: { kind: 'owner' } } })),
+    } as never)
+
+    // 服务端配置了 host-provider/host-model，但客户端在前端选了 client-ai/client-model
+    apply(ctx, {
+      prediction: true,
+      provider: 'host-provider',
+      model: 'host-model',
+    } as any)
+
+    const streamHandler = handlers.get(CODEX_UI_API_ENDPOINTS.composerPredictionStream)
+    const response = { writeHead: vi.fn(), write: vi.fn(), end: vi.fn(), on: vi.fn() }
+
+    await streamHandler!(
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        [Symbol.asyncIterator]: async function* () {
+          yield Buffer.from(JSON.stringify({
+            sessionId: 'sess_1',
+            mode: 'continue',
+            draft: '测试',
+            route: {
+              provider: 'client-ai',
+              model: 'client-model',
+              reasoningEffort: 'high',
+            },
+          }))
+        },
+      },
+      response,
+    )
+
+    expect(capturedCallConfig).not.toBeNull()
+    expect(capturedCallConfig.provider).toBe('client-ai')
+    expect(capturedCallConfig.model).toBe('client-model')
+    expect(capturedCallConfig.reasoningEffort).toBe('high')
+  })
 })

@@ -33,6 +33,7 @@ const FALLBACK_DOWNLOAD = createFallbackIcon('M8 2v9m0 0l-3-3m3 3l3-3M3 13h10')
 const FALLBACK_LIST_PEN = createFallbackIcon('M3 4h10M3 8h6M3 12h4m6-3l2 2-5 5H9v-2l5-5z')
 const FALLBACK_LOADING = createFallbackIcon('M8 2a6 6 0 1 0 6 6')
 const FALLBACK_REFRESH = createFallbackIcon('M2.5 8a5.5 5.5 0 1 0 1.2-3.4M2.5 3v3h3')
+const FALLBACK_CHEVRON_DOWN = createFallbackIcon('M4 6l4 4 4-4')
 
 /**
  * 跨宿主版本图标安全解析器：按候选名依次匹配（新版 → 老版 → Medium/Regular 变体），
@@ -65,3 +66,4 @@ export const IconDownloadOutlineMedium = hostIcon('IconDownloadOutlineMedium', '
 export const IconListPenOutlineMedium = hostIcon('IconListPenOutlineMedium', 'IconListPenOutline16', FALLBACK_LIST_PEN)
 export const IconLoadingOutlineMedium = hostIcon('IconLoadingOutlineMedium', 'IconLoadingOutline16', FALLBACK_LOADING)
 export const IconRefreshOutlineMedium = hostIcon('IconRefreshOutlineMedium', 'IconRefreshOutline16', FALLBACK_REFRESH)
+export const IconChevronDownOutlineMedium = hostIcon('IconChevronDownOutlineMedium', 'IconChevronDownOutline', FALLBACK_CHEVRON_DOWN)

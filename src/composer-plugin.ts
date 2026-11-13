@@ -2,6 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
 import { isSubPluginDisabledOnDisk as checkDisabledOnDisk } from './profile-resolver.ts'
 import { apply as applyPredictions } from './composer-prediction.ts'
+import { collectModelCatalog } from './composer-models.ts'
 
 export const name = 'codex-ui-composer'
 export const inject = ['webServer']
@@ -82,8 +83,30 @@ export function apply(ctx: Context, config?: ComposerPluginConfig): void {
       },
     })
 
+    const disposeModels = webServer.register({
+      kind: 'exact',
+      path: CODEX_UI_API_ENDPOINTS.composerModels,
+      handler: async (_request: any, response: any) => {
+        try {
+          const providers = await collectModelCatalog(ctx)
+          response.writeHead(200, {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+          })
+          response.end(JSON.stringify({ ok: true, providers }))
+        } catch (error) {
+          response.writeHead(500, {
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+          })
+          response.end(JSON.stringify({ ok: false, error: String(error) }))
+        }
+      },
+    })
+
     return () => {
       disposeStatus?.()
+      disposeModels?.()
     }
   }, 'michengai-codex-ui: composer state')
 }

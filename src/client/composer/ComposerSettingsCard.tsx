@@ -13,6 +13,7 @@ import {
   setHistoryScope,
   subscribeHistoryScope,
 } from './history-scope.ts'
+import { PredictionModelPicker } from './PredictionModelPicker.tsx'
 
 export interface ComposerSettingsCardProps {
   t: (key: any) => string
@@ -67,6 +68,13 @@ export function ComposerSettingsCard({ t }: ComposerSettingsCardProps): React.JS
             setPredictionMode(nextMode)
           }}
         />
+      </div>
+      <div className="dcu-settings-row">
+        <div className="dcu-settings-row-label">
+          <span className="dcu-settings-row-title">{t('composer.predictionModel')}</span>
+          <span className="dcu-settings-row-hint">{t('composer.predictionModelHint')}</span>
+        </div>
+        <PredictionModelPicker t={t} disabled={lockedByHost || state.mode === 'off'} />
       </div>
       <div className="dcu-settings-row">
         <div className="dcu-settings-row-label">

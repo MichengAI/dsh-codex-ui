@@ -262,9 +262,32 @@ async function planRequest(ctx: any, request: any, response: any) {
   if (mode === 'continue' && draft.trim() === '') return { status: 200, error: 'no-draft' }
 
   const seq = Number(session.seq)
-  const key = JSON.stringify([sessionId, seq, mode, draft])
+  let clientRoute: { provider: string; model: string; reasoningEffort?: string } | undefined
+  if (body?.route && typeof body.route === 'object') {
+    const p = typeof body.route.provider === 'string' ? body.route.provider.trim() : ''
+    const m = typeof body.route.model === 'string' ? body.route.model.trim() : ''
+    if (p !== '' && m !== '') {
+      clientRoute = {
+        provider: p,
+        model: m,
+        ...(typeof body.route.reasoningEffort === 'string' && body.route.reasoningEffort.trim() !== ''
+          ? { reasoningEffort: body.route.reasoningEffort.trim() }
+          : {}),
+      }
+    }
+  }
 
-  return { sessionId, session, mode, draft, seq, key }
+  const key = JSON.stringify([
+    sessionId,
+    seq,
+    mode,
+    draft,
+    clientRoute?.provider,
+    clientRoute?.model,
+    clientRoute?.reasoningEffort,
+  ])
+
+  return { sessionId, session, mode, draft, seq, key, clientRoute }
 }
 
 /**
@@ -281,7 +304,7 @@ async function runPrediction(ctx: any, options: any, cache: any, inflight: any, 
   const controller = new AbortController()
   inflight.add(controller)
   try {
-    const result = await predict(ctx, options, plan.session, plan.sessionId, plan.mode, plan.draft, joinSignals([controller.signal, ...signals]), onDelta)
+    const result = await predict(ctx, options, plan.session, plan.sessionId, plan.mode, plan.draft, joinSignals([controller.signal, ...signals]), onDelta, plan.clientRoute)
     if (result.items.length > 0 && !controller.signal.aborted && !signals.some(signal => signal.aborted)) {
       remember(cache, plan.key, { items: result.items })
     }
@@ -295,11 +318,11 @@ async function runPrediction(ctx: any, options: any, cache: any, inflight: any, 
  * Run one auxiliary model call over the transcript tail and tool activity.
  * @returns `{ items }` on success or `{ items: [], reason }` when none is usable.
  */
-async function predict(ctx: any, options: any, session: any, sessionId: string, mode: string, draft: string, signal: AbortSignal, onDelta?: (text: string) => void) {
+async function predict(ctx: any, options: any, session: any, sessionId: string, mode: string, draft: string, signal: AbortSignal, onDelta?: (text: string) => void, clientRoute?: any) {
   const prompt = buildPrompt(session, options, mode, draft)
   if (prompt === null) return { items: [], reason: 'no-conversation' }
 
-  const route = resolveRoute(ctx, session, options)
+  const route = resolveRoute(ctx, session, options, clientRoute)
   if (route === undefined) return { items: [], reason: 'no-route' }
 
   const system = (mode === 'continue' ? CONTINUE_SYSTEM_PROMPT : NEXT_SYSTEM_PROMPT).replace(
@@ -329,7 +352,7 @@ async function predict(ctx: any, options: any, session: any, sessionId: string, 
         }
       }
       if (effortIds && effortIds.length > 0) {
-        const requested = options.reasoningEffort || 'off'
+        const requested = clientRoute?.reasoningEffort || options.reasoningEffort || 'off'
         if (effortIds.includes(requested)) {
           targetEffort = requested
         } else if (effortIds.includes('off')) {
@@ -419,8 +442,15 @@ function remember(cache: Map<string, any>, key: string, entry: any) {
   if (!oldest.done) cache.delete(oldest.value)
 }
 
-/** Prefer the route the Session already used, unless a fixed route is configured. */
-function resolveRoute(ctx: any, session: any, options: any) {
+/** Prefer explicit client route first, then fixed host options route, then session route, then default model. */
+function resolveRoute(ctx: any, session: any, options: any, clientRoute?: any) {
+  if (clientRoute && clientRoute.provider && clientRoute.model) {
+    return {
+      provider: clientRoute.provider,
+      model: clientRoute.model,
+      ...(clientRoute.reasoningEffort ? { reasoningEffort: clientRoute.reasoningEffort } : {}),
+    }
+  }
   if (options.provider !== '' && options.model !== '') {
     return { provider: options.provider, model: options.model }
   }
