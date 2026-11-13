@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.2.1] - 2026-11-13
+
+- **Sidebar New Session & Navigation Visibility Fix (Issue #96)**: Fixed an issue where the "New Session" button and custom sidebar navigation items (Tasks, Channels, Scheduled, etc.) disappeared and left a blank area on DeepSeek Harness `0.2.2-rc.3`; added fallback safeguards to ensure native sidebar controls remain visible and functional in all conditions.
+- **Host Compatibility & Support Matrix Alignment**: Verified full compatibility with DeepSeek Harness `0.2.2-rc.3` (covering all `0.2.x` RC hosts from `0.2.0-rc.1` through `0.2.2-rc.3`), aligned development dependencies with `0.2.2-rc.3`, and updated verified host lists across all documentation.
+
 ## [2.2.0] - 2026-11-13
 
 - **Mobile Web & Touch Experience Upgrade (PR #93)**:

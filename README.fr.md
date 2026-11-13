@@ -142,7 +142,7 @@ Actions rapides sur chaque session : Épingler, Renommer, Marquer non lu/lu, Arc
 ## Compatibilité avec l'Hôte
 
 * **Générations Prises en Charge** : Famille DeepSeek Harness `0.2.x` (`>=0.2.0-rc.1 <0.3.0-0`) ;
-* **Versions Validées** : Toutes les versions RC de `0.2.x` (`0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-rc.1`–`0.2.1-rc.5`, `0.2.2-rc.1`, `0.2.2-rc.2`) ;
+* **Versions Validées** : Toutes les versions RC de `0.2.x` (`0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-rc.1`–`0.2.1-rc.5`, `0.2.2-rc.1`–`0.2.2-rc.3`) ;
 * **Prérequis d'Exécution** : Node.js `^22.19.0 || >=24.0.0`, pnpm `^11.0.0`.
 
 > ⚠️ **Attention** : N'activez pas simultanément Codex UI et `ds-bot`. Les deux extensions modifient les emplacements de la barre latérale avec des risques d'interférence.
