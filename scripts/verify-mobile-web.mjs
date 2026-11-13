@@ -191,6 +191,15 @@ try {
   assert.equal(await page.evaluate(() => window.matchMedia('(max-width: 767px)').matches), false)
   assert.equal(await page.evaluate(() => window.matchMedia('(max-width: 1023px) and (pointer: coarse)').matches), true)
 
+  // Verify 768px tablet boundary where rail navigation applies 44px touch targets
+  await page.setViewportSize({ width: 768, height: 1024 })
+  await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--dcu-viewport-width') === '768px')
+  const tablet = await measure()
+  assert.equal(tablet.active, true, '768px coarse pointer must activate mobile-web mode')
+  assert.equal(tablet.frame.width, 768)
+  assert.ok(tablet.settingsTab.height >= 44, '768px boundary settingsTab height must be at least 44px')
+  assert.ok(tablet.settingsTab.width >= 44, '768px boundary settingsTab width must be at least 44px')
+
   await page.setViewportSize({ width: 390, height: 844 })
   await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--dcu-viewport-width') === '390px')
   for (const name of ['settingsBack', 'workspaceMore', 'searchClose']) {

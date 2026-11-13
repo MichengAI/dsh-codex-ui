@@ -10,7 +10,7 @@ const POPUPS = '[data-trigger-menu], :is([data-anchor-side], [data-context-menu]
 const POPUP_MARGIN = 8
 
 const MOBILE_WEB_CSS = `
-html[data-dcu-mobile-web] :has(> [data-shell-bottom]):has(> [data-shell-overlay]) {
+html[data-dcu-mobile-web] :is([class*="_frame"], :has(> [data-shell-bottom])):has(> [data-shell-overlay]) {
   height: var(--dcu-frame-height, 100dvh);
   top: var(--dcu-frame-top, 0px);
   box-sizing: border-box;
@@ -24,7 +24,7 @@ html[data-dcu-mobile-web] [data-sidebar-drawer] [data-sidebar-mask] + div {
   box-sizing: border-box;
   padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
-html[data-dcu-mobile-web] :is([data-sidebar-opener], [data-sidebar-toggle]) {
+html[data-dcu-mobile-web] :is([data-sidebar-opener], [data-sidebar-toggle], [class*="_sidebarCol"] button[class*="_toggle"], [class*="_leadingSeat"] button) {
   min-width: 44px;
   min-height: 44px;
 }

@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.2.0] - 2026-11-13
+
+- **Mobile Web & Touch Experience Upgrade (PR #93)**:
+  - **Visual Viewport & Keyboard Panning**: On mobile browsers, the composer and trigger menus dynamically pan above the software keyboard, keeping active drafts comfortably visible; input font sizes scale to 16px to prevent iOS Safari from unwanted auto-zooming.
+  - **44px Touch Targets**: Sidebar session actions, workspace buttons, search clear controls, and popup menu items adopt standard 44px touch targets for effortless fingertip tapping.
+  - **Horizontal Tabs Settings Layout**: In narrow screens, the fullscreen settings modal transforms its left vertical navigation into a sleek top horizontal scrolling tab bar with full-width options, eliminating horizontal overflow and cramped columns.
+- **Unified Settings Header & Action Alignment**: Standardized the About section title to 24px and aligned GitHub and feedback button layouts across all devices, removing redundant version labels.
+- **Refined Light Theme Contrast**: Calibrated sidebar background fills and input field tones across Codex Light, Claude Light, and Catppuccin Latte palettes for cleaner separation and comfortable contrast.
+
 ## [2.1.1] - 2026-11-12
 
 - **Compatibility & Dependencies**: Verified full compatibility with DeepSeek Harness `0.2.2-rc.2` (covering all `0.2.x` RC hosts from `0.2.0-rc.1` through `0.2.2-rc.2`), aligned development dependencies with `0.2.2-rc.2` and Cordis `4.1.0`, and updated verified host lists across all README manuals.
