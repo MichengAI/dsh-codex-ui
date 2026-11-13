@@ -85,7 +85,7 @@ assert.match(about, /IconListPenOutlineMedium/, '意见反馈入口必须使用�
 assert.match(about, /target="_blank" rel="noreferrer"/, 'GitHub 外链必须安全地在新窗口打开')
 assert.match(about, /about\.viewProject/, 'GitHub 项目入口必须使用可翻译文案')
 assert.match(about, /about\.feedback/, '意见反馈入口必须使用可翻译文案')
-assert.match(about, /selfVersion/, 'Codex UI 大标题必须显示当前运行版本')
+assert.ok(!about.includes('selfVersion'), 'Codex UI 大标题不应残留版本号，对齐自研插件规范')
 assert.match(locales, /'about\.viewProject': 'GitHub'/, '关于页必须提供中文 GitHub 项目文案')
 assert.match(locales, /'about\.feedback': '问题反馈'/, '关于页必须提供中文问题反馈文案')
 assert.equal(locales.match(/'about\.viewProject': 'GitHub'/g)?.length, 2, '关于页中英文 GitHub 项目文案必须保持一致')

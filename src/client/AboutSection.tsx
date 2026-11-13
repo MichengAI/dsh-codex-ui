@@ -76,7 +76,6 @@ const stylesheet = `
 .dcu-about-title{margin:0;font-size:24px;line-height:32px;font-weight:600;letter-spacing:-.4px;color:var(--dsw-alias-label-primary);display:inline-flex;align-items:baseline;white-space:nowrap}
 .dcu-about-desc{margin:0;font-size:13px;line-height:18px;color:var(--dsw-alias-label-tertiary)}
 .dcu-about-feedback-links,.dcu-about-links{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;flex:0 0 auto}
-.dcu-about-version{margin-left:8px;color:var(--dsw-alias-label-tertiary);font-family:inherit;font-size:12px;font-weight:500;line-height:18px;letter-spacing:0;white-space:nowrap;vertical-align:baseline}
 .dcu-section-subtitle-wrap{margin-top:-4px;margin-bottom:4px}
 .dcu-section-subtitle{font-size:13px;font-weight:600;color:var(--dsw-alias-label-secondary)}
 .dcu-subplugins-list{display:flex;flex-direction:column;gap:6px}
@@ -344,7 +343,6 @@ export function AboutSection(props: { t: TranslateNS<typeof NS>; close?: () => v
     }
   }
   const actionableCount = dependencies.filter(dependency => !dependency.installed || dependency.updateAvailable).length
-  const selfVersion = dependencies.find(dependency => dependency.id === 'ui')?.version
   const title = (id: ManagedDependencyId): string => t(`about.dependency.${id}`)
   return <section ref={root} className="dcu-about" aria-label={t('about.nav')}>
     <style>{stylesheet}</style>
@@ -352,10 +350,7 @@ export function AboutSection(props: { t: TranslateNS<typeof NS>; close?: () => v
     <div className="dcu-section-card dcu-card-features">
       <div className="dcu-about-head">
         <div className="dcu-about-title-row">
-          <h2 className="dcu-about-title">
-            {t('about.title')}
-            {selfVersion === undefined ? null : <span className="dcu-about-version">v{selfVersion}</span>}
-          </h2>
+          <h2 className="dcu-about-title">{t('about.title')}</h2>
           <div className="dcu-about-feedback-links dcu-about-links">
             <PrimitiveButton
               variant="outline"
