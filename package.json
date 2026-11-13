@@ -129,7 +129,7 @@
     "typecheck": "tsc --noEmit",
     "test": "pnpm run typecheck && vitest run && tsdown && node tests/run-assertions.mjs && pnpm run test:layout && pnpm run test:glass && pnpm run test:settings",
     "test:host": "node scripts/verify-native-settings.mjs",
-    "test:layout": "node scripts/verify-new-conversation.mjs && node scripts/verify-hero-width.mjs",
+    "test:layout": "node scripts/verify-new-conversation.mjs && node scripts/verify-hero-width.mjs && node scripts/verify-mobile-web.mjs",
     "test:compat": "node scripts/run-compat-host.mjs",
     "test:fallback-host": "node scripts/verify-plugin-fallback-host.mjs",
     "test:glass": "node scripts/verify-glass-material.mjs",
