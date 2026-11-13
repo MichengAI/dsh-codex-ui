@@ -86,7 +86,6 @@ export const de: Record<CodexUiKey, string> = {
   'composer.modelFollowSession': 'Aktueller Unterhaltung folgen (Standard)',
   'composer.effortAuto': 'Automatisch niedrigste Stufe (Empfohlen)',
   'composer.modelLoading': 'Modelle werden geladen...',
-  'composer.noModels': 'Keine weiteren Modelle verfügbar',
   'composer.historyScope': 'Verlaufsbereich',
   'composer.historyScopeHint': 'Erinnerte Eingaben nur aus dieser Unterhaltung oder gemeinsam mit allen Unterhaltungen im Arbeitsbereich.',
   'composer.historyScopeSession': 'Diese Unterhaltung',

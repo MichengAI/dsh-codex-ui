@@ -86,7 +86,6 @@ export const fr: Record<CodexUiKey, string> = {
   'composer.modelFollowSession': 'Suivre la session actuelle (par défaut)',
   'composer.effortAuto': 'Effort minimal automatique (recommandé)',
   'composer.modelLoading': 'Chargement des modèles...',
-  'composer.noModels': 'Aucun autre modèle disponible',
   'composer.historyScope': 'Portée de l\'historique',
   'composer.historyScopeHint': 'Rappelez les messages de cette conversation uniquement, ou partagez-les avec toutes les conversations de l\'espace de travail.',
   'composer.historyScopeSession': 'Cette conversation',
