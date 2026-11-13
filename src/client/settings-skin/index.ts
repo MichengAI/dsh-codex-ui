@@ -1757,7 +1757,7 @@ html[data-dcu-mobile-web] [data-shortcut-modal="settings"][role="dialog"] {
       min-width: 0;
       padding: 14px;
     }
-    & :is(.dcu-section-title, .dcu-subplugin-header, .dcu-about-dependency, .dcu-about-actions, .dcu-about-name-row) {
+    & :is(.dcu-about-title-row, .dcu-section-title, .dcu-subplugin-header, .dcu-about-dependency, .dcu-about-actions, .dcu-about-name-row) {
       flex-wrap: wrap;
     }
     & .dcu-subplugin-header {

@@ -71,7 +71,11 @@ const endpoint = CODEX_UI_API_ENDPOINTS.dependencies
 
 const stylesheet = `
 .dcu-about{color:var(--dsw-alias-label-primary);font-family:var(--dsw-font-family);display:flex;flex-direction:column}
-.dcu-about-feedback-links,.dcu-about-links{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dcu-about-head{display:flex;flex-direction:column;gap:6px;margin-bottom:2px}
+.dcu-about-title-row{display:flex;align-items:center;gap:8px 12px;min-width:0;flex-wrap:wrap}
+.dcu-about-title{margin:0;font-size:24px;line-height:32px;font-weight:600;letter-spacing:-.4px;color:var(--dsw-alias-label-primary);display:inline-flex;align-items:baseline;white-space:nowrap}
+.dcu-about-desc{margin:0;font-size:13px;line-height:18px;color:var(--dsw-alias-label-tertiary)}
+.dcu-about-feedback-links,.dcu-about-links{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;flex:0 0 auto}
 .dcu-about-version{margin-left:8px;color:var(--dsw-alias-label-tertiary);font-family:inherit;font-size:12px;font-weight:500;line-height:18px;letter-spacing:0;white-space:nowrap;vertical-align:baseline}
 .dcu-section-subtitle-wrap{margin-top:-4px;margin-bottom:4px}
 .dcu-section-subtitle{font-size:13px;font-weight:600;color:var(--dsw-alias-label-secondary)}
@@ -346,34 +350,34 @@ export function AboutSection(props: { t: TranslateNS<typeof NS>; close?: () => v
     <style>{stylesheet}</style>
     {/* 区域一：内置功能与子插件介绍卡片 */}
     <div className="dcu-section-card dcu-card-features">
-      <div className="dcu-section-header">
-        <div className="dcu-section-title-wrap">
-          <h3 className="dcu-section-title">
+      <div className="dcu-about-head">
+        <div className="dcu-about-title-row">
+          <h2 className="dcu-about-title">
             {t('about.title')}
             {selfVersion === undefined ? null : <span className="dcu-about-version">v{selfVersion}</span>}
-          </h3>
-          <p className="dcu-section-desc">{t('about.description')}</p>
+          </h2>
+          <div className="dcu-about-feedback-links dcu-about-links">
+            <PrimitiveButton
+              variant="outline"
+              size="sm"
+              icon={<GithubMark16 />}
+              aria-label={t('about.viewProject')}
+              onClick={() => { openExternal('https://github.com/MichengAI/dsh-codex-ui') }}
+            >
+              {t('about.viewProject')}
+            </PrimitiveButton>
+            <PrimitiveButton
+              variant="outline"
+              size="sm"
+              icon={<IconListPenOutlineMedium size={14} />}
+              aria-label={t('about.feedback')}
+              onClick={() => { openExternal('https://github.com/MichengAI/dsh-codex-ui/issues') }}
+            >
+              {t('about.feedback')}
+            </PrimitiveButton>
+          </div>
         </div>
-        <div className="dcu-about-feedback-links dcu-about-links">
-          <PrimitiveButton
-            variant="outline"
-            size="sm"
-            icon={<GithubMark16 />}
-            aria-label={t('about.viewProject')}
-            onClick={() => { openExternal('https://github.com/MichengAI/dsh-codex-ui') }}
-          >
-            {t('about.viewProject')}
-          </PrimitiveButton>
-          <PrimitiveButton
-            variant="outline"
-            size="sm"
-            icon={<IconListPenOutlineMedium size={14} />}
-            aria-label={t('about.feedback')}
-            onClick={() => { openExternal('https://github.com/MichengAI/dsh-codex-ui/issues') }}
-          >
-            {t('about.feedback')}
-          </PrimitiveButton>
-        </div>
+        <p className="dcu-about-desc">{t('about.description')}</p>
       </div>
       <div className="dcu-section-subtitle-wrap">
         <span className="dcu-section-subtitle">
