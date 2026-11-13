@@ -5,7 +5,7 @@ import { CODEX_UI_API_ENDPOINTS } from '../src/business-api.ts'
 describe('composer-plugin: 路由与鉴权契约', () => {
   it('正确声明插件名称与依赖注入项', () => {
     expect(name).toBe('codex-ui-composer')
-    expect(inject).toEqual(['webServer'])
+    expect(inject).toEqual(['webServer', 'llm'])
   })
 
   it('正确向 webServer 注册状态端点与预测端点', () => {

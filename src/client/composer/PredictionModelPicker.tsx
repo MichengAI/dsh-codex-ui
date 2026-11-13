@@ -53,18 +53,13 @@ export function PredictionModelPicker({ t, disabled = false }: PredictionModelPi
   const [providers, setProviders] = useState<ProviderEntry[]>(() => cachedProviders ?? [])
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (!open) return
-    if (cachedProviders !== null) {
-      setProviders(cachedProviders)
-      return
-    }
-    let cancelled = false
+  const loadCatalog = () => {
+    if (cachedProviders !== null || loading) return
     setLoading(true)
     fetch(CODEX_UI_API_ENDPOINTS.composerModels)
       .then(res => (res.ok ? res.json() : null))
       .then(data => {
-        if (cancelled || !data?.ok || !Array.isArray(data.providers)) return
+        if (!data?.ok || !Array.isArray(data.providers)) return
         cachedProviders = data.providers
         setProviders(data.providers)
       })
@@ -72,12 +67,25 @@ export function PredictionModelPicker({ t, disabled = false }: PredictionModelPi
         // 容错降级
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        setLoading(false)
       })
-    return () => {
-      cancelled = true
+  }
+
+  useEffect(() => {
+    if (open) {
+      loadCatalog()
     }
   }, [open])
+
+  useEffect(() => {
+    // 非测试环境下，组件挂载后延迟静默预取一次，避免用户点击时等待网络延迟
+    if (typeof window !== 'undefined' && !(window as any).__DCU_TEST__ && cachedProviders === null) {
+      const timer = setTimeout(() => {
+        loadCatalog()
+      }, 50)
+      return () => clearTimeout(timer)
+    }
+  }, [])
 
   const handleSelect = (id: string) => {
     setOpen(false)
@@ -187,6 +195,15 @@ export function PredictionModelPicker({ t, disabled = false }: PredictionModelPi
         }
       }
     }
+  } else {
+    items.push({ type: 'separator', id: 'sep_follow' })
+    items.push({
+      id: '__empty_or_loading__',
+      label: loading
+        ? (t('composer.modelLoading') || '加载模型中...')
+        : (t('composer.noModels') || '暂无其他已配置模型'),
+      disabled: true,
+    })
   }
 
   const triggerButton = (
@@ -197,8 +214,13 @@ export function PredictionModelPicker({ t, disabled = false }: PredictionModelPi
       aria-expanded={open}
       aria-haspopup="menu"
       className={`dcu-prediction-model-trigger ${open ? 'is-open' : ''}`}
+      onMouseEnter={() => { if (!disabled) loadCatalog() }}
+      onFocus={() => { if (!disabled) loadCatalog() }}
       onClick={() => {
-        if (!disabled) setOpen(prev => !prev)
+        if (!disabled) {
+          loadCatalog()
+          setOpen(prev => !prev)
+        }
       }}
     >
       <span className="dcu-prediction-model-label" title={triggerText}>

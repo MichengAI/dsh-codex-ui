@@ -86,6 +86,7 @@ export const ru: Record<CodexUiKey, string> = {
   'composer.modelFollowSession': 'Следовать за диалогом (по умолчанию)',
   'composer.effortAuto': 'Авто минимальное рассуждение (рекомендуется)',
   'composer.modelLoading': 'Загрузка моделей...',
+  'composer.noModels': 'Нет других доступных моделей',
   'composer.historyScope': 'Область истории',
   'composer.historyScopeHint': 'Показывать введённые сообщения только этого диалога или всех диалогов рабочей области.',
   'composer.historyScopeSession': 'Этот диалог',

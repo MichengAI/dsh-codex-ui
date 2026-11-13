@@ -5,7 +5,7 @@ import { apply as applyPredictions } from './composer-prediction.ts'
 import { collectModelCatalog } from './composer-models.ts'
 
 export const name = 'codex-ui-composer'
-export const inject = ['webServer']
+export const inject = ['webServer', 'llm']
 
 export function isSubPluginDisabledOnDisk(id: string, homeDir?: string, ctx?: Context): boolean {
   return checkDisabledOnDisk(id, homeDir, ctx)
