@@ -12,7 +12,8 @@ export const SIDEBAR_STYLES_ID = 'michengai-codex-ui-sidebar-styles'
 export const SIDEBAR_ACTIVE_ATTR = 'data-dcu-sidebar-active'
 
 export const SIDEBAR_CSS = `
-/* 仅在展开态隐藏宿主原生 newSession 和 panelList；折叠收缩态 100% 对齐宿主官方 56px 原生导轨 */
+/* 仅在展开态隐藏宿主原生 newSession/newSessionRow 和 panelList；折叠收缩态 100% 对齐宿主官方 56px 原生导轨 */
+[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) [class*="newSessionRow"],
 [${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) button[class*="newSession"],
 [${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) nav[class*="panelList"] {
   display: none !important;

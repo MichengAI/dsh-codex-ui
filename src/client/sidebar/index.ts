@@ -86,24 +86,44 @@ export function observeSidebarNav(ctx: ClientContext): () => void {
       nativeNewSession.parentElement) as HTMLElement | null
     if (!sidebarRoot) return
 
+    // 向上寻找位于 sidebarRoot 下的直接子元素作为挂载插入锚点（兼容 0.2.2-rc.3 newSessionRow 等外层包装）
+    let mountAnchor: HTMLElement = nativeNewSession
+    while (mountAnchor.parentElement && mountAnchor.parentElement !== sidebarRoot) {
+      mountAnchor = mountAnchor.parentElement
+    }
+    if (mountAnchor.parentElement !== sidebarRoot) return
+
     // 注入样式
     if (!cleanupStyles) {
       cleanupStyles = injectSidebarStyles()
     }
 
-    // 标记宿主侧栏根节点并创建挂载容器
-    sidebarRoot.setAttribute(SIDEBAR_ACTIVE_ATTR, 'true')
-    currentSidebarRoot = sidebarRoot
-
     const container = document.createElement('div')
     container.className = CONTAINER_CLASS
     container.setAttribute('data-dcu-managed', 'true')
 
-    sidebarRoot.insertBefore(container, nativeNewSession)
-    currentContainer = container
+    try {
+      sidebarRoot.insertBefore(container, mountAnchor)
+      currentContainer = container
 
-    // 渲染独立 React 树 (复用宿主 react-dom 静态提供的 render)
-    render(React.createElement(SidebarNav, { ctx }), container)
+      // 渲染独立 React 树 (复用宿主 react-dom 静态提供的 render)
+      render(React.createElement(SidebarNav, { ctx }), container)
+
+      // 成功挂载并渲染后标记宿主侧栏根节点
+      sidebarRoot.setAttribute(SIDEBAR_ACTIVE_ATTR, 'true')
+      currentSidebarRoot = sidebarRoot
+    } catch {
+      // 容错保障：挂载或渲染失败时彻底清理，绝不隐藏宿主原生入口
+      try {
+        unmountComponentAtNode(container)
+      } catch {
+        // 忽略 unmount 报错
+      }
+      container.remove()
+      currentContainer = null
+      sidebarRoot.removeAttribute(SIDEBAR_ACTIVE_ATTR)
+      currentSidebarRoot = null
+    }
   }
 
   const scheduleCheck = (): void => {

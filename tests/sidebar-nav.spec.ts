@@ -740,4 +740,66 @@ describe('observeSidebarNav 挂载与回退生命周期', () => {
 
     dispose()
   })
+
+  it('兼容 DSH 0.2.2-rc.3：原生新建会话按钮包裹在 newSessionRow 容器中时正常挂载', async () => {
+    // 模拟 DSH 0.2.2-rc.3 DOM 结构：nativeNewSession 包装在 newSessionRow 内
+    sidebarRoot.innerHTML = ''
+    const newSessionRow = document.createElement('div')
+    newSessionRow.className = 'host_newSessionRow'
+    newSessionRow.appendChild(nativeNewSession)
+    sidebarRoot.append(newSessionRow, nativePanelList)
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ enabled: true }),
+    } as Response)
+
+    const ctx = {
+      slots: { entriesOfSlot: () => [], subscribe: () => vi.fn() },
+      locale: { bind: () => (k: string) => k, subscribe: () => vi.fn() },
+      effect: vi.fn(),
+    }
+
+    const dispose = observeSidebarNav(ctx as never)
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 40))
+    })
+
+    const managedContainer = document.querySelector('.dcu-sidebar-nav-root')
+    expect(managedContainer).not.toBeNull()
+    expect(sidebarRoot.getAttribute(SIDEBAR_ACTIVE_ATTR)).toBe('true')
+    // 容器应正确插入在 newSessionRow 的位置（作为 sidebarRoot 的直接子节点且在 newSessionRow 之前）
+    expect(managedContainer?.parentElement).toBe(sidebarRoot)
+    expect(managedContainer?.nextElementSibling).toBe(newSessionRow)
+
+    dispose()
+  })
+
+  it('挂载抛出未知异常时触发回退保障：移除激活标记，确保不隐藏原生侧栏入口', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ enabled: true }),
+    } as Response)
+
+    vi.spyOn(sidebarRoot, 'insertBefore').mockImplementation(() => {
+      throw new Error('Simulated DOM NotFoundError')
+    })
+
+    const ctx = {
+      slots: { entriesOfSlot: () => [], subscribe: () => vi.fn() },
+      locale: { bind: () => (k: string) => k, subscribe: () => vi.fn() },
+      effect: vi.fn(),
+    }
+
+    const dispose = observeSidebarNav(ctx as never)
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 40))
+    })
+
+    // 自定义容器未成功挂载，且激活标记被撤销，原生入口不被强制隐藏
+    expect(document.querySelector('.dcu-sidebar-nav-root')).toBeNull()
+    expect(sidebarRoot.hasAttribute(SIDEBAR_ACTIVE_ATTR)).toBe(false)
+
+    dispose()
+  })
 })
