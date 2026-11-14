@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.3] - 2026-11-14
+
+- **Custom Workspace Section Reordering via Actions Menu (Issue #99)**:
+  - Added "Move up" and "Move down" actions to the `···` more actions menu on custom section headers, enabling easy manual reordering of workspace sections;
+  - Boundary positions are handled automatically (topmost custom sections omit "Move up", and bottommost custom sections omit "Move down");
+  - Moving a section immediately updates the visual layout and automatically synchronizes the physical order of enclosed workspaces in the host tree, persisting across restarts.
+
 ## [2.2.2] - 2026-11-14
 
 - **Dedicated Model Selection & Automatic Low Reasoning for Prediction (Issue #98)**:
