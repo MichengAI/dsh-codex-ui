@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.2.2] - 2026-11-14
+
+- **Dedicated Model Selection & Automatic Low Reasoning for Prediction (Issue #98)**:
+  - Added a "Prediction model" selector in Settings → Codex UI → Composer Enhancements, matching the single-field experience of the native chat interface;
+  - Follows the active conversation's model by default, with the ability to choose any enabled fast model for completions to significantly reduce latency and token consumption;
+  - Supports choosing reasoning effort levels for reasoning-capable models, automatically defaulting to the lowest available effort to avoid full-depth thinking during inline typing completions.
+- **Fixed Prediction Route & Configuration Passthrough (Issue #98)**:
+  - Fixed an issue where model routing, token bounds, and timeout options specified in Profile configs (`cordis.patch.yml`) were not applied to the prediction engine.
+
 ## [2.2.1] - 2026-11-13
 
 - **Sidebar New Session & Navigation Visibility Fix (Issue #96)**: Fixed an issue where the "New Session" button and custom sidebar navigation items (Tasks, Channels, Scheduled, etc.) disappeared and left a blank area on DeepSeek Harness `0.2.2-rc.3`; added fallback safeguards to ensure native sidebar controls remain visible and functional in all conditions.
