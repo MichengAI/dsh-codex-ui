@@ -27,6 +27,11 @@ const used = source.replace(locales, '')
 const allLanguages = { en, ja, es, fr, de, ru, pt } as const
 
 for (const [lang, dict] of Object.entries(allLanguages)) {
+  const missingInLang = Object.keys(zh).filter(k => !(k in dict))
+  const extraInLang = Object.keys(dict).filter(k => !(k in zh))
+  assert.deepEqual(missingInLang, [], `${lang} 词典缺失键：${missingInLang.join(', ')}`)
+  assert.deepEqual(extraInLang, [], `${lang} 词典多余键：${extraInLang.join(', ')}`)
+
   for (const [key, value] of Object.entries(dict)) {
     assert.ok(typeof value === 'string' && value.trim() !== '', `${lang} 词典 ${key} 不得为空`)
     if (lang !== 'ja') {
@@ -55,3 +60,7 @@ for (const key of Object.keys(zh)) {
   dead.push(key)
 }
 assert.deepEqual(dead, [], `词典不得保留未被引用的键：${dead.join(', ')}`)
+
+const tMatches = [...used.matchAll(/\bt\(['"]([a-zA-Z0-9_.-]+)['"]\)/g)].map(m => m[1])
+const undefinedKeys = tMatches.filter(k => !(k in zh) && !k.startsWith('search.') && !k.startsWith('permission.') && !k.startsWith('about.dependency.') && !k.startsWith('about.progress.'))
+assert.deepEqual([...new Set(undefinedKeys)], [], `源码使用了词典中未定义的键：${[...new Set(undefinedKeys)].join(', ')}`)

@@ -51,7 +51,6 @@ export function PredictionModelPicker({ t, disabled = false }: PredictionModelPi
   const currentRoute = useSyncExternalStore(subscribePredictionRoute, getPredictionRoute, getPredictionRoute)
   const [open, setOpen] = useState(false)
   const [providers, setProviders] = useState<ProviderEntry[]>(() => cachedProviders ?? [])
-  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -60,7 +59,6 @@ export function PredictionModelPicker({ t, disabled = false }: PredictionModelPi
       return
     }
     let cancelled = false
-    setLoading(true)
     fetch(CODEX_UI_API_ENDPOINTS.composerModels)
       .then(res => (res.ok ? res.json() : null))
       .then(data => {
@@ -70,9 +68,6 @@ export function PredictionModelPicker({ t, disabled = false }: PredictionModelPi
       })
       .catch(() => {
         // 容错降级
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
       })
     return () => {
       cancelled = true
