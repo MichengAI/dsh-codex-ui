@@ -8,6 +8,10 @@ import {
   deleteSection,
   flattenSections,
   moveSection,
+  canMoveSectionUp,
+  canMoveSectionDown,
+  moveSectionUp,
+  moveSectionDown,
   normalizeSections,
   parseSections,
   reconcileHostOrder,
@@ -16,6 +20,7 @@ import {
   sectionOf,
   serializeSections,
   type SectionsState,
+  type WorkspaceSection,
 } from '../src/client/sidebar/sections/model.ts'
 
 const state = (sections: SectionsState['sections']): SectionsState => ({ sections })
@@ -173,6 +178,67 @@ describe('分区模型：分区排序', () => {
     expect(moveSection(current, DEFAULT_SECTION_ID, PINNED_SECTION_ID)).toBe(current)
     expect(moveSection(current, 's1', DEFAULT_SECTION_ID)).toBe(current)
     expect(moveSection(current, 's1', 'missing')).toBe(current)
+  })
+
+  it('支持自定义分区上下移动：判定边界与交换相对顺序', () => {
+    const three = state([
+      { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+      { id: 's1', name: '分区1', ids: ['a1', 'b1'] },
+      { id: 's2', name: '历史文档', ids: ['h1'] },
+      { id: 's3', name: '分区2', ids: ['a2'] },
+      { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d1'] },
+    ])
+
+    // 内置分区永远不能上下移动
+    expect(canMoveSectionUp(three, PINNED_SECTION_ID)).toBe(false)
+    expect(canMoveSectionDown(three, PINNED_SECTION_ID)).toBe(false)
+    expect(canMoveSectionUp(three, DEFAULT_SECTION_ID)).toBe(false)
+    expect(canMoveSectionDown(three, DEFAULT_SECTION_ID)).toBe(false)
+
+    // s1 处于首位：不能上移，可以下移
+    expect(canMoveSectionUp(three, 's1')).toBe(false)
+    expect(canMoveSectionDown(three, 's1')).toBe(true)
+
+    // s2 处于中间：既可上移也可下移
+    expect(canMoveSectionUp(three, 's2')).toBe(true)
+    expect(canMoveSectionDown(three, 's2')).toBe(true)
+
+    // s3 处于末位：可以上移，不能下移
+    expect(canMoveSectionUp(three, 's3')).toBe(true)
+    expect(canMoveSectionDown(three, 's3')).toBe(false)
+
+    // 测试将历史文档（s2）下移到分区2（s3）之后：
+    const afterDown = moveSectionDown(three, 's2')
+    expect(afterDown.sections.map((s: WorkspaceSection) => s.id)).toEqual([
+      PINNED_SECTION_ID,
+      's1',
+      's3',
+      's2',
+      DEFAULT_SECTION_ID,
+    ])
+    // 成员完好保留且按新顺序展平
+    expect(flattenSections(afterDown)).toEqual(['p1', 'a1', 'b1', 'a2', 'h1', 'd1'])
+
+    // 测试将分区2（s3）在原结构中上移到历史文档（s2）之前：
+    const afterUp = moveSectionUp(three, 's3')
+    expect(afterUp.sections.map((s: WorkspaceSection) => s.id)).toEqual([
+      PINNED_SECTION_ID,
+      's1',
+      's3',
+      's2',
+      DEFAULT_SECTION_ID,
+    ])
+
+    // 只有一个自定义分区时，既不能上移也不能下移
+    const oneCustom = state([
+      { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+      { id: 's1', name: '单一分区', ids: ['x'] },
+      { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+    ])
+    expect(canMoveSectionUp(oneCustom, 's1')).toBe(false)
+    expect(canMoveSectionDown(oneCustom, 's1')).toBe(false)
+    expect(moveSectionUp(oneCustom, 's1')).toBe(oneCustom)
+    expect(moveSectionDown(oneCustom, 's1')).toBe(oneCustom)
   })
 })
 

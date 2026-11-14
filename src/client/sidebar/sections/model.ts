@@ -280,6 +280,40 @@ export function moveSection(
   return { sections: rest }
 }
 
+/** 判断某个分区是否可以向上移动（必须是非内置分区，且上方还有其他自定义分区）。 */
+export function canMoveSectionUp(state: SectionsState, sectionId: string): boolean {
+  if (isBuiltinSection(sectionId)) return false
+  const custom = state.sections.filter(s => !isBuiltinSection(s.id))
+  const index = custom.findIndex(s => s.id === sectionId)
+  return index > 0
+}
+
+/** 判断某个分区是否可以向下移动（必须是非内置分区，且下方还有其他自定义分区）。 */
+export function canMoveSectionDown(state: SectionsState, sectionId: string): boolean {
+  if (isBuiltinSection(sectionId)) return false
+  const custom = state.sections.filter(s => !isBuiltinSection(s.id))
+  const index = custom.findIndex(s => s.id === sectionId)
+  return index !== -1 && index < custom.length - 1
+}
+
+/** 向上移动自定义分区（与上方相邻的自定义分区交换位置）。 */
+export function moveSectionUp(state: SectionsState, sectionId: string): SectionsState {
+  if (!canMoveSectionUp(state, sectionId)) return state
+  const custom = state.sections.filter(s => !isBuiltinSection(s.id))
+  const index = custom.findIndex(s => s.id === sectionId)
+  const prev = custom[index - 1]!
+  return moveSection(state, sectionId, prev.id)
+}
+
+/** 向下移动自定义分区（与下方相邻的自定义分区交换位置）。 */
+export function moveSectionDown(state: SectionsState, sectionId: string): SectionsState {
+  if (!canMoveSectionDown(state, sectionId)) return state
+  const custom = state.sections.filter(s => !isBuiltinSection(s.id))
+  const index = custom.findIndex(s => s.id === sectionId)
+  const nextTarget = index + 2 < custom.length ? custom[index + 2]!.id : null
+  return moveSection(state, sectionId, nextTarget)
+}
+
 /**
  * 用宿主的最新顺序校正归属（用户在原生树上直接拖动项目后调用）。
  *

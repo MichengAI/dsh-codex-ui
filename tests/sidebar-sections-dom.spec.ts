@@ -1266,6 +1266,63 @@ describe('工作区分区：DOM 层', () => {
     expect(hostSection(DEFAULT_SECTION_ID).ids).toContain('a')
   })
 
+  it('自定义分区在 ··· 菜单中支持「向上移动」与「向下移动」，点击后更新 DOM 排列与宿主顺序', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '分区1', ids: ['a'] },
+        { id: 's2', name: '历史文档', ids: ['b'] },
+        { id: 's3', name: '分区2', ids: ['c'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d'] },
+      ],
+    })
+    mountFixture(['a', 'b', 'c', 'd'])
+    mount(['a', 'b', 'c', 'd'])
+    await waitForSync()
+
+    // 1. 首个自定义分区 s1：只能下移，不能上移
+    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+    s1Header.querySelector<HTMLElement>('.dcu-ws-section-actions button[data-dcu-action="more"]')!.click()
+    await waitForSync()
+    let panel = document.querySelector('.dcu-ws-section-menu')!
+    let labels = Array.from(panel.querySelectorAll('button')).map(b => b.textContent?.trim())
+    expect(labels).toEqual(['重命名', '向下移动', '新建分区', '移除分区'])
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    await waitForSync()
+
+    // 2. 中间自定义分区 s2：既能上移，也能下移
+    const s2Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's2')!
+    s2Header.querySelector<HTMLElement>('.dcu-ws-section-actions button[data-dcu-action="more"]')!.click()
+    await waitForSync()
+    panel = document.querySelector('.dcu-ws-section-menu')!
+    labels = Array.from(panel.querySelectorAll('button')).map(b => b.textContent?.trim())
+    expect(labels).toEqual(['重命名', '向上移动', '向下移动', '新建分区', '移除分区'])
+
+    // 3. 点击「向下移动」把 s2（历史文档）移动到 s3 之后
+    const moveDownBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '向下移动')!
+    moveDownBtn.click()
+    await waitForSync()
+
+    // 验证 DOM 标题顺序（置顶空时不渲染标题）与宿主存储顺序
+    expect(headerIdsInDomOrder()).toEqual(['s1', 's3', 's2', DEFAULT_SECTION_ID])
+    expect(readHostSections().sections.map(s => s.id)).toEqual([PINNED_SECTION_ID, 's1', 's3', 's2', DEFAULT_SECTION_ID])
+
+    // 4. 再次打开下移后的 s2 菜单：此时它处于自定义分区的末位，只能上移，不能下移
+    const newS2Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's2')!
+    newS2Header.querySelector<HTMLElement>('.dcu-ws-section-actions button[data-dcu-action="more"]')!.click()
+    await waitForSync()
+    panel = document.querySelector('.dcu-ws-section-menu')!
+    labels = Array.from(panel.querySelectorAll('button')).map(b => b.textContent?.trim())
+    expect(labels).toEqual(['重命名', '向上移动', '新建分区', '移除分区'])
+
+    // 5. 点击「向上移动」把 s2 移回原位
+    const moveUpBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '向上移动')!
+    moveUpBtn.click()
+    await waitForSync()
+    expect(headerIdsInDomOrder()).toEqual(['s1', 's2', 's3', DEFAULT_SECTION_ID])
+    expect(readHostSections().sections.map(s => s.id)).toEqual([PINNED_SECTION_ID, 's1', 's2', 's3', DEFAULT_SECTION_ID])
+  })
+
   it('同分区内部的项目拖拽排序正常放行（dragstart 不被拦截，保留原生拖拽排序）', async () => {
     mountFixture(['a', 'b'])
     mount(['a', 'b'])

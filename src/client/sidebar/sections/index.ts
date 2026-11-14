@@ -19,11 +19,15 @@ import {
   DEFAULT_SECTION_ID,
   PINNED_SECTION_ID,
   assignWorkspace,
+  canMoveSectionDown,
+  canMoveSectionUp,
   createSection,
   createSectionsState,
   deleteSection,
   flattenSections,
   isBuiltinSection,
+  moveSectionDown,
+  moveSectionUp,
   normalizeSections,
   parseSections,
   reconcileHostOrder,
@@ -1225,6 +1229,26 @@ export function observeWorkspaceSections(
           startRename(sectionId)
         },
       })
+      if (canMoveSectionUp(state, sectionId)) {
+        items.push({
+          label: text('sections.moveUp', '向上移动'),
+          icon: iconUp(),
+          onSelect: () => {
+            closeSectionMenu()
+            commitExplicit(moveSectionUp(state, sectionId), section.ids)
+          },
+        })
+      }
+      if (canMoveSectionDown(state, sectionId)) {
+        items.push({
+          label: text('sections.moveDown', '向下移动'),
+          icon: iconDown(),
+          onSelect: () => {
+            closeSectionMenu()
+            commitExplicit(moveSectionDown(state, sectionId), section.ids)
+          },
+        })
+      }
     }
     items.push({
       label: text('sections.new', '新建分区'),
@@ -1663,6 +1687,8 @@ export function observeWorkspaceSections(
   /** 分区展开箭头：和宿主项目行同一颗 `IconTriangleRightFillRegular`，展开时旋转 90°。 */
   const iconChevron = (): string => hostIconMarkup('IconTriangleRightFillRegular')
   const iconEdit = (): string => hostIconMarkup('IconEditOutlineRegular')
+  const iconUp = (): string => hostIconMarkup('IconChevronUpOutlineRegular')
+  const iconDown = (): string => hostIconMarkup('IconChevronDownOutlineRegular')
   const iconClose = (): string => hostIconMarkup('IconCloseOutlineRegular')
 
   /**

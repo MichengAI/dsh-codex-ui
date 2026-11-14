@@ -147,6 +147,8 @@ export const ru: Record<CodexUiKey, string> = {
   'sections.remove': 'Удалить секцию',
   'sections.addWorkspace': 'Добавить рабочую область',
   'sections.rename': 'Переименовать',
+  'sections.moveUp': 'Переместить вверх',
+  'sections.moveDown': 'Переместить вниз',
   'sections.settings': 'Настройки секции',
   'sections.unpin': 'Открепить',
   'sections.writeAborted': 'Перемещение рабочей области не было завершено и было автоматически отменено.',

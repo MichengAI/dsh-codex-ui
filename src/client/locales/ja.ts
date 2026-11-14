@@ -147,6 +147,8 @@ export const ja: Record<CodexUiKey, string> = {
   'sections.remove': 'セクションを削除',
   'sections.addWorkspace': 'ワークスペースを追加',
   'sections.rename': '名前を変更',
+  'sections.moveUp': '上へ移動',
+  'sections.moveDown': '下へ移動',
   'sections.settings': 'セクション設定',
   'sections.unpin': 'ピン留めを解除',
   'sections.writeAborted': 'ワークスペースの移動が完了しなかったため、自動的に中止されました。',

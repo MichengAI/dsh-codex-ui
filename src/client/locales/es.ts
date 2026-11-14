@@ -147,6 +147,8 @@ export const es: Record<CodexUiKey, string> = {
   'sections.remove': 'Eliminar sección',
   'sections.addWorkspace': 'Agregar espacio de trabajo',
   'sections.rename': 'Renombrar',
+  'sections.moveUp': 'Mover hacia arriba',
+  'sections.moveDown': 'Mover hacia abajo',
   'sections.settings': 'Ajustes de sección',
   'sections.unpin': 'Desfijar',
   'sections.writeAborted': 'El movimiento del espacio de trabajo no se completó y fue cancelado automáticamente.',

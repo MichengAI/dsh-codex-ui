@@ -147,6 +147,8 @@ export const de: Record<CodexUiKey, string> = {
   'sections.remove': 'Bereich entfernen',
   'sections.addWorkspace': 'Arbeitsbereich hinzufügen',
   'sections.rename': 'Umbenennen',
+  'sections.moveUp': 'Nach oben verschieben',
+  'sections.moveDown': 'Nach unten verschieben',
   'sections.settings': 'Bereichseinstellungen',
   'sections.unpin': 'Lösen',
   'sections.writeAborted': 'Verschieben des Arbeitsbereichs wurde nicht abgeschlossen und automatisch abgebrochen.',
