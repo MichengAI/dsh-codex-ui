@@ -85,7 +85,6 @@ export const ja: Record<CodexUiKey, string> = {
   'composer.predictionModelHint': 'デフォルトでは現在の会話に追従します。高速モデルを指定することも可能です。',
   'composer.modelFollowSession': '現在の会話に従う (デフォルト)',
   'composer.effortAuto': '自動最少推論 (推奨)',
-  'composer.modelLoading': 'モデル読み込み中...',
   'composer.historyScope': '履歴の呼び出し範囲',
   'composer.historyScopeHint': '現在の会話のみ、または同じワークスペースのすべての会話と共有します。',
   'composer.historyScopeSession': '現在の会話',

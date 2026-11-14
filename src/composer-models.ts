@@ -75,17 +75,24 @@ export async function collectModelCatalog(ctx: Context): Promise<ProviderCatalog
 
       try {
         if (typeof llm.resolveModelInfo === 'function') {
-          const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
-          const info = await Promise.race([llm.resolveModelInfo(providerId, modelId), timeoutPromise])
-          if (info?.reasoning && Array.isArray(info.reasoning.efforts) && info.reasoning.efforts.length > 0) {
-            reasoning = {
-              efforts: info.reasoning.efforts.map((e: any) => ({
-                id: String(e.id ?? ''),
-                name: e.name ? String(e.name) : undefined,
-                description: e.description ? String(e.description) : undefined,
-              })).filter((e: any) => e.id !== ''),
-              defaultEffort: info.reasoning.defaultEffort ? String(info.reasoning.defaultEffort) : undefined,
+          let timer: NodeJS.Timeout | undefined
+          const timeoutPromise = new Promise<null>((_, reject) => {
+            timer = setTimeout(() => reject(new Error('timeout')), 1500)
+          })
+          try {
+            const info = await Promise.race([llm.resolveModelInfo(providerId, modelId), timeoutPromise])
+            if (info?.reasoning && Array.isArray(info.reasoning.efforts) && info.reasoning.efforts.length > 0) {
+              reasoning = {
+                efforts: info.reasoning.efforts.map((e: any) => ({
+                  id: String(e.id ?? ''),
+                  name: e.name ? String(e.name) : undefined,
+                  description: e.description ? String(e.description) : undefined,
+                })).filter((e: any) => e.id !== ''),
+                defaultEffort: info.reasoning.defaultEffort ? String(info.reasoning.defaultEffort) : undefined,
+              }
             }
+          } finally {
+            if (timer !== undefined) clearTimeout(timer)
           }
         }
       } catch {

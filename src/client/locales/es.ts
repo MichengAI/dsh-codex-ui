@@ -85,7 +85,6 @@ export const es: Record<CodexUiKey, string> = {
   'composer.predictionModelHint': 'Sigue la sesión actual por defecto; o especifique un modelo rápido.',
   'composer.modelFollowSession': 'Seguir sesión actual (por defecto)',
   'composer.effortAuto': 'Esfuerzo mínimo automático (recomendado)',
-  'composer.modelLoading': 'Cargando modelos...',
   'composer.historyScope': 'Alcance del historial',
   'composer.historyScopeHint': 'Recupera mensajes solo de esta conversación o compártelos con todas las conversaciones del espacio de trabajo.',
   'composer.historyScopeSession': 'Esta conversación',

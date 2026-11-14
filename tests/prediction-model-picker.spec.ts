@@ -157,6 +157,19 @@ describe('PredictionModelPicker & prediction-route-state', () => {
       expect(bodyHtml).toContain('DeepSeek Official')
       expect(bodyHtml).toContain('DeepSeek Chat')
       expect(bodyHtml).toContain('DeepSeek Reasoner')
+
+      // 点击选中普通模型 DeepSeek Chat
+      const chatItem = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent?.includes('DeepSeek Chat'))
+      expect(chatItem).toBeDefined()
+      await act(async () => {
+        chatItem!.click()
+      })
+
+      // 验证状态已更新为选中的模型
+      expect(getPredictionRoute()).toEqual({
+        provider: 'mock-deepseek',
+        model: 'deepseek-chat',
+      })
     } finally {
       await act(async () => {
         root.unmount()

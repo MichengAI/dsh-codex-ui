@@ -202,7 +202,7 @@ export function PredictionModelPicker({ t, disabled = false }: PredictionModelPi
       }}
     >
       <span className="dcu-prediction-model-label" title={triggerText}>
-        {loading && providers.length === 0 ? t('composer.modelLoading') || '加载中...' : triggerText}
+        {triggerText}
       </span>
       <IconChevronDownOutlineMedium
         size={12}
