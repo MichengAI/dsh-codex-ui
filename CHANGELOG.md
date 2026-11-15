@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.5] - 2026-11-15
+
+- **Longer Generated Titles Are Kept Instead of Discarded (Issue #101)**:
+  - A generated title whose theme carried a plugin name, a file path or a long identifier used to be thrown away as a whole, so the session fell back to the clipped first message; the title now keeps its `✨ Type｜theme` shape and only the part that does not fit is trimmed;
+  - The title still respects the host's byte budget, and the type prefix stays intact in every case, so a new session no longer loses its smart title when the subject happens to be long.
+
 ## [2.2.4] - 2026-11-15
 
 - **Section Headers Stay Pinned While Scrolling (Issue #100)**:
