@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   SESSION_TITLE_EMOJI,
+  SESSION_TITLE_MAX_BYTES,
   alignThemeToMessage,
   assembleSessionTitle,
   parseTypeAndTheme,
@@ -59,9 +60,20 @@ describe('assembleSessionTitle', () => {
     expect(assembleSessionTitle('Feature', 'Feature type', 'en')).toBe(`${SESSION_TITLE_EMOJI.feature} Feature`)
   })
 
-  test('超过宿主字节上限或类型无效时保留原名', () => {
+  test('类型无效时保留原名', () => {
     expect(assembleSessionTitle('未知', '主题')).toBeUndefined()
-    expect(assembleSessionTitle('优化', '这是一段会超过八十字节上限的特别长主题用于验证截断前直接放弃')).toBeUndefined()
+  })
+
+  test('主题超限时截断主题，不丢整条标题（Issue #101）', () => {
+    const issue101 = assembleSessionTitle('功能', '拆分 dsh-archive-favorites-forge 的复制 ID 与复制路径功能')
+    expect(issue101).toBeDefined()
+    expect(issue101!.startsWith(`${SESSION_TITLE_EMOJI.feature} 功能｜拆分 dsh-archive-favorites-forge`)).toBe(true)
+    expect(Buffer.byteLength(issue101!, 'utf8')).toBeLessThanOrEqual(SESSION_TITLE_MAX_BYTES)
+
+    const long = assembleSessionTitle('优化', '这是一段会超过八十字节上限的特别长主题用于验证截断前直接放弃')
+    expect(long).toBeDefined()
+    expect(long!.startsWith(`${SESSION_TITLE_EMOJI.optimize} 优化｜这是一段`)).toBe(true)
+    expect(Buffer.byteLength(long!, 'utf8')).toBeLessThanOrEqual(SESSION_TITLE_MAX_BYTES)
   })
 })
 

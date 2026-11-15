@@ -141,18 +141,22 @@ function inferLocaleFromMessage(text: string | undefined): SessionTitleLocale | 
   return undefined
 }
 
-function compactMessageTheme(message: string): string {
-  const line = message.replace(/\s+/g, ' ').trim()
-  if (Buffer.byteLength(line, 'utf8') <= 40) return line
+function truncateUtf8(value: string, maxBytes: number): string {
+  if (Buffer.byteLength(value, 'utf8') <= maxBytes) return value
   let used = 0
   let output = ''
-  for (const character of line) {
+  for (const character of value) {
     const bytes = Buffer.byteLength(character, 'utf8')
-    if (used + bytes > 40) break
+    if (used + bytes > maxBytes) break
     output += character
     used += bytes
   }
-  return output.trimEnd()
+  return output
+}
+
+function compactMessageTheme(message: string): string {
+  const line = message.replace(/\s+/g, ' ').trim()
+  return truncateUtf8(line, 40).trimEnd()
 }
 
 /** 主题必须跟用户消息同一语言；模型串语言时改用消息原文。 */
@@ -230,11 +234,13 @@ export function assembleSessionTitle(type: string, theme: string, locale?: Sessi
   if (parsed === undefined) return undefined
   const displayLocale = locale ?? inferLocaleFromTypeToken(type)
   const label = typeLabel(parsed.type, displayLocale)
-  const title = isRedundantTheme(parsed.type, parsed.theme)
-    ? `${SESSION_TITLE_EMOJI[parsed.type]} ${label}`
-    : `${SESSION_TITLE_EMOJI[parsed.type]} ${label}${SESSION_TITLE_SEPARATOR}${parsed.theme}`
-  if (Buffer.byteLength(title, 'utf8') > SESSION_TITLE_MAX_BYTES) return undefined
-  return title
+  const prefix = `${SESSION_TITLE_EMOJI[parsed.type]} ${label}`
+  if (isRedundantTheme(parsed.type, parsed.theme)) return prefix
+  // 主题超限时只截断主题、保留「表情 + 类型｜」，不丢整条标题：宿主接收时同样按 UTF-8
+  // 边界截断，而整条丢弃会退回首条消息的兜底标题，可读性更差（Issue #101）。
+  const budget = SESSION_TITLE_MAX_BYTES - Buffer.byteLength(`${prefix}${SESSION_TITLE_SEPARATOR}`, 'utf8')
+  const fitted = truncateUtf8(parsed.theme, budget).trimEnd()
+  return fitted === '' ? prefix : `${prefix}${SESSION_TITLE_SEPARATOR}${fitted}`
 }
 
 export function shouldSkipAutoTitle(session: SessionTitleTarget): boolean {
