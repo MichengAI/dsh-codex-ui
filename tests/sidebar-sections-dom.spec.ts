@@ -2705,7 +2705,58 @@ describe('分区二级菜单的可访问性：', () => {
       warnSpy.mockRestore()
     }
   })
-
 })
+
+  it('滚动时只有当前分区的标题吸顶，换区后上一个标题退出吸顶（不叠字）', async () => {
+    // 宿主把工作区列表放在内层滚动容器里；标题跟着这个滚动口吸顶，而不是跟着文档滚。
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d1'] },
+      ],
+    })
+    mountFixture(['p1', 'd1'])
+    mount(['p1', 'd1'])
+    await waitForSync()
+
+    const list = findWorkspaceList(document)!
+    const scroller = list.parentElement as HTMLElement
+    scroller.style.overflowY = 'auto'
+
+    const rectAt = (top: number): DOMRect =>
+      ({ top, bottom: top + 30, left: 0, right: 200, width: 200, height: 30, x: 0, y: top, toJSON: () => ({}) }) as DOMRect
+    const tops = new Map<HTMLElement, number>()
+    scroller.getBoundingClientRect = () => rectAt(100)
+    for (const header of headers()) {
+      header.getBoundingClientRect = () => rectAt(tops.get(header) ?? 500)
+    }
+    const [pinnedHeader, defaultHeader] = headers()
+    expect(pinnedHeader).toBeDefined()
+    expect(defaultHeader).toBeDefined()
+    const stickyIds = (): string[] =>
+      headers()
+        .filter(header => header.getAttribute('data-dcu-sticky') === 'true')
+        .map(header => header.getAttribute(SECTION_HEADER_ATTR) ?? '')
+
+    // 1. 停在顶部：没有任何标题越过滚动口上沿 → 都不吸顶
+    tops.set(pinnedHeader!, 140)
+    tops.set(defaultHeader!, 260)
+    scroller.dispatchEvent(new Event('scroll'))
+    await waitForSync(2)
+    expect(stickyIds()).toEqual([])
+
+    // 2. 「置顶」标题滚到上沿，「项目」还在下面 → 只有「置顶」吸顶
+    tops.set(pinnedHeader!, 100)
+    scroller.dispatchEvent(new Event('scroll'))
+    await waitForSync(2)
+    expect(stickyIds()).toEqual([PINNED_SECTION_ID])
+
+    // 3. 「项目」也越过上沿 → 吸顶换成「项目」；注意「置顶」此刻仍被钉在上沿（rect.top 等于上沿，
+    //    比已经滚过去的「项目」更大），所以判定必须按文档顺序取最后一个，不能比 rect.top 的大小。
+    tops.set(defaultHeader!, 60)
+    scroller.dispatchEvent(new Event('scroll'))
+    await waitForSync(2)
+    expect(stickyIds()).toEqual([DEFAULT_SECTION_ID])
+  })
 
 })

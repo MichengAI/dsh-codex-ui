@@ -100,6 +100,11 @@ const SECTIONS_CSS = `
 .dcu-ws-section-action{width:24px;height:24px;margin:-4px;padding:0;border:0;border-radius:var(--dsw-radius-xs,4px);background:transparent;color:var(--dsw-alias-label-tertiary,inherit);font:inherit;font-size:12px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .dcu-ws-section-action:hover{color:var(--dsw-alias-label-primary,inherit);background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.16))}
 [data-sidebar-collapsed='true'] .dcu-ws-section{display:none !important}
+/* 滚轮滚动时只让「当前分区」的标题吸顶（判定见 updateStickyHeaders），其余标题留在文档流里，
+   否则多行标题会一起钉在顶部叠字。吸顶时把 8px 上外边距换成等量上内边距：标题占位总高不变，
+   但贴住上沿后上方不会再留一条能看见滚动内容的空缝。背景吃侧栏填充色并补一层模糊，
+   滚过去的会话行不会从标题后面透出来。 */
+.dcu-ws-section[data-dcu-sticky='true']{position:sticky;top:0;z-index:3;box-sizing:border-box;margin-top:0;padding-top:8px;height:38px;background:var(--dsw-specific-sidebar-fill,var(--dsw-alias-bg-layer-1,#121214));backdrop-filter:blur(12px)}
 /* z-index 取宿主顶级浮层的量级：分区标题 ··· 这条路径把面板挂在 body 上，宿主侧边栏/工作区树自己是
    更大的层级，1000 会让侧边栏的行文字压在面板上（表现为「菜单跑到侧边栏后面」）。
    面板本体由宿主 MenuSurface 原语渲染（表面 + material 磨砂层），这里只补壳外的几何与文字颜色，
@@ -996,6 +1001,8 @@ export function observeWorkspaceSections(
         headers.delete(id)
       }
     }
+    // 标题搬动/折叠后布局已变，吸顶归属要重算一次（滚动时也会算，这里补的是不滚也变的情况）。
+    scheduleStickyUpdate()
   }
 
   /** 列表不在工作区视图（频道、定时、rail 收起）时摘掉标题，避免串到别的列表里。 */
@@ -1003,6 +1010,79 @@ export function observeWorkspaceSections(
     for (const header of headers.values()) header.remove()
     headers.clear()
   }
+
+  /* ── 标题吸顶 ── */
+
+  /** 标题上的吸顶标记：只有「当前分区」的那一个带它，样式见 SECTIONS_CSS。 */
+  const STICKY_ATTR = 'data-dcu-sticky'
+  let stickyRaf = 0
+
+  /** 从列表向上找真正的滚动容器（宿主的 `.listArea`），找不到时退化成文档滚动。 */
+  function findStickyScroller(from: HTMLElement | undefined): HTMLElement | null {
+    if (from === undefined) return null
+    let node: HTMLElement | null = from.parentElement
+    while (node !== null && node !== document.body) {
+      const overflowY = getComputedStyle(node).overflowY
+      if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') return node
+      node = node.parentElement
+    }
+    return null
+  }
+
+  /**
+   * 只给「当前分区」的标题打吸顶标记。
+   *
+   * 多个标题同时 sticky 会一起钉在顶部叠字（后一个盖住前一个），所以取「已经越过滚动口上沿、
+   * 且最靠下」的那个标题作为当前分区；换区时上一个标题退回文档流，随内容一起滚走。
+   * 吸顶中的标题 border-box 正好贴上沿，因此用 `<= 上沿 + 1px` 判定它仍属于当前分区。
+   */
+  function updateStickyHeaders(): void {
+    stickyRaf = 0
+    if (disposed) return
+    const connected = Array.from(headers.values()).filter(header => header.isConnected)
+    if (connected.length === 0) return
+    // 每次现算滚动口：宿主会重建列表容器，缓存下来会指向已经脱离文档的旧节点。
+    const scroller = findStickyScroller(list)
+    const edge = scroller === null ? 0 : scroller.getBoundingClientRect().top
+    let active: HTMLElement | null = null
+    // 按文档顺序取「最后一个已经越过上沿的标题」= 当前分区。
+    // 不能取 rect.top 最大的那个：已经吸顶的标题 border-box 就贴上沿，永远比它后面已经滚过去的标题大，
+    // 结果会一直钉在第一个吸顶的标题上，后一个分区永远抢不到。
+    const ordered = connected
+      .slice()
+      .sort((left, right) =>
+        left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
+      )
+    for (const header of ordered) {
+      if (header.getBoundingClientRect().top <= edge + 1) active = header
+    }
+    for (const header of connected) {
+      if (header === active) {
+        if (!header.hasAttribute(STICKY_ATTR)) header.setAttribute(STICKY_ATTR, 'true')
+      } else if (header.hasAttribute(STICKY_ATTR)) {
+        header.removeAttribute(STICKY_ATTR)
+      }
+    }
+  }
+
+  function scheduleStickyUpdate(): void {
+    if (stickyRaf !== 0 || disposed) return
+    stickyRaf = window.requestAnimationFrame(updateStickyHeaders)
+  }
+
+  /** 滚动事件不冒泡，只能在捕获阶段拿；只要是列表的滚动祖先就重算一次。 */
+  function onScrollForSticky(event: Event): void {
+    const target = event.target
+    if (target instanceof Document) {
+      scheduleStickyUpdate()
+      return
+    }
+    if (!(target instanceof Element) || list === undefined) return
+    if (!target.contains(list)) return
+    scheduleStickyUpdate()
+  }
+
+  document.addEventListener('scroll', onScrollForSticky, true)
 
   /* ── 分区菜单 ── */
 
@@ -2301,6 +2381,8 @@ export function observeWorkspaceSections(
     document.removeEventListener('click', onDocumentClickClearPending, true)
     document.removeEventListener('keydown', onDocumentKeydownClearPending, true)
     document.removeEventListener('contextmenu', onContextMenuToPrepareMenu, true)
+    document.removeEventListener('scroll', onScrollForSticky, true)
+    if (stickyRaf !== 0) window.cancelAnimationFrame(stickyRaf)
     unsubscribeDirectoryFlow?.()
     unsubscribe?.()
 
