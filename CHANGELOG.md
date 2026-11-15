@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.4] - 2026-11-15
+
+- **Section Headers Stay Pinned While Scrolling (Issue #100)**:
+  - Scrolling the sidebar list no longer pushes the current section header (Pinned, Projects or a custom section) out of view: the header of the section you are reading sticks to the top of the list and hands the spot over to the next section as it comes up;
+  - Section headers no longer disappear together with the workspace rows, so it stays clear which group the visible rows belong to.
+
 ## [2.2.3] - 2026-11-14
 
 - **Custom Workspace Section Reordering via Actions Menu (Issue #99)**:
