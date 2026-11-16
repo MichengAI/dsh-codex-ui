@@ -1674,6 +1674,9 @@ describe('工作区分区：DOM 层', () => {
     expect(getComputedStyle(chevron).width).toBe('16px')
     expect(getComputedStyle(chevron).height).toBe('20px')
     expect(header.getAttribute('data-open')).toBe('true')
+    // 折叠箭头对齐原生细线 Chevron（IconChevronRightOutlineRegular），杜绝粗硬实心黑三角
+    expect(chevron.innerHTML).toContain('chevron-right')
+    expect(chevron.innerHTML).not.toContain('triangle-right')
   })
 
   it('空的「置顶」分区整行隐藏，置顶首个项目后标题回到最上方，取消最后一个置顶后再次隐藏', async () => {
