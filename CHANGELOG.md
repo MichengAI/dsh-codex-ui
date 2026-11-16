@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.2.6] - 2026-11-16
+
+- **Default "Projects" Section Supports Reordering Up and Down (Issue #103)**:
+  - Added a `···` more actions menu to the default "Projects" workspace section header with "Move up" and "Move down" options, allowing it to be repositioned freely among workspace sections;
+  - Boundary positions and fold states are automatically handled, instantly updating the sidebar and persisting across restarts.
+- **Section Collapse Icons and Header Polish Aligned with Codex (Issue #103)**:
+  - Replaced the solid triangle collapse indicator with a subtle outlined Chevron icon with smooth rotation on toggle;
+  - Section header titles now feature medium font weight (500) and smooth 150ms hover transitions for background and text colors, improving visual hierarchy.
+- **Light Theme Settings Card Fill Fix (Issue #102)**:
+  - Fixed an issue where settings cards would turn into a translucent dark gray when dialogs were open under light theme, keeping card backgrounds crisp white.
+
 ## [2.2.5] - 2026-11-15
 
 - **Longer Generated Titles Are Kept Instead of Discarded (Issue #101)**:
