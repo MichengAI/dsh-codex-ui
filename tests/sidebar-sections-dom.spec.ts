@@ -907,6 +907,40 @@ describe('工作区分区：DOM 层', () => {
     expect(ungrouped.getAttribute('data-dcu-section-member')).toBeNull()
   })
 
+  it('当末尾存在连续空分区时，所有空分区标题均位于未分组桶之前，而不是落到未分组桶下方', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+        { id: 's1', name: '归档任务', ids: [] },
+      ],
+    })
+    const list = mountFixture(['a'])
+    const ungrouped = document.createElement('div')
+    ungrouped.className = 'groupSection'
+    const row = document.createElement('div')
+    row.setAttribute('data-row-key', 'workspace:')
+    row.textContent = '未分组'
+    ungrouped.appendChild(row)
+    list.appendChild(ungrouped)
+
+    mount(['a'])
+    await waitForSync()
+
+    const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+    const blockA = list.querySelector<HTMLElement>('[data-dcu-test-group=\"a\"]')!
+
+    expect(defaultHeader).not.toBeUndefined()
+    expect(s1Header).not.toBeUndefined()
+    expect(blockA).not.toBeNull()
+
+    // 相对顺序必须为：blockA -> defaultHeader -> s1Header -> ungrouped
+    expect(blockA.compareDocumentPosition(defaultHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(defaultHeader.compareDocumentPosition(s1Header) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(s1Header.compareDocumentPosition(ungrouped) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('内置分区有 ···（只提供「新建分区」），且不可拖动', async () => {
     // 置顶一个项目，让两个内置分区标题都真实存在（空的置顶分区不渲染标题）。
     seedSections({ sections: [
@@ -2099,6 +2133,11 @@ describe('分区二级菜单的可访问性：', () => {
     expect(styleText).toMatch(/\.dcu-ws-section\{[^}]*font-weight:500/)
     expect(styleText).toMatch(/\.dcu-ws-section\{[^}]*transition:[^}]*color/)
     expect(styleText).toMatch(/\.dcu-ws-section:hover\{[^}]*color:/)
+
+    // 在真实挂载的 DOM 节点上验证计算样式生效
+    const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+    expect(defaultHeader).not.toBeUndefined()
+    expect(window.getComputedStyle(defaultHeader).fontWeight).toBe('500')
   })
 
   it('点击分区标题 ··· 右侧的「添加工作区」图标按钮后，触发宿主新建并自动归属且展开目标分区（含自定义与置顶）', async () => {

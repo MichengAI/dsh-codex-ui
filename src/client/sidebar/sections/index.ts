@@ -79,7 +79,7 @@ const COLLAPSED_STORAGE_KEY = 'michengai.codex-ui.workspace-sections-collapsed.v
  */
 const SECTIONS_CSS = `
 .dcu-ws-section{display:flex;align-items:center;gap:4px;height:30px;margin:8px 2px 2px;padding:0 4px 0 var(--dcu-section-lead,6px);font-size:12px;font-weight:500;letter-spacing:.2px;color:var(--dsw-alias-label-tertiary,rgba(127,127,127,.95));-webkit-app-region:no-drag;cursor:pointer;border-radius:6px;transition:background 150ms ease,color 150ms ease}
-.dcu-ws-section:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.10));color:var(--dsw-alias-label-secondary,var(--dsw-alias-label-primary,rgba(255,255,255,.9)))}
+.dcu-ws-section:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.10));color:var(--dsw-alias-label-secondary,var(--dsw-alias-label-primary,inherit))}
 .dcu-ws-section-label{flex:0 0 auto;max-width:70%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 展开/收起箭头：16×20 的 slot，里面是细线 Chevron，展开旋转 90°。 */
 .dcu-ws-section-chevron{display:inline-flex;align-items:center;justify-content:center;flex:none;width:16px;height:20px;color:var(--dsw-alias-label-caption,var(--dsw-alias-label-tertiary,#888));transition:color 150ms ease}
@@ -672,7 +672,7 @@ export function observeWorkspaceSections(
     header = document.createElement('div')
     header.className = HEADER_CLASS
     header.setAttribute(SECTION_HEADER_ATTR, sectionId)
-    // 内置分区（置顶固定在首位、项目可上下移动，均不可改名/删除），不可拖动（置顶不给 ··· 菜单，项目允许上下移动）。
+    // 内置分区（置顶固定在首位、项目可上下移动，均不可改名/删除、不可拖动；置顶菜单只含新建分区，项目支持上下移动）。
     const fixed = isBuiltinSection(sectionId)
     if (fixed) header.setAttribute('data-dcu-section-fixed', 'true')
     header.draggable = false
@@ -895,7 +895,7 @@ export function observeWorkspaceSections(
     const target = blocks[0]!.block.parentElement
     if (target === null) return
 
-    // 未分组桶是默认分区的末端成员，也可以充当空默认分区的标题锚点（仅当默认分区是最后一个分区时）。
+    // 未分组桶是默认分区的末端成员（仅当默认分区在末位时作为其成员跟随折叠），也是宿主钉在列表底部的独立桶。
     const isDefaultLast =
       layoutState.sections.length > 0 &&
       layoutState.sections[layoutState.sections.length - 1]?.id === DEFAULT_SECTION_ID
@@ -907,13 +907,13 @@ export function observeWorkspaceSections(
       relocatingIds.size === 0
         ? byId
         : new Map(blocks.filter(item => !relocatingIds.has(item.workspaceId)).map(item => [item.workspaceId, item.block]))
-    let reference: Element | null = null
+    // 末尾兜底锚点：存在未分组桶时，末尾任何空分区标题均应插入在未分组桶之前，绝不落到桶下方。
+    let reference: Element | null = ungrouped ?? null
     // 从后向前确定边界：有成员贴自己的首项，空分区贴下一个标题；绝不插到上一区成员之前。
     for (let index = layoutState.sections.length - 1; index >= 0; index -= 1) {
       const section = layoutState.sections[index]!
       const first = section.ids.map(id => visibleById.get(id)).find(block => block !== undefined)
       if (first !== undefined) reference = first
-      else if (section.id === DEFAULT_SECTION_ID && isDefaultLast && ungrouped !== undefined) reference = ungrouped
       // 「置顶」没有成员时整行不渲染：空的置顶分区只剩一行标题，白占约 40px 高度，
       // 用户也没有任何办法把它收走。自定义空分区必须保留标题（那是新建分区后唯一的可见入口），
       // 所以这条只对内置置顶生效；重新置顶任意项目时标题会自动回到原位。
