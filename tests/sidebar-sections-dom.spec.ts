@@ -2138,6 +2138,7 @@ describe('分区二级菜单的可访问性：', () => {
     const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
     expect(defaultHeader).not.toBeUndefined()
     expect(window.getComputedStyle(defaultHeader).fontWeight).toBe('500')
+    expect(window.getComputedStyle(defaultHeader).transition).toContain('color')
   })
 
   it('点击分区标题 ··· 右侧的「添加工作区」图标按钮后，触发宿主新建并自动归属且展开目标分区（含自定义与置顶）', async () => {
