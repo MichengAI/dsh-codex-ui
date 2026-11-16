@@ -2043,6 +2043,24 @@ describe('分区二级菜单的可访问性：', () => {
     expect(styleText).toContain(".dcu-ws-section[data-menu-open='true'] .dcu-ws-section-actions{display:inline-flex}")
   })
 
+  it('分区标题样式具备 Codex 的 Medium 骨架感（font-weight: 500 与 hover 变亮平滑过渡）', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a'] },
+      ],
+    })
+    mountFixture(['p1', 'a'])
+    mount(['p1', 'a'])
+    await waitForSync()
+
+    const styleText = document.getElementById('michengai-codex-ui-sections-styles')?.textContent ?? ''
+    // 对齐 Codex 官方 Medium 骨架感（font-weight: 500 与平滑过渡）
+    expect(styleText).toMatch(/\.dcu-ws-section\{[^}]*font-weight:500/)
+    expect(styleText).toMatch(/\.dcu-ws-section\{[^}]*transition:[^}]*color/)
+    expect(styleText).toMatch(/\.dcu-ws-section:hover\{[^}]*color:/)
+  })
+
   it('点击分区标题 ··· 右侧的「添加工作区」图标按钮后，触发宿主新建并自动归属且展开目标分区（含自定义与置顶）', async () => {
     seedSections({
       sections: [
