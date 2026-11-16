@@ -168,6 +168,56 @@ try {
       assert.ok(Math.abs(state.surface.height - state.card.height) <= 2)
     }
   }
+
+  // Issue #102 防御校验：亮色主题下设置卡片底色防变灰 + seam 防溢出至 body
+  const lightSettingsCheck = await page.evaluate(() => {
+    document.body.removeAttribute('data-ds-dark-theme')
+    document.documentElement.style.setProperty('--dsw-static-neutral-bluish-850', '#2c2c2e')
+    document.documentElement.style.setProperty('--dsw-static-neutral-bluish-00', '#ffffff')
+    document.documentElement.style.setProperty('--dsw-static-neutral-bluish-60', '#f0f2f5')
+    document.body.style.setProperty('--dsw-alias-bg-layer-2', '#ffffff')
+    document.body.style.setProperty('--dsw-alias-settings-card-fill', 'var(--dsw-alias-bg-layer-2)')
+
+    // 1. 测试直接子节点 dialog 不会导致 body 被盖戳
+    const dummyDialog = document.createElement('div')
+    dummyDialog.setAttribute('role', 'dialog')
+    dummyDialog.setAttribute('aria-modal', 'true')
+    document.body.appendChild(dummyDialog)
+    window.__glass.applyGlassSettings({ enabled: true, mode: 'mica', preset: 'standard' })
+    const bodyHasSettingsAttr = document.body.hasAttribute('data-dsh-glass-settings')
+    dummyDialog.remove()
+
+    // 2. 模拟设置卡片与极端 body 盖戳
+    const card = document.createElement('div')
+    card.setAttribute('data-test-settings-card', '')
+    card.style.background = 'var(--dsw-alias-settings-card-fill)'
+    card.style.width = '100px'
+    card.style.height = '100px'
+    document.body.appendChild(card)
+
+    // 人为挂载属性模拟极端脏状态
+    document.body.setAttribute('data-dsh-glass-settings', '')
+    const cardBg = getComputedStyle(card).backgroundColor
+    const layer2Var = getComputedStyle(document.body).getPropertyValue('--dsw-alias-bg-layer-2')
+    card.remove()
+    document.body.removeAttribute('data-dsh-glass-settings')
+
+    return {
+      bodyHasSettingsAttr,
+      cardBg,
+      layer2Var,
+    }
+  })
+  assert.equal(lightSettingsCheck.bodyHasSettingsAttr, false, 'body 不得被赋上 data-dsh-glass-settings')
+  assert.notEqual(lightSettingsCheck.cardBg, 'rgb(128, 128, 129)', '卡片不得呈现 #808081 暗灰色')
+  assert.ok(
+    lightSettingsCheck.cardBg === 'rgb(255, 255, 255)' ||
+    lightSettingsCheck.cardBg.startsWith('color(srgb 1 1 1') ||
+    lightSettingsCheck.cardBg.includes('rgba(255, 255, 255'),
+    `卡片背景必须为白色或半透白，实际: ${lightSettingsCheck.cardBg}`
+  )
+  console.log('Issue #102 亮色设置卡片防御校验：通过（卡片底色保持纯白，未被暗色规则污染）')
+
   console.log('通用外扩装饰与玻璃层共存：两种模式、三种预设均通过')
   console.log('玻璃材质计算样式校验：')
   for (const row of rows) {

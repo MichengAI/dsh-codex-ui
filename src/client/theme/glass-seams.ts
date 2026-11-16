@@ -64,17 +64,18 @@ const SEAMS: readonly Seam[] = [
   // class: the host class name is a build hash (`VOzbGW_overlay`) that changes
   // whenever the host stylesheet does, and a stale selector would silently
   // drop the settings dialog back to opaque cards.
-  { attribute: 'data-dsh-glass-settings', selector: ':has(> [role="dialog"][aria-modal="true"])' },
+  // ⚠ 排除 body（Issue #102）：第三方插件或特定模态框可能直接挂载在 body 上，不得把 body 识别为 settings
+  { attribute: 'data-dsh-glass-settings', selector: ':not(body):has(> [role="dialog"][aria-modal="true"])' },
 ]
 
 function stamp(seam: Seam): void {
   if (seam.first) {
     const el = document.querySelector(seam.selector)
-    if (el !== null && !el.hasAttribute(seam.attribute)) el.setAttribute(seam.attribute, '')
+    if (el !== null && el !== document.body && !el.hasAttribute(seam.attribute)) el.setAttribute(seam.attribute, '')
     return
   }
   for (const el of document.querySelectorAll(seam.selector)) {
-    if (!el.hasAttribute(seam.attribute)) el.setAttribute(seam.attribute, '')
+    if (el !== document.body && !el.hasAttribute(seam.attribute)) el.setAttribute(seam.attribute, '')
   }
 }
 

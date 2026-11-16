@@ -120,6 +120,14 @@ export const GLASS_EXTRA_CSS = `
   outline: 1px solid var(--dsh-glass-rim-soft, rgba(255, 255, 255, 0.12));
   outline-offset: -1px;
 }
+
+/* 浅色模式设置卡片与背景防御（Issue #102）：
+   防止 --dsw-alias-bg-layer-2 或 --dsw-alias-settings-card-fill 被暗色规则或异常标记污染为深灰（#808081） */
+[data-dsh-glass] body:not([data-ds-dark-theme]) [data-dsh-glass-settings],
+[data-dsh-glass] body:not([data-ds-dark-theme])[data-dsh-glass-settings] {
+  --dsw-alias-bg-layer-2: color-mix(in srgb, var(--dsw-static-neutral-bluish-00) var(--dsh-glass-settings-raised), transparent) !important;
+  --dsw-alias-settings-card-fill: var(--dsw-alias-bg-layer-2, #ffffff) !important;
+}
 `
 
 let styleTag: HTMLStyleElement | null = null
