@@ -672,7 +672,7 @@ export function observeWorkspaceSections(
     header = document.createElement('div')
     header.className = HEADER_CLASS
     header.setAttribute(SECTION_HEADER_ATTR, sectionId)
-    // 内置分区（置顶、项目）固定位置且不允许改名，因此不可拖动、不给 ··· 菜单。
+    // 内置分区（置顶固定在首位、项目可上下移动，均不可改名/删除），不可拖动（置顶不给 ··· 菜单，项目允许上下移动）。
     const fixed = isBuiltinSection(sectionId)
     if (fixed) header.setAttribute('data-dcu-section-fixed', 'true')
     header.draggable = false
@@ -895,7 +895,10 @@ export function observeWorkspaceSections(
     const target = blocks[0]!.block.parentElement
     if (target === null) return
 
-    // 未分组桶是默认分区的末端成员，也可以充当空默认分区的标题锚点。
+    // 未分组桶是默认分区的末端成员，也可以充当空默认分区的标题锚点（仅当默认分区是最后一个分区时）。
+    const isDefaultLast =
+      layoutState.sections.length > 0 &&
+      layoutState.sections[layoutState.sections.length - 1]?.id === DEFAULT_SECTION_ID
     const ungrouped = Array.from(list?.querySelectorAll('[data-row-key="workspace:"]') ?? [])
       .map(row => (row instanceof HTMLElement ? blockOf(row, list!) : null))
       .find((block): block is HTMLElement => block !== null)
@@ -910,7 +913,7 @@ export function observeWorkspaceSections(
       const section = layoutState.sections[index]!
       const first = section.ids.map(id => visibleById.get(id)).find(block => block !== undefined)
       if (first !== undefined) reference = first
-      else if (section.id === DEFAULT_SECTION_ID && ungrouped !== undefined) reference = ungrouped
+      else if (section.id === DEFAULT_SECTION_ID && isDefaultLast && ungrouped !== undefined) reference = ungrouped
       // 「置顶」没有成员时整行不渲染：空的置顶分区只剩一行标题，白占约 40px 高度，
       // 用户也没有任何办法把它收走。自定义空分区必须保留标题（那是新建分区后唯一的可见入口），
       // 所以这条只对内置置顶生效；重新置顶任意项目时标题会自动回到原位。
@@ -981,18 +984,26 @@ export function observeWorkspaceSections(
       for (const header of headers.values()) header.style.setProperty('--dcu-section-lead', `${lead}px`)
     }
 
-    // 未分组桶跟随默认分区折叠，但不参与宿主工作区排序。
+    // 未分组桶跟随默认分区折叠（仅当默认分区是最后一个分区时紧邻跟随，避免跨区挂件），但不参与宿主工作区排序。
     if (ungrouped !== undefined) {
-      ungrouped.setAttribute('data-dcu-section-member', DEFAULT_SECTION_ID)
-      if (!animatingSections.has(DEFAULT_SECTION_ID)) {
-        if (headers.get(DEFAULT_SECTION_ID)?.dataset.open === 'false') {
-          ungrouped.setAttribute('data-dcu-section-hidden', 'true')
-        } else {
-          ungrouped.removeAttribute('data-dcu-section-hidden')
-          ungrouped.style.removeProperty('max-height')
-          ungrouped.style.removeProperty('overflow')
-          ungrouped.style.removeProperty('opacity')
+      if (isDefaultLast) {
+        ungrouped.setAttribute('data-dcu-section-member', DEFAULT_SECTION_ID)
+        if (!animatingSections.has(DEFAULT_SECTION_ID)) {
+          if (headers.get(DEFAULT_SECTION_ID)?.dataset.open === 'false') {
+            ungrouped.setAttribute('data-dcu-section-hidden', 'true')
+          } else {
+            ungrouped.removeAttribute('data-dcu-section-hidden')
+            ungrouped.style.removeProperty('max-height')
+            ungrouped.style.removeProperty('overflow')
+            ungrouped.style.removeProperty('opacity')
+          }
         }
+      } else {
+        ungrouped.removeAttribute('data-dcu-section-member')
+        ungrouped.removeAttribute('data-dcu-section-hidden')
+        ungrouped.style.removeProperty('max-height')
+        ungrouped.style.removeProperty('overflow')
+        ungrouped.style.removeProperty('opacity')
       }
     }
 

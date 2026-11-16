@@ -87,7 +87,7 @@ export function serializeSections(state: SectionsState): string {
 /**
  * 用当前实际存在的工作区集合校正分区结构：
  * - 丢弃已删除的工作区、跨分区重复项（保留首次出现）与重复分区 id；
- * - 补齐缺失的内置分区，`default` 固定到最后；
+ * - 补齐缺失的内置分区，`default` 缺失时追加到末尾（已有则保留用户排序位置）；
  * - 名称空白的内置分区回退默认名。
  *
  * @param state - 待校正的结构。

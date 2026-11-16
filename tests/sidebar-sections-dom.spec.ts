@@ -870,6 +870,43 @@ describe('工作区分区：DOM 层', () => {
     expect(ungrouped.getAttribute('data-dcu-section-hidden')).toBe('true')
   })
 
+  it('当空「项目」分区上移至其他分区上方时，标题正确定位在下一分区之前，未分组桶不作为跨区成员', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+        { id: 's1', name: '归档任务', ids: ['a'] },
+      ],
+    })
+    const list = mountFixture(['a'])
+    const ungrouped = document.createElement('div')
+    ungrouped.className = 'groupSection'
+    const row = document.createElement('div')
+    row.setAttribute('data-row-key', 'workspace:')
+    row.textContent = '未分组'
+    ungrouped.appendChild(row)
+    list.appendChild(ungrouped)
+
+    mount(['a'])
+    await waitForSync()
+
+    const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+    const blockA = list.querySelector<HTMLElement>('[data-dcu-test-group="a"]')!
+
+    expect(defaultHeader).not.toBeUndefined()
+    expect(s1Header).not.toBeUndefined()
+    expect(blockA).not.toBeNull()
+
+    // defaultHeader 必须在 s1Header 之前，且都在 blockA 之前
+    expect(defaultHeader.compareDocumentPosition(s1Header) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(s1Header.compareDocumentPosition(blockA) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(blockA.compareDocumentPosition(ungrouped) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    // default 不在最末分区时，未分组桶物理在末尾，不可被赋予 default 的成员标记以避免跨区跟随折叠
+    expect(ungrouped.getAttribute('data-dcu-section-member')).toBeNull()
+  })
+
   it('内置分区有 ···（只提供「新建分区」），且不可拖动', async () => {
     // 置顶一个项目，让两个内置分区标题都真实存在（空的置顶分区不渲染标题）。
     seedSections({ sections: [
