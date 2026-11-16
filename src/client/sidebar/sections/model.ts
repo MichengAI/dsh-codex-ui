@@ -7,14 +7,14 @@
  *
  * 不变式：
  * - 始终包含内置分区 `pinned`（置顶）与兜底分区 `default`（项目），且各只有一份；
- * - `default` 永远排在最后，`pinned` 可被拖到任意位置（Codex 同样允许）；
+ * - `pinned` 固定排在最前面，`default`（项目）与自定义分区均可自由上下调整顺序；
  * - 一个工作区最多出现在一个分区里，未知工作区在归一化时被丢弃。
  */
 
-/** 内置「置顶」分区 id：可拖动、可重命名，但不能删除。 */
+/** 内置「置顶」分区 id：固定最前，可改名但不可删除或移动。 */
 export const PINNED_SECTION_ID = 'pinned'
 
-/** 兜底「项目」分区 id：固定最后，成员是尚未归类的工作区。 */
+/** 兜底「项目」分区 id：不可删除或改名，但支持上下移动与自定义排序。 */
 export const DEFAULT_SECTION_ID = 'default'
 
 /** 持久化键；与侧栏导航布局分键，互不影响。 */
@@ -122,13 +122,16 @@ export function normalizeSections(
 
   if (!seenSections.has(PINNED_SECTION_ID)) {
     sections.unshift({ id: PINNED_SECTION_ID, name: defaultNameFor(PINNED_SECTION_ID), ids: [] })
+  } else {
+    const pinnedIndex = sections.findIndex(section => section.id === PINNED_SECTION_ID)
+    if (pinnedIndex > 0) {
+      const [pinned] = sections.splice(pinnedIndex, 1)
+      sections.unshift(pinned!)
+    }
   }
   const defaultIndex = sections.findIndex(section => section.id === DEFAULT_SECTION_ID)
   if (defaultIndex === -1) {
     sections.push({ id: DEFAULT_SECTION_ID, name: defaultNameFor(DEFAULT_SECTION_ID), ids: [] })
-  } else if (defaultIndex !== sections.length - 1) {
-    const [fallback] = sections.splice(defaultIndex, 1)
-    sections.push(fallback!)
   }
 
   return { sections }
@@ -247,20 +250,21 @@ export function sortSectionMembers(state: SectionsState, order: readonly string[
  * 调整分区顺序。
  *
  * @param state - 当前结构。
- * @param sectionId - 被移动的分区。
- * @param beforeSectionId - 插入到该分区之前；`null` 表示排到最后（兜底分区之前）。
- * @returns 新的结构；兜底分区不可移动，非法目标原样返回。
+ * @param sectionId - 被移动的分区（除置顶外的任意分区，包括项目分区）。
+ * @param beforeSectionId - 插入到该分区之前；`null` 表示排到最后。不能为置顶分区。
+ * @returns 新的结构；置顶分区不可移动，非法目标原样返回。
  */
 export function moveSection(
   state: SectionsState,
   sectionId: string,
   beforeSectionId: string | null,
 ): SectionsState {
-  // 置顶固定最上面、项目固定最下面，两个内置分区都不参与拖动重排。
-  if (sectionId === DEFAULT_SECTION_ID || sectionId === PINNED_SECTION_ID) return state
+  // 置顶固定最上面，不可移动；也不能把其它分区移动到置顶之前
+  if (sectionId === PINNED_SECTION_ID || beforeSectionId === PINNED_SECTION_ID) return state
+  if (beforeSectionId === sectionId) return state
+
   const moving = state.sections.find(section => section.id === sectionId)
   if (moving === undefined) return state
-  if (beforeSectionId === DEFAULT_SECTION_ID || beforeSectionId === sectionId) return state
 
   const rest = state.sections.filter(section => section.id !== sectionId)
   let at = rest.length
@@ -271,46 +275,46 @@ export function moveSection(
   }
   rest.splice(at, 0, moving)
 
-  // 兜底分区永远最后，无论插入点怎么算。
-  const fallbackIndex = rest.findIndex(section => section.id === DEFAULT_SECTION_ID)
-  if (fallbackIndex !== -1 && fallbackIndex !== rest.length - 1) {
-    const [fallback] = rest.splice(fallbackIndex, 1)
-    rest.push(fallback!)
+  // 保证置顶始终固定在最前面
+  const pinnedIndex = rest.findIndex(section => section.id === PINNED_SECTION_ID)
+  if (pinnedIndex > 0) {
+    const [pinned] = rest.splice(pinnedIndex, 1)
+    rest.unshift(pinned!)
   }
   return { sections: rest }
 }
 
-/** 判断某个分区是否可以向上移动（必须是非内置分区，且上方还有其他自定义分区）。 */
+/** 判断某个分区是否可以向上移动（除置顶外，且上方还有其他可移动分区）。 */
 export function canMoveSectionUp(state: SectionsState, sectionId: string): boolean {
-  if (isBuiltinSection(sectionId)) return false
-  const custom = state.sections.filter(s => !isBuiltinSection(s.id))
-  const index = custom.findIndex(s => s.id === sectionId)
+  if (sectionId === PINNED_SECTION_ID) return false
+  const movable = state.sections.filter(s => s.id !== PINNED_SECTION_ID)
+  const index = movable.findIndex(s => s.id === sectionId)
   return index > 0
 }
 
-/** 判断某个分区是否可以向下移动（必须是非内置分区，且下方还有其他自定义分区）。 */
+/** 判断某个分区是否可以向下移动（除置顶外，且下方还有其他可移动分区）。 */
 export function canMoveSectionDown(state: SectionsState, sectionId: string): boolean {
-  if (isBuiltinSection(sectionId)) return false
-  const custom = state.sections.filter(s => !isBuiltinSection(s.id))
-  const index = custom.findIndex(s => s.id === sectionId)
-  return index !== -1 && index < custom.length - 1
+  if (sectionId === PINNED_SECTION_ID) return false
+  const movable = state.sections.filter(s => s.id !== PINNED_SECTION_ID)
+  const index = movable.findIndex(s => s.id === sectionId)
+  return index !== -1 && index < movable.length - 1
 }
 
-/** 向上移动自定义分区（与上方相邻的自定义分区交换位置）。 */
+/** 向上移动分区（与上方相邻的分区交换位置）。 */
 export function moveSectionUp(state: SectionsState, sectionId: string): SectionsState {
   if (!canMoveSectionUp(state, sectionId)) return state
-  const custom = state.sections.filter(s => !isBuiltinSection(s.id))
-  const index = custom.findIndex(s => s.id === sectionId)
-  const prev = custom[index - 1]!
+  const movable = state.sections.filter(s => s.id !== PINNED_SECTION_ID)
+  const index = movable.findIndex(s => s.id === sectionId)
+  const prev = movable[index - 1]!
   return moveSection(state, sectionId, prev.id)
 }
 
-/** 向下移动自定义分区（与下方相邻的自定义分区交换位置）。 */
+/** 向下移动分区（与下方相邻的分区交换位置）。 */
 export function moveSectionDown(state: SectionsState, sectionId: string): SectionsState {
   if (!canMoveSectionDown(state, sectionId)) return state
-  const custom = state.sections.filter(s => !isBuiltinSection(s.id))
-  const index = custom.findIndex(s => s.id === sectionId)
-  const nextTarget = index + 2 < custom.length ? custom[index + 2]!.id : null
+  const movable = state.sections.filter(s => s.id !== PINNED_SECTION_ID)
+  const index = movable.findIndex(s => s.id === sectionId)
+  const nextTarget = index + 2 < movable.length ? movable[index + 2]!.id : null
   return moveSection(state, sectionId, nextTarget)
 }
 

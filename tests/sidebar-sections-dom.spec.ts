@@ -1307,20 +1307,45 @@ describe('工作区分区：DOM 层', () => {
     expect(headerIdsInDomOrder()).toEqual(['s1', 's3', 's2', DEFAULT_SECTION_ID])
     expect(readHostSections().sections.map(s => s.id)).toEqual([PINNED_SECTION_ID, 's1', 's3', 's2', DEFAULT_SECTION_ID])
 
-    // 4. 再次打开下移后的 s2 菜单：此时它处于自定义分区的末位，只能上移，不能下移
+    // 4. 再次打开下移后的 s2 菜单：由于项目分区支持排序且位于其后，s2 既能上移也能继续下移到项目下方
     const newS2Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's2')!
     newS2Header.querySelector<HTMLElement>('.dcu-ws-section-actions button[data-dcu-action="more"]')!.click()
     await waitForSync()
     panel = document.querySelector('.dcu-ws-section-menu')!
     labels = Array.from(panel.querySelectorAll('button')).map(b => b.textContent?.trim())
+    expect(labels).toEqual(['重命名', '向上移动', '向下移动', '新建分区', '移除分区'])
+
+    // 5. 点击「向下移动」把 s2 进一步移到项目分区（default）之后
+    const moveDownAgainBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '向下移动')!
+    moveDownAgainBtn.click()
+    await waitForSync()
+    expect(headerIdsInDomOrder()).toEqual(['s1', 's3', DEFAULT_SECTION_ID, 's2'])
+    expect(readHostSections().sections.map(s => s.id)).toEqual([PINNED_SECTION_ID, 's1', 's3', DEFAULT_SECTION_ID, 's2'])
+
+    // 6. 此时 s2 处于末位：只能上移，不能下移
+    const bottomS2Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's2')!
+    bottomS2Header.querySelector<HTMLElement>('.dcu-ws-section-actions button[data-dcu-action="more"]')!.click()
+    await waitForSync()
+    panel = document.querySelector('.dcu-ws-section-menu')!
+    labels = Array.from(panel.querySelectorAll('button')).map(b => b.textContent?.trim())
     expect(labels).toEqual(['重命名', '向上移动', '新建分区', '移除分区'])
 
-    // 5. 点击「向上移动」把 s2 移回原位
-    const moveUpBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '向上移动')!
-    moveUpBtn.click()
+    // 7. 测试项目分区本身的菜单：此时项目分区位于 s3 与 s2 之间，支持向上移动与向下移动，不支持改名与删除
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
     await waitForSync()
-    expect(headerIdsInDomOrder()).toEqual(['s1', 's2', 's3', DEFAULT_SECTION_ID])
-    expect(readHostSections().sections.map(s => s.id)).toEqual([PINNED_SECTION_ID, 's1', 's2', 's3', DEFAULT_SECTION_ID])
+    const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+    defaultHeader.querySelector<HTMLElement>('.dcu-ws-section-actions button[data-dcu-action="more"]')!.click()
+    await waitForSync()
+    panel = document.querySelector('.dcu-ws-section-menu')!
+    labels = Array.from(panel.querySelectorAll('button')).map(b => b.textContent?.trim())
+    expect(labels).toEqual(['向上移动', '向下移动', '新建分区'])
+
+    // 8. 点击「向上移动」把项目分区上移到 s3 之前
+    const defaultMoveUpBtn = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.trim() === '向上移动')!
+    defaultMoveUpBtn.click()
+    await waitForSync()
+    expect(headerIdsInDomOrder()).toEqual(['s1', DEFAULT_SECTION_ID, 's3', 's2'])
+    expect(readHostSections().sections.map(s => s.id)).toEqual([PINNED_SECTION_ID, 's1', DEFAULT_SECTION_ID, 's3', 's2'])
   })
 
   it('同分区内部的项目拖拽排序正常放行（dragstart 不被拦截，保留原生拖拽排序）', async () => {

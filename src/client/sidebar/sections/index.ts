@@ -1309,26 +1309,26 @@ export function observeWorkspaceSections(
           startRename(sectionId)
         },
       })
-      if (canMoveSectionUp(state, sectionId)) {
-        items.push({
-          label: text('sections.moveUp', '向上移动'),
-          icon: iconUp(),
-          onSelect: () => {
-            closeSectionMenu()
-            commitExplicit(moveSectionUp(state, sectionId), section.ids)
-          },
-        })
-      }
-      if (canMoveSectionDown(state, sectionId)) {
-        items.push({
-          label: text('sections.moveDown', '向下移动'),
-          icon: iconDown(),
-          onSelect: () => {
-            closeSectionMenu()
-            commitExplicit(moveSectionDown(state, sectionId), section.ids)
-          },
-        })
-      }
+    }
+    if (canMoveSectionUp(state, sectionId)) {
+      items.push({
+        label: text('sections.moveUp', '向上移动'),
+        icon: iconUp(),
+        onSelect: () => {
+          closeSectionMenu()
+          commitExplicit(moveSectionUp(state, sectionId), section.ids)
+        },
+      })
+    }
+    if (canMoveSectionDown(state, sectionId)) {
+      items.push({
+        label: text('sections.moveDown', '向下移动'),
+        icon: iconDown(),
+        onSelect: () => {
+          closeSectionMenu()
+          commitExplicit(moveSectionDown(state, sectionId), section.ids)
+        },
+      })
     }
     items.push({
       label: text('sections.new', '新建分区'),
