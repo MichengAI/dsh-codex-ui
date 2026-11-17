@@ -218,6 +218,72 @@ try {
   )
   console.log('Issue #102 亮色设置卡片防御校验：通过（卡片底色保持纯白，未被暗色规则污染）')
 
+  // Issue #104：同一浮层内部的类名前缀不能被当成独立材质表面；嵌套原生菜单仍走自己的通道。
+  const popupPage = await browser.newPage()
+  await popupPage.setContent(`<!doctype html><html><head><style>
+    body { --dsw-alias-bg-layer-1: #242428; --dsw-alias-label-primary: #eeeeee;
+      --dsw-alias-brand-primary-new-colorprimary-new-color: #388bff;
+      --dsw-specific-menu: #303136; --dsw-menu-backdrop-filter: blur(40px) saturate(150%); }
+    .sample-material, .sample-card { background: var(--dsw-specific-menu); backdrop-filter: var(--dsw-menu-backdrop-filter); }
+    .sample-note { background: rgba(255,255,255,.08); }
+    .sample-avatar { border: 2px solid var(--dsw-specific-menu); }
+  </style></head><body>
+    <div class="sample-popover" id="popover"><div class="sample-popover-title" id="title">标题</div>
+      <button class="sample-popover-option" id="option"><span class="sample-popover-option-label" id="label">选项</span></button>
+      <div class="sample-popover-note sample-note" id="note">提示</div>
+      <div class="sample-dropdown" id="mixed-child">浮层内部组件</div>
+      <div role="menu" id="legacy-submenu"><button role="menuitem">子菜单</button></div>
+      <div data-menu-material="translucent" id="native-submenu"><div class="sample-material" id="native-material"></div></div>
+    </div>
+    <div class="sample-dropdown" id="dropdown"><span class="sample-dropdown-label" id="dropdown-label">下拉文字</span></div>
+    <div data-menu-material="translucent"><span class="sample-popover-label" id="native-label">原生菜单内部文字</span></div>
+    <div class="sample-card" id="card">非目标常驻卡片</div><img class="sample-avatar" id="avatar">
+  </body></html>`)
+  await popupPage.addScriptTag({ content: genScript })
+  await popupPage.addScriptTag({ content: seamScript })
+  await popupPage.addScriptTag({ content: glassScript })
+  for (const dark of [false, true]) {
+    for (const preset of ['clear', 'standard', 'frosted']) {
+      const sample = await popupPage.evaluate(({ dark, preset }) => {
+        window.__glass.applyGlassSettings({ enabled: false })
+        document.body.toggleAttribute('data-ds-dark-theme', dark)
+        const snapshot = () => Object.fromEntries(
+          ['popover', 'title', 'option', 'label', 'note', 'mixed-child', 'legacy-submenu', 'native-material', 'dropdown', 'dropdown-label', 'native-label', 'card', 'avatar'].map(id => {
+            const style = getComputedStyle(document.getElementById(id))
+            return [id, { background: style.backgroundColor, filter: style.backdropFilter, outline: style.outlineStyle, border: style.borderTopColor }]
+          }),
+        )
+        const before = snapshot()
+        window.__glass.applyGlassSettings({ enabled: true, mode: 'compat', preset })
+        const compat = snapshot()
+        document.getElementById('option').focus()
+        const focusVisible = document.getElementById('option').matches(':focus-visible')
+        const focusOutline = getComputedStyle(document.getElementById('option')).outlineStyle
+        window.__glass.applyGlassSettings({ enabled: false })
+        document.getElementById('option').blur()
+        const disabled = snapshot()
+        window.__glass.applyGlassSettings({ enabled: true, mode: 'mica', preset })
+        const mica = snapshot()
+        window.__glass.applyGlassSettings({ enabled: false })
+        return { before, compat, disabled, mica, focusVisible, focusOutline }
+      }, { dark, preset })
+      const name = `${dark ? '深色' : '浅色'}/${preset}`
+      for (const id of ['title', 'option', 'label', 'note', 'mixed-child', 'dropdown-label', 'native-label', 'card', 'avatar']) {
+        assert.deepEqual(sample.compat[id], sample.before[id], `${name}/${id} 不得被玻璃兜底规则污染`)
+      }
+      for (const id of ['popover', 'dropdown', 'legacy-submenu', 'native-material']) {
+        assert.equal(sample.compat[id].filter, 'blur(12px)', `${name}/${id} 应保留独立磨砂`)
+        assert.notEqual(sample.compat[id].background, 'rgba(0, 0, 0, 0)', `${name}/${id} 应保留材质背景`)
+      }
+      assert.equal(sample.compat.popover.outline, 'solid', `${name} 保留外壳描边`)
+      assert.deepEqual(sample.disabled, sample.before, `${name} 关闭后应恢复原样`)
+      assert.deepEqual(sample.mica.title, sample.before.title, `${name} 不影响云母模式的普通文字`)
+      if (sample.focusVisible) assert.equal(sample.focusOutline, 'solid', `${name} 保留键盘焦点描边`)
+    }
+  }
+  await popupPage.close()
+  console.log('Issue #104：深浅主题 × 三档预设，浮层外壳、内部隔离、混合前缀、嵌套菜单、非目标样式及关闭恢复检查通过')
+
   console.log('通用外扩装饰与玻璃层共存：两种模式、三种预设均通过')
   console.log('玻璃材质计算样式校验：')
   for (const row of rows) {
