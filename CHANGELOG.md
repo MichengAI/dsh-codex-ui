@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.7] - 2026-11-17
+
+- **Workspace Header Create Section Button & Inline Insertion (Issue #105)**:
+  - Added a dedicated "Create section" button to the workspace header in the sidebar, allowing new sections to be created instantly with an inline name input;
+  - Added a "Create section" option to the `···` more actions menu on existing section headers, making it easy to create peer sections directly at the desired location;
+  - Pressing Enter creates the section while Escape cancels it, seamlessly updating the layout without manual page refreshing.
+- **Empty Section Creation & Sidebar Rail Interaction Safeguards (Issue #105)**:
+  - Fixed an issue where creating a new section directly below an empty section could cause the input box to lose focus prematurely;
+  - Ensured smooth section creation and positioning across both expanded and collapsed sidebar layouts, preventing input disruptions.
+- **Third-Party Plugin Menu & Popover Theme Isolation (Issue #104)**:
+  - Refined theme scope selectors so that only the outermost popovers and dropdown wrappers carry plugin styles, preventing nested menus and native third-party plugin panels from unintended dark styling or clipped borders.
+
 ## [2.2.6] - 2026-11-16
 
 - **Default "Projects" Section Supports Reordering Up and Down (Issue #103)**:
