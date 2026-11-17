@@ -3004,4 +3004,98 @@ describe('分区二级菜单的可访问性：', () => {
     expect(idxS2).toBe(idxNew + 1)
     dispose?.()
   })
+
+  it('在最后一个分区（末尾成员在列表最底部）点击新建分区，输入框应精准插入在最后一个成员之后追加在列表末尾', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d1'] },
+      ],
+    })
+    mountFixture(['p1', 'd1'])
+    mount(['p1', 'd1'])
+    await waitForSync()
+
+    // 找到 DEFAULT_SECTION_ID（项目，最后一个分区）的操作按钮并打开菜单
+    const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+    const moreBtn = defaultHeader.querySelector<HTMLButtonElement>('button[data-dcu-action="more"]')!
+    moreBtn.click()
+    await waitForSync()
+
+    const menu = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    const newSectionItem = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+      .find(item => item.textContent?.includes('新建分区'))!
+    newSectionItem.click()
+    await waitForSync()
+
+    const editingRow = document.querySelector<HTMLElement>('.dcu-ws-section.dcu-ws-section-editing')!
+    expect(editingRow).not.toBeNull()
+
+    // 验证 editingRow 必须位于 d1（最后一个成员）之后，绝不能被插在 defaultHeader 后面或更前面
+    const d1Row = document.querySelector<HTMLElement>('[data-row-key="workspace:d1"]')!
+    expect(d1Row.compareDocumentPosition(editingRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(defaultHeader.compareDocumentPosition(editingRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    // 输入名称并确认
+    const input = editingRow.querySelector<HTMLInputElement>('input.dcu-ws-section-input')!
+    input.value = '末尾新分区'
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    await waitForSync()
+
+    const headerNames = headers().map(h => h.querySelector('.dcu-ws-section-label')?.textContent?.trim())
+    expect(headerNames.at(-1)).toBe('末尾新分区')
+    dispose?.()
+  })
+
+  it('平铺视图（无工作区列表）下不注入新建分区按钮；视图切换丢失列表时应及时移除已注入按钮', async () => {
+    seedSections({
+      sections: [
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d1'] },
+      ],
+    })
+    // 1. 模拟平铺视图：只存在 mockBrowser 和 mock_sectionHeader（会话），但无 role="tree" 的工作区列表
+    const region = document.createElement('div')
+    region.className = 'mockBrowser'
+    const header = document.createElement('div')
+    header.className = 'mock_sectionHeader'
+    const headerActions = document.createElement('span')
+    headerActions.className = 'mock_headerActions'
+    for (const name of ['视图选项', '添加工作区']) {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.setAttribute('aria-label', name)
+      headerActions.appendChild(button)
+    }
+    header.appendChild(headerActions)
+    region.appendChild(header)
+    document.body.appendChild(region)
+
+    mount([])
+    await waitForSync()
+
+    // 此时平铺视图下不应注入新建分区按钮
+    expect(document.querySelector('button[data-dcu-action="create-section"]')).toBeNull()
+
+    // 2. 动态挂载工作区列表（切回分组视图）
+    const list = document.createElement('div')
+    list.className = 'list'
+    list.setAttribute('role', 'tree')
+    const row = document.createElement('div')
+    row.setAttribute('data-row-key', 'workspace:d1')
+    list.appendChild(row)
+    region.appendChild(list)
+
+    // 等待 boot 轮询（200ms）检测到列表挂载并触发 sync
+    await new Promise<void>(resolve => setTimeout(resolve, 260))
+    await waitForSync()
+    // 分组就绪后应成功注入
+    expect(document.querySelector('button[data-dcu-action="create-section"]')).not.toBeNull()
+
+    // 3. 动态移除工作区列表（再次切回平铺视图）
+    list.remove()
+    await waitForSync(3)
+    // 按钮应被及时清理
+    expect(document.querySelector('button[data-dcu-action="create-section"]')).toBeNull()
+    dispose?.()
+  })
 })

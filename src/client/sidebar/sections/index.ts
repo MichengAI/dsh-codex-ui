@@ -126,11 +126,11 @@ body[data-dcu-drag-blocked='true'] [class*="workspaceDropBefore"]::before,
 body[data-dcu-drag-blocked='true'] [class*="workspaceDropAfter"]::after,
 body[data-dcu-drag-blocked='true'] [class*="dropBefore"]::before,
 body[data-dcu-drag-blocked='true'] [class*="dropAfter"]::after{display:none !important}
-/* 顶部工作区横栏操作区扩展：原生宿主 max-width 为 60px 仅预留两颗按钮；注入新建分区后需放宽到 90px，
+/* 顶部工作区横栏操作区扩展：原生宿主 max-width 为 60px 仅预留两颗按钮；注入新建分区后需放宽到 96px，
    未展开搜索时正常展示 3 颗按钮，当宿主展开搜索（添加 headerActionsHidden）时依然平滑折叠至 0 */
 [data-sidebar-workspace-header] [class*="headerActions"]:not([class*="headerActionsHidden"]),
 [class*="sectionHeader"] [class*="headerActions"]:not([class*="headerActionsHidden"]) {
-  max-width: 90px;
+  max-width: 96px;
 }
 
 `
@@ -182,7 +182,7 @@ export function isWorkspaceRegion(list: HTMLElement): boolean {
     const header = node.querySelector<HTMLElement>('[class*="sectionHeader"]')
     if (header !== null) {
       const actions = header.querySelector<HTMLElement>('[class*="headerActions"]')
-      if (actions !== null && actions.querySelectorAll('button').length >= 2) return true
+      if (actions !== null && actions.querySelectorAll('button').length >= 1) return true
     }
     node = node.parentElement
   }
@@ -551,12 +551,12 @@ export function observeWorkspaceSections(
       if (parentActions !== null) return parentActions
     }
     const byHeader = document.querySelector<HTMLElement>(
-      '[data-sidebar-workspace-header] [class*="headerActions"], .mock_headerActions, [class*="sectionHeader"] [class*="headerActions"]',
+      '[data-sidebar-workspace-header] [class*="headerActions"], [class*="sectionHeader"] [class*="headerActions"]',
     )
     if (byHeader !== null) return byHeader
     const listEl = list ?? findWorkspaceList(document)
     if (listEl !== undefined) {
-      const container = listEl.closest('[class*="mockBrowser"], [class*="root"]') ?? listEl.parentElement?.parentElement
+      const container = listEl.closest('[class*="root"]') ?? listEl.parentElement?.parentElement
       if (container !== null && container !== undefined) {
         const actions = container.querySelector<HTMLElement>('[class*="headerActions"]')
         if (actions !== null) return actions
@@ -567,6 +567,10 @@ export function observeWorkspaceSections(
 
   function syncHostCreateSectionButton(): void {
     if (disposed) return
+    if (!sectionsLoaded || findWorkspaceList(document) === undefined) {
+      removeHostCreateSectionButton()
+      return
+    }
     const actionsContainer = findHostHeaderActions()
     if (actionsContainer === null) return
 
@@ -1521,10 +1525,10 @@ export function observeWorkspaceSections(
             if (block !== null && block.parentElement === host) lastMemberEl = block
           }
         }
-        if (lastMemberEl !== null && lastMemberEl.nextSibling !== null) {
+        if (lastMemberEl !== null) {
           host.insertBefore(row, lastMemberEl.nextSibling)
           inserted = true
-        } else if (targetHeader.nextSibling !== null) {
+        } else {
           host.insertBefore(row, targetHeader.nextSibling)
           inserted = true
         }
@@ -2265,15 +2269,16 @@ export function observeWorkspaceSections(
 
   function syncNow(allowRevealRelocating: boolean = true): void {
     if (disposed || syncing) return
-    syncHostCreateSectionButton()
     cacheHostMenuTemplate()
     if (!sectionsLoaded) return
     const next = findWorkspaceList(document)
     if (next === undefined) {
       detachHeaders()
+      removeHostCreateSectionButton()
       return
     }
     list = next
+    syncHostCreateSectionButton()
     if (!wired) {
       wired = true
       subscribeWorkspaces()
@@ -2491,7 +2496,6 @@ export function observeWorkspaceSections(
   // 首轮：等宿主把树挂上来（可能晚于插件激活）。
   const boot = window.setInterval(() => {
     if (disposed) return
-    syncHostCreateSectionButton()
     if (findWorkspaceList(document) === undefined) return
     window.clearInterval(boot)
     scheduleSync()
