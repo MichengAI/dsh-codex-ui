@@ -138,6 +138,25 @@ describe('分区模型：归属与顺序', () => {
     ])
   })
 
+  it('新建分区可指定在某分区之后插入（平级新建）', () => {
+    const base: SectionsState = {
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: 's1', name: '客户', ids: [] },
+        { id: 's2', name: '研发', ids: [] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    }
+    const next = createSection(base, 's_new', '新客户', 's1')
+    expect(next.sections.map(section => section.id)).toEqual([
+      PINNED_SECTION_ID,
+      's1',
+      's_new',
+      's2',
+      DEFAULT_SECTION_ID,
+    ])
+  })
+
   it('sectionOf 能定位归属，未归类返回 undefined', () => {
     expect(sectionOf(sample(), 'c')).toBe('s1')
     expect(sectionOf(sample(), 'zzz')).toBeUndefined()

@@ -188,11 +188,31 @@ export function assignWorkspace(
   return { sections }
 }
 
-/** 新建自定义分区，插到兜底分区之前。 */
-export function createSection(state: SectionsState, id: string, name: string): SectionsState {
+/** 新建自定义分区，默认插到兜底分区之前；若指定 relativeToSectionId，则插在该分区之后（平级新建）。 */
+export function createSection(
+  state: SectionsState,
+  id: string,
+  name: string,
+  relativeToSectionId?: string,
+): SectionsState {
   const sections = state.sections.map(section => ({ ...section, ids: section.ids.slice() }))
-  const defaultIndex = sections.findIndex(section => section.id === DEFAULT_SECTION_ID)
-  const at = defaultIndex === -1 ? sections.length : defaultIndex
+  let at: number
+  if (relativeToSectionId !== undefined) {
+    const idx = sections.findIndex(section => section.id === relativeToSectionId)
+    if (idx !== -1) {
+      at = idx + 1
+    } else {
+      const defaultIndex = sections.findIndex(section => section.id === DEFAULT_SECTION_ID)
+      at = defaultIndex === -1 ? sections.length : defaultIndex
+    }
+  } else {
+    const defaultIndex = sections.findIndex(section => section.id === DEFAULT_SECTION_ID)
+    at = defaultIndex === -1 ? sections.length : defaultIndex
+  }
+  const pinnedIndex = sections.findIndex(section => section.id === PINNED_SECTION_ID)
+  if (pinnedIndex !== -1 && at <= pinnedIndex) {
+    at = pinnedIndex + 1
+  }
   sections.splice(at, 0, { id, name, ids: [] })
   return { sections }
 }

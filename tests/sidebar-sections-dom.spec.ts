@@ -2882,4 +2882,126 @@ describe('分区二级菜单的可访问性：', () => {
     expect(stickyIds()).toEqual([DEFAULT_SECTION_ID])
   })
 
+  it('在侧栏顶部「工作区」横栏操作区注入「新建分区」按钮，点击可触发行内输入并创建分区', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d1'] },
+      ],
+    })
+    mountFixture(['p1', 'd1'])
+    mount(['p1', 'd1'])
+    await waitForSync()
+
+    // 1. 验证在宿主头部操作栏注入了新建分区按钮
+    const headerActions = document.querySelector<HTMLElement>('.mock_headerActions')!
+    expect(headerActions).not.toBeNull()
+    const createBtn = headerActions.querySelector<HTMLButtonElement>('button[data-dcu-action="create-section"]')
+    expect(createBtn).not.toBeNull()
+    expect(createBtn!.getAttribute('aria-label')).toBe('新建分区')
+    expect(createBtn!.getAttribute('title')).toBe('新建分区')
+
+    // 验证相对顺序：新建分区按钮位于「添加工作区」之前
+    const addBtn = headerActions.querySelector<HTMLButtonElement>('button[aria-label="添加工作区"]')!
+    expect(addBtn).not.toBeNull()
+    expect(createBtn!.compareDocumentPosition(addBtn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    // 2. 点击新建分区按钮，触发行内输入框
+    createBtn!.click()
+    await waitForSync()
+
+    const editingRow = document.querySelector<HTMLElement>('.dcu-ws-section.dcu-ws-section-editing')
+    expect(editingRow).not.toBeNull()
+    const input = editingRow!.querySelector<HTMLInputElement>('input.dcu-ws-section-input')
+    expect(input).not.toBeNull()
+    expect(document.activeElement).toBe(input)
+
+    // 3. 输入新分区名称并按回车
+    input!.value = '核心业务'
+    input!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    await waitForSync()
+
+    // 验证新分区已被创建并在 DOM 中渲染
+    const allHeaders = headers()
+    const newSectionHeader = allHeaders.find(h => h.textContent?.includes('核心业务'))
+    expect(newSectionHeader).toBeDefined()
+
+    // 4. 验证卸载时清理新建分区按钮
+    dispose?.()
+    expect(document.querySelector('button[data-dcu-action="create-section"]')).toBeNull()
+  })
+
+  it('当宿主头部无添加工作区按钮时，新建分区按钮依然能挂载到操作区并正常创建分区', async () => {
+    seedSections({
+      sections: [
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d1'] },
+      ],
+    })
+    mountFixture(['d1'])
+    // 移除宿主原生添加工作区按钮，模拟无 directoryFlow 场景
+    const hostAddBtn = document.querySelector<HTMLButtonElement>('.mock_headerActions button[aria-label="添加工作区"]')!
+    hostAddBtn.remove()
+
+    mount(['d1'])
+    await waitForSync()
+
+    const headerActions = document.querySelector<HTMLElement>('.mock_headerActions')!
+    const createBtn = headerActions.querySelector<HTMLButtonElement>('button[data-dcu-action="create-section"]')
+    expect(createBtn).not.toBeNull()
+
+    createBtn!.click()
+    await waitForSync()
+
+    const input = document.querySelector<HTMLInputElement>('.dcu-ws-section.dcu-ws-section-editing input.dcu-ws-section-input')
+    expect(input).not.toBeNull()
+    input!.value = '边界分区'
+    input!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    await waitForSync()
+
+    expect(headers().some(h => h.textContent?.includes('边界分区'))).toBe(true)
+    dispose?.()
+  })
+
+  it('在分区操作菜单中点击新建分区，新分区作为平级插入在当前分区之后', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: 's1', name: '分组一', ids: ['a1'] },
+        { id: 's2', name: '分组二', ids: ['a2'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d1'] },
+      ],
+    })
+    mountFixture(['p1', 'a1', 'a2', 'd1'])
+    mount(['p1', 'a1', 'a2', 'd1'])
+    await waitForSync()
+
+    // 找到 s1（分组一）的操作按钮并打开菜单
+    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+    const moreBtn = s1Header.querySelector<HTMLButtonElement>('button[data-dcu-action="more"]')!
+    moreBtn.click()
+    await waitForSync()
+
+    // 在弹出的分区菜单中点击「新建分区」
+    const menu = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    const newSectionItem = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+      .find(item => item.textContent?.includes('新建分区'))!
+    newSectionItem.click()
+    await waitForSync()
+
+    const input = document.querySelector<HTMLInputElement>('.dcu-ws-section.dcu-ws-section-editing input.dcu-ws-section-input')!
+    expect(input).not.toBeNull()
+    input.value = '分组一之平级'
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    await waitForSync()
+
+    // 验证新分区插入在 s1 之后、s2 之前
+    const headerNames = headers().map(h => h.querySelector('.dcu-ws-section-label')?.textContent?.trim())
+    expect(headerNames).toContain('分组一之平级')
+    const idxS1 = headerNames.indexOf('分组一')
+    const idxNew = headerNames.indexOf('分组一之平级')
+    const idxS2 = headerNames.indexOf('分组二')
+    expect(idxNew).toBe(idxS1 + 1)
+    expect(idxS2).toBe(idxNew + 1)
+    dispose?.()
+  })
 })

@@ -43,6 +43,9 @@ import { flushSectionsSave, loadSectionsDocument, scheduleSectionsSave } from '.
 /** 分区标题行的标记属性，样式与测试都靠它定位。 */
 export const SECTION_HEADER_ATTR = 'data-dcu-ws-section'
 
+/** 顶部工作区横栏注入的新建分区操作标识。 */
+export const CREATE_SECTION_ACTION = 'create-section'
+
 /** 追加在项目行菜单里的入口标记。 */
 export const MENU_ITEM_ATTR = 'data-dcu-ws-section-item'
 
@@ -123,6 +126,12 @@ body[data-dcu-drag-blocked='true'] [class*="workspaceDropBefore"]::before,
 body[data-dcu-drag-blocked='true'] [class*="workspaceDropAfter"]::after,
 body[data-dcu-drag-blocked='true'] [class*="dropBefore"]::before,
 body[data-dcu-drag-blocked='true'] [class*="dropAfter"]::after{display:none !important}
+/* 顶部工作区横栏操作区扩展：原生宿主 max-width 为 60px 仅预留两颗按钮；注入新建分区后需放宽到 90px，
+   未展开搜索时正常展示 3 颗按钮，当宿主展开搜索（添加 headerActionsHidden）时依然平滑折叠至 0 */
+[data-sidebar-workspace-header] [class*="headerActions"]:not([class*="headerActionsHidden"]),
+[class*="sectionHeader"] [class*="headerActions"]:not([class*="headerActionsHidden"]) {
+  max-width: 90px;
+}
 
 `
 
@@ -533,6 +542,86 @@ export function observeWorkspaceSections(
       if (isHostAddWorkspaceButton(btn)) return btn
     }
     return null
+  }
+
+  function findHostHeaderActions(): HTMLElement | null {
+    const hostAddBtn = findHostAddWorkspaceButton()
+    if (hostAddBtn !== null) {
+      const parentActions = hostAddBtn.closest<HTMLElement>('[class*="headerActions"]')
+      if (parentActions !== null) return parentActions
+    }
+    const byHeader = document.querySelector<HTMLElement>(
+      '[data-sidebar-workspace-header] [class*="headerActions"], .mock_headerActions, [class*="sectionHeader"] [class*="headerActions"]',
+    )
+    if (byHeader !== null) return byHeader
+    const listEl = list ?? findWorkspaceList(document)
+    if (listEl !== undefined) {
+      const container = listEl.closest('[class*="mockBrowser"], [class*="root"]') ?? listEl.parentElement?.parentElement
+      if (container !== null && container !== undefined) {
+        const actions = container.querySelector<HTMLElement>('[class*="headerActions"]')
+        if (actions !== null) return actions
+      }
+    }
+    return null
+  }
+
+  function syncHostCreateSectionButton(): void {
+    if (disposed) return
+    const actionsContainer = findHostHeaderActions()
+    if (actionsContainer === null) return
+
+    let btn = actionsContainer.querySelector<HTMLButtonElement>(`button[data-dcu-action="${CREATE_SECTION_ACTION}"]`)
+    if (btn === null) {
+      const templateBtn = actionsContainer.querySelector<HTMLButtonElement>('button')
+      if (templateBtn !== null) {
+        btn = templateBtn.cloneNode(false) as HTMLButtonElement
+      } else {
+        btn = document.createElement('button')
+        btn.className = `${HEADER_CLASS}-action`
+      }
+      btn.setAttribute('type', 'button')
+      btn.setAttribute('data-dcu-action', CREATE_SECTION_ACTION)
+      btn.removeAttribute('aria-keyshortcuts')
+      btn.removeAttribute('tabindex')
+      btn.removeAttribute('aria-haspopup')
+      btn.removeAttribute('aria-expanded')
+      btn.removeAttribute('data-context-menu-trigger')
+      btn.innerHTML = iconPlus()
+
+      const label = text('sections.new', '新建分区')
+      btn.setAttribute('aria-label', label)
+      btn.setAttribute('title', label)
+
+      btn.addEventListener('click', event => {
+        event.preventDefault()
+        event.stopPropagation()
+        startCreateSection()
+      })
+
+      // 插入位置：优先插在宿主原生「添加工作区」按钮之前
+      const hostAddBtn = findHostAddWorkspaceButton()
+      let insertAnchor: Element | null = hostAddBtn
+      while (insertAnchor !== null && insertAnchor.parentElement !== actionsContainer) {
+        insertAnchor = insertAnchor.parentElement
+      }
+      if (insertAnchor !== null && insertAnchor.parentElement === actionsContainer) {
+        actionsContainer.insertBefore(btn, insertAnchor)
+      } else {
+        actionsContainer.appendChild(btn)
+      }
+    } else {
+      const label = text('sections.new', '新建分区')
+      if (btn.getAttribute('aria-label') !== label) {
+        btn.setAttribute('aria-label', label)
+        btn.setAttribute('title', label)
+      }
+    }
+  }
+
+  function removeHostCreateSectionButton(): void {
+    for (const btn of Array.from(document.querySelectorAll(`button[data-dcu-action="${CREATE_SECTION_ACTION}"]`))) {
+      btn.remove()
+    }
   }
 
   function triggerHostAddWorkspace(): void {
@@ -1347,7 +1436,7 @@ export function observeWorkspaceSections(
       icon: iconPlus(),
       onSelect: () => {
         closeSectionMenu()
-        startCreateSection()
+        startCreateSection(sectionId)
       },
     })
     if (!builtin) {
@@ -1407,7 +1496,7 @@ export function observeWorkspaceSections(
   }
 
   /** 新建分区：在列表里插一行输入框，回车创建（宿主 web 里 window.prompt 被禁用，所以不用 prompt）。 */
-  function startCreateSection(workspaceId?: string): void {
+  function startCreateSection(relativeToSectionId?: string, workspaceId?: string): void {
     const host = findWorkspaceList(document)
     if (host === undefined) return
     const row = document.createElement('div')
@@ -1418,13 +1507,45 @@ export function observeWorkspaceSections(
     input.maxLength = 24
     row.appendChild(input)
 
-    const lastHeader = Array.from(headers.values()).at(-1)
-    if (lastHeader !== undefined && lastHeader.parentElement === host) {
-      host.insertBefore(row, lastHeader.nextSibling)
-    } else {
-      host.insertBefore(row, host.firstChild)
+    let inserted = false
+    if (relativeToSectionId !== undefined) {
+      const targetHeader = headers.get(relativeToSectionId)
+      if (targetHeader !== undefined && targetHeader.parentElement === host) {
+        const targetSection = state.sections.find(s => s.id === relativeToSectionId)
+        const memberIds = targetSection?.ids ?? []
+        let lastMemberEl: HTMLElement | null = null
+        for (const mId of memberIds) {
+          const el = host.querySelector<HTMLElement>(`[data-row-key="workspace:${mId}"]`)
+          if (el !== null) {
+            const block = blockOf(el, host)
+            if (block !== null && block.parentElement === host) lastMemberEl = block
+          }
+        }
+        if (lastMemberEl !== null && lastMemberEl.nextSibling !== null) {
+          host.insertBefore(row, lastMemberEl.nextSibling)
+          inserted = true
+        } else if (targetHeader.nextSibling !== null) {
+          host.insertBefore(row, targetHeader.nextSibling)
+          inserted = true
+        }
+      }
+    }
+
+    if (!inserted) {
+      const defaultHeader = headers.get(DEFAULT_SECTION_ID)
+      if (defaultHeader !== undefined && defaultHeader.parentElement === host) {
+        host.insertBefore(row, defaultHeader)
+      } else {
+        const lastHeader = Array.from(headers.values()).at(-1)
+        if (lastHeader !== undefined && lastHeader.parentElement === host) {
+          host.insertBefore(row, lastHeader.nextSibling)
+        } else {
+          host.insertBefore(row, host.firstChild)
+        }
+      }
     }
     input.focus()
+    input.scrollIntoView?.({ block: 'nearest' })
 
     let done = false
     const finish = (commitValue: boolean): void => {
@@ -1434,7 +1555,7 @@ export function observeWorkspaceSections(
       row.remove()
       if (!commitValue || value === '') return
       const id = `s${Date.now().toString(36)}`
-      const created = createSection(state, id, value)
+      const created = createSection(state, id, value, relativeToSectionId)
       if (workspaceId === undefined) commit(created)
       else commitExplicit(assignWorkspace(created, workspaceId, id), [workspaceId])
     }
@@ -2009,7 +2130,7 @@ export function observeWorkspaceSections(
       onSelect: () => {
         closeSectionMenu()
         closeMenusByEscape()
-        startCreateSection(workspaceId)
+        startCreateSection(undefined, workspaceId)
       },
     })
     openHostPanel(anchor, items, parentMenu)
@@ -2144,6 +2265,7 @@ export function observeWorkspaceSections(
 
   function syncNow(allowRevealRelocating: boolean = true): void {
     if (disposed || syncing) return
+    syncHostCreateSectionButton()
     cacheHostMenuTemplate()
     if (!sectionsLoaded) return
     const next = findWorkspaceList(document)
@@ -2369,6 +2491,7 @@ export function observeWorkspaceSections(
   // 首轮：等宿主把树挂上来（可能晚于插件激活）。
   const boot = window.setInterval(() => {
     if (disposed) return
+    syncHostCreateSectionButton()
     if (findWorkspaceList(document) === undefined) return
     window.clearInterval(boot)
     scheduleSync()
@@ -2405,6 +2528,7 @@ export function observeWorkspaceSections(
     unsubscribeDirectoryFlow?.()
     unsubscribe?.()
 
+    removeHostCreateSectionButton()
     closeSectionMenu()
     void flushSectionsSave()
     for (const header of headers.values()) header.remove()
