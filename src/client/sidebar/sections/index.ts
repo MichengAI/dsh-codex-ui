@@ -166,11 +166,17 @@ function workspaceIdOfRow(row: Element): string | undefined {
   return id === '' ? undefined : id
 }
 
+/** 宿主侧栏是否处于收起（56px 导轨 / rail）形态。 */
+export function isSidebarCollapsed(): boolean {
+  return document.querySelector('[data-sidebar-collapsed="true"]') !== null
+}
+
 /**
  * 列表是否属于侧栏的「工作区」区块。
  *
- * 频道、定时等页签下也会出现树形列表，只有同时满足下面三条才算工作区，避免把分区标题塞进别的列表：
- * 不在 rail（侧栏收起）形态里、同一区域的区块标题带有多颗操作按钮、列表里确有项目行。
+ * 频道、定时等页签下也会出现树形列表，只有同时满足下面条件才算工作区，避免把分区标题塞进别的列表：
+ * 同一区域的区块标题带有操作按钮（展开态 2 颗或收起态/无目录流 1 颗）、列表里确有工作区行。
+ * 收起形态由 CSS 及 isSidebarCollapsed 守卫隐藏标题和按钮，此处负责结构判定。
  */
 export function isWorkspaceRegion(list: HTMLElement): boolean {
   // 不用 class 里带 rail 的元素来排除「侧栏收起」：宿主把整条侧栏的外壳也命名成 shell-rail，
@@ -508,6 +514,48 @@ export function observeWorkspaceSections(
     }, 90000)
   }
 
+  /** 在途的新建分区编辑行状态，供 placeHeaders 在重排后稳定定位，避免空分区跨过输入框。 */
+  let activeCreatingSession: { row: HTMLElement; targetSectionId?: string } | null = null
+
+  function positionCreatingRow(row: HTMLElement, host: HTMLElement, relativeToSectionId?: string): void {
+    let ref: Node | null = null
+    if (relativeToSectionId !== undefined) {
+      const targetHeader = headers.get(relativeToSectionId)
+      if (targetHeader !== undefined && targetHeader.parentElement === host) {
+        const targetSection = state.sections.find(s => s.id === relativeToSectionId)
+        const memberIds = targetSection?.ids ?? []
+        let lastMemberEl: HTMLElement | null = null
+        for (const mId of memberIds) {
+          const el = host.querySelector<HTMLElement>(`[data-row-key="workspace:${mId}"]`)
+          if (el !== null) {
+            const block = blockOf(el, host)
+            if (block !== null && block.parentElement === host) lastMemberEl = block
+          }
+        }
+        ref = lastMemberEl !== null ? lastMemberEl.nextSibling : targetHeader.nextSibling
+        if (row.parentElement !== host || row.nextSibling !== ref) {
+          host.insertBefore(row, ref)
+        }
+        return
+      }
+    }
+
+    const defaultHeader = headers.get(DEFAULT_SECTION_ID)
+    if (defaultHeader !== undefined && defaultHeader.parentElement === host) {
+      ref = defaultHeader
+    } else {
+      const lastHeader = Array.from(headers.values()).at(-1)
+      if (lastHeader !== undefined && lastHeader.parentElement === host) {
+        ref = lastHeader.nextSibling
+      } else {
+        ref = host.firstChild
+      }
+    }
+    if (row.parentElement !== host || row.nextSibling !== ref) {
+      host.insertBefore(row, ref)
+    }
+  }
+
   /**
    * 宿主顶栏/侧栏头部原生「添加工作区」按钮的 8 门精确文案（同步自宿主 `workspace.add`）。
    * 仅做精确全等匹配：既能绕开宿主工作区行右键菜单（`工作区“…”的操作`）与带省略号的菜单项（`添加工作区…`），
@@ -544,7 +592,7 @@ export function observeWorkspaceSections(
     return null
   }
 
-  function findHostHeaderActions(): HTMLElement | null {
+  function findHostHeaderActions(targetList: HTMLElement | undefined = list): HTMLElement | null {
     const hostAddBtn = findHostAddWorkspaceButton()
     if (hostAddBtn !== null) {
       const parentActions = hostAddBtn.closest<HTMLElement>('[class*="headerActions"]')
@@ -554,7 +602,7 @@ export function observeWorkspaceSections(
       '[data-sidebar-workspace-header] [class*="headerActions"], [class*="sectionHeader"] [class*="headerActions"]',
     )
     if (byHeader !== null) return byHeader
-    const listEl = list ?? findWorkspaceList(document)
+    const listEl = targetList ?? findWorkspaceList(document)
     if (listEl !== undefined) {
       const container = listEl.closest('[class*="root"]') ?? listEl.parentElement?.parentElement
       if (container !== null && container !== undefined) {
@@ -565,13 +613,13 @@ export function observeWorkspaceSections(
     return null
   }
 
-  function syncHostCreateSectionButton(): void {
+  function syncHostCreateSectionButton(targetList: HTMLElement | undefined = list): void {
     if (disposed) return
-    if (!sectionsLoaded || findWorkspaceList(document) === undefined) {
+    if (!sectionsLoaded || targetList === undefined || isSidebarCollapsed()) {
       removeHostCreateSectionButton()
       return
     }
-    const actionsContainer = findHostHeaderActions()
+    const actionsContainer = findHostHeaderActions(targetList)
     if (actionsContainer === null) return
 
     let btn = actionsContainer.querySelector<HTMLButtonElement>(`button[data-dcu-action="${CREATE_SECTION_ACTION}"]`)
@@ -1106,11 +1154,16 @@ export function observeWorkspaceSections(
         headers.delete(id)
       }
     }
+    // 若当前有在途的新建分区编辑行，在标题重排完成后按目标分区重新校准位置，
+    // 避免空分区标题被 追加至末尾/插入至下一区 前时跨过编辑行。
+    if (activeCreatingSession !== null && activeCreatingSession.row.parentElement === target) {
+      positionCreatingRow(activeCreatingSession.row, target, activeCreatingSession.targetSectionId)
+    }
     // 标题搬动/折叠后布局已变，吸顶归属要重算一次（滚动时也会算，这里补的是不滚也变的情况）。
     scheduleStickyUpdate()
   }
 
-  /** 列表不在工作区视图（频道、定时、rail 收起）时摘掉标题，避免串到别的列表里。 */
+  /** 列表不在工作区视图（切换至频道、定时等非工作区页签）时摘掉标题，避免串到别的列表里。 */
   function detachHeaders(): void {
     for (const header of headers.values()) header.remove()
     headers.clear()
@@ -1501,7 +1554,8 @@ export function observeWorkspaceSections(
 
   /** 新建分区：在列表里插一行输入框，回车创建（宿主 web 里 window.prompt 被禁用，所以不用 prompt）。 */
   function startCreateSection(relativeToSectionId?: string, workspaceId?: string): void {
-    const host = findWorkspaceList(document)
+    if (isSidebarCollapsed()) return
+    const host = list ?? findWorkspaceList(document)
     if (host === undefined) return
     const row = document.createElement('div')
     row.className = `${HEADER_CLASS} ${HEADER_CLASS}-editing`
@@ -1511,43 +1565,9 @@ export function observeWorkspaceSections(
     input.maxLength = 24
     row.appendChild(input)
 
-    let inserted = false
-    if (relativeToSectionId !== undefined) {
-      const targetHeader = headers.get(relativeToSectionId)
-      if (targetHeader !== undefined && targetHeader.parentElement === host) {
-        const targetSection = state.sections.find(s => s.id === relativeToSectionId)
-        const memberIds = targetSection?.ids ?? []
-        let lastMemberEl: HTMLElement | null = null
-        for (const mId of memberIds) {
-          const el = host.querySelector<HTMLElement>(`[data-row-key="workspace:${mId}"]`)
-          if (el !== null) {
-            const block = blockOf(el, host)
-            if (block !== null && block.parentElement === host) lastMemberEl = block
-          }
-        }
-        if (lastMemberEl !== null) {
-          host.insertBefore(row, lastMemberEl.nextSibling)
-          inserted = true
-        } else {
-          host.insertBefore(row, targetHeader.nextSibling)
-          inserted = true
-        }
-      }
-    }
+    positionCreatingRow(row, host, relativeToSectionId)
+    activeCreatingSession = { row, targetSectionId: relativeToSectionId }
 
-    if (!inserted) {
-      const defaultHeader = headers.get(DEFAULT_SECTION_ID)
-      if (defaultHeader !== undefined && defaultHeader.parentElement === host) {
-        host.insertBefore(row, defaultHeader)
-      } else {
-        const lastHeader = Array.from(headers.values()).at(-1)
-        if (lastHeader !== undefined && lastHeader.parentElement === host) {
-          host.insertBefore(row, lastHeader.nextSibling)
-        } else {
-          host.insertBefore(row, host.firstChild)
-        }
-      }
-    }
     input.focus()
     input.scrollIntoView?.({ block: 'nearest' })
 
@@ -1555,6 +1575,7 @@ export function observeWorkspaceSections(
     const finish = (commitValue: boolean): void => {
       if (done) return
       done = true
+      activeCreatingSession = null
       const value = input.value.trim()
       row.remove()
       if (!commitValue || value === '') return
@@ -2278,7 +2299,7 @@ export function observeWorkspaceSections(
       return
     }
     list = next
-    syncHostCreateSectionButton()
+    syncHostCreateSectionButton(next)
     if (!wired) {
       wired = true
       subscribeWorkspaces()
@@ -2454,6 +2475,10 @@ export function observeWorkspaceSections(
       }
       let touched = false
       for (const mutation of mutations) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-sidebar-collapsed') {
+          touched = true
+          break
+        }
         for (const node of Array.from(mutation.addedNodes)) {
           if (node instanceof Element && node.closest(`.${HEADER_CLASS}`) !== null) continue
           touched = true
@@ -2477,7 +2502,12 @@ export function observeWorkspaceSections(
         }
       }
     })
-    observer.observe(document.body, { childList: true, subtree: true })
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-sidebar-collapsed'],
+    })
   }
 
   function subscribeWorkspaces(): void {
@@ -2532,6 +2562,10 @@ export function observeWorkspaceSections(
     unsubscribeDirectoryFlow?.()
     unsubscribe?.()
 
+    if (activeCreatingSession !== null) {
+      activeCreatingSession.row.remove()
+      activeCreatingSession = null
+    }
     removeHostCreateSectionButton()
     closeSectionMenu()
     void flushSectionsSave()

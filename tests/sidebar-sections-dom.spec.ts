@@ -3098,4 +3098,102 @@ describe('分区二级菜单的可访问性：', () => {
     expect(document.querySelector('button[data-dcu-action="create-section"]')).toBeNull()
     dispose?.()
   })
+
+  it('在中间空分区点击新建分区，经过 sync 重排后输入框仍保持在目标分区标题下方', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: 's-empty', name: '空分区', ids: [] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d1'] },
+      ],
+    })
+    mountFixture(['p1', 'd1'])
+    mount(['p1', 'd1'])
+    await waitForSync()
+
+    const emptyHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's-empty')!
+    const emptyMoreBtn = emptyHeader.querySelector<HTMLButtonElement>('button[data-dcu-action="more"]')!
+    emptyMoreBtn.click()
+    await waitForSync()
+
+    const menu = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    const newSectionItem = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+      .find(item => item.textContent?.includes('新建分区'))!
+    newSectionItem.click()
+    await waitForSync()
+
+    const editingRow = document.querySelector<HTMLElement>('.dcu-ws-section.dcu-ws-section-editing')!
+    expect(editingRow).not.toBeNull()
+
+    // 关键验证：多次 sync 后，输入框依然必须在 emptyHeader 之后、在 defaultHeader 之前
+    await waitForSync(2)
+    expect(emptyHeader.compareDocumentPosition(editingRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+    expect(editingRow.compareDocumentPosition(defaultHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    dispose?.()
+  })
+
+  it('在末尾空分区点击新建分区，经过 sync 重排后输入框仍保持在末尾标题下方追加在最末端', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    })
+    mountFixture(['p1'])
+    mount(['p1'])
+    await waitForSync()
+
+    const lastDefaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+    const lastMoreBtn = lastDefaultHeader.querySelector<HTMLButtonElement>('button[data-dcu-action="more"]')!
+    lastMoreBtn.click()
+    await waitForSync()
+
+    const lastMenu = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    const lastNewItem = Array.from(lastMenu.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+      .find(item => item.textContent?.includes('新建分区'))!
+    lastNewItem.click()
+    await waitForSync()
+
+    const editingRow = document.querySelector<HTMLElement>('.dcu-ws-section.dcu-ws-section-editing')!
+    expect(editingRow).not.toBeNull()
+    await waitForSync(2)
+    // 验证末尾空分区时输入框必须在 lastDefaultHeader 之后
+    expect(lastDefaultHeader.compareDocumentPosition(editingRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    dispose?.()
+  })
+
+  it('侧栏收起态（[data-sidebar-collapsed="true"]）不注入新建分区按钮，展开后自动恢复', async () => {
+    seedSections({
+      sections: [
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d1'] },
+      ],
+    })
+    document.body.setAttribute('data-sidebar-collapsed', 'true')
+    mountFixture(['d1'])
+    mount(['d1'])
+    await waitForSync()
+
+    // 收起态下不应注入新建分区按钮
+    expect(document.querySelector('button[data-dcu-action="create-section"]')).toBeNull()
+
+    // 展开侧栏
+    document.body.removeAttribute('data-sidebar-collapsed')
+    await waitForSync(2)
+
+    // 展开后按钮应恢复注入
+    expect(document.querySelector('button[data-dcu-action="create-section"]')).not.toBeNull()
+
+    // 再次收起侧栏
+    document.body.setAttribute('data-sidebar-collapsed', 'true')
+    await waitForSync(2)
+
+    // 按钮应被移除
+    expect(document.querySelector('button[data-dcu-action="create-section"]')).toBeNull()
+
+    document.body.removeAttribute('data-sidebar-collapsed')
+    dispose?.()
+  })
 })
