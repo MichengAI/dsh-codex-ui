@@ -3099,7 +3099,7 @@ describe('分区二级菜单的可访问性：', () => {
     dispose?.()
   })
 
-  it('在中间空分区点击新建分区，经过 sync 重排后输入框仍保持在目标分区标题下方', async () => {
+  it('在中间空分区点击新建分区，经过 sync 重排后输入框仍保持在目标分区标题下方且不丢失焦点、不发生 DOM 二次移动', async () => {
     seedSections({
       sections: [
         { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
@@ -3124,9 +3124,41 @@ describe('分区二级菜单的可访问性：', () => {
 
     const editingRow = document.querySelector<HTMLElement>('.dcu-ws-section.dcu-ws-section-editing')!
     expect(editingRow).not.toBeNull()
+    const input = editingRow.querySelector<HTMLInputElement>('input.dcu-ws-section-input')!
+    expect(input).not.toBeNull()
+    expect(document.activeElement).toBe(input)
+
+    // 仿真真机 Chromium 严格行为：一旦编辑行被二次移动/重新插入，真实浏览器会派发 blur
+    // 监听 blur 事件以捕获任何因移动引起的焦点丢失
+    let blurCount = 0
+    input.addEventListener('blur', () => {
+      blurCount++
+    })
+
+    // 监控 target 容器上的 insertBefore：在编辑行生成后，后续 sync 重排绝不得移动 editingRow 或空分区 header
+    const hostTarget = editingRow.parentElement!
+    const originalInsertBefore = hostTarget.insertBefore.bind(hostTarget)
+    const movedNodes: Node[] = []
+    hostTarget.insertBefore = ((newNode: Node, referenceNode: Node | null) => {
+      if (newNode === editingRow || newNode === emptyHeader) {
+        movedNodes.push(newNode)
+      }
+      return originalInsertBefore(newNode, referenceNode)
+    }) as typeof hostTarget.insertBefore
 
     // 关键验证：多次 sync 后，输入框依然必须在 emptyHeader 之后、在 defaultHeader 之前
     await waitForSync(2)
+
+    // 还原 insertBefore 桩
+    hostTarget.insertBefore = originalInsertBefore
+
+    // 核心断言：
+    // 1. sync 重排对编辑行完全透明，绝不得再次移动 editingRow 或 emptyHeader
+    expect(movedNodes).toEqual([])
+    // 2. 焦点绝不丢失，不得触发 blur
+    expect(blurCount).toBe(0)
+    expect(document.activeElement).toBe(input)
+    // 3. 相对位置正确
     expect(emptyHeader.compareDocumentPosition(editingRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
     expect(editingRow.compareDocumentPosition(defaultHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -3134,7 +3166,7 @@ describe('分区二级菜单的可访问性：', () => {
     dispose?.()
   })
 
-  it('在末尾空分区点击新建分区，经过 sync 重排后输入框仍保持在末尾标题下方追加在最末端', async () => {
+  it('在末尾空分区点击新建分区，经过 sync 重排后输入框仍保持在末尾标题下方追加在最末端且不发生二次移动', async () => {
     seedSections({
       sections: [
         { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
@@ -3158,9 +3190,70 @@ describe('分区二级菜单的可访问性：', () => {
 
     const editingRow = document.querySelector<HTMLElement>('.dcu-ws-section.dcu-ws-section-editing')!
     expect(editingRow).not.toBeNull()
+    const input = editingRow.querySelector<HTMLInputElement>('input.dcu-ws-section-input')!
+    expect(document.activeElement).toBe(input)
+
+    let blurCount = 0
+    input.addEventListener('blur', () => {
+      blurCount++
+    })
+
+    const hostTarget = editingRow.parentElement!
+    const originalInsertBefore = hostTarget.insertBefore.bind(hostTarget)
+    const movedNodes: Node[] = []
+    hostTarget.insertBefore = ((newNode: Node, referenceNode: Node | null) => {
+      if (newNode === editingRow || newNode === lastDefaultHeader) {
+        movedNodes.push(newNode)
+      }
+      return originalInsertBefore(newNode, referenceNode)
+    }) as typeof hostTarget.insertBefore
+
     await waitForSync(2)
+
+    hostTarget.insertBefore = originalInsertBefore
+
+    expect(movedNodes).toEqual([])
+    expect(blurCount).toBe(0)
+    expect(document.activeElement).toBe(input)
     // 验证末尾空分区时输入框必须在 lastDefaultHeader 之后
     expect(lastDefaultHeader.compareDocumentPosition(editingRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    dispose?.()
+  })
+
+  it('侧栏收起态下尝试调用新建分区（如通过已打开菜单），startCreateSection 守卫阻止在 DOM 中插入编辑行', async () => {
+    seedSections({
+      sections: [
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d1'] },
+      ],
+    })
+    mountFixture(['d1'])
+    mount(['d1'])
+    await waitForSync()
+
+    const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
+    const moreBtn = defaultHeader.querySelector<HTMLButtonElement>('button[data-dcu-action="more"]')!
+    moreBtn.click()
+    await waitForSync()
+
+    const menu = document.querySelector<HTMLElement>('.dcu-ws-section-menu')!
+    const newSectionItem = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+      .find(item => item.textContent?.includes('新建分区'))!
+
+    // 模拟侧栏进入收起态
+    document.body.setAttribute('data-sidebar-collapsed', 'true')
+    await waitForSync()
+
+    // 在收起状态下点击新建分区菜单项
+    newSectionItem.click()
+    await waitForSync()
+
+    // 变异测试守护断言：处于收起态时，startCreateSection 必须拦截，绝不能在 DOM 中插入编辑行
+    expect(document.querySelector('.dcu-ws-section-editing')).toBeNull()
+
+    // 恢复展开状态后再触发
+    document.body.removeAttribute('data-sidebar-collapsed')
+    await waitForSync()
 
     dispose?.()
   })

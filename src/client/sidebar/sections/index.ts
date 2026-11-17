@@ -514,8 +514,8 @@ export function observeWorkspaceSections(
     }, 90000)
   }
 
-  /** 在途的新建分区编辑行状态，供 placeHeaders 在重排后稳定定位，避免空分区跨过输入框。 */
-  let activeCreatingSession: { row: HTMLElement; targetSectionId?: string } | null = null
+  /** 在途的新建分区编辑行，供组件卸载（dispose）时清理残留的输入行 DOM。 */
+  let activeCreatingRow: HTMLElement | null = null
 
   function positionCreatingRow(row: HTMLElement, host: HTMLElement, relativeToSectionId?: string): void {
     let ref: Node | null = null
@@ -1018,6 +1018,18 @@ export function observeWorkspaceSections(
   /** 上一次算对齐时的（标题数+列宽）组合，避免每帧量 rect。 */
   let lastAlignKey = ''
 
+  /**
+   * 获取逻辑上的下一个结构兄弟元素，跳过在途的新建分区编辑行（.dcu-ws-section-editing）。
+   * 编辑行是临时行内输入层，对分区标题的结构定位完全透明，避免 sync 重排误将空分区标题搬到编辑行后面。
+   */
+  function nextStructuralSibling(node: Element | null): Element | null {
+    let cur = node?.nextElementSibling ?? null
+    while (cur !== null && cur.classList.contains(`${HEADER_CLASS}-editing`)) {
+      cur = cur.nextElementSibling
+    }
+    return cur
+  }
+
   /** 把标题按分区顺序放到各自第一个分组块前面；空分区贴着下一个分区显示。 */
   function placeHeaders(blocks: readonly ProjectBlock[], layoutState: SectionsState = state): void {
     if (blocks.length === 0) {
@@ -1072,7 +1084,7 @@ export function observeWorkspaceSections(
         continue
       }
       const header = ensureHeader(section.id, section.name)
-      if (header.parentElement !== target || header.nextElementSibling !== reference) {
+      if (header.parentElement !== target || nextStructuralSibling(header) !== reference) {
         target.insertBefore(header, reference)
       }
       reference = header
@@ -1153,11 +1165,6 @@ export function observeWorkspaceSections(
         header.remove()
         headers.delete(id)
       }
-    }
-    // 若当前有在途的新建分区编辑行，在标题重排完成后按目标分区重新校准位置，
-    // 避免空分区标题被 追加至末尾/插入至下一区 前时跨过编辑行。
-    if (activeCreatingSession !== null && activeCreatingSession.row.parentElement === target) {
-      positionCreatingRow(activeCreatingSession.row, target, activeCreatingSession.targetSectionId)
     }
     // 标题搬动/折叠后布局已变，吸顶归属要重算一次（滚动时也会算，这里补的是不滚也变的情况）。
     scheduleStickyUpdate()
@@ -1566,7 +1573,7 @@ export function observeWorkspaceSections(
     row.appendChild(input)
 
     positionCreatingRow(row, host, relativeToSectionId)
-    activeCreatingSession = { row, targetSectionId: relativeToSectionId }
+    activeCreatingRow = row
 
     input.focus()
     input.scrollIntoView?.({ block: 'nearest' })
@@ -1575,7 +1582,7 @@ export function observeWorkspaceSections(
     const finish = (commitValue: boolean): void => {
       if (done) return
       done = true
-      activeCreatingSession = null
+      activeCreatingRow = null
       const value = input.value.trim()
       row.remove()
       if (!commitValue || value === '') return
@@ -2562,9 +2569,9 @@ export function observeWorkspaceSections(
     unsubscribeDirectoryFlow?.()
     unsubscribe?.()
 
-    if (activeCreatingSession !== null) {
-      activeCreatingSession.row.remove()
-      activeCreatingSession = null
+    if (activeCreatingRow !== null) {
+      activeCreatingRow.remove()
+      activeCreatingRow = null
     }
     removeHostCreateSectionButton()
     closeSectionMenu()
