@@ -198,6 +198,36 @@ describe('codex-ui-composer sub-plugin', () => {
       }
     })
 
+    it('插槽接线防护：以 priority -100 覆盖 conversation.hero.workspace，托管 Codex 项目选择器', () => {
+      const registrations: Array<{ meta: { name: string; priority?: number; locale?: string } }> = []
+      const fakeCtx = {
+        locale: { bind: () => (k: string) => k },
+        slots: {
+          inject: (_name: string, callback: () => void) => {
+            callback()
+            return () => {}
+          },
+          register: (meta: { name: string; priority?: number; locale?: string }) => {
+            registrations.push({ meta })
+            return () => {}
+          },
+        },
+      } as any
+
+      const dispose = observeComposerEnhancements(fakeCtx)
+      try {
+        const entry = registrations.find(row => row.meta.name === 'conversation.hero.workspace')
+        expect(entry).toBeDefined()
+        // 单槽按 priority 遮蔽宿主默认实现（宿主为 0），数值必须更低才能生效
+        expect(entry!.meta.priority).toBe(-100)
+        expect(entry!.meta.locale).toBe('michengai.codexUi')
+        // 项目选择器依赖的注入能力必须由 apply 闭包按需解析，而不是注册期直接抛错
+        expect(registrations.filter(row => row.meta.name === 'conversation.hero.workspace')).toHaveLength(1)
+      } finally {
+        dispose()
+      }
+    })
+
     it('端到端状态驱动：子插件停用时必须通过 sync() 将 subPluginEnabled 置为 false 并整卡隐藏', async () => {
       const originalFetch = globalThis.fetch
       globalThis.fetch = vi.fn().mockResolvedValue({
