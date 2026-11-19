@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [2.4.0] - 2026-11-20
 
 - **Searchable, keyboard-friendly workspace menu on the new-session page (PR #106)**:
   - The hero workspace menu is now a Codex-style project picker: type to filter by project name or path, move with the arrow keys, pick with Enter, dismiss with Escape;
@@ -8,6 +8,7 @@
   - Same-named projects show the shortest path suffix that tells them apart;
   - The current workspace carries a check mark, so the project in use is obvious at a glance;
   - A "New project" row at the bottom picks a directory, registers it as a workspace and switches to it;
+  - While the system directory dialog is open the row stays disabled, so a double click cannot open two dialogs;
   - Note: creating a project now opens the system directory dialog; the hero no longer offers the in-app directory browsing flow, and hosts without a native directory dialog (remote connections, SSH launches, non-loopback binds) hide the "New project" row.
 
 ## [2.3.0] - 2026-11-19
