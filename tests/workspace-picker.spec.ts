@@ -255,6 +255,19 @@ describe('Codex 风格项目选择器', () => {
     expect(document.activeElement).toBe(props.anchorRef?.current)
   })
 
+  it('打开动画帧还没落地就按 Esc，焦点仍回到胶囊而不是被抢回搜索框', async () => {
+    const props = pickerProps()
+    await mount(props)
+
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    })
+    // 等过「聚焦搜索框」那一帧：没有取消时它会在此刻把焦点从胶囊抢回输入框。
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 40)) })
+
+    expect(document.activeElement).toBe(props.anchorRef?.current)
+  })
+
   it('键盘游标移出可视区时把目标行滚动到最近边缘', async () => {
     await mount(pickerProps())
     const scrolled: string[] = []

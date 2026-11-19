@@ -204,6 +204,8 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
   // 展开方向在打开时一次决定：输入过滤导致高度变化时不来回翻面。
   const sideRef = useRef<'above' | 'below'>('below')
   const alive = useRef(true)
+  /** 打开时「聚焦搜索框」那一帧的句柄，关闭时必须取消，否则焦点会被抢回输入框。 */
+  const focusFrameRef = useRef<number | undefined>(undefined)
   const baseId = useId()
   const listId = `${baseId}-list`
   const createId = `${baseId}-create`
@@ -239,6 +241,13 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
 
   /** 关闭浮层并把焦点还给锚点胶囊，键盘用户不丢失上下文。 */
   const closeMenu = useCallback((): void => {
+    // 关闭后不得再让「打开即聚焦搜索框」的那一帧把焦点抢回去：它在 jsdom 与
+    // 真实浏览器里都可能晚于 Esc/选中落地，父组件保持挂载（退场动画）时 cleanup
+    // 也不会执行。这里先取消，再归还焦点。
+    if (focusFrameRef.current !== undefined) {
+      cancelAnimationFrame(focusFrameRef.current)
+      focusFrameRef.current = undefined
+    }
     onClose()
     anchorRef?.current?.focus({ preventScroll: true })
   }, [onClose, anchorRef])
@@ -249,8 +258,15 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
     setQuery('')
     setActive(0)
     setError(null)
-    const frame = requestAnimationFrame(() => inputRef.current?.focus())
-    return () => { cancelAnimationFrame(frame) }
+    const frame = requestAnimationFrame(() => {
+      focusFrameRef.current = undefined
+      inputRef.current?.focus()
+    })
+    focusFrameRef.current = frame
+    return () => {
+      cancelAnimationFrame(frame)
+      if (focusFrameRef.current === frame) focusFrameRef.current = undefined
+    }
   }, [open])
 
   // 过滤后行数变少时把高亮夹回有效区间。
