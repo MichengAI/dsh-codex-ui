@@ -46,11 +46,13 @@ test('设置侧栏装饰器动态将宿主侧栏宽度注入到 CSS 变量', () 
 
   const panel = document.createElement('div')
   panel.setAttribute('data-shortcut-modal', 'settings')
+  const navTitle = document.createElement('div')
+  navTitle.className = 'navTitle'
   const nav = document.createElement('nav')
-  const header = document.createElement('div')
   const navList = document.createElement('div')
-  nav.append(header, navList)
-  panel.append(nav)
+  navList.className = 'navList'
+  nav.append(navList)
+  panel.append(navTitle, nav)
   document.body.append(panel)
 
   try {
@@ -106,9 +108,11 @@ test('设置菜单无侵入已知项分组模型：仅置顶个人与记录，�
 test('动态导航装饰器：宿主原生生成按钮自动添加 order 分组，且搜索过滤联动', () => {
   const panel = document.createElement('div')
   panel.setAttribute('data-shortcut-modal', 'settings')
+  const navTitle = document.createElement('div')
+  navTitle.className = 'navTitle'
   const nav = document.createElement('nav')
-  const header = document.createElement('div')
   const navList = document.createElement('div')
+  navList.className = 'navList'
 
   // 宿主原生生成 3 个按钮（不写死，纯由宿主追加）
   const btn1 = document.createElement('button')
@@ -118,8 +122,8 @@ test('动态导航装饰器：宿主原生生成按钮自动添加 order 分组�
   const btn3 = document.createElement('button')
   btn3.innerHTML = '<span>归档记录</span>'
   navList.append(btn1, btn2, btn3)
-  nav.append(header, navList)
-  panel.append(nav)
+  nav.append(navList)
+  panel.append(navTitle, nav)
   document.body.append(panel)
 
   const cleanup = decorateSettingsNav(panel)
@@ -275,7 +279,7 @@ test('设置皮肤启用门控：observeSettingsSkin 仅在启用时预装样式
 
 test('浅色模式下设置工作台背景与按钮高对比度规则兜底', () => {
   expect(SETTINGS_SKIN_CSS).toContain('body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]')
-  expect(SETTINGS_SKIN_CSS).toContain('body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav)')
+  expect(SETTINGS_SKIN_CSS).toContain('body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"]')
 })
 
 test('decorateSettingsNav 兼容新版宿主平铺 4 块结构（navTitle 与 nav 为同级直属子节点）', () => {
@@ -335,12 +339,12 @@ test('SETTINGS_SKIN_CSS 包含新版平铺 Grid 4 块布局映射规则，杜绝
   expect(SETTINGS_SKIN_CSS).toContain('> [class*=\"options\"]')
   // 守护规则：平铺 Grid 宿主下绝对定位 Header 的偏移必须为 left: 0，杜绝与第二列产生 80px 错位
   expect(SETTINGS_SKIN_CSS).toContain('left: 0 !important;\n  right: 0 !important;')
-  // 守护规则：折叠与窄屏媒体块下子选择器必须严格限制在旧版宿主（:not(:has(> [class*="options"]))），防止误穿透平铺宿主
-  expect(SETTINGS_SKIN_CSS).toContain('[data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > nav > :first-child')
-  expect(SETTINGS_SKIN_CSS).toContain('[data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > nav > :first-child')
+  // 守护规则：折叠与平铺 Grid 宿主下收起态 navTitle 尺寸与对齐守护
+  expect(SETTINGS_SKIN_CSS).toContain('[data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="navTitle"]')
+  expect(SETTINGS_SKIN_CSS).toContain('[data-shortcut-modal="settings"] > [class*="navTitle"]')
   // 守护规则：普通模式（非云母）下收起态严格平铺，仅在开启云母悬浮模式下才启用悬浮双岛与外层边距
   expect(SETTINGS_SKIN_CSS).toContain('html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"])')
-  expect(SETTINGS_SKIN_CSS).toContain('html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav)')
+  expect(SETTINGS_SKIN_CSS).toContain('html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="navTitle"]')
   expect(SETTINGS_SKIN_CSS).toContain('html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"])')
   // 守护规则：56px 导轨内部绝不残留横向分割线（消除收起态 navTitle 的 border-bottom，含普通模式与 ≤768px 媒体块）
   const navTitleFlatRule = SETTINGS_SKIN_CSS

@@ -35,17 +35,14 @@ try {
   })
   const viewport = page.viewportSize()
   assert.ok(viewport)
-  assert.ok(geometry.width <= 980 && geometry.width >= 500, `原生设置皮肤应为居中浮动卡片 (当前宽度: ${geometry.width})`)
-  assert.ok(geometry.height <= 720 && geometry.height >= 400, `原生设置皮肤应为浮动高度 (当前高度: ${geometry.height})`)
-  assert.equal(geometry.borderRadius, '12px', '原生设置皮肤圆角必须为 12px')
-  if (geometry.contentChildWidth > 0) {
-    assert.ok(geometry.contentChildWidth <= 680, `右侧设置区内容必须受限在 680px 内 (当前: ${geometry.contentChildWidth})`)
-  }
+  assert.equal(geometry.width, viewport.width, `设置皮肤应铺满视口全宽 (当前宽度: ${geometry.width}, 视口: ${viewport.width})`)
+  assert.equal(geometry.height, viewport.height, `设置皮肤应铺满视口全高 (当前高度: ${geometry.height}, 视口: ${viewport.height})`)
+  assert.equal(geometry.borderRadius, '0px', '全屏设置工作台外壳圆角必须为 0px')
   assert.ok(await panel.locator('nav').count() > 0, '原生设置面板必须保留官方导航')
 
   await page.keyboard.press('Escape')
   await panel.waitFor({ state: 'detached' })
-  console.log('实际 DSH 原生设置检查通过：Control+, 打开官方面板、1:1 Codex 浮动卡片皮肤、官方导航及 Escape 关闭。')
+  console.log('实际 DSH 原生设置检查通过：Control+, 打开官方面板、1:1 Codex 全屏设置工作台、官方导航及 Escape 关闭。')
 } finally {
   await browser.close()
 }

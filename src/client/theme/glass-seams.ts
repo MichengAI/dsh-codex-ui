@@ -33,17 +33,9 @@ const SEAMS: readonly Seam[] = [
   { attribute: 'data-dsh-glass-surface', selector: 'button[class*="newSession"]' },
   // Trajectory view (the composer-overlay view).
   { attribute: 'data-dsh-glass-trajectory', selector: '[data-conversation-composer-overlay]' },
-  // Right panel (会话右侧栏 / 详情栏). The column was renamed upstream —
-  // `detailsCol` through 0.1.2-rc.1, `rightbarCol` from 0.1.5-rc.2 on
-  // (ui-layout/src/client/AppFrame.module.css) — and the old `[class*="root"]`
-  // descendant had no stable target: ui-sidebar-right ships `.session` /
-  // `.panel`, while the tab views it hosts DO carry a `root` class
-  // (ui-sidebar-files / browser / terminal), so the stamp landed on whichever
-  // content view happened to be open — and on none of them for the document
-  // preview. The panel itself carries the stable `data-sidebar-right-panel`
-  // attribute (SidebarRight.tsx), which is what the stylesheet actually wants
-  // (it makes the panel background transparent so the ground shows through).
-  { attribute: 'data-dsh-glass-details', selector: '[class*="rightbarCol"] [data-sidebar-right-panel], [class*="detailsCol"] [class*="root"]', first: true },
+  // Right panel (会话右侧栏 / 详情栏). The panel carries the stable `data-sidebar-right-panel`
+  // attribute (SidebarRight.tsx), which makes the panel background transparent so the ground shows through.
+  { attribute: 'data-dsh-glass-details', selector: '[class*="rightbarCol"] [data-sidebar-right-panel]', first: true },
   // Composer bar root: the composer card's direct parent.
   { attribute: 'data-dsh-glass-inputbar', selector: ':has(> [data-composer-card])' },
   // Composer attach "+" button (ui-conversation InputBar.tsx -> css.add).

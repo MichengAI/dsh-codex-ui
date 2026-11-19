@@ -161,7 +161,7 @@ try {
     assert.ok(metrics.modal.backgroundColor, '模态框必须正确渲染深黑主题底色')
 
     if (metrics.nav) {
-      assert.ok(metrics.nav.width >= 260 && metrics.nav.width <= 420, `左侧导航栏宽度应同步主侧栏展开宽度 (当前: ${metrics.nav.width}px)`)
+      assert.ok(metrics.nav.width >= 240 && metrics.nav.width <= 420, `左侧导航栏宽度应同步主侧栏展开宽度 (当前: ${metrics.nav.width}px)`)
     }
 
     if (metrics.content) {
@@ -175,7 +175,7 @@ try {
     assert.equal(await backBtn.isVisible(), true, '左侧顶部必须渲染返回应用按钮')
     console.log('  ✓ 返回应用按钮可见')
 
-    const searchInput = modal.locator('.dcu-settings-search-input')
+    const searchInput = modal.locator('.dcu-settings-search-input input, input.dcu-settings-search-input')
     assert.equal(await searchInput.isVisible(), true, '左侧顶部必须渲染搜索输入框')
     console.log('  ✓ 搜索输入框可见')
 
@@ -185,7 +185,7 @@ try {
     console.log(`  检测到 ${headerCount} 个分组标头`)
     assert.ok(headerCount >= 2, '必须成功注入分组标头')
 
-    const buttons = modal.locator('nav > :nth-child(2) > button')
+    const buttons = modal.locator('nav button')
     const btnCount = await buttons.count()
     console.log(`  检测到宿主原生生成的菜单按钮数量: ${btnCount}`)
     assert.ok(btnCount > 0, '宿主生成的菜单按钮必须存在，绝不能丢失')
@@ -195,7 +195,7 @@ try {
     await page.waitForTimeout(300)
 
     const visibleButtonsAfterSearch = await modal.evaluate(el => {
-      const btns = el.querySelectorAll('nav > :nth-child(2) > button')
+      const btns = el.querySelectorAll('nav button')
       return [...btns].filter(b => getComputedStyle(b).display !== 'none').map(b => b.textContent.trim())
     })
     console.log('  搜索"通用"后可见按钮:', visibleButtonsAfterSearch)
@@ -212,7 +212,7 @@ try {
     await page.waitForTimeout(300)
 
     const visibleButtonsAfterClear = await modal.evaluate(el => {
-      const btns = el.querySelectorAll('nav > :nth-child(2) > button')
+      const btns = el.querySelectorAll('nav button')
       return [...btns].filter(b => getComputedStyle(b).display !== 'none').length
     })
     assert.equal(visibleButtonsAfterClear, btnCount, '清空搜索后全部按钮必须完全恢复可见')

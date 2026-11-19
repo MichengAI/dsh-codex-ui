@@ -80,19 +80,10 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-shortcut-modal="settin
   background: var(--dsw-alias-bg-layer-2, #18181b) !important;
 }
 
-[data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) {
-  background: var(--dsw-alias-bg-layer-2, #18181b) !important;
-}
-
 /* 浅色模式全局兜底：浅底高对比度规范，绝不允许残留或回退暗黑色 */
 body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"],
 html[data-ds-theme-source="light"] [data-shortcut-modal="settings"] {
   background: var(--dsw-alias-bg-base, var(--dsw-static-neutral-bluish-00, #ffffff)) !important;
-}
-
-body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav),
-html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) {
-  background: var(--dsw-alias-bg-layer-1, var(--dsw-static-neutral-bluish-00, #ffffff)) !important;
 }
 
 /* 玻璃质感/原版兼容排版模式（Compat） */
@@ -103,7 +94,7 @@ html[data-dsh-glass]:not([data-dsh-glass-float]) [data-shortcut-modal="settings"
 }
 
 html[data-dsh-glass]:not([data-dsh-glass-float]) [data-shortcut-modal="settings"] > nav,
-html[data-dsh-glass]:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="navTitle"] {
+html[data-dsh-glass]:not([data-dsh-glass-float]) [data-shortcut-modal="settings"] > [class*="navTitle"] {
   background: color-mix(
     in srgb,
     var(--dsw-specific-sidebar-fill, #181825) 85%,
@@ -113,12 +104,6 @@ html[data-dsh-glass]:not([data-dsh-glass-float]) [data-shortcut-modal="settings"
   -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
   border-right: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.08)) !important;
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05) !important;
-}
-
-html[data-dsh-glass]:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) {
-  background: var(--dsw-alias-bg-base, #151517) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
 }
 
 /* 云母悬浮模式（Mica Mode）：设置面板全面升华为与首页一致的悬浮双岛体系 */
@@ -146,57 +131,12 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"] {
   -webkit-backdrop-filter: none !important;
 }
 
-/* 左侧导航悬浮岛：与首页侧边栏严格对齐几何形态、12px外边距、16px圆角与微高光 */
-html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > nav {
-  box-sizing: border-box !important;
-  width: calc(var(--dcu-settings-nav-width, 280px) - 24px) !important;
-  min-width: calc(var(--dcu-settings-nav-width, 280px) - 24px) !important;
-  max-width: calc(var(--dcu-settings-nav-width, 280px) - 24px) !important;
-  margin: 8px 12px 12px 12px !important;
-  height: calc(100% - 20px) !important;
-  max-height: calc(100% - 20px) !important;
-  border-radius: 16px !important;
-  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
-  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
-  background: var(--dsw-alias-bg-layer-2, var(--dsh-glass-card, #18181b)) !important;
-  backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
-  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
-  overflow: hidden !important;
-}
-
-/* 右侧工作台悬浮岛：独立大圆角卡片，浅色为纯净微光白，深色为深邃灰，与首页悬浮实体完全一致 */
-html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) {
-  margin: 8px 12px 12px 0 !important;
-  height: calc(100% - 20px) !important;
-  max-height: calc(100% - 20px) !important;
-  border-radius: 16px !important;
-  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
-  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
-  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1, #18181b)) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  overflow: hidden !important;
-}
-
-/* 云母模式下收敛顶部工具栏与内容区 padding，消除脱节大空隙 */
-html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child {
-  height: 48px !important;
-  min-height: 48px !important;
-  padding: 0 24px !important;
-  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1, #18181b)) !important;
-}
-
-html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2) {
-  padding: 16px 32px 48px !important;
-  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1, #18181b)) !important;
-}
-
 html[data-platform="darwin"] [data-shortcut-modal="settings"] > nav {
   background: var(--dsw-specific-sidebar-fill, transparent) !important;
 }
 
 /* 顶部标题与搜索区插槽容器 */
-[data-shortcut-modal="settings"] > nav > :first-child {
+[data-shortcut-modal="settings"] > [class*="navTitle"] {
   padding: 0 !important;
   display: flex !important;
   flex-direction: column !important;
@@ -311,8 +251,7 @@ button.dcu-settings-back-btn:hover,
 }
 
 /* 导航项列表容器 */
-[data-shortcut-modal="settings"] > nav [class*="navList"],
-[data-shortcut-modal="settings"] > nav > :nth-child(2) {
+[data-shortcut-modal="settings"] > nav [class*="navList"] {
   display: flex !important;
   flex-direction: column !important;
   gap: 2px !important;
@@ -415,116 +354,7 @@ button.dcu-settings-back-btn:hover,
   outline-offset: 1px !important;
 }
 
-/* 右侧内容工作区 */
-[data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) {
-  display: flex !important;
-  min-width: 0 !important;
-  flex: 1 1 auto !important;
-  flex-direction: column !important;
-  background: var(--dsw-alias-bg-layer-2, #18181b) !important;
-  height: 100% !important;
-}
-
-[data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child {
-  box-sizing: border-box !important;
-  height: 56px !important;
-  min-height: 56px !important;
-  padding: 0 32px !important;
-  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.07)) !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  background: var(--dsw-alias-bg-layer-2, #18181b) !important;
-}
-
-[data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child h2,
-[data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child span {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--dsw-alias-label-primary, #f4f4f5) !important;
-  letter-spacing: -0.01em;
-}
-
-[data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child button,
-[data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child a {
-  color: var(--dsw-alias-label-secondary, #a1a1aa) !important;
-  transition: color 0.15s ease;
-}
-
-[data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child button:hover,
-[data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child a:hover {
-  color: var(--dsw-alias-label-primary, #f4f4f5) !important;
-}
-
-[data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2) {
-  box-sizing: border-box !important;
-  min-height: 0 !important;
-  flex: 1 1 auto !important;
-  overflow-y: auto !important;
-  padding: 24px 32px 48px !important;
-  background: var(--dsw-alias-bg-layer-2, #18181b) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: stretch !important;
-}
-
-/* 浅色模式右侧内容区实色与文字按钮高对比度兜底 */
-body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child,
-html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child {
-  background: var(--dsw-alias-bg-layer-1, #ffffff) !important;
-  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)) !important;
-}
-
-body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child h2,
-body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child span,
-html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child h2,
-html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child span {
-  color: var(--dsw-alias-label-primary, #18181b) !important;
-}
-
-body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child button,
-body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child a,
-html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child button,
-html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child a {
-  color: var(--dsw-alias-label-secondary, #52525b) !important;
-}
-
-body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child button:hover,
-body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child a:hover,
-html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child button:hover,
-html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child a:hover {
-  color: var(--dsw-alias-label-primary, #18181b) !important;
-}
-
-body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2),
-html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2) {
-  background: var(--dsw-alias-bg-layer-1, #ffffff) !important;
-}
-
-/* 右侧设置区固定宽度规范：卡片先吃满列宽、再被 800px 夹住，左右留白相等（不会出现单侧空洞）。
-   实测（scripts/verify-settings-geometry.mjs，1400px 面板）：卡片宽 800px、左右各 260px —
-   即「居中收束」而不是贴左；若要改成贴左，需同时去掉下面的 margin-inline: auto。 */
-[data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2) > * {
-  width: 100% !important;
-  max-width: 800px !important;
-  margin-inline: auto !important;
-  box-sizing: border-box !important;
-}
-
-[data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2) > * > * {
-  width: 100% !important;
-  max-width: 800px !important;
-  margin-inline: auto !important;
-  box-sizing: border-box !important;
-}
-
-[data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2) [class*="section"] {
-  width: 100% !important;
-  max-width: 800px !important;
-  margin-inline: auto !important;
-}
-
-/* 新版宿主平铺 4 块 Grid 布局映射（0.2.1-alpha.3+），杜绝 4 列横向撕裂与多余空条 */
+/* 宿主平铺 4 块 Grid 布局映射，杜绝 4 列横向撕裂与多余空条 */
 [data-shortcut-modal="settings"]:has(> [class*="options"]) {
   display: grid !important;
   grid-template-columns: var(--dcu-settings-nav-width, 280px) minmax(0, 1fr) !important;
@@ -802,41 +632,6 @@ html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-c
   gap: 0 !important;
 }
 
-html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav) {
-  margin: 0 !important;
-  border-radius: 0 !important;
-  border: none !important;
-  box-shadow: none !important;
-  background: var(--dsw-alias-bg-base, #151517) !important;
-  height: 100% !important;
-  max-height: 100% !important;
-  overflow: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav) > :first-child {
-  background: transparent !important;
-  border: none !important;
-  border-bottom: none !important;
-  flex: none !important;
-}
-
-html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2) {
-  margin: 0 !important;
-  border-radius: 0 !important;
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  overflow-y: auto !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  padding-top: 28px !important;
-  padding-bottom: 64px !important;
-  padding-inline: 48px !important;
-  box-sizing: border-box !important;
-}
-
 html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="options"] {
   margin: 0 !important;
   border-radius: 0 !important;
@@ -861,8 +656,6 @@ html:not([data-dsh-glass-float]) html[data-ds-theme-source="light"] [data-shortc
   border-right: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)) !important;
 }
 
-html:not([data-dsh-glass-float]) body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav),
-html:not([data-dsh-glass-float]) html[data-ds-theme-source="light"] [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav),
 html:not([data-dsh-glass-float]) body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="options"],
 html:not([data-dsh-glass-float]) html[data-ds-theme-source="light"] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="options"] {
   background: var(--dsw-alias-bg-base, #ffffff) !important;
@@ -895,29 +688,6 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
   flex: none !important;
 }
 
-html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > nav {
-  box-sizing: border-box !important;
-  width: 56px !important;
-  min-width: 56px !important;
-  max-width: 56px !important;
-  margin: 8px 12px 12px 12px !important;
-  padding: 12px 0 16px !important;
-  border-radius: 16px !important;
-  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
-  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
-  background: var(--dsh-glass-card, var(--dsw-alias-bg-layer-1)) !important;
-  backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
-  -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  gap: 0 !important;
-}
-
 html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > nav {
   grid-column: 1 !important;
   grid-row: 2 !important;
@@ -946,16 +716,6 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
   align-items: center !important;
 }
 
-html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav) {
-  margin: 8px 12px 12px 0 !important;
-  border-radius: 16px !important;
-  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
-  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
-  background: var(--dsw-alias-bg-layer-1) !important;
-  overflow-y: auto !important;
-  height: calc(100% - 20px) !important;
-}
-
 html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="options"] {
   grid-column: 2 !important;
   grid-row: 1 / -1 !important;
@@ -981,36 +741,6 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
   display: none !important;
   width: 0 !important;
   height: 0 !important;
-}
-
-/* 旧版嵌套结构下的返回标题栏，平铺 Grid 宿主下不命中了 nav > :first-child，避免把 navList 错误当成标题 */
-[data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > nav > :first-child {
-  border: none !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  margin: 0 auto 10px auto !important;
-  width: 100% !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-}
-
-[data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > nav [class*="navList"],
-[data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > nav > :nth-child(2) {
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  width: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  gap: 4px !important;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
 }
 
 [data-shortcut-modal="settings"][data-sidebar-collapsed] .dcu-settings-nav-header-root,
@@ -1175,16 +905,6 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
   pointer-events: auto !important;
 }
 
-html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:not(:has(> [class*="options"])) > div:not(nav) {
-  margin: 8px 12px 12px 0 !important;
-  border-radius: 16px !important;
-  border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
-  box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
-  background: var(--dsw-alias-bg-layer-1) !important;
-  overflow-y: auto !important;
-  height: calc(100% - 20px) !important;
-}
-
 [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="options"],
 html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collapsed]:has(> [class*="options"]) > [class*="options"] {
   grid-column: 2 !important;
@@ -1300,60 +1020,6 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     flex: none !important;
   }
 
-  /* 旧版嵌套宿主在 <=768px 下的 nav 单岛体系，与折叠块完全对齐 */
-  [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > nav,
-  html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > nav {
-    box-sizing: border-box !important;
-    width: 56px !important;
-    min-width: 56px !important;
-    max-width: 56px !important;
-    margin: 8px 12px 12px 12px !important;
-    padding: 12px 0 16px !important;
-    border-radius: 16px !important;
-    border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
-    box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
-    background: var(--dsh-glass-card, var(--dsw-alias-bg-layer-1)) !important;
-    backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
-    -webkit-backdrop-filter: blur(var(--dsh-glass-blur, 16px)) !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    gap: 0 !important;
-  }
-
-  [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > nav > :first-child {
-    border: none !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 auto 10px auto !important;
-    width: 100% !important;
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-  }
-
-  [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > nav [class*="navList"],
-  [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > nav > :nth-child(2) {
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    gap: 4px !important;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-  }
-
   .dcu-settings-nav-header-root {
     align-items: center !important;
     justify-content: center !important;
@@ -1405,9 +1071,7 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     align-items: center !important;
   }
 
-  html[data-dsh-glass-float] [data-shortcut-modal="settings"] > nav,
-  html[data-dsh-glass-float] [data-shortcut-modal="settings"]:has(> [class*="options"]) > nav,
-  html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > nav {
+  html[data-dsh-glass-float] [data-shortcut-modal="settings"] > nav {
     grid-column: 1 !important;
     grid-row: 2 !important;
     box-sizing: border-box !important;
@@ -1493,42 +1157,6 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     pointer-events: auto !important;
   }
 
-  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) {
-    margin: 0 !important;
-    border-radius: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: var(--dsw-alias-bg-base, #151517) !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
-    display: flex !important;
-    flex-direction: column !important;
-  }
-
-  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :first-child {
-    background: transparent !important;
-    border: none !important;
-    border-bottom: none !important;
-    flex: none !important;
-  }
-
-  /* 右侧设置内容区：普通模式平铺紧贴，云母模式下复刻首页右侧 16px 圆角大卡片独立悬浮岛 */
-  html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) > :nth-child(2) {
-    margin: 0 !important;
-    border-radius: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: transparent !important;
-    overflow-y: auto !important;
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    padding-top: 28px !important;
-    padding-bottom: 40px !important;
-    padding-inline: 20px !important;
-    box-sizing: border-box !important;
-  }
-
   html:not([data-dsh-glass-float]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] {
     margin: 0 !important;
     border-radius: 0 !important;
@@ -1544,21 +1172,9 @@ html[data-dsh-glass-float] [data-shortcut-modal="settings"][data-sidebar-collaps
     box-sizing: border-box !important;
   }
 
-  html:not([data-dsh-glass-float]) body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav),
-  html:not([data-dsh-glass-float]) html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav),
   html:not([data-dsh-glass-float]) body:not([data-ds-dark-theme]) [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"],
   html:not([data-dsh-glass-float]) html[data-ds-theme-source="light"] [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"] {
     background: var(--dsw-alias-bg-base, #ffffff) !important;
-  }
-
-  html[data-dsh-glass-float] [data-shortcut-modal="settings"]:not(:has(> [class*="options"])) > div:not(nav) {
-    margin: 8px 12px 12px 0 !important;
-    border-radius: 16px !important;
-    border: 1px solid var(--dsh-glass-rim-soft, rgba(0, 0, 0, 0.08)) !important;
-    box-shadow: var(--dsh-glass-drop, 0 8px 24px rgba(0, 0, 0, 0.08)), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
-    background: var(--dsw-alias-bg-layer-1) !important;
-    overflow-y: auto !important;
-    height: calc(100% - 20px) !important;
   }
 
   [data-shortcut-modal="settings"]:has(> [class*="options"]) > [class*="options"],
@@ -2006,12 +1622,9 @@ export function decorateSettingsNav(panelEl: HTMLElement): () => void {
     panelEl.style.setProperty('--dcu-settings-nav-width', `${sidebarWidth}px`)
   }
 
-  // 兼容新旧两版宿主结构：新版（0.2.1-alpha.3+）navTitle 与 nav 为同级兄弟节点；旧版 navTitle 是 nav 的首个子元素
+  // DSH 0.2.2+ 宿主结构：navTitle 与 nav 为同级兄弟节点，navList 位于 nav 内
   const navHeader = panelEl.querySelector<HTMLElement>(':scope > [class*="navTitle"]')
-    ?? panelEl.querySelector<HTMLElement>('nav > :first-child')
   const navList = panelEl.querySelector<HTMLElement>('nav [class*="navList"]')
-    ?? panelEl.querySelector<HTMLElement>('nav > :nth-child(2)')
-    ?? panelEl.querySelector<HTMLElement>('nav > :first-child')
   if (!navList) return () => {}
   const doc = panelEl.ownerDocument
   const phone = doc.defaultView?.matchMedia?.(MOBILE_SETTINGS_QUERY)

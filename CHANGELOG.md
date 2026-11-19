@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.3.0] - 2026-11-19
+
+- **Host Compatibility Baseline Upgraded to DeepSeek Harness 0.2.2 Series**:
+  - Fully adapted to the latest DeepSeek Harness 0.2.2 versions (0.2.2-rc.1 through 0.2.2-rc.5), aligning with the newest host full-screen settings workbench and native sidebar right-click menu experiences;
+  - Raised minimum supported host version to 0.2.2-rc.1, dropping legacy support for 0.2.0, 0.2.1, and older versions; removed outdated fallback logic to optimize startup and rendering performance on modern hosts.
+
 ## [2.2.7] - 2026-11-17
 
 - **Workspace Header Create Section Button & Inline Insertion (Issue #105)**:
