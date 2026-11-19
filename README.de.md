@@ -188,6 +188,7 @@ Nach der Installation DSH Web neu starten und den Browser mit `Strg + Umschalt +
 | **Design & Weichzeichnung** | Unter **Einstellungen → Codex UI** aus 14 Paletten wählen und zwischen Flat- und Mica-Karten sowie Unschärfe-Stufen wechseln. |
 | **Seitenleiste sortieren** | Elemente vertikal ziehen; blaue Linien signalisieren die genaue Ablageposition innerhalb oder außerhalb des Mehr-Fachs. |
 | **Arbeitsbereich im Abschnitt hinzufügen** | Über den Titel eines beliebigen Abschnitts (Angeheftet, Projekte oder benutzerdefiniert) fahren oder fokussieren und rechts neben `···` auf „Arbeitsbereich hinzufügen“ klicken (sichtbar bei verfügbarer Host-Ordnerauswahl); der neue Arbeitsbereich wird dort automatisch einsortiert und aufgeklappt. |
+| **Projekte auf der Startseite suchen und wechseln** | Auf der Seite für neue Sitzungen auf den Arbeitsbereich-Chip klicken und tippen, um nach Projektname oder Pfad zu filtern; `↑` / `↓` bewegt, `Enter` wählt, `Esc` schließt. Das aktuelle Projekt trägt ein Häkchen, gleichnamige Projekte zeigen den kürzesten unterscheidenden Pfad, und **Neues Projekt** erscheint nur, wenn der Host einen System-Ordnerdialog anbietet (Remote- oder SSH-Hosts blenden ihn aus). |
 | **Seitenleiste einklappen** | Oben auf der Seitenleiste auf Einklappen klicken, um zum offiziellen 56px-Symbolstreifen zu wechseln. |
 | **Plugins aktualisieren** | In **Einstellungen → Codex UI** auf der Karte für Begleit-Plugins auf **Alle installieren/aktualisieren** klicken. |
 

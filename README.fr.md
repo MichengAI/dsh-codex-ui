@@ -188,6 +188,7 @@ Une fois installé, redémarrez votre instance DSH Web et rechargez complètemen
 | **Changer de thème et de verre** | Dans **Paramètres → Codex UI**, choisissez parmi les 14 palettes et basculez entre les modes Plat et Cartes Mica. |
 | **Réorganiser la barre latérale** | Glissez verticalement les éléments ; les repères bleus indiquent l'emplacement exact d'insertion ou de retrait. |
 | **Ajouter un espace de travail depuis une section** | Survolez ou focalisez l'en-tête de n'importe quelle section (Épinglés, Projets ou personnalisée) puis cliquez sur l'icône « Ajouter un espace de travail » à côté de `···` (affichée si le sélecteur de dossiers de l'hôte est actif) ; le nouvel espace s'y classe et s'ouvre automatiquement. |
+| **Rechercher et changer de projet depuis l'accueil** | Cliquez sur la puce d'espace de travail de la page de nouvelle session et saisissez pour filtrer par nom ou par chemin ; `↑` / `↓` déplace, `Enter` valide, `Esc` ferme. Le projet courant porte une coche, les projets homonymes affichent le suffixe de chemin le plus court, et **Nouveau projet** n'apparaît que si l'hôte propose la boîte de dialogue système (les hôtes distants ou via SSH le masquent). |
 | **Replier la barre latérale** | Cliquez sur le bouton de réduction en haut de la barre pour passer au rail officiel de 56px. |
 | **Mettre à jour les extensions** | Dans **Paramètres → Codex UI**, cliquez sur **Tout installer/mettre à jour** dans la carte des dépendances. |
 

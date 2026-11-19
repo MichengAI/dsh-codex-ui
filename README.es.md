@@ -188,6 +188,7 @@ Una vez instalado, reinicie su entorno DSH Web y fuerce la recarga del navegador
 | **Cambiar temas y desenfoque** | Vaya a **Configuración → Codex UI**, seleccione una de las 14 paletas y alterne entre los modos de cristal Plano y Mica Flotante. |
 | **Reordenar barra lateral** | Arrastre verticalmente los elementos; las guías azules indican la posición exacta para ingresar o extraer del cajón «Más». |
 | **Agregar espacio de trabajo desde una sección** | Pase el cursor o enfoque el título de cualquier sección (Fijados, Proyectos o personalizada) y pulse el icono «Agregar espacio de trabajo» junto a `···` (visible cuando el selector de directorios del host está disponible); el nuevo espacio se colocará y expandirá automáticamente dentro de esa sección. |
+| **Buscar y cambiar de proyecto desde la bienvenida** | Pulse la píldora de espacio de trabajo en la página de nueva sesión y escriba para filtrar por nombre o ruta; `↑` / `↓` desplaza, `Enter` elige, `Esc` cierra. El proyecto actual lleva una marca de verificación, los proyectos homónimos muestran la ruta distintiva más corta, y **Nuevo proyecto** solo aparece cuando el host ofrece el diálogo de carpetas del sistema (los hosts remotos o vía SSH lo ocultan). |
 | **Plegar barra lateral** | Haga clic en el botón superior de la barra para cambiar al riel oficial compacto de 56px. |
 | **Actualizar complementos** | En **Configuración → Codex UI**, pulse **Instalar/actualizar todo** dentro de la tarjeta de complementos. |
 

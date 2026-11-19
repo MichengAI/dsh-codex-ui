@@ -119,6 +119,9 @@ describe('Codex 风格项目选择器', () => {
     // 宿主自动标题 default-workspace 必须显示为本地化默认名，而不是字面量
     expect(rowOf('w3').textContent).toContain(zh['workspacePicker.defaultName'])
     expect(createButton().textContent).toContain(zh['workspacePicker.new'])
+    // 行外层只是高亮载体：菜单容器的直接子节点从无障碍树里抹掉
+    expect(rowOf('w2').getAttribute('role')).toBe('none')
+    expect(document.querySelector('[data-dcu-workspace-create]')?.getAttribute('role')).toBe('none')
   })
 
   it('同名项目显示区分用的路径后缀，唯一名字不显示后缀', async () => {
@@ -181,6 +184,24 @@ describe('Codex 风格项目选择器', () => {
     expect(props.createWorkspace).toHaveBeenCalledExactlyOnceWith({ path: '/Users/me/new-project' })
     expect(props.onPick).toHaveBeenCalledExactlyOnceWith('w9')
     expect(props.onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('连点两次「新建项目」只触发一次目录选择', async () => {
+    const pickDirectory = vi.fn(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0))
+      return null
+    })
+    const props = pickerProps({ pickDirectory })
+    await mount(props)
+
+    await act(async () => {
+      createButton().click()
+      createButton().click()
+      await Promise.resolve()
+    })
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)) })
+
+    expect(pickDirectory).toHaveBeenCalledTimes(1)
   })
 
   it('取消目录选择时不注册工作区，浮层保持打开', async () => {

@@ -193,6 +193,7 @@ Once installed, restart your DSH Web instance and hard-refresh your browser (`Ct
 | **Switch Themes & Blur** | Navigate to **Settings → Codex UI**, choose from 14 palettes, and toggle Stock/Mica or blur presets. |
 | **Reorder Sidebar Items** | Drag any item vertically; blue indicators guide drop positions into or out of the More drawer. |
 | **Add Workspace from Section** | Hover or focus any section header (Pinned, Projects, or custom) and click the **Add workspace** icon beside `···` (shown when host directory-picking is available); the new workspace is placed into that section and expanded automatically. |
+| **Search & Switch Projects from the Welcome Page** | Click the workspace chip on the new-session page and type to filter by project name or path; `↑` / `↓` moves, `Enter` picks, `Esc` closes. The current project carries a check mark, same-named projects show the shortest distinguishing path, and **New project** appears only where the host offers a system directory dialog (remote or SSH hosts hide it). |
 | **Collapse Sidebar** | Click the collapse button on top of the sidebar to switch to the official 56px native icon rail. |
 | **Batch Upgrade Plugins** | In **Settings → Codex UI**, click **Update All** on the Companion Plugins card. |
 

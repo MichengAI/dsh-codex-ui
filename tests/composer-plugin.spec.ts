@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
-import React from 'react'
+import React, { act } from 'react'
+import { createRequire } from 'node:module'
 import { renderToString } from 'react-dom/server'
 import { Context } from '@deepseek-ai/cordis'
 import { tmpdir } from 'node:os'
@@ -11,6 +12,11 @@ import { ComposerSettingsCard } from '../src/client/composer/ComposerSettingsCar
 import { setPredictionEnabled, setPredictionMode, setSubPluginEnabled } from '../src/client/composer/prediction-state.ts'
 import { CODEX_UI_API_ENDPOINTS } from '../src/business-api.ts'
 import { clearModelCatalogCache } from '../src/composer-models.ts'
+
+const { createRoot } = createRequire(import.meta.url)('react-dom/client') as {
+  createRoot: (el: HTMLElement) => { render: (node: React.ReactNode) => void; unmount: () => void }
+}
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
 describe('codex-ui-composer sub-plugin', () => {
   it('子插件元数据命名必须是 codex-ui-composer', () => {
@@ -198,8 +204,12 @@ describe('codex-ui-composer sub-plugin', () => {
       }
     })
 
-    it('插槽接线防护：以 priority -100 覆盖 conversation.hero.workspace，托管 Codex 项目选择器', () => {
-      const registrations: Array<{ meta: { name: string; priority?: number; locale?: string } }> = []
+    it('插槽接线防护：以 priority -100 覆盖 conversation.hero.workspace，并真渲染注册到的组件', async () => {
+      type Registration = {
+        meta: { name: string; priority?: number; locale?: string }
+        component?: React.ComponentType<Record<string, never>>
+      }
+      const registrations: Registration[] = []
       const fakeCtx = {
         locale: { bind: () => (k: string) => k },
         slots: {
@@ -207,8 +217,8 @@ describe('codex-ui-composer sub-plugin', () => {
             callback()
             return () => {}
           },
-          register: (meta: { name: string; priority?: number; locale?: string }) => {
-            registrations.push({ meta })
+          register: (meta: Registration['meta'], component?: Registration['component']) => {
+            registrations.push({ meta, component })
             return () => {}
           },
         },
@@ -222,6 +232,38 @@ describe('codex-ui-composer sub-plugin', () => {
         expect(entries).toHaveLength(1)
         expect(entries[0]!.meta.priority).toBe(-100)
         expect(entries[0]!.meta.locale).toBe('michengai.codexUi')
+
+        // 元数据对了不等于接线对了：把注册到的组件真渲染一次，确认它挂出选择器。
+        const Registered = entries[0]!.component as unknown as React.ComponentType<Record<string, unknown>>
+        expect(Registered).toBeTypeOf('function')
+        const container = document.createElement('div')
+        document.body.appendChild(container)
+        const root = createRoot(container)
+        try {
+          await act(async () => {
+            root.render(React.createElement(Registered, {
+              open: true,
+              selectedId: undefined,
+              anchorRef: { current: null },
+              onPick: () => {},
+              onClose: () => {},
+              useWorkspaces: (selector: (state: unknown) => unknown) => selector({
+                items: [],
+                archivedSessionIds: [],
+                pinnedSessionIds: [],
+                state: 'ready',
+                phase: 'ready',
+                error: null,
+              }),
+              t: (key: string) => key,
+            }))
+          })
+          expect(document.querySelector('[data-dcu-workspace-picker]')).not.toBeNull()
+          expect(document.querySelector('[data-dcu-workspace-create]')).not.toBeNull()
+        } finally {
+          await act(async () => { root.unmount() })
+          container.remove()
+        }
       } finally {
         dispose()
       }

@@ -163,6 +163,8 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
   // 展开方向在打开时一次决定：输入过滤导致高度变化时不来回翻面。
   const sideRef = useRef<'above' | 'below'>('below')
   const alive = useRef(true)
+  // 连点两次「新建项目」时 `busy` 还是上一次渲染的值，用 ref 挡住第二次弹窗。
+  const startingRef = useRef(false)
   const baseId = useId()
   const listId = `${baseId}-list`
   const createId = `${baseId}-create`
@@ -304,7 +306,8 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
   }, [open, anchorRef, closeMenu])
 
   const startCreate = useCallback(async (): Promise<void> => {
-    if (busy) return
+    if (startingRef.current) return
+    startingRef.current = true
     setBusy(true)
     setError(null)
     try {
@@ -317,9 +320,10 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
     } catch (reason: unknown) {
       if (alive.current) setError(reason instanceof Error ? reason.message : String(reason))
     } finally {
+      startingRef.current = false
       if (alive.current) setBusy(false)
     }
-  }, [busy, pickDirectory, createWorkspace, closeMenu, onPick])
+  }, [pickDirectory, createWorkspace, closeMenu, onPick])
 
   const choose = useCallback((row: Row): void => {
     if (row.kind === 'create') {
@@ -406,6 +410,9 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
         {projectRows.map((row, index) => (
           <div
             key={row.id}
+            // 菜单容器的直接子节点应当是 menuitem / group；这层只是定位与高亮载体，
+            // 用 role="none" 从无障碍树里抹掉。
+            role="none"
             className="dcu-wsp-row"
             data-active={active === index}
             data-workspace-id={row.id}
@@ -447,7 +454,7 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
       </div>
       {canCreate
         ? (
-          <div className="dcu-wsp-create" data-active={active === createIndex} data-dcu-workspace-create="">
+          <div role="none" className="dcu-wsp-create" data-active={active === createIndex} data-dcu-workspace-create="">
             <MenuItemButton
               {...({ id: createId } as { id: string })}
               icon={busy
