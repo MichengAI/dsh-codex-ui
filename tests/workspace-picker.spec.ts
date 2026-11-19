@@ -28,9 +28,9 @@ const items = [
   workspace('w3', '/Users/me/default-workspace', 'default-workspace'),
 ]
 
-function snapshot() {
+function snapshot(list = items) {
   return {
-    items,
+    items: list,
     archivedSessionIds: [] as string[],
     pinnedSessionIds: [] as string[],
     state: 'ready' as const,
@@ -41,7 +41,7 @@ function snapshot() {
 
 type PickerProps = Parameters<typeof CodexWorkspacePicker>[0]
 
-function pickerProps(overrides: Partial<PickerProps> = {}): PickerProps {
+function pickerProps(overrides: Partial<PickerProps> = {}, list = items): PickerProps {
   const anchor = document.createElement('button')
   document.body.appendChild(anchor)
   return {
@@ -50,7 +50,7 @@ function pickerProps(overrides: Partial<PickerProps> = {}): PickerProps {
     anchorRef: { current: anchor },
     onPick: vi.fn(),
     onClose: vi.fn(),
-    useWorkspaces: (selector: (state: ReturnType<typeof snapshot>) => unknown) => selector(snapshot()),
+    useWorkspaces: (selector: (state: ReturnType<typeof snapshot>) => unknown) => selector(snapshot(list)),
     t,
     pickDirectory: vi.fn(async () => '/Users/me/new-project'),
     createWorkspace: vi.fn(async ({ path }: { path: string }) => workspace('w9', path, 'new-project')),
@@ -68,6 +68,15 @@ async function mount(props: PickerProps): Promise<void> {
   await act(async () => { root!.render(createElement(CodexWorkspacePicker, props)) })
 }
 
+/** 组合框输入框：宿主 Input 渲染的 native input。 */
+const searchInput = (): HTMLInputElement => document.querySelector<HTMLInputElement>('input[role="combobox"]')!
+/** 项目行外层（承载 data-active 与 id 挂钩）。 */
+const rowOf = (id: string): HTMLElement => document.querySelector<HTMLElement>(`[data-workspace-id="${id}"]`)!
+/** 项目行真正的菜单按钮（宿主 MenuItemButton）。 */
+const rowButton = (id: string): HTMLButtonElement => rowOf(id).querySelector<HTMLButtonElement>('button')!
+/** 「新建项目」菜单按钮。 */
+const createButton = (): HTMLButtonElement => document.querySelector<HTMLButtonElement>('[data-dcu-workspace-create] button')!
+
 afterEach(async () => {
   if (root !== undefined) await act(async () => { root!.unmount() })
   root = undefined
@@ -77,22 +86,37 @@ afterEach(async () => {
 })
 
 describe('Codex 风格项目选择器', () => {
-  it('打开后渲染搜索框、项目列表、选中态与本地化的默认工作区名', async () => {
-    const props = pickerProps()
-    await mount(props)
+  it('打开后渲染搜索框、项目列表、当前项标记与本地化的默认工作区名', async () => {
+    await mount(pickerProps())
 
     expect(document.querySelector('[data-dcu-workspace-picker]')).not.toBeNull()
-    expect(document.querySelector<HTMLInputElement>('.dcu-wsp-input')?.placeholder).toBe(zh['workspacePicker.search'])
+    expect(searchInput().placeholder).toBe(zh['workspacePicker.search'])
     expect(document.querySelectorAll('[data-workspace-id]')).toHaveLength(3)
-    expect(document.querySelector('[data-workspace-id="w2"]')?.getAttribute('aria-selected')).toBe('true')
+    // 当前工作区以宿主菜单行的 aria-current 标记，而不是另画一套高亮
+    expect(rowButton('w2').getAttribute('aria-current')).toBe('page')
+    expect(rowButton('w1').getAttribute('aria-current')).toBeNull()
     // 宿主自动标题 default-workspace 必须显示为本地化默认名，而不是字面量
-    expect(document.querySelector('[data-workspace-id="w3"]')?.textContent).toContain(zh['workspacePicker.defaultName'])
-    expect(document.querySelector('[data-dcu-workspace-create]')?.textContent).toContain(zh['workspacePicker.new'])
+    expect(rowOf('w3').textContent).toContain(zh['workspacePicker.defaultName'])
+    expect(createButton().textContent).toContain(zh['workspacePicker.new'])
+  })
+
+  it('同名项目显示区分用的路径后缀，唯一名字不显示后缀', async () => {
+    const duplicates = [
+      workspace('d1', '/Users/me/work/app', 'app'),
+      workspace('d2', '/Users/me/side/app', 'app'),
+      workspace('d3', '/Users/me/unique', 'unique'),
+    ]
+    await mount(pickerProps({ selectedId: 'd1' as never }, duplicates))
+
+    // 与宿主一致：后缀是最短的唯一尾部路径段（不含前导分隔符）
+    expect(rowOf('d1').querySelector('.dcu-wsp-suffix')?.textContent).toBe('work/app')
+    expect(rowOf('d2').querySelector('.dcu-wsp-suffix')?.textContent).toBe('side/app')
+    expect(rowOf('d3').querySelector('.dcu-wsp-suffix')).toBeNull()
   })
 
   it('按标题或路径搜索并过滤项目，无匹配时给出空状态', async () => {
     await mount(pickerProps())
-    const input = document.querySelector<HTMLInputElement>('.dcu-wsp-input')!
+    const input = searchInput()
     // React 受控输入：必须走原型 setter 再派发 input，才能触发 onChange
     const type = async (value: string) => act(async () => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value)
@@ -112,15 +136,14 @@ describe('Codex 风格项目选择器', () => {
     expect(document.querySelector('.dcu-wsp-status')?.textContent).toBe(zh['workspacePicker.empty'])
   })
 
-  it('点击项目把 id 交给 owner 并关闭浮层', async () => {
+  it('点击项目把 id 交给 owner、关闭浮层并把焦点还给胶囊', async () => {
     const props = pickerProps()
     await mount(props)
 
-    await act(async () => {
-      document.querySelector<HTMLButtonElement>('[data-workspace-id="w1"]')!.click()
-    })
+    await act(async () => { rowButton('w1').click() })
     expect(props.onPick).toHaveBeenCalledExactlyOnceWith('w1')
     expect(props.onClose).toHaveBeenCalledTimes(1)
+    expect(document.activeElement).toBe(props.anchorRef?.current)
   })
 
   it('新建项目：先选目录再注册工作区，成功后选中新项目', async () => {
@@ -128,7 +151,7 @@ describe('Codex 风格项目选择器', () => {
     await mount(props)
 
     await act(async () => {
-      document.querySelector<HTMLButtonElement>('[data-dcu-workspace-create]')!.click()
+      createButton().click()
       await Promise.resolve()
     })
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)) })
@@ -144,7 +167,7 @@ describe('Codex 风格项目选择器', () => {
     await mount(props)
 
     await act(async () => {
-      document.querySelector<HTMLButtonElement>('[data-dcu-workspace-create]')!.click()
+      createButton().click()
       await Promise.resolve()
     })
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)) })
@@ -161,55 +184,73 @@ describe('Codex 风格项目选择器', () => {
     await mount(props)
 
     await act(async () => {
-      document.querySelector<HTMLButtonElement>('[data-dcu-workspace-create]')!.click()
+      createButton().click()
       await Promise.resolve()
     })
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)) })
 
     expect(document.querySelector('[role=alert]')?.textContent).toContain('permission denied')
-    expect(document.querySelector<HTMLButtonElement>('[data-dcu-workspace-create]')!.disabled).toBe(false)
+    expect(createButton().disabled).toBe(false)
     expect(props.onPick).not.toHaveBeenCalled()
   })
 
-  it('键盘：方向键移动高亮、Enter 选中、Esc 关闭', async () => {
+  it('键盘：方向键移动高亮、Enter 选中、Esc 关闭并把焦点还给胶囊', async () => {
     const props = pickerProps()
     await mount(props)
-    const input = document.querySelector<HTMLInputElement>('.dcu-wsp-input')!
+    const input = searchInput()
     const press = async (key: string) => act(async () => {
       input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
     })
 
-    expect(document.querySelector('[data-workspace-id="w1"]')?.getAttribute('data-active')).toBe('true')
+    expect(rowOf('w1').getAttribute('data-active')).toBe('true')
     await press('ArrowDown')
-    expect(document.querySelector('[data-workspace-id="w2"]')?.getAttribute('data-active')).toBe('true')
+    expect(rowOf('w2').getAttribute('data-active')).toBe('true')
     await press('Enter')
     expect(props.onPick).toHaveBeenCalledExactlyOnceWith('w2')
 
     await press('Escape')
     expect(props.onClose).toHaveBeenCalledTimes(2)
+    expect(document.activeElement).toBe(props.anchorRef?.current)
   })
 
-  it('列表溢出时在右侧渲染滚动条，并随滚动更新位置', async () => {
+  it('键盘游标移出可视区时把目标行滚动到最近边缘', async () => {
     await mount(pickerProps())
-    const scroll = document.querySelector<HTMLElement>('.dcu-wsp-scroll')!
-    Object.defineProperty(scroll, 'clientHeight', { configurable: true, value: 200 })
-    Object.defineProperty(scroll, 'scrollHeight', { configurable: true, value: 600 })
-    Object.defineProperty(scroll, 'scrollTop', { configurable: true, writable: true, value: 0 })
-    const settle = async () => {
+    const scrolled: string[] = []
+    const proto = Element.prototype as Element & { scrollIntoView?: (options?: ScrollIntoViewOptions) => void }
+    const original = proto.scrollIntoView
+    proto.scrollIntoView = function scrollIntoView(this: Element): void { scrolled.push(this.id) }
+    try {
+      const input = searchInput()
       await act(async () => {
-        scroll.dispatchEvent(new Event('scroll'))
-        await new Promise(resolve => requestAnimationFrame(() => { resolve(undefined) }))
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }))
       })
+      await act(async () => {
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }))
+      })
+      expect(scrolled.at(-1)).toBe(rowButton('w3').id)
+      // 再落到「新建项目」行：它同样必须被滚动到可见范围
+      await act(async () => {
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }))
+      })
+      expect(scrolled.at(-1)).toBe(createButton().id)
+    } finally {
+      if (original === undefined) Reflect.deleteProperty(proto, 'scrollIntoView')
+      else proto.scrollIntoView = original
     }
-    await settle()
-    const thumb = document.querySelector<HTMLElement>('.dcu-wsp-thumb')
-    expect(thumb).not.toBeNull()
-    expect(Number.parseInt(thumb!.style.height, 10)).toBeGreaterThanOrEqual(24)
-    const before = thumb!.style.transform
+  })
 
-    Object.defineProperty(scroll, 'scrollTop', { configurable: true, writable: true, value: 200 })
-    await settle()
-    expect(document.querySelector<HTMLElement>('.dcu-wsp-thumb')!.style.transform).not.toBe(before)
+  it('aria-activedescendant 始终指向当前高亮行（含新建项目）', async () => {
+    await mount(pickerProps())
+    const input = searchInput()
+    const press = async (key: string) => act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+    })
+
+    expect(input.getAttribute('aria-activedescendant')).toBe(rowButton('w1').id)
+    await press('End')
+    const active = input.getAttribute('aria-activedescendant')
+    expect(active).toBe(createButton().id)
+    expect(document.getElementById(active!)?.getAttribute('role')).toBe('menuitem')
   })
 
   it('关闭时不渲染浮层', async () => {
