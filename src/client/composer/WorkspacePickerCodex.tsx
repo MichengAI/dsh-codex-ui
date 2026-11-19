@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  IconFolderCloseRegular, IconPlusOutlineRegular, IconSearchOutlineRegular,
+  IconCheckOutlineRegular, IconFolderCloseRegular, IconPlusOutlineRegular, IconSearchOutlineRegular,
   Input, MenuItemButton, MenuSurface,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 // 仅类型：拉取 conversation 的槽位 Owner 契约、workspace 的全局 useWorkspaces hooks
@@ -24,12 +24,47 @@ const POPOVER_MAX_HEIGHT = 312
  */
 const DEFAULT_WORKSPACE_TITLE = 'default-workspace'
 
+/**
+ * 「新建项目」能力闸门。
+ *
+ * 宿主只在原生后端（`capability().kind === 'native'`）提供 `directoryPicker.pick`；
+ * browse 后端（远程 Peer、SSH 启动、非 loopback 绑定）调用时以
+ * `directory-picker/unavailable` 拒绝。客户端没有查询后端种类的接口，因此在第一次
+ * 收到该拒绝码后把闸门永久关闭，「新建项目」行随之消失——与官方在没有目录流时
+ * 干脆不提供该入口的行为一致。
+ */
+export interface CreateGate {
+  getSnapshot(): boolean
+  subscribe(listener: () => void): () => void
+  close(): void
+}
+
+/** 创建一个初始开放的能力闸门。 */
+export function createCreateGate(): CreateGate {
+  let open = true
+  const listeners = new Set<() => void>()
+  return {
+    getSnapshot: () => open,
+    subscribe: (listener) => {
+      listeners.add(listener)
+      return () => { listeners.delete(listener) }
+    },
+    close: () => {
+      if (!open) return
+      open = false
+      for (const listener of listeners) listener()
+    },
+  }
+}
+
 /** 项目选择器自身需要的能力：选目录 + 注册为工作区（由 apply 闭包注入）。 */
 export interface WorkspacePickerInjected {
   /** 打开系统目录选择器；用户取消返回 null。 */
   pickDirectory: () => Promise<string | null>
   /** 把选中的目录注册为工作区。 */
   createWorkspace: (input: { path: string }) => Promise<{ workspaceId: WorkspaceId }>
+  /** 「新建项目」是否可用的闸门（宿主无原生目录能力后永久关闭）。 */
+  createGate: CreateGate
 }
 
 /** 槽位 owner props + 本地化 + 注入能力。 */
@@ -111,9 +146,10 @@ function distinguishingPathSuffixes<Id>(
 export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
   const {
     open, selectedId, anchorRef, onPick, onClose,
-    useWorkspaces, t, pickDirectory, createWorkspace,
+    useWorkspaces, t, pickDirectory, createWorkspace, createGate,
   } = props
   const snapshot = useWorkspaces(state => state)
+  const canCreate = useSyncExternalStore(createGate.subscribe, createGate.getSnapshot, createGate.getSnapshot)
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -156,8 +192,9 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
         suffix: suffixes.get(workspace.workspaceId),
         path: workspace.path,
       }))
-    return [...projects, { kind: 'create' }]
-  }, [snapshot.items, query, t])
+    return canCreate ? [...projects, { kind: 'create' }] : projects
+  }, [snapshot.items, query, t, canCreate])
+  const projectCount = canCreate ? rows.length - 1 : rows.length
 
   /** 关闭浮层并把焦点还给锚点胶囊，键盘用户不丢失上下文。 */
   const closeMenu = useCallback((): void => {
@@ -183,9 +220,10 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
   // 键盘游标移动后保持目标行可见：焦点留在搜索框，滚动由这里驱动。
   useEffect(() => {
     if (!open) return
-    const target = document.getElementById(active < rows.length - 1 ? rowIdOf(active) : createId)
-    target?.scrollIntoView?.({ block: 'nearest' })
-  }, [open, active, rows.length, rowIdOf, createId])
+    const id = active < projectCount ? rowIdOf(active) : (canCreate ? createId : undefined)
+    if (id === undefined) return
+    document.getElementById(id)?.scrollIntoView?.({ block: 'nearest' })
+  }, [open, active, projectCount, canCreate, rowIdOf, createId])
 
   // 打开时按胶囊上下可用空间选一次展开方向，窗口尺寸变化时重新评估。
   useLayoutEffect(() => {
@@ -327,7 +365,7 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
   const createIndex = projectRows.length
   const settled = snapshot.state !== 'loading'
   const hasProjects = projectRows.length > 0
-  const activeId = active < createIndex ? rowIdOf(active) : createId
+  const activeId = active < createIndex ? rowIdOf(active) : (canCreate ? createId : undefined)
 
   return createPortal(
     <MenuSurface
@@ -382,10 +420,17 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
               disabled={busy}
               onSelect={() => choose(row)}
             >
-              <span className="dcu-wsp-label" title={row.path}>{row.label}</span>
-              {row.suffix === undefined
-                ? null
-                : <span className="dcu-wsp-suffix">{row.suffix}</span>}
+              <span className="dcu-wsp-body">
+                <span className="dcu-wsp-label" title={row.path}>{row.label}</span>
+                {row.suffix === undefined
+                  ? null
+                  : <span className="dcu-wsp-suffix">{row.suffix}</span>}
+                {/* 当前工作区用宿主对勾标记；MenuItemButton 没有 selected 入参，
+                    只能自己补这一枚图标（不是自绘控件）。 */}
+                {row.id === selectedId
+                  ? <IconCheckOutlineRegular size={16} aria-hidden="true" className="dcu-wsp-check" />
+                  : null}
+              </span>
             </MenuItemButton>
           </div>
         ))}
@@ -400,19 +445,23 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
           )
           : null}
       </div>
-      <div className="dcu-wsp-create" data-active={active === createIndex} data-dcu-workspace-create="">
-        <MenuItemButton
-          {...({ id: createId } as { id: string })}
-          icon={busy
-            ? <span className="dcu-wsp-spin" aria-hidden="true" />
-            : <IconPlusOutlineRegular size={16} />}
-          disabled={busy}
-          separatorBefore
-          onSelect={() => choose({ kind: 'create' })}
-        >
-          {t('workspacePicker.new')}
-        </MenuItemButton>
-      </div>
+      {canCreate
+        ? (
+          <div className="dcu-wsp-create" data-active={active === createIndex} data-dcu-workspace-create="">
+            <MenuItemButton
+              {...({ id: createId } as { id: string })}
+              icon={busy
+                ? <span className="dcu-wsp-spin" aria-hidden="true" />
+                : <IconPlusOutlineRegular size={16} />}
+              disabled={busy}
+              separatorBefore
+              onSelect={() => choose({ kind: 'create' })}
+            >
+              {t('workspacePicker.new')}
+            </MenuItemButton>
+          </div>
+        )
+        : null}
       {error !== null
         ? <div className="dcu-wsp-error" role="alert">{t('workspacePicker.createFailed')}{error}</div>
         : null}

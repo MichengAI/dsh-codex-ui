@@ -6,7 +6,7 @@ import { useMemo, useSyncExternalStore } from 'react'
 import { CODEX_UI_API_ENDPOINTS } from '../../business-api.ts'
 import { NS } from '../locales.ts'
 import { registerInputHistory } from './InputHistoryDock.tsx'
-import { CodexWorkspacePicker, type WorkspacePickerInjected } from './WorkspacePickerCodex.tsx'
+import { CodexWorkspacePicker, createCreateGate, type WorkspacePickerInjected } from './WorkspacePickerCodex.tsx'
 import { WORKSPACE_PICKER_STYLE } from './workspace-picker-style.ts'
 
 function currentSessionId(state?: { current?: string; byId?: Record<string, { id?: string; retainedBy?: { mainView?: number } }> }): string | undefined {
@@ -142,16 +142,38 @@ export function observeComposerEnhancements(ctx: Context): () => void {
     // 5.5 Codex 风格项目选择器：以更高优先级覆盖宿主 conversation.hero.workspace
     // 单槽默认实现（无搜索的 Menu），保留宿主 Workspace Controller 的全部语义：
     // 选择仍走 owner.onPick，新建仍走 createWorkspace，目录仍由系统选择器返回。
-    // 与官方 directory-picker-native 一致：桌面端优先走预加载桥接的本地选择器，
-    // 普通浏览器 / 远程 Peer 回退到 Host 的目录选择能力。
+    //
+    // 「新建项目」需要宿主原生目录能力：browse 后端（远程 Peer、SSH 启动、非
+    // loopback 绑定）对该调用以 `directory-picker/unavailable` 拒绝。客户端没有
+    // 查询后端种类的接口，因此第一次收到该拒绝码就把「新建项目」闸门永久关闭，
+    // 入口随之消失——与官方在没有目录流时干脆不提供该入口的行为一致。
     const desktopPicker = (globalThis as typeof globalThis & {
       __DSH_DIRECTORY_PICKER__?: { pick: () => Promise<string | null> }
     }).__DSH_DIRECTORY_PICKER__
+    const createGate = createCreateGate()
+    const pickDirectory = async (): Promise<string | null> => {
+      if (desktopPicker !== undefined) return desktopPicker.pick()
+      // cordis 的服务属性访问受 inject 门控（`remote.directoryPicker` 是子服务），
+      // 用反射取值不受门控；取不到时回退到工作区导航的同名能力。
+      const picker = (ctx as unknown as {
+        get?: (name: string) => {
+          pick: () => Promise<{ ok: boolean; value?: string | null; error?: { code?: string; message?: string } }>
+        } | undefined
+      }).get?.('remote.directoryPicker')
+      // 老宿主没有暴露该远程能力时，回退到工作区导航提供的同名能力。
+      if (picker === undefined) return ctx.uiWorkspace.pickDirectory()
+      const result = await picker.pick()
+      if (result.ok) return result.value ?? null
+      if (result.error?.code === 'directory-picker/unavailable') {
+        createGate.close()
+        return null
+      }
+      throw new Error(result.error?.message ?? 'directory picker failed')
+    }
     const pickerInjected: WorkspacePickerInjected = {
-      pickDirectory: () => desktopPicker === undefined
-        ? ctx.uiWorkspace.pickDirectory()
-        : desktopPicker.pick(),
+      pickDirectory,
       createWorkspace: input => ctx.workspaces.create(input),
+      createGate,
     }
     function WorkspacePickerSlot(props: PropsRuntime<'conversation.hero.workspace'> & PropsLocale<typeof NS>) {
       return <CodexWorkspacePicker {...props} {...pickerInjected} />

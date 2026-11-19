@@ -216,13 +216,12 @@ describe('codex-ui-composer sub-plugin', () => {
 
       const dispose = observeComposerEnhancements(fakeCtx)
       try {
-        const entry = registrations.find(row => row.meta.name === 'conversation.hero.workspace')
-        expect(entry).toBeDefined()
-        // 单槽按 priority 遮蔽宿主默认实现（宿主为 0），数值必须更低才能生效
-        expect(entry!.meta.priority).toBe(-100)
-        expect(entry!.meta.locale).toBe('michengai.codexUi')
-        // 项目选择器依赖的注入能力必须由 apply 闭包按需解析，而不是注册期直接抛错
-        expect(registrations.filter(row => row.meta.name === 'conversation.hero.workspace')).toHaveLength(1)
+        const entries = registrations.filter(row => row.meta.name === 'conversation.hero.workspace')
+        // 单槽按 priority 遮蔽宿主默认实现（宿主为 0），数值必须更低才能生效；
+        // 「新建项目」是否可用由注入的能力闸门控制，不再额外注册第二档条目。
+        expect(entries).toHaveLength(1)
+        expect(entries[0]!.meta.priority).toBe(-100)
+        expect(entries[0]!.meta.locale).toBe('michengai.codexUi')
       } finally {
         dispose()
       }

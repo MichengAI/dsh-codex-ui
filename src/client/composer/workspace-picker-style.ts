@@ -18,8 +18,10 @@ export const WORKSPACE_PICKER_STYLE = `
 .dcu-wsp-row{flex:none}
 .dcu-wsp-row[data-active=true] [role=menuitem],
 .dcu-wsp-create[data-active=true] [role=menuitem]{background:var(--dsw-alias-interactive-bg-hover)}
+.dcu-wsp-body{display:flex;align-items:center;gap:6px;min-width:0;width:100%}
 .dcu-wsp-label{min-width:0;overflow:hidden;text-overflow:ellipsis}
-.dcu-wsp-suffix{margin-left:6px;flex:none;color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:inherit}
+.dcu-wsp-suffix{flex:none;color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:inherit}
+.dcu-wsp-check{margin-left:auto;flex:none;opacity:.85}
 .dcu-wsp-create{flex:none}
 .dcu-wsp-status{padding:12px 10px;color:var(--dsw-alias-label-tertiary)}
 .dcu-wsp-error{padding:6px 10px 2px;color:var(--dsw-alias-state-warn-label,#d94838);font-size:12px;line-height:18px;word-break:break-word}

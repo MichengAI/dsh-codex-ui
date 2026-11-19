@@ -41,6 +41,24 @@ function snapshot(list = items) {
 
 type PickerProps = Parameters<typeof CodexWorkspacePicker>[0]
 
+/** 可手动闭合的能力闸门替身：宿主拒绝原生目录能力后应当永久关闭。 */
+function createGate(open = true) {
+  let value = open
+  const listeners = new Set<() => void>()
+  return {
+    getSnapshot: () => value,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener)
+      return () => { listeners.delete(listener) }
+    },
+    close: () => {
+      if (!value) return
+      value = false
+      for (const listener of listeners) listener()
+    },
+  }
+}
+
 function pickerProps(overrides: Partial<PickerProps> = {}, list = items): PickerProps {
   const anchor = document.createElement('button')
   document.body.appendChild(anchor)
@@ -54,6 +72,7 @@ function pickerProps(overrides: Partial<PickerProps> = {}, list = items): Picker
     t,
     pickDirectory: vi.fn(async () => '/Users/me/new-project'),
     createWorkspace: vi.fn(async ({ path }: { path: string }) => workspace('w9', path, 'new-project')),
+    createGate: createGate(true),
     ...overrides,
   } as PickerProps
 }
@@ -92,9 +111,11 @@ describe('Codex 风格项目选择器', () => {
     expect(document.querySelector('[data-dcu-workspace-picker]')).not.toBeNull()
     expect(searchInput().placeholder).toBe(zh['workspacePicker.search'])
     expect(document.querySelectorAll('[data-workspace-id]')).toHaveLength(3)
-    // 当前工作区以宿主菜单行的 aria-current 标记，而不是另画一套高亮
+    // 当前工作区以宿主菜单行的 aria-current 标记，并且带一枚宿主对勾图标
     expect(rowButton('w2').getAttribute('aria-current')).toBe('page')
     expect(rowButton('w1').getAttribute('aria-current')).toBeNull()
+    expect(rowButton('w2').querySelectorAll('svg')).toHaveLength(2)
+    expect(rowButton('w1').querySelectorAll('svg')).toHaveLength(1)
     // 宿主自动标题 default-workspace 必须显示为本地化默认名，而不是字面量
     expect(rowOf('w3').textContent).toContain(zh['workspacePicker.defaultName'])
     expect(createButton().textContent).toContain(zh['workspacePicker.new'])
@@ -251,6 +272,32 @@ describe('Codex 风格项目选择器', () => {
     const active = input.getAttribute('aria-activedescendant')
     expect(active).toBe(createButton().id)
     expect(document.getElementById(active!)?.getAttribute('role')).toBe('menuitem')
+  })
+
+  it('宿主没有原生目录能力时不渲染「新建项目」行，键盘只在项目间移动', async () => {
+    await mount(pickerProps({ createGate: createGate(false) }))
+    const input = searchInput()
+
+    expect(document.querySelectorAll('[data-workspace-id]')).toHaveLength(3)
+    expect(document.querySelector('[data-dcu-workspace-create]')).toBeNull()
+
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }))
+    })
+    const active = input.getAttribute('aria-activedescendant')
+    expect(active).toBe(rowButton('w3').id)
+    expect(document.getElementById(active!)?.getAttribute('role')).toBe('menuitem')
+  })
+
+  it('能力闸门关闭后「新建项目」行立即消失（宿主拒绝原生目录能力）', async () => {
+    const gate = createGate(true)
+    await mount(pickerProps({ createGate: gate }))
+    expect(createButton()).not.toBeNull()
+
+    await act(async () => { gate.close() })
+
+    expect(document.querySelector('[data-dcu-workspace-create]')).toBeNull()
+    expect(document.querySelectorAll('[data-workspace-id]')).toHaveLength(3)
   })
 
   it('关闭时不渲染浮层', async () => {
