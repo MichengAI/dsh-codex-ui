@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+- **Searchable, keyboard-friendly workspace menu on the new-session page (PR #106)**:
+  - The hero workspace menu is now a Codex-style project picker: type to filter by project name or path, move with the arrow keys, pick with Enter, dismiss with Escape;
+  - The keyboard highlight keeps itself scrolled into view, and closing the picker returns focus to the workspace chip;
+  - Same-named projects show the shortest path suffix that tells them apart;
+  - A "New project" row at the bottom picks a directory, registers it as a workspace and switches to it;
+  - Note: creating a project now opens the system directory dialog; the hero no longer offers the in-app directory browsing flow.
+
 ## [2.3.0] - 2026-11-19
 
 - **Host Compatibility Baseline Upgraded to DeepSeek Harness 0.2.2 Series**:
