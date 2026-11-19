@@ -1,10 +1,13 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
+import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { useMemo, useSyncExternalStore } from 'react'
 import { CODEX_UI_API_ENDPOINTS } from '../../business-api.ts'
 import { NS } from '../locales.ts'
 import { registerInputHistory } from './InputHistoryDock.tsx'
+import { CodexWorkspacePicker, type WorkspacePickerInjected } from './WorkspacePickerCodex.tsx'
+import { WORKSPACE_PICKER_STYLE } from './workspace-picker-style.ts'
 
 function currentSessionId(state?: { current?: string; byId?: Record<string, { id?: string; retainedBy?: { mainView?: number } }> }): string | undefined {
   if (!state) return undefined
@@ -67,7 +70,7 @@ function installComposerStyles(doc: Document = document): () => void {
   if (existing !== null) return () => { existing.remove() }
   const style = doc.createElement('style')
   style.id = COMPOSER_ENHANCEMENT_STYLE_ID
-  style.textContent = `\n${NEW_CONVERSATION_STYLE}\n`
+  style.textContent = `\n${NEW_CONVERSATION_STYLE}\n${WORKSPACE_PICKER_STYLE}\n`
   ;(doc.head ?? doc.documentElement).appendChild(style)
   return () => { if (style.parentNode !== null) style.remove() }
 }
@@ -135,6 +138,31 @@ export function observeComposerEnhancements(ctx: Context): () => void {
       locale: NS,
     }, SuggestionsDock))
     cleaners.push(unregisterSuggestions)
+
+    // 5.5 Codex 风格项目选择器：以更高优先级覆盖宿主 conversation.hero.workspace
+    // 单槽默认实现（无搜索的 Menu），保留宿主 Workspace Controller 的全部语义：
+    // 选择仍走 owner.onPick，新建仍走 createWorkspace，目录仍由系统选择器返回。
+    // 与官方 directory-picker-native 一致：桌面端优先走预加载桥接的本地选择器，
+    // 普通浏览器 / 远程 Peer 回退到 Host 的目录选择能力。
+    const desktopPicker = (globalThis as typeof globalThis & {
+      __DSH_DIRECTORY_PICKER__?: { pick: () => Promise<string | null> }
+    }).__DSH_DIRECTORY_PICKER__
+    const pickerInjected: WorkspacePickerInjected = {
+      pickDirectory: () => desktopPicker === undefined
+        ? ctx.uiWorkspace.pickDirectory()
+        : desktopPicker.pick(),
+      createWorkspace: input => ctx.workspaces.create(input),
+    }
+    function WorkspacePickerSlot(props: PropsRuntime<'conversation.hero.workspace'> & PropsLocale<typeof NS>) {
+      return <CodexWorkspacePicker {...props} {...pickerInjected} />
+    }
+    const unregisterWorkspacePicker = ctx.slots.inject('conversation.hero.workspace', () => ctx.slots.register({
+      name: 'conversation.hero.workspace',
+      // 单槽按 priority 遮蔽：数值更低者渲染；宿主默认实现为 0。
+      priority: -100,
+      locale: NS,
+    }, WorkspacePickerSlot))
+    cleaners.push(unregisterWorkspacePicker)
 
     // 6. 智能输入预测与行内续写 (挂载于 conversation.input.overlay 插槽)
     // `enabled` 由设置页开关与 Host 站点级配置共同决定；关闭时 overlay 自身中止请求并清空 ghost，
