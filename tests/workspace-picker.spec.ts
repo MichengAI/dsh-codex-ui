@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module'
 import { act, createElement, type ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { CodexWorkspacePicker } from '../src/client/composer/WorkspacePickerCodex.tsx'
+import { CodexWorkspacePicker, createCreateGate, createPickDirectory } from '../src/client/composer/WorkspacePickerCodex.tsx'
 import { zh } from '../src/client/locales.ts'
 
 const { createRoot } = createRequire(import.meta.url)('react-dom/client') as {
@@ -186,22 +186,22 @@ describe('Codex 风格项目选择器', () => {
     expect(props.onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('连点两次「新建项目」只触发一次目录选择', async () => {
-    const pickDirectory = vi.fn(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0))
-      return null
-    })
+  it('「新建项目」在选择进行中保持禁用，第二次点击不会再次触发', async () => {
+    let release: ((value: string | null) => void) | undefined
+    const pickDirectory = vi.fn(() => new Promise<string | null>((resolve) => { release = resolve }))
     const props = pickerProps({ pickDirectory })
     await mount(props)
 
-    await act(async () => {
-      createButton().click()
-      createButton().click()
-      await Promise.resolve()
-    })
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)) })
-
+    await act(async () => { createButton().click() })
+    // 连点的真实保护就是行按钮读 `busy` 后禁用（React 会同步刷新禁用态），
+    // 所以必须先断言禁用、再发第二次点击；删掉 disabled 这条用例才会变红。
+    expect(createButton().disabled).toBe(true)
+    await act(async () => { createButton().click() })
     expect(pickDirectory).toHaveBeenCalledTimes(1)
+
+    // 选择结束（用户取消）后恢复可点，避免一次失败把入口永久卡死。
+    await act(async () => { release?.(null) })
+    expect(createButton().disabled).toBe(false)
   })
 
   it('取消目录选择时不注册工作区，浮层保持打开', async () => {
@@ -324,5 +324,74 @@ describe('Codex 风格项目选择器', () => {
   it('关闭时不渲染浮层', async () => {
     await mount(pickerProps({ open: false }))
     expect(document.querySelector('[data-dcu-workspace-picker]')).toBeNull()
+  })
+})
+
+/**
+ * 「新建项目」的目录选择入口是 apply 里的真实接线，不能只在组件层用假替身覆盖：
+ * 宿主拒绝原生能力时关闸、老宿主回退，都发生在这里。
+ */
+describe('createPickDirectory（生产接线）', () => {
+  it('桌面端原生对话框优先，且完全不碰远程能力', async () => {
+    const gate = createCreateGate()
+    const getRemotePicker = vi.fn()
+    const fallback = vi.fn(async () => '/fallback')
+    const pick = createPickDirectory({
+      desktopPicker: { pick: async () => '/desktop/picked' },
+      getRemotePicker,
+      fallback,
+      gate,
+    })
+
+    await expect(pick()).resolves.toBe('/desktop/picked')
+    expect(getRemotePicker).not.toHaveBeenCalled()
+    expect(fallback).not.toHaveBeenCalled()
+    expect(gate.getSnapshot()).toBe(true)
+  })
+
+  it('宿主以 directory-picker/unavailable 拒绝时关闭闸门并当作取消', async () => {
+    const gate = createCreateGate()
+    const pick = createPickDirectory({
+      getRemotePicker: () => ({ pick: async () => ({ ok: false, error: { code: 'directory-picker/unavailable' } }) }),
+      fallback: vi.fn(async () => '/fallback'),
+      gate,
+    })
+
+    await expect(pick()).resolves.toBeNull()
+    expect(gate.getSnapshot()).toBe(false)
+  })
+
+  it('远程返回路径时直接使用，闸门保持打开', async () => {
+    const gate = createCreateGate()
+    const pick = createPickDirectory({
+      getRemotePicker: () => ({ pick: async () => ({ ok: true, value: '/remote/picked' }) }),
+      fallback: vi.fn(async () => '/fallback'),
+      gate,
+    })
+
+    await expect(pick()).resolves.toBe('/remote/picked')
+    expect(gate.getSnapshot()).toBe(true)
+  })
+
+  it('其它失败照常抛错，不误关闸门', async () => {
+    const gate = createCreateGate()
+    const pick = createPickDirectory({
+      getRemotePicker: () => ({ pick: async () => ({ ok: false, error: { code: 'directory-picker/failed', message: 'boom' } }) }),
+      fallback: vi.fn(async () => '/fallback'),
+      gate,
+    })
+
+    await expect(pick()).rejects.toThrow('boom')
+    expect(gate.getSnapshot()).toBe(true)
+  })
+
+  it('老宿主没有远程能力时回退到工作区导航', async () => {
+    const gate = createCreateGate()
+    const fallback = vi.fn(async () => '/fallback')
+    const pick = createPickDirectory({ getRemotePicker: () => undefined, fallback, gate })
+
+    await expect(pick()).resolves.toBe('/fallback')
+    expect(fallback).toHaveBeenCalledTimes(1)
+    expect(gate.getSnapshot()).toBe(true)
   })
 })

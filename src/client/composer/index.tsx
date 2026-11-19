@@ -6,7 +6,7 @@ import { useMemo, useSyncExternalStore } from 'react'
 import { CODEX_UI_API_ENDPOINTS } from '../../business-api.ts'
 import { NS } from '../locales.ts'
 import { registerInputHistory } from './InputHistoryDock.tsx'
-import { CodexWorkspacePicker, createCreateGate, type WorkspacePickerInjected } from './WorkspacePickerCodex.tsx'
+import { CodexWorkspacePicker, createCreateGate, createPickDirectory, type RemotePickResult, type WorkspacePickerInjected } from './WorkspacePickerCodex.tsx'
 import { WORKSPACE_PICKER_STYLE } from './workspace-picker-style.ts'
 
 function currentSessionId(state?: { current?: string; byId?: Record<string, { id?: string; retainedBy?: { mainView?: number } }> }): string | undefined {
@@ -151,25 +151,16 @@ export function observeComposerEnhancements(ctx: Context): () => void {
       __DSH_DIRECTORY_PICKER__?: { pick: () => Promise<string | null> }
     }).__DSH_DIRECTORY_PICKER__
     const createGate = createCreateGate()
-    const pickDirectory = async (): Promise<string | null> => {
-      if (desktopPicker !== undefined) return desktopPicker.pick()
+    const pickDirectory = createPickDirectory({
+      ...(desktopPicker === undefined ? {} : { desktopPicker }),
       // cordis 的服务属性访问受 inject 门控（`remote.directoryPicker` 是子服务），
       // 用反射取值不受门控；取不到时回退到工作区导航的同名能力。
-      const picker = (ctx as unknown as {
-        get?: (name: string) => {
-          pick: () => Promise<{ ok: boolean; value?: string | null; error?: { code?: string; message?: string } }>
-        } | undefined
-      }).get?.('remote.directoryPicker')
-      // 老宿主没有暴露该远程能力时，回退到工作区导航提供的同名能力。
-      if (picker === undefined) return ctx.uiWorkspace.pickDirectory()
-      const result = await picker.pick()
-      if (result.ok) return result.value ?? null
-      if (result.error?.code === 'directory-picker/unavailable') {
-        createGate.close()
-        return null
-      }
-      throw new Error(result.error?.message ?? 'directory picker failed')
-    }
+      getRemotePicker: () => (ctx as unknown as {
+        get?: (name: string) => { pick: () => Promise<RemotePickResult> } | undefined
+      }).get?.('remote.directoryPicker'),
+      fallback: () => ctx.uiWorkspace.pickDirectory(),
+      gate: createGate,
+    })
     const pickerInjected: WorkspacePickerInjected = {
       pickDirectory,
       createWorkspace: input => ctx.workspaces.create(input),

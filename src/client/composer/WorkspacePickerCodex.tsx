@@ -57,6 +57,47 @@ export function createCreateGate(): CreateGate {
   }
 }
 
+/** 宿主远程目录能力 `remote.directoryPicker.pick()` 的返回形状。 */
+export interface RemotePickResult {
+  readonly ok: boolean
+  readonly value?: string | null
+  readonly error?: { readonly code?: string; readonly message?: string }
+}
+
+/** `createPickDirectory` 的依赖，便于在宿主 API 之外单测拒绝分支。 */
+export interface PickDirectoryDeps {
+  /** 桌面端 preload 暴露的原生对话框；存在时优先，且完全不碰远程能力。 */
+  desktopPicker?: { pick: () => Promise<string | null> }
+  /** 懒取远程目录能力；老宿主没有该子服务时返回 undefined。 */
+  getRemotePicker?: () => { pick: () => Promise<RemotePickResult> } | undefined
+  /** 远程能力缺失时的回退（工作区导航提供的同名能力）。 */
+  fallback: () => Promise<string | null>
+  /** 收到 `directory-picker/unavailable` 时关闭的闸门。 */
+  gate: CreateGate
+}
+
+/**
+ * 组装「新建项目」的目录选择入口。
+ *
+ * browse 后端（远程 Peer、SSH 启动、非 loopback 绑定）以
+ * `directory-picker/unavailable` 拒绝：此时永久关闭闸门并返回 null，
+ * 让「新建项目」入口消失，而不是在界面上留一个点了没反应的假入口。
+ */
+export function createPickDirectory(deps: PickDirectoryDeps): () => Promise<string | null> {
+  return async () => {
+    if (deps.desktopPicker !== undefined) return deps.desktopPicker.pick()
+    const picker = deps.getRemotePicker?.()
+    if (picker === undefined) return deps.fallback()
+    const result = await picker.pick()
+    if (result.ok) return result.value ?? null
+    if (result.error?.code === 'directory-picker/unavailable') {
+      deps.gate.close()
+      return null
+    }
+    throw new Error(result.error?.message ?? 'directory picker failed')
+  }
+}
+
 /** 项目选择器自身需要的能力：选目录 + 注册为工作区（由 apply 闭包注入）。 */
 export interface WorkspacePickerInjected {
   /** 打开系统目录选择器；用户取消返回 null。 */
@@ -163,8 +204,6 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
   // 展开方向在打开时一次决定：输入过滤导致高度变化时不来回翻面。
   const sideRef = useRef<'above' | 'below'>('below')
   const alive = useRef(true)
-  // 连点两次「新建项目」时 `busy` 还是上一次渲染的值，用 ref 挡住第二次弹窗。
-  const startingRef = useRef(false)
   const baseId = useId()
   const listId = `${baseId}-list`
   const createId = `${baseId}-create`
@@ -306,8 +345,8 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
   }, [open, anchorRef, closeMenu])
 
   const startCreate = useCallback(async (): Promise<void> => {
-    if (startingRef.current) return
-    startingRef.current = true
+    // 并发保护由行按钮的 `disabled={busy}` 承担：React 对离散事件同步刷新，
+    // 第一次点击后按钮即被禁用，第二次点击不会再进到这里。
     setBusy(true)
     setError(null)
     try {
@@ -320,7 +359,6 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
     } catch (reason: unknown) {
       if (alive.current) setError(reason instanceof Error ? reason.message : String(reason))
     } finally {
-      startingRef.current = false
       if (alive.current) setBusy(false)
     }
   }, [pickDirectory, createWorkspace, closeMenu, onPick])
@@ -335,6 +373,8 @@ export function CodexWorkspacePicker(props: CodexWorkspacePickerProps) {
   }, [startCreate, closeMenu, onPick])
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>): void => {
+    // 列表为空时 rows.length 为 0，取模会得到 NaN 并让高亮漂移；此类情况直接忽略。
+    if (rows.length === 0) return
     if (event.key === 'ArrowDown') {
       event.preventDefault()
       setActive(current => (current + 1) % rows.length)
