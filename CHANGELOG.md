@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.2] - 2026-11-21
+
+- **Fix Prediction Candidates Display and Control Text Filtering with Reasoning Models (Issue #108, PR #109)**:
+  - Increased default prediction token budget to provide ample reasoning headroom, resolving the issue where ghost suggestions never appeared with certain reasoning models;
+  - Improved prediction truncation and candidate recovery to retain usable whole candidates when length limits are reached, preventing single-line completions from being accidentally cleared;
+  - Enhanced streaming preview by filtering out prompt echoes and control text, immediately halting when no prediction is available to keep ghost suggestions crisp and accurate.
+
 ## [2.4.1] - 2026-11-20
 
 - **Fix Network Noise and Continuous Error Logs When Theme Feature is Disabled (Issue #107)**:
