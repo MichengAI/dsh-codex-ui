@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.4.1] - 2026-11-20
+
+- **Fix Network Noise and Continuous Error Logs When Theme Feature is Disabled (Issue #107)**:
+  - Fixed an issue where disabling the theme feature in configuration caused the client to continuously request theme status and log 404 network errors in DevTools;
+  - Improved the status probing behavior so failed probes back off and stop polling indefinitely, keeping the network panel and error count clean without background noise.
+
 ## [2.4.0] - 2026-11-20
 
 - **Searchable, keyboard-friendly workspace menu on the new-session page (PR #106)**:
