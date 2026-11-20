@@ -1,9 +1,12 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, createElement } from 'react'
+import { createRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
 import {
   ComposerPredictionOverlay,
   PREDICTION_PLACEHOLDER_HIDE_CSS,
   renderPredictionGhost,
+  streamingCandidate,
 } from '../src/client/composer/ComposerPredictionOverlay.tsx'
 import {
   PREDICTION_STORAGE_KEY,
@@ -15,6 +18,68 @@ import {
   setPredictionMode,
   setSubPluginEnabled,
 } from '../src/client/composer/prediction-state.ts'
+
+describe('composer: 流式预测预览', () => {
+  it.each([
+    ['续写指令分片', 'continue', 'Write only the cont', ''],
+    ['续写提示词及标签后显示真正候选', 'continue', 'Write only the continuation text.\nDraft text ending at the caret: "请检查"\n请补充错误原因', '请补充错误原因'],
+    ['无候选标记后的文本不预览', 'next', '- "NONE"\n我想继续', ''],
+    ['不显示无候选标记的未完成分片', 'next', 'NON', ''],
+    ['不误过滤开头相似的正常候选', 'continue', 'Write only the unit tests', 'Write only the unit tests'],
+  ] as const)('%s', (_name, mode, text, expected) => {
+    expect(streamingCandidate(text, mode)).toBe(expected)
+  })
+
+  it('真实浮层接到分片回声时不渲染，仍正常显示后续候选', async () => {
+    let controller!: ReadableStreamDefaultController<Uint8Array>
+    const body = new ReadableStream<Uint8Array>({ start: value => { controller = value } })
+    const send = (event: { type: string; text?: string; items?: string[] }) =>
+      controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`))
+    const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(body, {
+      headers: { 'content-type': 'text/event-stream' },
+    }))
+    const visibility = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false)
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    vi.useFakeTimers()
+    const card = document.createElement('div')
+    card.setAttribute('data-composer-card', '')
+    const editor = document.createElement('div')
+    editor.setAttribute('contenteditable', 'true')
+    editor.getBoundingClientRect = () => new DOMRect(0, 0, 300, 30)
+    const slot = document.createElement('div')
+    card.append(editor, slot)
+    document.body.append(card)
+    const root = createRoot(slot)
+    const ghost = () => card.querySelector('[data-composer-prediction]')
+
+    try {
+      await act(async () => root.render(createElement(ComposerPredictionOverlay, {
+        sessionId: 'stream-preview',
+        t: (key: string) => key,
+      })))
+      await act(async () => { await vi.advanceTimersByTimeAsync(650) })
+      expect(fetcher).toHaveBeenCalledOnce()
+
+      await act(async () => send({ type: 'delta', text: 'Predict the user' }))
+      expect(ghost()).toBeNull()
+      await act(async () => send({ type: 'delta', text: "'s next message.\n继续核对结果" }))
+      expect(ghost()?.textContent).toContain('继续核对结果')
+      expect(ghost()?.textContent).not.toContain('Predict')
+      await act(async () => send({ type: 'done', items: ['好的'] }))
+      expect(ghost()?.textContent).toContain('好的')
+    } finally {
+      await act(async () => {
+        root.unmount()
+        controller.close()
+      })
+      card.remove()
+      vi.useRealTimers()
+      vi.unstubAllGlobals()
+      visibility.mockRestore()
+      fetcher.mockRestore()
+    }
+  })
+})
 
 describe('composer prediction-state: 三态滑动开关模式管理', () => {
   beforeEach(() => {

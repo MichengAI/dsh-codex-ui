@@ -4,6 +4,7 @@
  */
 import React from 'react'
 import { CODEX_UI_API_ENDPOINTS } from '../../business-api.ts'
+import { isNoPrediction, isPredictionPromptEcho, PREDICTION_CUES, predictionLineIdentity, type PredictionMode } from '../../composer-prediction-format.ts'
 import { getPredictionRoute } from './prediction-route-state.ts'
 
 const h = React.createElement
@@ -175,15 +176,16 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
       return /(?:^|\s)\/[^\s]*$/u.test(draft) || /(?:^|\s)@"?[^\s]*$/u.test(draft)
     }
 
-    /** Show the model's first line while it is still streaming. */
-    function streamingCandidate(stream: string): string {
+    /** 流式预览只显示候选，不显示模型复述的提示词。 */
+    function streamingCandidate(stream: string, mode: PredictionMode): string {
       if (stream.trim().length < STREAM_MIN_CHARS) return ''
-      for (const raw of stream.split(/\r?\n/u)) {
-        let line = raw.trim()
+      const lines = stream.split('\n')
+      const cue = predictionLineIdentity(PREDICTION_CUES[mode])
+      for (const [index, raw] of lines.entries()) {
+        const line = cleanLine(raw)
         if (line === '') continue
-        if (/^none$/iu.test(line)) return ''
-        line = cleanLine(line)
-        if (line === '') continue
+        if (isNoPrediction(line)) return ''
+        if (isPredictionPromptEcho(predictionLineIdentity(line), cue, index === lines.length - 1)) continue
         return line.length > 240 ? line.slice(0, 240) : line
       }
       return ''
@@ -191,7 +193,9 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
 
     function cleanLine(line: string): string {
       return line
+        .trimStart()
         .replace(/^(?:[-*•]|\d+[.)])\s+/u, '')
+        .replace(/^user\s*:\s*/iu, '')
         .replace(/^["'`\u201c\u201d]+|["'`\u201c\u201d]+$/gu, '')
         .replace(/\s+/gu, ' ')
         .trim()
@@ -506,7 +510,7 @@ const PREDICTION_PLACEHOLDER_HIDE_CSS =
 
       const rawCandidate = ghost.items.length > 0
         ? ghost.items[Math.min(ghost.index, ghost.items.length - 1)] ?? ''
-        : streamingCandidate(ghost.stream)
+        : streamingCandidate(ghost.stream, ghost.mode === 'continue' ? 'continue' : 'next')
       const current = ghost.mode === 'continue' ? joinContinuation(draft, rawCandidate) : rawCandidate
       currentRef.current = current
       const hasCandidate = current !== ''

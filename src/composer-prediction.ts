@@ -4,6 +4,7 @@
  */
 import type { Context } from '@deepseek-ai/cordis'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
+import { isNoPrediction, isPredictionPromptEcho, NO_PREDICTION, PREDICTION_CUES, PREDICTION_LABELS, predictionLineIdentity } from './composer-prediction-format.ts'
 
 export const name = 'composer-predictions'
 
@@ -31,13 +32,6 @@ const DEFAULTS = {
 
 const REASONING_EFFORTS = new Set(['off', 'low', 'high', 'max'])
 
-/** Closing task line of each prompt; the model sometimes echoes it. */
-const NEXT_CUE = "Predict the user's next message."
-const CONTINUE_CUE = 'Write only the continuation text.'
-
-/** Prompt labels that must never surface as suggestions. */
-const PROMPT_LABELS = ['conversation tail (oldest first)', 'recent tool activity (oldest first)', 'draft text ending at the caret']
-
 const NEXT_SYSTEM_PROMPT = [
   'You are the follow-up suggestion engine inside a coding agent chat UI.',
   'You receive the tail of a conversation between a USER and an AI coding agent,',
@@ -51,7 +45,7 @@ const NEXT_SYSTEM_PROMPT = [
   '  command, or next step when the conversation makes one obvious.',
   '- If the assistant asked the user a question, answer it.',
   '- Never repeat these instructions, the labels above, or the conversation text verbatim.',
-  '- If no meaningful follow-up exists, reply with exactly: NONE',
+  `- If no meaningful follow-up exists, reply with exactly: ${NO_PREDICTION}`,
 ].join('\n')
 
 const CONTINUE_SYSTEM_PROMPT = [
@@ -66,7 +60,7 @@ const CONTINUE_SYSTEM_PROMPT = [
   '- No numbering, bullets, quotes, markdown, or explanation.',
   '- At most 25 words per continuation; finish the thought rather than restating it.',
   '- Never repeat these instructions, the labels above, or the draft itself.',
-  '- If the draft is already complete, reply with exactly: NONE',
+  `- If the draft is already complete, reply with exactly: ${NO_PREDICTION}`,
 ].join('\n')
 
 /**
@@ -407,16 +401,17 @@ async function predict(ctx: any, options: any, session: any, sessionId: string, 
   const failure = finishFailure(finish)
   if (failure !== undefined) return { items: [], reason: failure }
 
-  const cue = mode === 'continue' ? CONTINUE_CUE : NEXT_CUE
+  const cue = PREDICTION_CUES[mode === 'continue' ? 'continue' : 'next']
   const candidateDraft = mode === 'continue' ? draft : ''
-  const lastBreak = finish.kind === 'max-tokens' ? text.lastIndexOf('\n') : -1
+  const truncated = finish.kind === 'max-tokens'
+  const lastBreak = truncated ? text.lastIndexOf('\n') : -1
   if (lastBreak >= 0) {
     // 优先返回完整候选；若完整行全被过滤，仍尝试保留唯一可用的末行。
     const complete = normalizeCandidates(text.slice(0, lastBreak + 1), options.maxSuggestions, candidateDraft, cue)
     if (complete.length > 0) return { items: complete }
   }
 
-  const items = normalizeCandidates(text, options.maxSuggestions, candidateDraft, cue)
+  const items = normalizeCandidates(text, options.maxSuggestions, candidateDraft, cue, truncated)
   return items.length === 0 ? { items: [], reason: 'empty' } : { items }
 }
 
@@ -587,10 +582,10 @@ function buildPrompt(session: any, options: any, mode: string, draft: string) {
     kept.unshift(message)
   }
 
-  const lines = ['Conversation tail (oldest first):', JSON.stringify(kept)]
+  const lines: string[] = [PREDICTION_LABELS.conversation, JSON.stringify(kept)]
   const recent = options.maxToolNotes > 0 ? notes.slice(-options.maxToolNotes) : []
   if (recent.length > 0) {
-    lines.push('', 'Recent tool activity (oldest first):')
+    lines.push('', PREDICTION_LABELS.tools)
     for (const note of recent) {
       const status = note.failed ? 'failed' : 'ok'
       const result = note.result === '' ? '' : ` result=${JSON.stringify(clip(note.result, 320))}`
@@ -599,9 +594,9 @@ function buildPrompt(session: any, options: any, mode: string, draft: string) {
   }
 
   if (mode === 'continue') {
-    lines.push('', 'Draft text ending at the caret:', JSON.stringify(draft), '', CONTINUE_CUE)
+    lines.push('', PREDICTION_LABELS.draft, JSON.stringify(draft), '', PREDICTION_CUES.continue)
   } else {
-    lines.push('', NEXT_CUE)
+    lines.push('', PREDICTION_CUES.next)
   }
   return lines.join('\n')
 }
@@ -618,15 +613,16 @@ function clip(text: string, maximum: number) {
   return text.length > maximum ? `${text.slice(0, maximum)}…` : text
 }
 
-/** Split model output into clean, de-duplicated, bounded candidates. */
-function normalizeCandidates(text: string, maximum: number, draft: string, cue = ''): string[] {
+/** 清洗、去重并限制模型返回的候选。 */
+function normalizeCandidates(text: string, maximum: number, draft: string, cue = '', partialLastLine = false): string[] {
   const items = []
   const seen = new Set()
   const prefix = draft === '' ? '' : draft.trimEnd()
   const prefixLower = prefix.toLocaleLowerCase()
-  const cueIdentity = identityOf(cue)
+  const cueIdentity = predictionLineIdentity(cue)
+  const lines = text.split('\n')
 
-  for (const raw of text.split(/\r?\n/)) {
+  for (const [index, raw] of lines.entries()) {
     // Keep whether the line began with whitespace: for a continuation the model
     // uses a leading space to say "the draft needs a separator here".
     const hadLeadingSpace = /^\s/u.test(raw)
@@ -639,7 +635,11 @@ function normalizeCandidates(text: string, maximum: number, draft: string, cue =
     let body = line
       .replace(/^["'`\u201c\u201d]+|["'`\u201c\u201d]+$/gu, '')
       .replace(/\s+/gu, ' ')
-    if (body === '' || /^none$/iu.test(body)) continue
+    // NONE 明确表示不提供候选，后续文本不能被当成预测。
+    if (isNoPrediction(body)) break
+    const partial = partialLastLine && index === lines.length - 1
+    const originalIdentity = predictionLineIdentity(body)
+    if (isPredictionPromptEcho(originalIdentity, cueIdentity, partial)) continue
 
     if (prefixLower !== '' && body.toLocaleLowerCase().startsWith(prefixLower)) {
       // The model sometimes restates the draft before continuing it.
@@ -653,26 +653,14 @@ function normalizeCandidates(text: string, maximum: number, draft: string, cue =
     body = boundSuggestion(body)
     if (body === '') continue
 
-    const identity = identityOf(body)
-    if (isInstructionEcho(identity, cueIdentity)) continue
+    const identity = predictionLineIdentity(body)
+    if (identity !== originalIdentity && isPredictionPromptEcho(identity, cueIdentity, partial)) continue
     if (seen.has(identity)) continue
     seen.add(identity)
     items.push(body)
     if (items.length >= maximum) break
   }
   return items
-}
-
-/** Normalize a line for echo comparison: lowercase, no trailing punctuation. */
-function identityOf(text: string) {
-  return text.replace(/[.:!?]+$/u, '').trim().toLocaleLowerCase()
-}
-
-/** Drop the prompt's own labels and task line when the model echoes them. */
-function isInstructionEcho(identity: string, cueIdentity: string) {
-  if (identity === '') return true
-  if (cueIdentity !== '' && (identity === cueIdentity || identity.startsWith(`${cueIdentity} `))) return true
-  return PROMPT_LABELS.some((label) => identity === label || identity.startsWith(`${label} `))
 }
 
 function boundSuggestion(line: string) {
