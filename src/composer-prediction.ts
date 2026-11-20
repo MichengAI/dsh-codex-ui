@@ -20,7 +20,10 @@ const MAX_BODY_BYTES = 64 * 1024
 const MAX_DRAFT_CHARS = 4_000
 
 const DEFAULTS = {
-  maxOutputTokens: 220,
+  // Reasoning models spend the whole budget on thinking before they emit any
+  // text, so a 220-token cap yields an empty candidate on slower routes. The
+  // session-title provider already asks for 4096 for the same reason.
+  maxOutputTokens: 1_024,
   timeoutMs: 20_000,
   maxMessages: 10,
   maxChars: 8_000,
