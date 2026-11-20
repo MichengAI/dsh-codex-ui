@@ -20,7 +20,8 @@ const MAX_BODY_BYTES = 64 * 1024
 const MAX_DRAFT_CHARS = 4_000
 
 const DEFAULTS = {
-  maxOutputTokens: 220,
+  // 推理模型也会用这份预算思考，需给预测正文留出余量。
+  maxOutputTokens: 1_024,
   timeoutMs: 20_000,
   maxMessages: 10,
   maxChars: 8_000,
@@ -403,14 +404,19 @@ async function predict(ctx: any, options: any, session: any, sessionId: string, 
     deadline.dispose()
   }
 
-  // A truncated answer still carries usable whole lines; every other terminal
-  // outcome reports its own failure instead of looking like a missing stream.
   const failure = finishFailure(finish)
   if (failure !== undefined) return { items: [], reason: failure }
-  if (finish.kind === 'max-tokens') text = text.slice(0, text.lastIndexOf('\n') + 1)
 
   const cue = mode === 'continue' ? CONTINUE_CUE : NEXT_CUE
-  const items = normalizeCandidates(text, options.maxSuggestions, mode === 'continue' ? draft : '', cue)
+  const candidateDraft = mode === 'continue' ? draft : ''
+  const lastBreak = finish.kind === 'max-tokens' ? text.lastIndexOf('\n') : -1
+  if (lastBreak >= 0) {
+    // 优先返回完整候选；若完整行全被过滤，仍尝试保留唯一可用的末行。
+    const complete = normalizeCandidates(text.slice(0, lastBreak + 1), options.maxSuggestions, candidateDraft, cue)
+    if (complete.length > 0) return { items: complete }
+  }
+
+  const items = normalizeCandidates(text, options.maxSuggestions, candidateDraft, cue)
   return items.length === 0 ? { items: [], reason: 'empty' } : { items }
 }
 

@@ -97,7 +97,7 @@ describe('composer-prediction: 真实宿主契约与防御回归', () => {
 
     // 当模型通过 resolveModelInfo 声明支持 off 时，带入 reasoningEffort
     expect(mockLlm.prepareCall).toHaveBeenCalled()
-    expect(capturedConfig.maxTokens).toBe(220)
+    expect(capturedConfig.maxTokens).toBe(1024)
 
     // 验证 SSE 流式发送了 meta 和 delta
     expect(response.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({
@@ -239,6 +239,57 @@ describe('composer-prediction: 真实宿主契约与防御回归', () => {
     expect(capturedStreamOptions).not.toBeNull()
     expect(capturedStreamOptions.sessionId).toBe('sess_opencode')
     expect(capturedStreamOptions.purpose).toBe('composer-prediction')
+  })
+
+  it.each([
+    { name: '限长时保留没有尾换行的单行预测', draft: '', text: '继续核对结果', finish: 'max-tokens', items: ['继续核对结果'] },
+    { name: '限长时保留单行续写的前导空格', draft: '请检查', text: ' 这段代码', finish: 'max-tokens', items: [' 这段代码'] },
+    { name: '限长时跳过前导空行并回收唯一候选', draft: '', text: '\r\n继续核对结果', finish: 'max-tokens', items: ['继续核对结果'] },
+    { name: '限长时完整行都被过滤则回收可用续写', draft: '请检查', text: 'Write only the continuation text.\nnone\n请检查 这段代码', finish: 'max-tokens', items: [' 这段代码'] },
+    { name: '限长时已有完整候选则舍弃不完整末行', draft: '', text: '继续核对结果\n再看看不完整的', finish: 'max-tokens', items: ['继续核对结果'] },
+    { name: '正常结束时保留没有尾换行的最后一个候选', draft: '', text: '继续核对结果\n运行测试', finish: 'stop', items: ['继续核对结果', '运行测试'] },
+    { name: '限长但没有任何可用正文时仍返回空结果', draft: '', text: 'none\n', finish: 'max-tokens', items: [] },
+  ])('$name', async ({ draft, text, finish, items }) => {
+    const request = {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      async *[Symbol.asyncIterator]() {
+        yield Buffer.from(JSON.stringify({ sessionId: 'sess_truncated', mode: draft ? 'continue' : 'next', draft }))
+      },
+    }
+    const response = { writeHead: vi.fn(), write: vi.fn<(frame: string) => void>(), end: vi.fn(), on: vi.fn() }
+    const register = vi.fn((_route: { path: string; handler: (req: typeof request, res: typeof response) => Promise<void> }) => () => {})
+    const mockSession = {
+      seq: 1,
+      deriveMessages: () => [
+        { role: 'user', content: [{ type: 'text', text: '请帮我跑一下测试' }] },
+        { role: 'assistant', content: [{ type: 'text', text: '测试已完成' }] },
+      ],
+      requestHeader: () => ({ config: { provider: 'test', model: 'test' } }),
+    }
+    applyPredictions({
+      webServer: { register },
+      llm: {
+        prepareCall: async (config: unknown) => ({
+          config,
+          stream: async function* () {
+            yield { type: 'text-delta', text }
+            yield { type: 'finish', reason: { kind: finish } }
+          },
+        }),
+      },
+      sessions: { get: () => mockSession },
+      effect: (fn: () => unknown) => fn(),
+    } as any)
+
+    const stream = register.mock.calls.find(([route]) => route.path === CODEX_UI_API_ENDPOINTS.composerPredictionStream)?.[0]
+    if (stream === undefined) throw new Error('预测流端点未注册')
+    await stream.handler(request, response)
+
+    const events = response.write.mock.calls.map(([frame]) => JSON.parse(frame.slice('data: '.length)))
+    expect(events.at(-1)).toEqual(items.length > 0
+      ? { type: 'done', items, cached: false }
+      : { type: 'error', reason: 'empty' })
   })
 
   it('大模型复述草稿时，前缀被干净剥离，绝不传出重复文本', async () => {

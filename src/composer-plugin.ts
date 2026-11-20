@@ -28,7 +28,7 @@ export type ComposerPluginConfig = {
   model?: string
   /** 预测调用的 reasoning effort（off | low | high | max） */
   reasoningEffort?: string
-  /** 预测生成的最大 token 数（16 ~ 4096，默认 220） */
+  /** 预测生成的最大 token 数（16 ~ 4096，默认 1024） */
   maxOutputTokens?: number
   /** 单次预测超时时间毫秒数（1000 ~ 120000，默认 20000） */
   timeoutMs?: number
