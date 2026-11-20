@@ -407,7 +407,13 @@ async function predict(ctx: any, options: any, session: any, sessionId: string, 
   // outcome reports its own failure instead of looking like a missing stream.
   const failure = finishFailure(finish)
   if (failure !== undefined) return { items: [], reason: failure }
-  if (finish.kind === 'max-tokens') text = text.slice(0, text.lastIndexOf('\n') + 1)
+  // A one-line answer has no trailing newline. Slicing on a missing separator
+  // would blank the whole answer, so only trim back to the last full line when
+  // the stream actually contains a line break.
+  if (finish.kind === 'max-tokens') {
+    const lastBreak = text.lastIndexOf('\n')
+    if (lastBreak >= 0) text = text.slice(0, lastBreak + 1)
+  }
 
   const cue = mode === 'continue' ? CONTINUE_CUE : NEXT_CUE
   const items = normalizeCandidates(text, options.maxSuggestions, mode === 'continue' ? draft : '', cue)
