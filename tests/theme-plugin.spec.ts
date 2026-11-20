@@ -622,6 +622,141 @@ describe('codex-ui-theme 子模块与主题换肤', () => {
     dispose()
   })
 
+  it('Issue #107: 当主题端点返回 404 时，自愈探测必须有界收敛，绝不无限次每 3 秒发起轮询', async () => {
+    vi.useFakeTimers()
+    try {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+      } as Response)
+      globalThis.fetch = fetchMock
+
+      const ctx = {
+        on: vi.fn(),
+        get: vi.fn().mockReturnValue(undefined),
+      }
+
+      const dispose = observeTheme(ctx as never)
+      await vi.advanceTimersByTimeAsync(50)
+
+      // 推进 60 秒（若存在 3 秒死循环轮询，将产生 20 次请求）
+      await vi.advanceTimersByTimeAsync(60000)
+
+      // 有界收敛：初始 1 次 + 最多 3 次启动重试，精准收敛为 4 次请求（钉死退避行为，杜绝假绿）
+      expect(fetchMock.mock.calls.length).toBe(4)
+
+      dispose()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('Issue #107 / P3-1: 当窗口处于 hidden 状态后台冷启时，冷启退避链依然可靠完成 3 次重试并有界收敛为 4 次', async () => {
+    vi.useFakeTimers()
+    const hadOwnDescriptor = Object.prototype.hasOwnProperty.call(document, 'visibilityState')
+    const originalDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState')
+    try {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'hidden',
+      })
+
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+      } as Response)
+      globalThis.fetch = fetchMock
+
+      const ctx = {
+        on: vi.fn(),
+        get: vi.fn().mockReturnValue(undefined),
+      }
+
+      const dispose = observeTheme(ctx as never)
+      await vi.advanceTimersByTimeAsync(50)
+
+      // 推进 60 秒（覆盖整个冷启退避期）
+      await vi.advanceTimersByTimeAsync(60000)
+
+      // 即使在后台 hidden 冷启状态下，退避预算也不会被吞，依然稳定完成 3 次重试（共 4 次）并终止定时器
+      expect(fetchMock.mock.calls.length).toBe(4)
+
+      dispose()
+    } finally {
+      if (hadOwnDescriptor && originalDescriptor) {
+        Object.defineProperty(document, 'visibilityState', originalDescriptor)
+      } else {
+        Reflect.deleteProperty(document, 'visibilityState')
+      }
+      vi.useRealTimers()
+    }
+  })
+
+  it('Issue #107: 当主题端点明确返回 200 { enabled: false } 时，必须确认停用并不启动任何定时重试', async () => {
+    // 确保前序用例的 mock 不会污染后续全局 document 环境
+    expect(Object.prototype.hasOwnProperty.call(document, 'visibilityState')).toBe(false)
+    vi.useFakeTimers()
+    try {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ enabled: false }),
+      } as Response)
+      globalThis.fetch = fetchMock
+
+      const ctx = {
+        on: vi.fn(),
+        get: vi.fn().mockReturnValue(undefined),
+      }
+
+      const dispose = observeTheme(ctx as never)
+      await vi.advanceTimersByTimeAsync(50)
+
+      // 明确停用状态下，推进 30 秒，不应发起任何后续定时请求
+      await vi.advanceTimersByTimeAsync(30000)
+
+      expect(fetchMock.mock.calls.length).toBe(1)
+
+      dispose()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('Issue #107: 运行时窗口获焦触发自愈时，若仍为 404 仅进行单次按需探测，不启动后台重试定时器', async () => {
+    vi.useFakeTimers()
+    try {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+      } as Response)
+      globalThis.fetch = fetchMock
+
+      const ctx = {
+        on: vi.fn(),
+        get: vi.fn().mockReturnValue(undefined),
+      }
+
+      const dispose = observeTheme(ctx as never)
+      // 耗尽冷启动重试（初始 1 次 + 3 次重试 = 4 次）
+      await vi.advanceTimersByTimeAsync(10000)
+      const countAfterStartup = fetchMock.mock.calls.length
+      expect(countAfterStartup).toBe(4)
+
+      // 运行时窗口获焦触发自愈探测
+      window.dispatchEvent(new Event('focus'))
+      await vi.advanceTimersByTimeAsync(50)
+      expect(fetchMock.mock.calls.length).toBe(countAfterStartup + 1)
+
+      // 推进 30 秒，确认不会启动额外的后台定时重试
+      await vi.advanceTimersByTimeAsync(30000)
+      expect(fetchMock.mock.calls.length).toBe(countAfterStartup + 1)
+
+      dispose()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('当主题子插件被停用（fail-closed）时，所有切主题与事件回填入口全部物理熔断，0 个 Token 被写入 DOM', () => {
     try {
       setThemeSubPluginEnabled(false)

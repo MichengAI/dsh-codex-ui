@@ -23,11 +23,16 @@ export * from './state.ts'
 
 let globalThemeRuntime: ThemeRuntime | undefined
 
+export type ThemeSubPluginStatus = {
+  enabled: boolean
+  explicitlyDisabled: boolean
+}
+
 /**
- * 校验主题子插件是否在 Host 侧被显式停用。
- * 遵循统一的 fail-closed 契约：当端点 404 或网络不可达时视为停用并回退官方。
+ * 读取主题子插件在 Host 侧的状态。
+ * 返回 enabled（是否激活）和 explicitlyDisabled（是否为服务端明确回报的停用）。
  */
-export async function checkThemeEnabled(): Promise<boolean> {
+export async function fetchThemeSubPluginStatus(): Promise<ThemeSubPluginStatus> {
   try {
     const base = typeof document !== 'undefined' && document.baseURI ? document.baseURI : 'http://localhost'
     const normalizedBase = base.endsWith('/') ? base : `${base}/`
@@ -36,12 +41,25 @@ export async function checkThemeEnabled(): Promise<boolean> {
       : CODEX_UI_API_ENDPOINTS.theme
     const url = new URL(path, normalizedBase).href
     const res = await fetch(url)
-    if (!res.ok) return false
+    if (!res.ok) return { enabled: false, explicitlyDisabled: false }
     const data = (await res.json()) as { enabled?: boolean }
-    return data?.enabled === true
+    return {
+      enabled: data?.enabled === true,
+      explicitlyDisabled: data?.enabled === false,
+    }
   } catch {
-    return false
+    return { enabled: false, explicitlyDisabled: false }
   }
+}
+
+/**
+ * 校验主题子插件是否在 Host 侧被显式停用。
+ * 遵循统一的 fail-closed 契约：当端点 404 或网络不可达时视为停用并回退官方。
+ * 注：生产路径已由 fetchThemeSubPluginStatus 接管以区分 404 与明确停用态；此函数保留作为历史兼容导出。
+ */
+export async function checkThemeEnabled(): Promise<boolean> {
+  const status = await fetchThemeSubPluginStatus()
+  return status.enabled
 }
 
 function tolerantRegistration(run: () => (() => void) | void): () => void {
@@ -351,18 +369,20 @@ export function observeTheme(ctx: ClientContext): () => void {
     disposers.push(() => clearInterval(timer))
   }
 
-  let healTimer: ReturnType<typeof setInterval> | undefined
+  let healTimer: ReturnType<typeof setTimeout> | undefined
+  let startupRetryCount = 0
+  const MAX_STARTUP_RETRIES = 3
 
   // 探活检查与自愈同步机制：
   // 1. 当服务端显式停用或端点未就绪时，fail-closed 回退官方原生，并彻底清除 190 个自定义 Token；
-  // 2. 先挂载自愈定时器，再执行状态复位，杜绝宿主服务抛错导致自愈定时器无法启动；
-  // 3. 挂载窗口 focus 监听与低频轮询，一旦服务就绪或网络恢复自动重新激活，消除单次抖动永久降级。
-  const checkAndSync = async (): Promise<void> => {
+  // 2. 当服务端明确返回 enabled: false 时立即终止任何重试；若遇 404 等未就绪状态则做有限次启动退避（最多 3 次），耗尽后彻底终止定时轮询；
+  // 3. 挂载窗口 focus 监听、点击开关与 DOM 变动监听，用户切窗口或操作设置时即时按需单次自愈，杜绝持续死循环请求。
+  const checkAndSync = async (allowStartupRetry = false): Promise<void> => {
     if (disposed) return
-    const enabled = await checkThemeEnabled()
+    const status = await fetchThemeSubPluginStatus()
     if (disposed) return
 
-    if (!enabled) {
+    if (!status.enabled) {
       setThemeSubPluginEnabled(false)
       disposeGlassMode()
       removeThemeSurfaceStyles()
@@ -377,13 +397,30 @@ export function observeTheme(ctx: ClientContext): () => void {
         hasAppliedCustomTheme = false
       }
 
-      // 优先启动快速自愈探测（3 秒），网络恢复或端点挂载后自动恢复
-      if (!healTimer) {
-        healTimer = setInterval(() => {
-          if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-            void checkAndSync()
-          }
-        }, 3000)
+      // 如果服务端已明确返回停用（200 { enabled: false }），直接停止任何重试
+      if (status.explicitlyDisabled) {
+        if (healTimer) {
+          clearTimeout(healTimer)
+          healTimer = undefined
+        }
+        return
+      }
+
+      // 仅在明确允许冷启动重试（首帧探活）且遇到未就绪/网络错误时，进行有限次启动退避（最多 3 次），杜绝无休止每 3 秒发起轮询
+      if (allowStartupRetry && startupRetryCount < MAX_STARTUP_RETRIES) {
+        startupRetryCount++
+        if (!healTimer) {
+          const delay = startupRetryCount * 1000
+          healTimer = setTimeout(() => {
+            healTimer = undefined
+            if (!disposed) {
+              void checkAndSync(true)
+            }
+          }, delay)
+        }
+      } else if (healTimer) {
+        clearTimeout(healTimer)
+        healTimer = undefined
       }
 
       // 严禁在此处调用 setTheme('system')！
@@ -392,9 +429,10 @@ export function observeTheme(ctx: ClientContext): () => void {
     }
 
     if (healTimer) {
-      clearInterval(healTimer)
+      clearTimeout(healTimer)
       healTimer = undefined
     }
+    startupRetryCount = 0
     // 翻转启用标记并广播，由 subscribeThemeSettings 自动触发状态恢复与 UI 重渲染
     setThemeSubPluginEnabled(true)
     applyCurrentState(true)
@@ -402,10 +440,10 @@ export function observeTheme(ctx: ClientContext): () => void {
 
   globalCheckAndSync = checkAndSync
 
-  // 窗口重获焦点时即时同步状态（响应用户在插件管理中实时切开关）
+  // 窗口重获焦点时即时同步状态（响应用户在插件管理中实时切开关，按需单次探活，不启动定时器）
   const onFocus = (): void => {
     if (!disposed) {
-      void checkAndSync()
+      void checkAndSync(false)
     }
   }
   if (typeof window !== 'undefined') {
@@ -422,7 +460,7 @@ export function observeTheme(ctx: ClientContext): () => void {
       if (target?.closest?.('[data-plugin-rows], [data-plugin-row], [data-shortcut-modal="settings"], [role="switch"]')) {
         if (clickTimer) clearTimeout(clickTimer)
         clickTimer = setTimeout(() => {
-          if (!disposed) void checkAndSync()
+          if (!disposed) void checkAndSync(false)
         }, 150)
       }
     }
@@ -451,7 +489,7 @@ export function observeTheme(ctx: ClientContext): () => void {
       if (touchesSettings) {
         if (settingsObserverTimer) clearTimeout(settingsObserverTimer)
         settingsObserverTimer = setTimeout(() => {
-          if (!disposed) void checkAndSync()
+          if (!disposed) void checkAndSync(false)
         }, 150)
       }
     })
@@ -462,8 +500,8 @@ export function observeTheme(ctx: ClientContext): () => void {
     })
   }
 
-  // 启动探活
-  void checkAndSync()
+  // 启动探活（首帧冷启动探活允许有限次启动重试）
+  void checkAndSync(true)
 
   // 初始即时应用（首帧仅同步 DOM 样式，不强制同步宿主 ThemeRuntime，等待探活确认启用）
   applyCurrentState(false)
@@ -486,7 +524,7 @@ export function observeTheme(ctx: ClientContext): () => void {
   return () => {
     disposed = true
     if (globalCheckAndSync === checkAndSync) globalCheckAndSync = undefined
-    if (healTimer) clearInterval(healTimer)
+    if (healTimer) clearTimeout(healTimer)
     unsubscribe()
     offThemeChange?.()
     disposeGlassMode()
