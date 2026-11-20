@@ -46,7 +46,9 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
       whiteSpace: 'nowrap',
       pointerEvents: 'none',
       userSelect: 'none',
-      zIndex: 2,
+      // The composer paints its own in-card layers at z-index 2, so a ghost at
+      // that level is measured, styled and inserted but never actually shown.
+      zIndex: 8,
     }
 
     /** The continuation ghost hugs its text and sits where the caret is. */
@@ -55,7 +57,7 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
       gap: '6px',
       padding: '0 4px',
       borderRadius: '4px',
-      zIndex: 3,
+      zIndex: 9,
     }
 
     const TEXT_STYLE = {
