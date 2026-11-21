@@ -67,6 +67,7 @@ describe('composer: 流式预测预览', () => {
       expect(ghost()?.textContent).not.toContain('Predict')
       await act(async () => send({ type: 'done', items: ['好的'] }))
       expect(ghost()?.textContent).toContain('好的')
+      expect((ghost() as HTMLElement)?.style.zIndex).toBe('8')
     } finally {
       await act(async () => {
         root.unmount()
@@ -187,5 +188,35 @@ describe('composer prediction-state: 三态滑动开关模式管理', () => {
     // 杜绝组件内部整块删掉调用回退为 return anchor 的装配脱节风险
     const fnStr = ComposerPredictionOverlay.toString()
     expect(fnStr).toMatch(/return\s+renderPredictionGhost\s*\(/)
+  })
+
+  it('Issue #108: 幽灵预测浮层 zIndex 层级防护，next/continue 必须提升至 zIndex 8/9 避免被 composer 卡内层遮挡', () => {
+    const nextElement = renderPredictionGhost({
+      ghost: { mode: 'next', items: ['下一句建议'], index: 0, active: false },
+      box: { top: 10, left: 20, width: 200, height: 30 },
+      current: '下一句建议',
+      t: (k: string) => k,
+    })
+    const continueElement = renderPredictionGhost({
+      ghost: { mode: 'continue', items: ['继续编写'], index: 0, active: false },
+      box: { top: 10, left: 20, width: 200, height: 30 },
+      current: '继续编写',
+      t: (k: string) => k,
+    })
+
+    const findGhostDiv = (el: any) => {
+      const children = createElement('div', null, el.props.children).props.children
+      const arr = Array.isArray(children) ? children : [children]
+      return arr.find((child: any) => child?.props && child.props['data-composer-prediction'])
+    }
+
+    const nextGhost = findGhostDiv(nextElement)
+    const continueGhost = findGhostDiv(continueElement)
+
+    expect(nextGhost).toBeDefined()
+    expect(nextGhost?.props.style.zIndex).toBe(8)
+
+    expect(continueGhost).toBeDefined()
+    expect(continueGhost?.props.style.zIndex).toBe(9)
   })
 })

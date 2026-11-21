@@ -47,7 +47,9 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
       whiteSpace: 'nowrap',
       pointerEvents: 'none',
       userSelect: 'none',
-      zIndex: 2,
+      // Issue #108: 宿主 composer 卡内层绘制同级背景 (z-index: 2)，
+      // 幽灵层必须提升至 zIndex: 8 才能正常浮现在输入框上层，避免被卡内层背景覆盖遮挡。
+      zIndex: 8,
     }
 
     /** The continuation ghost hugs its text and sits where the caret is. */
@@ -56,7 +58,8 @@ const NO_GHOST = { mode: 'next', items: [] as string[], index: 0, stream: '', ac
       gap: '6px',
       padding: '0 4px',
       borderRadius: '4px',
-      zIndex: 3,
+      // 行内光标续写层级高于整句预测 (zIndex: 9 > 8)
+      zIndex: 9,
     }
 
     const TEXT_STYLE = {
