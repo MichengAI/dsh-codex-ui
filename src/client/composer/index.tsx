@@ -47,20 +47,27 @@ export async function checkComposerEnabled(): Promise<boolean> {
 /**
  * 读取 Host 状态：子插件是否启用，以及站点级是否允许预测。
  * 网络/解析失败一律返回“全部关闭”，避免在宿主不可达时仍然悄悄花 token。
+ *
+ * `explicitlyDisabled` 区分两种关闭：宿主明确回答 `{ enabled: false }`（子插件被停用）
+ * 与端点不存在/不可达（404、网关未就绪）。前者不再重试，后者允许冷启有界退避。
  */
-export async function fetchComposerStatus(): Promise<{ enabled: boolean; prediction: boolean }> {
+export async function fetchComposerStatus(): Promise<{ enabled: boolean; prediction: boolean; explicitlyDisabled: boolean }> {
   try {
     const response = await fetch(CODEX_UI_API_ENDPOINTS.composer, {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     })
-    if (!response.ok) return { enabled: false, prediction: false }
+    if (!response.ok) return { enabled: false, prediction: false, explicitlyDisabled: false }
     const data = await response.json()
     const enabled = data?.enabled === true
     // prediction 代表站点级配置允许与否（cordis.patch.yml 的 config.prediction），与子插件 enabled 解耦
-    return { enabled, prediction: data?.prediction !== false }
+    return {
+      enabled,
+      prediction: data?.prediction !== false,
+      explicitlyDisabled: data?.enabled === false,
+    }
   } catch {
-    return { enabled: false, prediction: false }
+    return { enabled: false, prediction: false, explicitlyDisabled: false }
   }
 }
 
@@ -217,7 +224,24 @@ export function observeComposerEnhancements(ctx: Context): () => void {
     }
   }
 
-  const sync = async (): Promise<void> => {
+  // 探活与自愈（与 Issue #107 的主题探活同一套契约）：
+  // 1. 端点正常时只做首帧探活，绝不保留周期性 setInterval，避免无意义的常驻请求；
+  // 2. 端点不存在/不可达（404、网关未就绪）时只做冷启有界退避（最多 3 次，1s/2s/3s），耗尽后彻底停止，
+  //    绝不在 DevTools 里持续刷 404（Issue #112 报告的子插件停用后刷屏即属此类）；
+  // 3. 宿主明确回答 enabled: false 时立即终止，不进入任何重试；
+  // 4. 运行期靠窗口获焦、设置弹层开闭按需单次补探，兼顾「用户重新启用后无需重启」。
+  let retryTimer: ReturnType<typeof setTimeout> | undefined
+  let startupRetryCount = 0
+  const MAX_STARTUP_RETRIES = 3
+
+  const clearRetry = (): void => {
+    if (retryTimer !== undefined) {
+      clearTimeout(retryTimer)
+      retryTimer = undefined
+    }
+  }
+
+  const sync = async (allowStartupRetry = false): Promise<void> => {
     if (disposed) return
     const status = await fetchComposerStatus()
     if (disposed) return
@@ -226,16 +250,39 @@ export function observeComposerEnhancements(ctx: Context): () => void {
     // 站点级配置先行落地：用户开关只能在其为真时生效
     setHostPredictionAllowed(status.prediction)
     if (status.enabled) {
+      clearRetry()
+      startupRetryCount = 0
       if (!cleanActive) cleanActive = activate()
-    } else {
-      cleanActive?.()
-      cleanActive = undefined
+      return
     }
+
+    cleanActive?.()
+    cleanActive = undefined
+
+    // 宿主明确停用：立即终止，不再产生任何请求
+    if (status.explicitlyDisabled) {
+      clearRetry()
+      return
+    }
+
+    // 仅冷启首帧允许有界退避；运行期事件（focus / 设置开关）按需单次探活，不挂后台定时器
+    if (allowStartupRetry && startupRetryCount < MAX_STARTUP_RETRIES) {
+      startupRetryCount += 1
+      const delay = startupRetryCount * 1000
+      clearRetry()
+      retryTimer = setTimeout(() => {
+        retryTimer = undefined
+        if (!disposed) void sync(true)
+      }, delay)
+      return
+    }
+
+    clearRetry()
   }
 
   // 首帧立即同步激活，确保输入框美化样式与能力零延迟常驻，不出现未美化闪烁
   cleanActive = activate()
-  void sync()
+  void sync(true)
 
   // 1. 窗口重新获得焦点时同步
   const onFocus = () => { void sync() }
@@ -263,20 +310,13 @@ export function observeComposerEnhancements(ctx: Context): () => void {
     observer.observe(document.body, { childList: true, subtree: true })
   }
 
-  // 3. 周期性轻量探活 (15 秒)，当窗口处于激活可见状态时静默同步状态
-  const pollTimer = setInterval(() => {
-    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-      void sync()
-    }
-  }, 15000)
-
   return () => {
     disposed = true
     if (typeof window !== 'undefined') {
       window.removeEventListener('focus', onFocus)
     }
     observer?.disconnect()
-    clearInterval(pollTimer)
+    clearRetry()
     cleanActive?.()
     cleanActive = undefined
   }

@@ -3,6 +3,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
 import { dependencyStatuses, installDependency, installProgressSnapshot, noteHostInstallState, resolveDependencyRuntime, updateAllDependencies } from './dependency-manager.ts'
 import { hostServices } from './host-services.ts'
+import { isSubPluginDisabledOnDisk } from './profile-resolver.ts'
 import {
   SectionsDocumentError,
   SECTIONS_STORE_MAX_BYTES,
@@ -12,6 +13,34 @@ import {
 } from './sections-store.ts'
 
 const dependenciesEndpoint = CODEX_UI_API_ENDPOINTS.dependencies
+
+/**
+ * composer 子插件被停用时，由主插件补一个只读状态兜底端点。
+ *
+ * 客户端以「探活 → 启停输入框增强」驱动 UI：子插件在 cordis.patch.yml 里被停用后，
+ * 它自己注册的 `/composer` 端点随之消失，探活只能拿到 404，DevTools 里就会持续报错。
+ * 这里在磁盘配置确认停用时接管同一路径，返回 `enabled: false`，客户端据此立即收敛。
+ * 子插件启用时不注册，避免与 composer 子插件的同名路由冲突（同一时刻只应有一个注册者）。
+ *
+ * @returns 路由注销函数；未注册时返回 undefined。
+ */
+export function registerComposerStatusFallback(ctx: Context): (() => void) | undefined {
+  const webServer = (ctx as unknown as {
+    webServer?: { register?: (route: unknown) => (() => void) | undefined }
+    get?: (name: string) => { register?: (route: unknown) => (() => void) | undefined } | undefined
+  })
+  const server = webServer.webServer ?? webServer.get?.('webServer')
+  if (!server || typeof server.register !== 'function') return undefined
+  if (!isSubPluginDisabledOnDisk('codex-ui-composer', undefined, ctx)) return undefined
+  return server.register({
+    kind: 'exact',
+    path: CODEX_UI_API_ENDPOINTS.composer,
+    handler: (_request: unknown, response: { writeHead: (status: number, headers?: Record<string, string>) => void; end: (body?: string) => void }) => {
+      response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+      response.end(JSON.stringify({ enabled: false, prediction: false }))
+    },
+  })
+}
 
 type HostRequest = {
   method?: string
@@ -107,6 +136,10 @@ export function apply(ctx: Context): void {
       noteHostInstallState(event)
     })
   }, 'codex-ui: host plugin-manager install state')
+  ctx.effect(() => {
+    const disposeFallback = registerComposerStatusFallback(ctx)
+    return () => { disposeFallback?.() }
+  }, 'michengai-codex-ui: composer status fallback')
   ctx.effect(() => {
     const disposeDependencies = host.webServer.register({
       kind: 'exact',
