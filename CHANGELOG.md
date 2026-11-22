@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.4.3] - 2026-11-22
+
+- **Improve Prediction Ghost Text Visibility and Layering (Issue #110)**:
+  - Fixed an issue where prediction suggestions could be obscured by card backgrounds or input containers, ensuring ghost completions remain clearly legible.
+- **Fix Network Requests and Error Logs When Composer Feature is Disabled (Issue #112)**:
+  - Fixed an issue where disabling input composer enhancements in settings caused background probes to repeatedly log 404 errors;
+  - Probes now cleanly detect disabled state and halt unnecessary polling, keeping developer tools and network traffic clean.
+- **Enhance Coexistence Compatibility with Third-Party Plugins on Hero Page (Issue #111)**:
+  - Fixed an issue where running alongside third-party workspace enhancement plugins could trigger conflicts and prevent hero components from rendering;
+  - Improved interface extension tolerance so workspace selection and search remain smooth and stable when multiple plugins are active.
+
 ## [2.4.2] - 2026-11-21
 
 - **Fix Prediction Candidates Display and Control Text Filtering with Reasoning Models (Issue #108, PR #109)**:
