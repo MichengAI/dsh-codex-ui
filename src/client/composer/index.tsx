@@ -5,6 +5,7 @@ import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots
 import { useMemo, useSyncExternalStore } from 'react'
 import { CODEX_UI_API_ENDPOINTS } from '../../business-api.ts'
 import { NS } from '../locales.ts'
+import { registerSingleSlotSafely } from './slot-safety.ts'
 import { registerInputHistory } from './InputHistoryDock.tsx'
 import { CodexWorkspacePicker, createCreateGate, createPickDirectory, type RemotePickResult, type WorkspacePickerInjected } from './WorkspacePickerCodex.tsx'
 import { WORKSPACE_PICKER_STYLE } from './workspace-picker-style.ts'
@@ -176,12 +177,17 @@ export function observeComposerEnhancements(ctx: Context): () => void {
     function WorkspacePickerSlot(props: PropsRuntime<'conversation.hero.workspace'> & PropsLocale<typeof NS>) {
       return <CodexWorkspacePicker {...props} {...pickerInjected} />
     }
-    const unregisterWorkspacePicker = ctx.slots.inject('conversation.hero.workspace', () => ctx.slots.register({
-      name: 'conversation.hero.workspace',
-      // 单槽按 priority 遮蔽：数值更低者渲染；宿主默认实现为 0。
-      priority: -100,
-      locale: NS,
-    }, WorkspacePickerSlot))
+    const unregisterWorkspacePicker = ctx.slots.inject('conversation.hero.workspace', () => registerSingleSlotSafely(
+      ctx.slots,
+      {
+        name: 'conversation.hero.workspace',
+        // 单槽按 priority 遮蔽：数值更低者渲染；宿主默认实现为 0。
+        // 若与第三方插件（如 dsh-plugin-chatfolders）同 priority 发生碰撞，自动递减数值避让并安全降级
+        priority: -100,
+        locale: NS,
+      },
+      WorkspacePickerSlot,
+    ))
     cleaners.push(unregisterWorkspacePicker)
 
     // 6. 智能输入预测与行内续写 (挂载于 conversation.input.overlay 插槽)
