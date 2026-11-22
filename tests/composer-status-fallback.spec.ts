@@ -69,6 +69,20 @@ describe('composer 状态兜底端点', () => {
     expect(JSON.parse(end.mock.calls[0][0])).toEqual({ enabled: false, prediction: false })
   })
 
+  it('非 GET 请求返回 405 Method Not Allowed', async () => {
+    writePatch('- id: codex-ui-composer\n  disabled: true\n')
+    const routes: CapturedRoute[] = []
+    registerComposerStatusFallback(fakeCtx(routes))
+
+    expect(routes).toHaveLength(1)
+    const writeHead = vi.fn()
+    const end = vi.fn()
+    await routes[0].handler({ method: 'POST' }, { writeHead, end })
+
+    expect(writeHead).toHaveBeenCalledWith(405, expect.objectContaining({ 'content-type': expect.stringContaining('application/json') }))
+    expect(JSON.parse(end.mock.calls[0][0])).toEqual({ error: 'Method Not Allowed' })
+  })
+
   it('子插件未被停用：绝不注册，避免与子插件自己的同名路由冲突', () => {
     writePatch('- id: codex-ui-composer\n  disabled: false\n')
     const routes: CapturedRoute[] = []

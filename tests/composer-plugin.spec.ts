@@ -269,6 +269,41 @@ describe('codex-ui-composer sub-plugin', () => {
       }
     })
 
+    it('插槽接线防护：遭遇第三方同 priority -100 冲突时通过安全机制降级至 -101 胜出注册', async () => {
+      type Registration = {
+        meta: { name: string; priority?: number; locale?: string }
+        component?: React.ComponentType<Record<string, never>>
+      }
+      const registrations: Registration[] = []
+      let collided = false
+      const fakeCtx = {
+        locale: { bind: () => (k: string) => k },
+        slots: {
+          inject: (_name: string, callback: () => void) => {
+            callback()
+            return () => {}
+          },
+          register: (meta: Registration['meta'], component?: Registration['component']) => {
+            if (meta.name === 'conversation.hero.workspace' && meta.priority === -100 && !collided) {
+              collided = true
+              throw new Error('single slot "conversation.hero.workspace" already has a registration at priority -100 — register at a different priority to shadow it (lowest renders)')
+            }
+            registrations.push({ meta, component })
+            return () => {}
+          },
+        },
+      } as any
+
+      const dispose = observeComposerEnhancements(fakeCtx)
+      try {
+        const entries = registrations.filter(row => row.meta.name === 'conversation.hero.workspace')
+        expect(entries).toHaveLength(1)
+        expect(entries[0]!.meta.priority).toBe(-101)
+      } finally {
+        dispose()
+      }
+    })
+
     it('端到端状态驱动：子插件停用时必须通过 sync() 将 subPluginEnabled 置为 false 并整卡隐藏', async () => {
       const originalFetch = globalThis.fetch
       globalThis.fetch = vi.fn().mockResolvedValue({

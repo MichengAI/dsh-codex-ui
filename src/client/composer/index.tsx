@@ -181,8 +181,8 @@ export function observeComposerEnhancements(ctx: Context): () => void {
       ctx.slots,
       {
         name: 'conversation.hero.workspace',
-        // 单槽按 priority 遮蔽：数值更低者渲染；宿主默认实现为 0。
-        // 若与第三方插件（如 dsh-plugin-chatfolders）同 priority 发生碰撞，自动递减数值避让并安全降级
+        // 单槽按 priority 遮蔽：数值更低者渲染（lowest renders）；宿主默认实现为 0。
+        // 若与第三方插件（如 dsh-plugin-chatfolders）同 priority 发生碰撞，自动递减数值（-100 -> -101）抢占更低档位胜出并避免注册冲突抛错
         priority: -100,
         locale: NS,
       },

@@ -25,17 +25,17 @@ const dependenciesEndpoint = CODEX_UI_API_ENDPOINTS.dependencies
  * @returns 路由注销函数；未注册时返回 undefined。
  */
 export function registerComposerStatusFallback(ctx: Context): (() => void) | undefined {
-  const webServer = (ctx as unknown as {
-    webServer?: { register?: (route: unknown) => (() => void) | undefined }
-    get?: (name: string) => { register?: (route: unknown) => (() => void) | undefined } | undefined
-  })
-  const server = webServer.webServer ?? webServer.get?.('webServer')
-  if (!server || typeof server.register !== 'function') return undefined
   if (!isSubPluginDisabledOnDisk('codex-ui-composer', undefined, ctx)) return undefined
-  return server.register({
+  const host = hostServices(ctx)
+  return host.webServer.register({
     kind: 'exact',
     path: CODEX_UI_API_ENDPOINTS.composer,
-    handler: (_request: unknown, response: { writeHead: (status: number, headers?: Record<string, string>) => void; end: (body?: string) => void }) => {
+    handler: async (request: HostRequest, response: HostResponse) => {
+      if (request.method && request.method !== 'GET') {
+        response.writeHead(405, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+        response.end(JSON.stringify({ error: 'Method Not Allowed' }))
+        return
+      }
       response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
       response.end(JSON.stringify({ enabled: false, prediction: false }))
     },
