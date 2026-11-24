@@ -23,13 +23,15 @@ export function observeHeroWidthHandles(label: string): () => void {
     }
     for (const root of document.querySelectorAll<HTMLElement>('[data-phase=hero]')) {
       if (mounted.has(root) || !root.querySelector('[data-conversation-scroll]')) continue
+      const body = root.querySelector<HTMLElement>('[class*="_body"]')
       const clamp = (value: number) => Math.min(Math.max(COMPOSER_MIN_WIDTH, value), Math.max(COMPOSER_MIN_WIDTH, root.clientWidth - COMPOSER_EDGE_BUDGET))
       const current = () => {
-        const raw = getComputedStyle(root).getPropertyValue('--dsh-chat-user-width') || getComputedStyle(root).getPropertyValue('--dsh-chat-content-width')
+        const raw = body?.style.getPropertyValue('--dsh-chat-user-width') || getComputedStyle(root).getPropertyValue('--dsh-chat-user-width') || getComputedStyle(root).getPropertyValue('--dsh-chat-content-width')
         return clamp(parseFloat(raw) || COMPOSER_MIN_WIDTH)
       }
       const publish = (width: number, save: boolean) => {
         const value = clamp(width)
+        body?.style.setProperty('--dsh-chat-user-width', `${value}px`)
         root.style.setProperty('--dsh-chat-user-width', `${value}px`)
         root.style.setProperty('--dsh-chat-content-width', `${value}px`)
         if (save) {
@@ -38,6 +40,7 @@ export function observeHeroWidthHandles(label: string): () => void {
         }
       }
       const initialWidth = current()
+      body?.style.setProperty('--dsh-chat-user-width', `${initialWidth}px`)
       root.style.setProperty('--dsh-chat-user-width', `${initialWidth}px`)
       root.style.setProperty('--dsh-chat-content-width', `${initialWidth}px`)
       const handles = ['left', 'right'].map(side => {
