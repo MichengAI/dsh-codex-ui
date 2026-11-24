@@ -23,7 +23,7 @@ export function observeHeroWidthHandles(label: string): () => void {
     }
     for (const root of document.querySelectorAll<HTMLElement>('[data-phase=hero]')) {
       if (mounted.has(root) || !root.querySelector('[data-conversation-scroll]')) continue
-      const body = root.querySelector<HTMLElement>('[class*="_body"]')
+      const body = root.querySelector<HTMLElement>('[class*="_body"]:has([data-conversation-scroll])') ?? root.querySelector<HTMLElement>('[class*="_body"]')
       const clamp = (value: number) => Math.min(Math.max(COMPOSER_MIN_WIDTH, value), Math.max(COMPOSER_MIN_WIDTH, root.clientWidth - COMPOSER_EDGE_BUDGET))
       const current = () => {
         const raw = body?.style.getPropertyValue('--dsh-chat-user-width') || getComputedStyle(root).getPropertyValue('--dsh-chat-user-width') || getComputedStyle(root).getPropertyValue('--dsh-chat-content-width')

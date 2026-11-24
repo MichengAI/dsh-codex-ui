@@ -111,26 +111,34 @@ function authenticateBusinessRequest(
   try {
     const connection = ctx.get('connection') as {
       requestRejection?: (request: { headers?: HostRequest['headers'] }) => 401 | 403 | undefined
-      admit?: (request: { headers?: HostRequest['headers'] }) => { kind?: string; status?: 401 | 403 | 503 } | undefined
+      admit?: (request: { headers?: HostRequest['headers'] }) => { rejection?: 401 | 403 | 503; peer?: unknown } | undefined
     } | undefined
     if (!connection || (typeof connection.requestRejection !== 'function' && typeof connection.admit !== 'function')) {
       ctx.logger.warn('Codex UI 业务 REST 认证不可用：缺少 connection 认证接口。')
       return reject(503, '宿主认证服务暂不可用。')
     }
-    let rejection: 401 | 403 | undefined
+    let rejection: 401 | 403 | 503 | undefined
     if (typeof connection.admit === 'function') {
       const admission = connection.admit(request)
       if (admission && typeof admission === 'object') {
-        if ('rejection' in admission) {
-          const status = (admission as { rejection?: number }).rejection
-          rejection = (status === 503 ? 403 : status) as 401 | 403
+        if ('rejection' in admission && admission.rejection !== undefined) {
+          rejection = admission.rejection
+        } else if (!('peer' in admission) || !admission.peer) {
+          rejection = 403
         }
+      } else {
+        rejection = 503
       }
     } else if (typeof connection.requestRejection === 'function') {
       rejection = connection.requestRejection(request)
     }
     if (rejection !== undefined) {
-      return reject(rejection, rejection === 401 ? '请先登录 DSH。' : '已拒绝不可信或跨站请求。')
+      const message = rejection === 401
+        ? '请先登录 DSH。'
+        : rejection === 503
+          ? '宿主认证服务暂不可用。'
+          : '已拒绝不可信或跨站请求。'
+      return reject(rejection, message)
     }
     return true
   } catch (error) {
@@ -159,7 +167,6 @@ export function apply(ctx: Context): void {
     const disposeDependencies = host.webServer.register({
       kind: 'exact',
       path: dependenciesEndpoint,
-      auth: 'anonymous',
       handler: async (request, response, peer?: unknown) => {
         if (!authenticateBusinessRequest(ctx, request, response, undefined, peer)) return
         const url = new URL(request.url ?? '/', 'http://localhost')
@@ -235,7 +242,6 @@ export function apply(ctx: Context): void {
     const disposeSections = host.webServer.register({
       kind: 'exact',
       path: CODEX_UI_API_ENDPOINTS.sections,
-      auth: 'anonymous',
       handler: async (request, response, peer?: unknown) => {
         if (!authenticateBusinessRequest(ctx, request, response, undefined, peer)) return
         const json = (status: number, body: unknown): void => {

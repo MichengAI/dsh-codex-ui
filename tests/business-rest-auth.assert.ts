@@ -25,10 +25,11 @@ type ResponseRecorder = {
 type Route = {
   kind: 'exact'
   path: string
-  handler(request: ReturnType<typeof createRequest>, response: ResponseRecorder): Promise<void>
+  auth?: 'anonymous' | 'required' | 'deny'
+  handler(request: ReturnType<typeof createRequest>, response: ResponseRecorder, peer?: unknown): Promise<void>
 }
 
-let rejection: 401 | 403 | undefined = 401
+let rejection: 401 | 403 | 503 | undefined = 401
 let connectionAvailable = true
 let authenticationError: Error | undefined
 let authenticationCalls = 0
@@ -113,6 +114,18 @@ try {
   apply(context as never)
   assert.deepEqual([...routes.keys()].sort(), expectedPaths.slice().sort())
   assert.equal([...routes.keys()].some(path => path.startsWith(oldPrefix)), false)
+  for (const path of expectedPaths) {
+    assert.equal(routes.get(path)?.auth, undefined, `${path} 业务路由必须保持默认 required 认证，绝不可声明为 anonymous`)
+  }
+
+  // 验证 DSH 0.2.3 WebServer 准入契约：宿主准入层分发的 Peer 必须直接放行业务请求
+  const peerResponse: ResponseRecorder = {
+    writeHead(status, headers) { peerResponse.status = status; peerResponse.headers = headers },
+    end(body) { peerResponse.body = body },
+  }
+  const admittedPeer = { principal: { kind: 'owner' }, signal: { aborted: false } }
+  await routes.get(sectionsPath)!.handler({ ...createRequest('GET'), url: sectionsPath }, peerResponse, admittedPeer)
+  assert.equal(peerResponse.status, 200, '携带宿主已认证 Peer 的请求必须直接放行')
 
   const authorizedCalls = [
     [dependenciesPath, 'GET'],
@@ -141,6 +154,44 @@ try {
   assert.match(authenticationWarnings.at(-1) ?? '', /认证/)
   authenticationError = undefined
   rejection = undefined
+
+  // 验证 connection.admit 接口契约与 503 保持（P2-4 / P2-5）
+  let admitResult: { rejection?: 401 | 403 | 503; peer?: unknown } | undefined
+  services.connection = {
+    admit: () => admitResult,
+  }
+
+  // 1) 503 rejection 保留原始 503，不降级为 403
+  admitResult = { rejection: 503 }
+  const resp503 = await invoke(dependenciesPath, 'GET')
+  assert.equal(resp503.status, 503, 'connection.admit 抛出 503 时不得降级为 403')
+  assert.match(resp503.body ?? '', /宿主认证服务暂不可用/)
+
+  // 2) 403 rejection
+  admitResult = { rejection: 403 }
+  const resp403 = await invoke(dependenciesPath, 'GET')
+  assert.equal(resp403.status, 403)
+
+  // 3) 401 rejection
+  admitResult = { rejection: 401 }
+  const resp401 = await invoke(dependenciesPath, 'GET')
+  assert.equal(resp401.status, 401)
+
+  // 4) fail-closed: admission 返回 {} (既无 rejection 又无 peer)
+  admitResult = {}
+  const respNoPeer = await invoke(dependenciesPath, 'GET')
+  assert.equal(respNoPeer.status, 403, 'connection.admit 返回无 peer 准入对象时必须 fail-closed 拒绝 (403)')
+
+  // 5) fail-closed: admission 返回 undefined
+  admitResult = undefined
+  const respUndef = await invoke(dependenciesPath, 'GET')
+  assert.equal(respUndef.status, 503, 'connection.admit 返回 undefined 时判定为服务不可用 (503)')
+
+  // 6) 成功准入：admission 返回有效 peer
+  admitResult = { peer: { principal: { kind: 'owner' } } }
+  const respSuccess = await invoke(sectionsPath, 'GET')
+  assert.equal(respSuccess.status, 200, 'connection.admit 返回有效 peer 时必须放行业务请求')
+
 
   // 使用锁文件中的真实宿主信任检查，仅将登录层固定为已登录，证明跨站拒绝不依赖 401。
   const hostContext = new Context()
