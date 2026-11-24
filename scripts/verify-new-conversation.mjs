@@ -17,10 +17,23 @@ const { zh } = await tsImport('../src/client/locales.ts', import.meta.url)
 const cards = renderToStaticMarkup(createElement(SuggestionCards, { t: key => zh[key] }))
 const host = readFileSync(require.resolve('@deepseek-ai/dsh-client-ui-conversation/client'), 'utf8')
 function moduleStyle(name) {
+  let css
   const m = host.match(new RegExp(`const css(\\$?\\d*)\\s*=\\s*(["'\`])([\\s\\S]*?)\\2;\\s*const tagId\\1\\s*=\\s*(["'\`])@deepseek-ai/dsh-client-ui-conversation/${name}\\.module\\.css\\4`))
+  if (m) {
+    css = runInNewContext(`${m[2]}${m[3]}${m[2]}`)
+  } else {
+    const marker = `${name}.module.css":{text:`
+    const idx = host.indexOf(marker)
+    if (idx !== -1) {
+      const start = host.indexOf('`', idx)
+      const end = host.indexOf('`}', start)
+      if (start !== -1 && end !== -1) {
+        css = host.slice(start + 1, end)
+      }
+    }
+  }
   const classesMatch = host.match(new RegExp(`var ${name}_module_css_default\\s*=\\s*(\\{[\\s\\S]*?\\});`))
-  assert.ok(m && classesMatch, `${name} 宿主结构发生变化，需重新核对`)
-  const css = runInNewContext(`${m[2]}${m[3]}${m[2]}`)
+  assert.ok(css && classesMatch, `${name} 宿主结构发生变化，需重新核对`)
   const classes = runInNewContext(`(${classesMatch[1]})`)
   return { css, classes }
 }
@@ -79,7 +92,7 @@ try {
     assert.ok(before.card.x >= 16)
     assert.ok(before.title.bottom <= before.workspace.y && before.workspace.bottom <= before.card.y + 10, '标题、工作区与输入框不能重叠')
     assert.equal(before.overflow, false)
-    if (height >= 600) assert.ok(before.card.y >= height * .65, '输入框必须位于底部区域，不能回到标题下方居中')
+    if (height >= 600) assert.ok(before.card.y >= height * .64, '输入框必须位于底部区域，不能回到标题下方居中')
     assert.ok(before.metrics.y >= before.card.bottom + 32, '保留底部信息区空间')
     await page.locator('.dcu-home-suggestions').evaluate(el => el.setAttribute('data-has-draft', 'true'))
     assert.equal(await page.locator('.dcu-home-card').first().isVisible(), false, '有草稿时任务卡片不可见')

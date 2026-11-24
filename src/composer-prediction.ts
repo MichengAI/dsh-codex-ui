@@ -87,6 +87,7 @@ export function apply(ctx: Context, config?: any): void {
     return ws.register({
       kind: 'exact',
       path: ENDPOINT,
+      auth: 'anonymous',
       handler: (request: any, response: any) => serveJson(ctx, options, cache, inflight, request, response),
     })
   })
@@ -97,6 +98,7 @@ export function apply(ctx: Context, config?: any): void {
     return ws.register({
       kind: 'exact',
       path: STREAM_ENDPOINT,
+      auth: 'anonymous',
       handler: (request: any, response: any) => serveStream(ctx, options, cache, inflight, request, response),
     })
   })

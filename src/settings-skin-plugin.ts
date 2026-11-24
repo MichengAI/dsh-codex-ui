@@ -17,6 +17,7 @@ export function apply(ctx: Context): void {
       register: (options: {
         kind: 'exact'
         path: string
+        auth?: 'anonymous' | 'required' | 'deny'
         handler: (req: unknown, res: { writeHead: (status: number, headers?: Record<string, string>) => void; end: (body?: string) => void }) => void | Promise<void>
       }) => (() => void) | undefined
     } | undefined
@@ -24,6 +25,7 @@ export function apply(ctx: Context): void {
     const dispose = webServer.register({
       kind: 'exact',
       path: endpoint,
+      auth: 'anonymous',
       handler: (_request, response) => {
         const disabled = isSubPluginDisabledOnDisk('codex-ui-settings-skin', undefined, ctx)
         response.writeHead(200, {

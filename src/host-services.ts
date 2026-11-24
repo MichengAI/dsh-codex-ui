@@ -13,7 +13,7 @@ type HttpResponse = {
 }
 
 type HostServices = {
-  webServer: { register: (route: { kind: 'exact'; path: string; handler: (request: HttpRequest, response: HttpResponse) => Promise<void> }) => () => void }
+  webServer: { register: (route: { kind: 'exact'; path: string; auth?: 'anonymous' | 'required' | 'deny'; handler: (request: HttpRequest, response: HttpResponse, peer?: unknown) => Promise<void> }) => () => void }
 }
 
 function requireService<T extends object>(ctx: Context, key: string, method: keyof T): T {

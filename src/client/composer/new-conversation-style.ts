@@ -1,6 +1,7 @@
 /** 新建页底部输入布局；保留宿主节点、插槽与 active 会话底部信息。 */
 export const NEW_CONVERSATION_STYLE = `
 [data-phase=hero]:has([data-conversation-scroll]){container:dcu-new-conversation / inline-size}
+[data-phase=hero] [class*="_body"]{--dsh-chat-user-width:inherit}
 [data-phase=hero] [data-conversation-scroll][class]{--dsh-composer-side-clearance:16px;justify-content:flex-start;scrollbar-gutter:stable both-edges}
 [data-phase=hero] [data-composer-seat]{flex:1 0 auto;min-height:100%}
 [data-phase=hero] [data-composer-seat]>:has([class*="_composerHero"]){display:flex;flex:1;flex-direction:column}

@@ -64,12 +64,23 @@ try {
   const page = await browser.newPage({ locale: 'zh-CN', viewport: { width: 1440, height: 960 } })
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
+  page.on('response', res => {
+    if (res.status() >= 400) console.log('HTTP失败:', res.status(), res.url())
+  })
+  page.on('console', msg => console.log('浏览器控制台:', msg.type(), msg.text()))
   await page.goto(target)
   await page.waitForFunction(() => !!window.__dcuE2E, { timeout: 60000 })
   for (let i = 0; i < 4; i += 1) {
-    for (const name of ['继续', '稍后配置']) {
+    for (const name of ['稍后配置', '继续', '我知道了', '确定']) {
       const button = page.getByRole('button', { name, exact: true })
-      if (await button.isVisible()) await button.click()
+      if (await button.isVisible() && await button.isEnabled()) {
+        await button.click()
+        break
+      }
+    }
+    const closeBtn = page.locator('[role="dialog"] button[aria-label*="关"], [role="dialog"] button[aria-label*="Close" i], [role="dialog"] button:has(svg)').first()
+    if (await closeBtn.isVisible()) {
+      await closeBtn.click()
     }
     await page.waitForTimeout(250)
   }

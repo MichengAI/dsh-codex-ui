@@ -64,13 +64,20 @@ try {
 
     // 处理欢迎或配置向导弹窗
     for (let i = 0; i < 4; i++) {
-      for (const label of ['继续', '稍后配置', '我知道了', '确定']) {
+      for (const label of ['稍后配置', '继续', '我知道了', '确定']) {
         const btn = page.getByRole('button', { name: label, exact: true })
-        if (await btn.isVisible()) {
+        if (await btn.isVisible() && await btn.isEnabled()) {
           console.log(`  关闭引导弹窗: "${label}"`)
           await btn.click()
           await page.waitForTimeout(300)
+          break
         }
+      }
+      const closeBtn = page.locator('[role="dialog"] button[aria-label*="关"], [role="dialog"] button[aria-label*="Close" i], [role="dialog"] button:has(svg)').first()
+      if (await closeBtn.isVisible()) {
+        console.log('  关闭引导弹窗: 关闭图标')
+        await closeBtn.click()
+        await page.waitForTimeout(300)
       }
     }
 

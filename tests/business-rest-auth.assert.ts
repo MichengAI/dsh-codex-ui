@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { apply, inject } from '../src/index.ts'
 import { Context } from '@deepseek-ai/cordis'
-import { HostConnectionService } from '@deepseek-ai/dsh-client-connection'
+import { ConnectionAuthentication, HostConnectionService } from '@deepseek-ai/dsh-client-connection'
 
 const dependenciesPath = '/api/michengai/dsh-codex-ui/dependencies'
 const sectionsPath = '/api/michengai/dsh-codex-ui/sections'
@@ -144,13 +144,24 @@ try {
 
   // 使用锁文件中的真实宿主信任检查，仅将登录层固定为已登录，证明跨站拒绝不依赖 401。
   const hostContext = new Context()
-  const hostConnection = new HostConnectionService(hostContext, ['dsh.example.test'], {
+  if (typeof ConnectionAuthentication === 'function') {
+    new ConnectionAuthentication(hostContext)
+  }
+  const hostConnection = new (HostConnectionService as any)(hostContext, ['dsh.example.test'], {
     isAuthenticated: () => true,
-  } as never)
+  })
+  if (hostConnection.authentication?.register) {
+    hostConnection.authentication.register({
+      authenticate: () => hostConnection.browserPeer,
+    })
+  }
   services.connection = hostConnection
   try {
     const trusted = createRequest('POST')
-    assert.equal(hostConnection.requestRejection(trusted), undefined, '正对照：已登录的可信来源必须放行')
+    const checkResult = typeof (hostConnection as any).requestRejection === 'function'
+      ? (hostConnection as any).requestRejection(trusted)
+      : (hostConnection.admit(trusted as any) as any).rejection
+    assert.equal(checkResult, undefined, '正对照：已登录的可信来源必须放行')
     for (const headers of [
       { origin: 'https://evil.example' },
       { 'sec-fetch-site': 'cross-site' },

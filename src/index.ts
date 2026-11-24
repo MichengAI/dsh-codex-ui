@@ -30,6 +30,7 @@ export function registerComposerStatusFallback(ctx: Context): (() => void) | und
   return host.webServer.register({
     kind: 'exact',
     path: CODEX_UI_API_ENDPOINTS.composer,
+    auth: 'anonymous',
     handler: async (request: HostRequest, response: HostResponse) => {
       if (request.method && request.method !== 'GET') {
         response.writeHead(405, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
@@ -99,7 +100,9 @@ function authenticateBusinessRequest(
   request: HostRequest,
   response: HostResponse,
   errorBody: AuthenticationErrorBody = (_status, message) => ({ error: message }),
+  peer?: unknown,
 ): boolean {
+  if (peer) return true
   const reject = (status: AuthenticationStatus, message: string): false => {
     response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
     response.end(JSON.stringify(errorBody(status, message)))
@@ -108,12 +111,24 @@ function authenticateBusinessRequest(
   try {
     const connection = ctx.get('connection') as {
       requestRejection?: (request: { headers?: HostRequest['headers'] }) => 401 | 403 | undefined
+      admit?: (request: { headers?: HostRequest['headers'] }) => { kind?: string; status?: 401 | 403 | 503 } | undefined
     } | undefined
-    if (typeof connection?.requestRejection !== 'function') {
-      ctx.logger.warn('Codex UI 业务 REST 认证不可用：缺少 connection.requestRejection。')
+    if (!connection || (typeof connection.requestRejection !== 'function' && typeof connection.admit !== 'function')) {
+      ctx.logger.warn('Codex UI 业务 REST 认证不可用：缺少 connection 认证接口。')
       return reject(503, '宿主认证服务暂不可用。')
     }
-    const rejection = connection.requestRejection(request)
+    let rejection: 401 | 403 | undefined
+    if (typeof connection.admit === 'function') {
+      const admission = connection.admit(request)
+      if (admission && typeof admission === 'object') {
+        if ('rejection' in admission) {
+          const status = (admission as { rejection?: number }).rejection
+          rejection = (status === 503 ? 403 : status) as 401 | 403
+        }
+      }
+    } else if (typeof connection.requestRejection === 'function') {
+      rejection = connection.requestRejection(request)
+    }
     if (rejection !== undefined) {
       return reject(rejection, rejection === 401 ? '请先登录 DSH。' : '已拒绝不可信或跨站请求。')
     }
@@ -144,8 +159,9 @@ export function apply(ctx: Context): void {
     const disposeDependencies = host.webServer.register({
       kind: 'exact',
       path: dependenciesEndpoint,
-      handler: async (request, response) => {
-        if (!authenticateBusinessRequest(ctx, request, response)) return
+      auth: 'anonymous',
+      handler: async (request, response, peer?: unknown) => {
+        if (!authenticateBusinessRequest(ctx, request, response, undefined, peer)) return
         const url = new URL(request.url ?? '/', 'http://localhost')
         try {
           if (request.method === 'GET') {
@@ -219,8 +235,9 @@ export function apply(ctx: Context): void {
     const disposeSections = host.webServer.register({
       kind: 'exact',
       path: CODEX_UI_API_ENDPOINTS.sections,
-      handler: async (request, response) => {
-        if (!authenticateBusinessRequest(ctx, request, response)) return
+      auth: 'anonymous',
+      handler: async (request, response, peer?: unknown) => {
+        if (!authenticateBusinessRequest(ctx, request, response, undefined, peer)) return
         const json = (status: number, body: unknown): void => {
           response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
           response.end(JSON.stringify(body))

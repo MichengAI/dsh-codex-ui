@@ -37,6 +37,7 @@ export function apply(ctx: Context): void {
       register: (options: {
         kind: 'exact' | 'prefix'
         path: string
+        auth?: 'anonymous' | 'required' | 'deny'
         handler: (req: RouteRequest, res: RouteResponse) => void | Promise<void>
       }) => (() => void) | undefined
     } | undefined
@@ -45,6 +46,7 @@ export function apply(ctx: Context): void {
       // 用 prefix 而非 exact：同一个端点要同时吃 `?action=status` 与 `?action=restart`
       kind: 'prefix',
       path: endpoint,
+      auth: 'anonymous',
       handler,
     })
     return () => {

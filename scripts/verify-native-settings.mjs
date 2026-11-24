@@ -10,17 +10,38 @@ const browser = await chromium.launch({ headless: true })
 try {
   const page = await browser.newPage({ locale: 'zh-CN' })
   await page.goto(url.href)
-  for (let i = 0; i < 3; i++) {
-    for (const name of ['继续', '稍后配置']) {
+  for (let i = 0; i < 4; i++) {
+    for (const name of ['稍后配置', '继续', '我知道了', '确定']) {
       const button = page.getByRole('button', { name, exact: true })
-      if (await button.isVisible()) await button.click()
+      if (await button.isVisible() && await button.isEnabled()) {
+        await button.click()
+        break
+      }
+    }
+    const closeBtn = page.locator('[role="dialog"] button[aria-label*="关"], [role="dialog"] button[aria-label*="Close" i], [role="dialog"] button:has(svg)').first()
+    if (await closeBtn.isVisible()) {
+      await closeBtn.click()
     }
     await page.waitForTimeout(200)
   }
 
+  await page.locator('body').click({ position: { x: 100, y: 100 } })
   await page.keyboard.press('Control+,')
   const panel = page.locator('[data-shortcut-modal="settings"]')
-  await panel.waitFor({ timeout: 30000 })
+  try {
+    await panel.waitFor({ timeout: 3000 })
+  } catch {
+    const accountBtn = page.locator('button[aria-label*="账号"], button:has-text("更多")').last()
+    if (await accountBtn.isVisible()) {
+      await accountBtn.click()
+      await page.waitForTimeout(300)
+      const settingItem = page.locator('[role="menuitem"]').filter({ hasText: /设置|Settings/i }).first()
+      if (await settingItem.isVisible()) {
+        await settingItem.click()
+      }
+    }
+    await panel.waitFor({ timeout: 15000 })
+  }
   const geometry = await panel.evaluate(element => {
     const rect = element.getBoundingClientRect()
     const style = getComputedStyle(element)

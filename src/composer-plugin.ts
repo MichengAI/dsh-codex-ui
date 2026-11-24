@@ -73,6 +73,7 @@ export function apply(ctx: Context, config?: ComposerPluginConfig): void {
     const disposeStatus = webServer.register({
       kind: 'exact',
       path: statusEndpoint,
+      auth: 'anonymous',
       handler: (_request: any, response: any) => {
         const disabled = isSubPluginDisabledOnDisk('codex-ui-composer', undefined, ctx)
         response.writeHead(200, {
@@ -86,6 +87,7 @@ export function apply(ctx: Context, config?: ComposerPluginConfig): void {
     const disposeModels = webServer.register({
       kind: 'exact',
       path: CODEX_UI_API_ENDPOINTS.composerModels,
+      auth: 'anonymous',
       handler: async (_request: any, response: any) => {
         try {
           const providers = await collectModelCatalog(ctx)
