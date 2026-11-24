@@ -67,6 +67,7 @@ export async function loadSectionsDocument(): Promise<string | null> {
 let pending: string | undefined
 let timer: number | undefined
 let inFlight: Promise<void> | undefined
+let retried = false
 
 async function flush(): Promise<void> {
   const body = pending
@@ -74,9 +75,15 @@ async function flush(): Promise<void> {
   if (body === undefined) return
   const ok = await transport.save(body)
   // 写失败时留一份最新内容重试一次：多半是宿主正忙，用户的下一次操作也会再触发保存。
-  if (!ok && pending === undefined) {
+  if (!ok && !retried && pending === undefined) {
+    retried = true
     pending = body
     scheduleSave()
+  } else if (ok) {
+    retried = false
+  } else {
+    // 已经重试过一次依然失败，放弃重试，避免控制台死循环刷屏
+    retried = false
   }
 }
 
@@ -109,5 +116,6 @@ function scheduleSave(): void {
  */
 export function scheduleSectionsSave(body: string): void {
   pending = body
+  retried = false
   scheduleSave()
 }

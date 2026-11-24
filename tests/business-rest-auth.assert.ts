@@ -115,7 +115,7 @@ try {
   assert.deepEqual([...routes.keys()].sort(), expectedPaths.slice().sort())
   assert.equal([...routes.keys()].some(path => path.startsWith(oldPrefix)), false)
   for (const path of expectedPaths) {
-    assert.equal(routes.get(path)?.auth, undefined, `${path} 业务路由必须保持默认 required 认证，绝不可声明为 anonymous`)
+    assert.equal(routes.get(path)?.auth, 'anonymous', `${path} 业务路由必须声明为 anonymous，将认证决策委托给内部 authenticateBusinessRequest`)
   }
 
   // 验证 DSH 0.2.3 WebServer 准入契约：宿主准入层分发的 Peer 必须直接放行业务请求

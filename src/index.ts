@@ -167,6 +167,7 @@ export function apply(ctx: Context): void {
     const disposeDependencies = host.webServer.register({
       kind: 'exact',
       path: dependenciesEndpoint,
+      auth: 'anonymous',
       handler: async (request, response, peer?: unknown) => {
         if (!authenticateBusinessRequest(ctx, request, response, undefined, peer)) return
         const url = new URL(request.url ?? '/', 'http://localhost')
@@ -242,6 +243,7 @@ export function apply(ctx: Context): void {
     const disposeSections = host.webServer.register({
       kind: 'exact',
       path: CODEX_UI_API_ENDPOINTS.sections,
+      auth: 'anonymous',
       handler: async (request, response, peer?: unknown) => {
         if (!authenticateBusinessRequest(ctx, request, response, undefined, peer)) return
         const json = (status: number, body: unknown): void => {
