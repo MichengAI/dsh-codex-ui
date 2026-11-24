@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.4.4] - 2026-11-24
+
+- **Full Compatibility with DeepSeek Harness 0.2.3 Series**:
+  - Upgraded core compatibility baseline to seamlessly support DeepSeek Harness 0.2.3 and Cordis 4.2.0 runtime;
+  - Fixed an issue where custom dragged input width on new conversations did not consistently inherit across session transitions, ensuring width preferences stay seamlessly applied;
+  - Fixed an issue where background status probes and composer prediction completions could be blocked under strict host network admission policies, ensuring instant ghost suggestions.
+- **Enhanced Modular Sidebar and Menu Compatibility**:
+  - Fully adapted to the latest modular sidebar accordion expansion, ensuring additional panel items open and switch cleanly;
+  - Refined input suggestion menu padding and attachment thumbnail spacing across light/dark themes and responsive viewports for consistent visual aesthetics.
+
 ## [2.4.3] - 2026-11-22
 
 - **Improve Prediction Ghost Text Visibility and Layering (Issue #110)**:
