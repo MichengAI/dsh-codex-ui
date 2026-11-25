@@ -192,7 +192,7 @@ async function serveStream(ctx: any, options: any, cache: any, inflight: any, re
     }
   } catch (error) {
     if (response.headersSent === true) closeStream(response)
-    else respond(response, 500, { suggestion: null, suggestions: [], reason: describeError(error) })
+    else respond(response, 200, { suggestion: null, suggestions: [], reason: describeError(error) })
   }
 }
 
@@ -249,7 +249,7 @@ async function planRequest(ctx: any, request: any, response: any) {
   if (sessionId === '') return { status: 400, error: 'missing-session' }
 
   const sessions = getService(ctx, 'sessions')
-  if (!sessions || typeof sessions.get !== 'function') return { status: 503, error: 'no-sessions-service' }
+  if (!sessions || typeof sessions.get !== 'function') return { status: 200, error: 'no-sessions-service' }
 
   const session = sessions.get(sessionId)
   if (session === undefined) return { status: 200, error: 'session-not-live' }

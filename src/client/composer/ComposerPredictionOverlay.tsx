@@ -324,7 +324,7 @@ const PREDICTION_PLACEHOLDER_HIDE_CSS =
 
       const request = React.useCallback(
         async (mode: 'next' | 'continue', draftText: string) => {
-          if (sessionId === undefined || sessionId === null) return
+          if (!sessionId || typeof sessionId !== 'string' || !sessionId.trim()) return
           if (typeof document !== 'undefined' && document.hidden) return
           abortRef.current?.abort()
           const controller = new AbortController()
