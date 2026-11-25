@@ -4,6 +4,7 @@
  */
 import { GLASS_CSS_TEXT } from './glass-css.gen.ts'
 import { startGlassSeamStamper } from './glass-seams.ts'
+import { startGlassHeaderWidthTracker } from './header-width.ts'
 
 export type GlassMode = 'mica' | 'compat'
 export type GlassPreset = 'clear' | 'standard' | 'frosted'
@@ -118,6 +119,14 @@ export const GLASS_EXTRA_CSS = `
   -webkit-backdrop-filter: blur(max(var(--dsh-glass-blur, 12px), 12px)) !important;
 }
 
+/* 浮动顶栏宽度跟随正文：新宿主（0.2.3 起）把内容宽度注册为不继承、只写在正文节点上，
+   顶栏与正文互为兄弟读不到，只能退回按列宽估算的兜底宽度（拖宽输入区时顶栏不变）。
+   这里优先读由 header-width 追踪器提升到会话根的绝对宽度，读不到时保持上游兜底不变。
+   折叠侧栏有自己的通栏规则，所以显式排除折叠态，避免覆盖它的 max-width: none。 */
+[data-dsh-glass-frame]:not([data-sidebar-collapsed]) [data-phase] header:not([class*="headerBlank"]):not(.lc-pulse-header):not([class*="lc-"]) {
+  max-width: min(calc(var(--dcu-chat-content-width, var(--dsh-chat-user-width, clamp(680px, calc(var(--dsh-conversation-column-width, 1500px) * 0.64), 920px))) + 32px), calc(100% - 32px));
+}
+
 /* 防御 dsh-context 编队卡片样式污染（Issue #113）：
    .lc-pulse-header 属于编队内容流内部卡片，严禁继承宿主会话顶栏的浮动排版
    （100% 宽 + 居中最大宽 + 卡片描边 + 20px 圆角 + z-index:8 的高层级定位）。
@@ -204,6 +213,7 @@ export const GLASS_EXTRA_CSS = `
 
 let styleTag: HTMLStyleElement | null = null
 let seamDisposer: (() => void) | undefined
+let headerWidthDisposer: (() => void) | undefined
 
 /**
  * 应用玻璃质感、排版模式与材质预设
@@ -268,6 +278,10 @@ export function applyGlassSettings(options: {
   if (!seamDisposer) {
     seamDisposer = startGlassSeamStamper()
   }
+  // 5.1 浮动顶栏宽度跟随：新宿主只把内容宽度发布到正文节点（且不继承），顶栏读不到，需要提升到会话根。
+  if (!headerWidthDisposer) {
+    headerWidthDisposer = startGlassHeaderWidthTracker()
+  }
 
   // 6. 顶部渐隐条：宿主基线里已有 [data-dsh-glass-fade] 的样式（13px、blur 5px、
   //    上实下虚的 mask），但上游的 DOM 创建点不在我们这份构建里。云母浮动模式下滚动内容
@@ -331,6 +345,10 @@ export function disposeGlassMode(): void {
   if (seamDisposer) {
     seamDisposer()
     seamDisposer = undefined
+  }
+  if (headerWidthDisposer) {
+    headerWidthDisposer()
+    headerWidthDisposer = undefined
   }
 
   if (styleTag && styleTag.parentNode) {

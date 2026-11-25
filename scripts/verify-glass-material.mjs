@@ -36,6 +36,10 @@ const genScript = moduleToScript(
   'src/client/theme/glass-css.gen.ts',
   'window.__gen = { GLASS_CSS_TEXT };',
 )
+const headerWidthScript = moduleToScript(
+  'src/client/theme/header-width.ts',
+  'window.__headerWidth = { startGlassHeaderWidthTracker };',
+)
 
 const FIXTURE = `<!doctype html><html><head><meta charset="utf-8"><style>
   body { margin: 0; height: 100vh; }
@@ -75,6 +79,7 @@ try {
   await page.goto('http://glass.test/')
   await page.addScriptTag({ content: genScript })
   await page.addScriptTag({ content: seamScript })
+  await page.addScriptTag({ content: headerWidthScript })
   await page.addScriptTag({ content: glassScript })
 
   /** 按模式 + 预设渲染，并读回三段计算样式 */
@@ -309,6 +314,7 @@ try {
   </body></html>`)
   await popupPage.addScriptTag({ content: genScript })
   await popupPage.addScriptTag({ content: seamScript })
+  await popupPage.addScriptTag({ content: headerWidthScript })
   await popupPage.addScriptTag({ content: glassScript })
   for (const dark of [false, true]) {
     for (const preset of ['clear', 'standard', 'frosted']) {
@@ -351,6 +357,62 @@ try {
   }
   await popupPage.close()
   console.log('Issue #104：深浅主题 × 三档预设，浮层外壳、内部隔离、混合前缀、嵌套菜单、非目标样式及关闭恢复检查通过')
+
+  /**
+   * Issue #115（顶栏跟随）：新宿主把内容宽度注册为不继承、只写在正文节点上。
+   * 这里在真实 Chromium 里验证浮动顶栏读的是提升到会话根的宽度，并且折叠侧栏仍走通栏规则。
+   */
+  const widthPage = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+  await widthPage.route('http://glass-width.test/', route => route.fulfill({
+    contentType: 'text/html',
+    body: `<!doctype html><html><head><meta charset="utf-8"><style>
+      body { margin: 0; }
+      [data-phase] { position: relative; height: 600px; }
+      header { height: 60px; margin: 12px 46px 0; }
+    </style></head><body>
+      <div data-dsh-glass-frame><div data-phase="active">
+        <header><span>标题</span></header>
+        <div data-conversation-content style="--dsh-chat-content-width: 900px"></div>
+      </div></div>
+    </body></html>`,
+  }))
+  await widthPage.goto('http://glass-width.test/')
+  await widthPage.addScriptTag({ content: genScript })
+  await widthPage.addScriptTag({ content: seamScript })
+  await widthPage.addScriptTag({ content: headerWidthScript })
+  await widthPage.addScriptTag({ content: glassScript })
+  const follow = await widthPage.evaluate(async () => {
+    const wait = () => new Promise(resolve => setTimeout(resolve, 80))
+    window.__glass.applyGlassSettings({ enabled: true, mode: 'mica', preset: 'standard' })
+    const stop = window.__headerWidth.startGlassHeaderWidthTracker()
+    const frame = document.querySelector('[data-dsh-glass-frame]')
+    const root = document.querySelector('[data-phase]')
+    const header = root.querySelector('header')
+    const body = root.querySelector('[data-conversation-content]')
+    const width = () => Math.round(header.getBoundingClientRect().width)
+    const before = width()
+    body.style.setProperty('--dsh-chat-content-width', '1100px')
+    await wait()
+    const after = width()
+    const published = root.style.getPropertyValue('--dcu-chat-content-width')
+    frame.setAttribute('data-sidebar-collapsed', '')
+    await wait()
+    const collapsed = width()
+    frame.removeAttribute('data-sidebar-collapsed')
+    body.style.setProperty('--dsh-chat-content-width', 'calc(50%)')
+    await wait()
+    const unresolved = root.style.getPropertyValue('--dcu-chat-content-width')
+    stop()
+    return { before, after, published, collapsed, unresolved, cleaned: root.style.getPropertyValue('--dcu-chat-content-width') }
+  })
+  // content-box：头栏宽度 = 内容宽度 + 32（max-width 上限）+ 32（左右各 16px 内边距）
+  check('浮动·顶栏初始跟随正文内容宽度', follow.before, v => v === 964, '964')
+  check('浮动·拖宽后顶栏跟着变宽', follow.after, v => v === 1164, '1164')
+  check('浮动·提升的是正文宽度且写插件变量', follow.published, v => v === '1100px', '1100px')
+  check('浮动·折叠侧栏仍走通栏（不被跟随规则压窄）', follow.collapsed, v => v > 1200, '> 1200')
+  check('浮动·未解析宽度不写入', follow.unresolved, v => v === '', '空')
+  check('浮动·注销后不残留变量', follow.cleaned, v => v === '', '空')
+  await widthPage.close()
 
   console.log('通用外扩装饰与玻璃层共存：两种模式、三种预设均通过')
   console.log('玻璃材质计算样式校验：')
