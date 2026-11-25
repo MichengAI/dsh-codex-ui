@@ -64,6 +64,46 @@ describe('新建页拖柄与宿主宽度变量的边界', () => {
       expect(localStorage.getItem('dsh.conversation.contentWidth')).toBe('760')
     } finally { stop() }
   })
+  /** jsdom 的 MouseEvent 不带 pointerId，用同名只读属性补上。 */
+  const pointer = (type: string, init: { x: number, buttons: number, id?: number }) => {
+    const event = new MouseEvent(type, { bubbles: true, button: 0, clientX: init.x, buttons: init.buttons })
+    Object.defineProperty(event, 'pointerId', { value: init.id ?? 1 })
+    return event
+  }
+  it('在窗口外松开（只收到 buttons=0 的 move）时收尾并落盘，之后不再粘滞改宽', () => {
+    const root = mountHero()
+    Object.defineProperty(root, 'clientWidth', { value: 1400, configurable: true })
+    localStorage.setItem('dsh.conversation.contentWidth', '640')
+    const stop = observeHeroWidthHandles('调整宽度')
+    try {
+      const handle = root.querySelector<HTMLElement>('[data-dcu-width-handle="right"]')!
+      handle.dispatchEvent(pointer('pointerdown', { x: 500, buttons: 1 }))
+      window.dispatchEvent(pointer('pointermove', { x: 560, buttons: 1 }))
+      // 窗口外松开：pointerup 丢失，只来一个 buttons=0 的 move
+      window.dispatchEvent(pointer('pointermove', { x: 600, buttons: 0 }))
+      expect(root.style.getPropertyValue('--dcu-hero-chat-width')).toBe('840px')
+      expect(localStorage.getItem('dsh.conversation.contentWidth')).toBe('840')
+      // 拖拽已结束：后续无按键的移动不得继续改宽
+      window.dispatchEvent(pointer('pointermove', { x: 900, buttons: 0 }))
+      expect(root.style.getPropertyValue('--dcu-hero-chat-width')).toBe('840px')
+    } finally { stop() }
+  })
+  it('第二个指针设备的 pointerup 不会提前结束拖拽', () => {
+    const root = mountHero()
+    Object.defineProperty(root, 'clientWidth', { value: 1400, configurable: true })
+    localStorage.setItem('dsh.conversation.contentWidth', '640')
+    const stop = observeHeroWidthHandles('调整宽度')
+    try {
+      const handle = root.querySelector<HTMLElement>('[data-dcu-width-handle="right"]')!
+      handle.dispatchEvent(pointer('pointerdown', { x: 500, buttons: 1, id: 1 }))
+      window.dispatchEvent(pointer('pointerup', { x: 560, buttons: 0, id: 2 }))
+      expect(localStorage.getItem('dsh.conversation.contentWidth')).toBe('640')
+      window.dispatchEvent(pointer('pointermove', { x: 560, buttons: 1, id: 1 }))
+      window.dispatchEvent(pointer('pointerup', { x: 560, buttons: 0, id: 1 }))
+      expect(root.style.getPropertyValue('--dcu-hero-chat-width')).toBe('760px')
+      expect(localStorage.getItem('dsh.conversation.contentWidth')).toBe('760')
+    } finally { stop() }
+  })
 })
 
 describe('输入区初始宽度', () => {

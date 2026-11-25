@@ -49,8 +49,9 @@ export function observeHeroWidthHandles(label: string): () => void {
       // 宿主已发布宽度时以其为准；只有宿主没给值时，私有变量才作为上一次拖拽的起点。
       const publish = (width: number, save: boolean) => {
         const value = clamp(width)
-        root.dataset.dcuHeroWidth = ''
+        // 先写值再打标记：标记一出现映射就生效，避免闪一帧没有有效值的中间态。
         root.style.setProperty(HERO_WIDTH_VAR, `${value}px`)
+        root.dataset.dcuHeroWidth = ''
         if (save) {
           try { localStorage.setItem('dsh.conversation.contentWidth', String(value)) }
           catch (error) { console.warn('[codex-ui] 无法保存输入区宽度。', error) }
@@ -66,20 +67,29 @@ export function observeHeroWidthHandles(label: string): () => void {
         let origin = 0
         let initial = COMPOSER_MIN_WIDTH
         let dragging = false
+        let pointerId: number | undefined
         const delta = (event: PointerEvent) => initial + (event.clientX - origin) * (side === 'right' ? 2 : -2)
         // 拖拽状态机放在 window 上：setPointerCapture 在部分宿主/窗口未聚焦时会抛错，
         // 只挂 handle 自己的 pointermove 会让拖拽彻底失灵（拖动无反应）。window 监听不依赖捕获。
         const onWindowMove = (event: PointerEvent) => {
-          if (!dragging) return
+          if (!dragging || event.pointerId !== pointerId) return
+          // 在窗口外松开时 pointerup 不会被投递，只剩一串 buttons=0 的 move：
+          // 不在这里收尾，宽度会跟着无按键的鼠标继续变，且不会落盘（下次启动又跳回去）。
+          if (event.buttons === 0) {
+            publish(delta(event), true)
+            finish()
+            return
+          }
           publish(delta(event), false)
         }
         const onWindowEnd = (event: PointerEvent) => {
-          if (!dragging) return
+          if (!dragging || event.pointerId !== pointerId) return
           publish(delta(event), true)
           finish()
         }
         const finish = () => {
           dragging = false
+          pointerId = undefined
           delete handle.dataset.dragging
           window.removeEventListener('pointermove', onWindowMove)
           window.removeEventListener('pointerup', onWindowEnd)
@@ -92,6 +102,7 @@ export function observeHeroWidthHandles(label: string): () => void {
           origin = event.clientX
           initial = current()
           dragging = true
+          pointerId = event.pointerId
           handle.dataset.dragging = ''
           try { handle.setPointerCapture(event.pointerId) } catch { /* 捕获失败不影响 window 监听 */ }
           window.addEventListener('pointermove', onWindowMove)
@@ -101,8 +112,11 @@ export function observeHeroWidthHandles(label: string): () => void {
         handle.addEventListener('pointermove', event => {
           handle.style.setProperty('--dcu-pointer-y', `${event.clientY - handle.getBoundingClientRect().top}px`)
         })
-        handle.addEventListener('lostpointercapture', () => {
-          // 捕获被系统收回时不能把拖拽判死：window 上的 pointermove/pointerup 仍会把这次拖拽做完。
+        handle.addEventListener('lostpointercapture', event => {
+          // 捕获被系统收回（窗口失焦、设备切换）时把这次拖拽按当前位置落定，避免状态卡在 dragging。
+          if (!dragging || event.pointerId !== pointerId) return
+          publish(delta(event), true)
+          finish()
         })
         handle.addEventListener('keydown', event => {
           if (!['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) return
