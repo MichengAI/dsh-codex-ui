@@ -44,11 +44,25 @@ const FIXTURE = `<!doctype html><html><head><meta charset="utf-8"><style>
   .dock { position: relative; height: 40px; }
   header { height: 85px; margin: 12px 46px 0; }
   [data-composer-card] { position: relative; height: 60px; margin: 0 46px; }
+  .lc-pulse-card { margin: 0 46px; height: 40px; }
+  header.lc-pulse-header { height: 32px; margin: 6px 0; }
+  /* 两条伪元素：宿主顶栏的 ::after 由基线规则 display:none，dsh-context 用 .lc-pulse-header::after 画底线 */
+  header::after { content: 'x'; display: block; height: 2px; }
+  header.lc-pulse-header::after { content: ''; display: block; height: 2px; background: red; }
+  [data-conversation-scroll] { position: relative; height: 120px; }
+  .msg-bubble { height: 24px; }
 </style></head><body>
 <div data-phase="active">
   <header><span>标题</span></header>
   <div data-composer-card><span>输入</span></div>
   <div data-dsh-glass-inputbar><div class="dock"><span>统计</span></div></div>
+  <div class="lc-pulse-card">
+    <header class="lc-pulse-header"><span>编队</span></header>
+  </div>
+  <div data-conversation-scroll>
+    <div class="msg-bubble"><span>正文气泡</span></div>
+    <div class="msg-bubble" role="tooltip"><span>复制</span></div>
+  </div>
 </div>
 </body></html>`
 
@@ -125,6 +139,60 @@ try {
     v => v === 'blur(20px)',
     'blur(20px)',
   )
+
+  /**
+   * Issue #113：编队卡片 header 与操作栏 Tooltip 的隔离必须限定在云母浮动模式。
+   * 这里读的是**计算样式**：字符串哨兵只能证明规则存在，证明不了它命中了正确元素、
+   * 也没有把宿主真正的浮动顶栏一起打掉。
+   */
+  const isolation = await page.evaluate(() => {
+    const read = (mode) => {
+      window.__glass.applyGlassSettings({ enabled: true, mode, preset: 'standard' })
+      const lc = getComputedStyle(document.querySelector('header.lc-pulse-header'))
+      const host = getComputedStyle(document.querySelector('[data-phase] header'))
+      const tip = getComputedStyle(document.querySelector('[data-conversation-scroll] [role="tooltip"]'))
+      return {
+        lc: { position: lc.position, z: lc.zIndex, marginTop: lc.marginTop, maxWidth: lc.maxWidth, radius: lc.borderTopLeftRadius },
+        host: { maxWidth: host.maxWidth, radius: host.borderTopLeftRadius, z: host.zIndex },
+        tip: { background: tip.backgroundColor, color: tip.color, radius: tip.borderTopLeftRadius },
+        after: {
+          lc: getComputedStyle(document.querySelector('header.lc-pulse-header'), '::after').display,
+          host: getComputedStyle(document.querySelector('[data-phase] header'), '::after').display,
+        },
+      }
+    }
+    return { float: read('mica'), compat: read('compat') }
+  })
+
+  // 浮动模式：第三方卡片退回自己的流式布局，宿主顶栏保持浮动卡片形态
+  check('浮动·编队 header 定位', isolation.float.lc.position, v => v === 'relative', 'relative')
+  check('浮动·编队 header 层级', isolation.float.lc.z, v => v === '1', '1')
+  check('浮动·编队 header 边距归零', isolation.float.lc.marginTop, v => v === '0px', '0px')
+  check('浮动·编队 header 不带最大宽度截断', isolation.float.lc.maxWidth, v => v === 'none', 'none')
+  check('浮动·编队 header 不套 20px 圆角', isolation.float.lc.radius, v => v !== '20px', '≠ 20px')
+  // dsh-context 用 .lc-pulse-header::after 画 2px 渐变底线；基线的「header:after{display:none}」必须被排除，
+  // 否则这条线会凭空消失（这是「不篡改第三方伪元素」这条约束的可执行证据）。
+  check('浮动·编队 header 的 ::after 底线未被隐藏', isolation.float.after.lc, v => v !== 'none', '≠ none')
+  check('浮动·宿主顶栏 ::after 仍按基线隐藏', isolation.float.after.host, v => v === 'none', 'none')
+  check('浮动·宿主顶栏仍带最大宽度', isolation.float.host.maxWidth, v => v !== 'none', '≠ none')
+  check('浮动·宿主顶栏仍是 20px 圆角', isolation.float.host.radius, v => v === '20px', '20px')
+
+  // 浮动模式：操作栏 Tooltip 恢复深色底板 + 纯白文字 + 8px 圆角
+  const alphaOf = value => {
+    const matched = /rgba?\(([^)]+)\)/.exec(value)
+    if (matched === null) return 1
+    const parts = matched[1].split(',').map(part => Number.parseFloat(part))
+    return parts.length > 3 ? parts[3] : 1
+  }
+  check('浮动·Tooltip 底板不透明', alphaOf(isolation.float.tip.background), v => v === 1, '1')
+  check('浮动·Tooltip 文字纯白', isolation.float.tip.color, v => v === 'rgb(255, 255, 255)', 'rgb(255, 255, 255)')
+  check('浮动·Tooltip 圆角 8px', isolation.float.tip.radius, v => v === '8px', '8px')
+
+  // 平铺（compat）模式：两条重置都不得触发，证明隔离没有越界
+  check('compat·编队 header 层级不被重置', isolation.compat.lc.z, v => v === 'auto', 'auto')
+  check('compat·编队 header 边距不被改写', isolation.compat.lc.marginTop, v => v === '6px', '6px')
+  check('compat·Tooltip 底板不被强改', isolation.compat.tip.background, v => v === 'rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)')
+  check('compat·宿主顶栏 ::after 不被隐藏', isolation.compat.after.host, v => v !== 'none', '≠ none')
 
   // 模拟任意外扩装饰，而不是针对某个皮肤写特判。
   await page.addStyleTag({ content: `

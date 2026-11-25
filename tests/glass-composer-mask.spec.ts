@@ -211,3 +211,32 @@ test('会话操作栏 Tooltip 气泡样式隔离（Issue #113）：bubble 样式
   expect(GLASS_EXTRA_CSS).toContain('border-radius: var(--dsw-radius-md, 8px) !important;')
   expect(GLASS_EXTRA_CSS).not.toContain('[data-dsh-glass] [role="tooltip"]')
 })
+
+test('样式隔离不退化（Issue #113）：注入样式里每条 header / bubble 规则都必须带排除条件', () => {
+  applyGlassSettings({ enabled: true, mode: 'mica', preset: 'standard' })
+  const css = injectedCss()
+
+  // 为什么不用「包含某段字符串」的哨兵：GLASS_COMPOSER_CSS 由 replaceAll 生成，
+  // 上游基线 glass-css.gen.ts 改版（空格 / 引号 / 前缀任一变化）会让替换静默落空，
+  // 而追加样式里本来就有同形规则，字符串断言可能仍然为真，红不起来。
+  // 这里改成结构不变量：按选择器逐条检查整份注入样式，缺一条排除就红。
+  // 先剥掉 /* */ 注释：注释里本身就写着 [class*=bubble] 这类字样，不剥会把注释当成选择器误判。
+  const cssBody = css.replace(/\/\*[\s\S]*?\*\//g, '')
+  const selectors = Array.from(cssBody.matchAll(/([^{}]+)\{/g)).map(match => match[1]!.trim())
+
+  const headerRules = selectors.filter(rule => /\[data-phase[^\]]*\]\s+header/.test(rule))
+  expect(headerRules.length).toBeGreaterThanOrEqual(3)
+  expect(headerRules.filter(rule => !rule.includes(':not(.lc-pulse-header)'))).toEqual([])
+
+  // 折叠侧栏变体的 `[data-phase]` 前多了一段前缀，主卡片那条替换覆盖不到它，
+  // 必须由独立的一条 replaceAll 负责：删掉它这条断言立刻变红（已实测）。
+  expect(headerRules.some(rule => rule.includes('[data-sidebar-collapsed]'))).toBe(true)
+
+  // bubble 规则必须排除 tooltip 结构（role 或 tooltip 类）。宿主 Tooltip 有「portal 到 body」和
+  // 「就地渲染」两种形态（primitives 里 `portal ? createPortal(content, body) : content`），
+  // 就地渲染时提示气泡就落在会话滚动流里，所以这条排除是双向防御；
+  // 视觉修复本体是追加样式里那条深色底板规则，两边各守一层。
+  const bubbleRules = selectors.filter(rule => rule.includes('[class*=bubble]'))
+  expect(bubbleRules.length).toBeGreaterThanOrEqual(1)
+  expect(bubbleRules.filter(rule => !rule.includes(':not([role=tooltip])'))).toEqual([])
+})

@@ -27,6 +27,19 @@ export const GLASS_COMPAT_ATTRIBUTE = 'data-dsh-glass-compat'
 const STYLE_TAG_ID = 'dsh-codex-ui-glass-style'
 
 // 上游压缩样式仍作为基线保存；仅将输入卡片的玻璃面迁移到自有节点。
+//
+// 下面几条 replaceAll 是「字符串替换」，目标串按子串命中，三条 header 替换缺一不可：
+//   ① `[data-phase=active] header`：只影响「层级 + 定位」那条短规则；
+//   ② `[data-phase] header:not([class*=headerBlank])`：主卡片规则，同时因字符串重叠顺带命中它的
+//      `:after` 兄弟规则。这一条不是可有可无：dsh-context 用 `.lc-pulse-header::after` 画 2px 渐变底线，
+//      漏掉 `:after` 就会把那根线 display:none 掉（verify-glass-material 里有计算样式断言锁这条）；
+//   ③ `[data-dsh-glass-frame][data-sidebar-collapsed] [data-phase] header…`：折叠侧栏变体。
+//      它的 `[data-phase]` 前面多了 `[data-dsh-glass-frame][data-sidebar-collapsed] ` 一段前缀，
+//      ② 的完整目标串在它里面并不连续，覆盖不到 —— 实测删掉这条会让折叠态的顶栏规则留在未排除状态。
+//
+// 另外：上游基线 glass-css.gen.ts 一旦改版（空格、引号、前缀任一变化）替换会静默落空，
+// 字符串哨兵还可能被追加样式里的同形规则误满足，因此由用例「样式隔离不退化（Issue #113）」
+// 对注入结果做结构不变量断言：整份样式里每条 header / bubble 规则都必须带排除条件，缺一条即红。
 const GLASS_COMPOSER_CSS = GLASS_CSS_TEXT
   .replaceAll('[data-dsh-glass-float] [data-composer-card]:before', '[data-dsh-glass-float] [data-composer-card] > [data-dcu-glass-composer-surface]')
   .replaceAll('[data-dsh-glass-compat] [data-composer-card]:before', '[data-dsh-glass-compat] [data-composer-card] > [data-dcu-glass-composer-surface]')
@@ -106,10 +119,20 @@ export const GLASS_EXTRA_CSS = `
 }
 
 /* 防御 dsh-context 编队卡片样式污染（Issue #113）：
-   .lc-pulse-header 属于编队内容流内部卡片，严禁继承宿主会话顶栏的浮动排版、最大宽度截断或高层级定位；
-   向上滚动时平滑穿入真正的宿主会话顶栏下方。
-   注：lc- 为 dsh-context 编队插件命名前缀契约；此重置仅限定在云母浮动模式（[data-dsh-glass-float]），
-   绝不越界污染平铺（compat）模式，且不篡改第三方卡片本身的圆角与私有属性。 */
+   .lc-pulse-header 属于编队内容流内部卡片，严禁继承宿主会话顶栏的浮动排版
+   （100% 宽 + 居中最大宽 + 卡片描边 + 20px 圆角 + z-index:8 的高层级定位）。
+   这里只把浮动顶栏注入的「定位与尺寸」回正为卡片自己的流式布局，让它在向上滚动时
+   从真正的宿主顶栏下方平滑穿过；圆角、背景、边框、阴影等第三方视觉属性一律不碰。
+   实测依据（dsh-context 已装产物）：该插件内部只有这一个 <header>（class=lc-pulse-header），
+   顶栏规则原本会同时套上 width:100% / 居中 max-width / 卡片描边 / 20px 圆角 / z-index:8；
+   它还用自己的 ::after 画一条 2px 渐变底线，所以「header:after{display:none}」那条兄弟规则
+   也必须一起排除（当前靠目标串子串重叠顺带命中，用例已锁死，别改成更精确的写法）。
+   注 1：lc- 是 dsh-context 插件的类名前缀契约；第三条选择器用子串匹配覆盖
+        「外层包了一层 lc- 卡片、header 在里面」的嵌套形状。当前 dsh-context 只有上面那一个
+        header，所以它今天与第一条选择器命中同一个节点，属于结构变化时的兜底；
+        代价是它也会命中任何 lc- 容器内的 header，改动前先与 dsh-context 的实际 DOM 对一遍。
+   注 2：此重置仅限定在云母浮动模式（[data-dsh-glass-float]），平铺（compat）模式下
+        不存在这些顶栏规则，绝不越界。 */
 [data-dsh-glass-float] header.lc-pulse-header,
 [data-dsh-glass-float] header[class*="lc-pulse-"],
 [data-dsh-glass-float] [class*="lc-"] header {

@@ -3,8 +3,8 @@
 ## [2.4.6] - 2026-11-25
 
 - **Adaptive Auto-Hiding for Unused Default Workspace Section (Issue #114)**:
-  - Automatically hides the default "Projects" section header when empty in partitioned views or in flat view, avoiding redundant vertical space in the sidebar;
-  - Section headers only appear when there are active workspaces in that group, keeping the sidebar uncluttered.
+  - In the plain flat view (no pinned projects and no custom sections), all built-in "Pinned" and "Projects" headers hide themselves so the sidebar falls back to the host's native flat list;
+  - In section mode, the default "Projects" header hides when it has no workspaces, freeing the vertical space it used to take up.
 - **Isolate Floating Mica Theme Styles from Third-Party Cards and Action Tooltips (Issue #113)**:
   - Prevented conversation header styles from spilling over into inline plugin headers (such as squad and fleet status cards), avoiding layout distortion or layering conflicts;
   - Restored high-contrast dark backgrounds and crisp white text for conversation action tooltips (copy, branch, etc.), ensuring legibility against glass backgrounds.

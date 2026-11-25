@@ -578,6 +578,33 @@ describe('工作区分区：DOM 层', () => {
     expect(headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)).toBeUndefined()
   })
 
+  it('纯平铺模式新建工作区后仍不渲染内置标题，新块仍归入「项目」成员（Issue #114）', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a'] },
+      ],
+    })
+    const list = mountFixture(['a'])
+    const fake = mount(['a'])
+    await waitForSync()
+    expect(headerIdsInDomOrder()).toEqual([])
+
+    // 真实宿主创建新工作区时会把它 prepend 到列表首位，这里照原样模拟。
+    const newBlock = list.querySelector<HTMLElement>('[data-dcu-test-group="a"]')!.cloneNode(true) as HTMLElement
+    newBlock.setAttribute('data-dcu-test-group', 'new-1')
+    newBlock.querySelector('[data-row-key]')!.setAttribute('data-row-key', 'workspace:new-1')
+    list.insertBefore(newBlock, list.firstChild)
+    fake.state.order = ['new-1', 'a']
+    fake.notify()
+    await waitForSync()
+
+    // 标题仍然全隐身（归位写回宿主之后也一样），新块带上「项目」成员标记决定折叠/隐藏行为。
+    expect(headerIdsInDomOrder()).toEqual([])
+    expect(newBlock.getAttribute('data-dcu-section-member')).toBe(DEFAULT_SECTION_ID)
+    expect(hostSection(DEFAULT_SECTION_ID).ids).toContain('new-1')
+  })
+
   it('顺序已一致时不再写宿主', async () => {
     seedSections({
         sections: [
