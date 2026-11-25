@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.5] - 2026-11-25
+
+- **Improve Workspace Section Recovery and Real-Time Synchronization**:
+  - Enhanced workspace section loading to automatically restore existing section headers upon mid-session login or credential refresh without requiring a page reload;
+  - Refined the automatic save mechanism when quickly rearranging workspace sections, ensuring the newest order and membership always persist reliably;
+  - Strengthened coordination with the latest host connection authentication services for consistent stability across host environments.
+
 ## [2.4.4] - 2026-11-24
 
 - **Full Compatibility with DeepSeek Harness 0.2.3 Series**:
