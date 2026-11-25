@@ -753,15 +753,24 @@ export function observeWorkspaceSections(
   /**
    * 从宿主导入分区文档。
    *
-   * 宿主读不到（接口未就绪、首次运行）时按默认结构启动：只有「置顶 + 项目」两个内置分区，
+   * 宿主返回空（如 404 或首次运行）时按默认结构启动：只有「置顶 + 项目」两个内置分区，
    * 首次同步会把宿主现有工作区顺序采纳进「项目」，与以前的全新安装行为一致。
+   * 若宿主未就绪抛出异常（503 等）：不标记 sectionsLoaded，不触发 persist() 存盘，
+   * 避免启动竞态下用空结构冲掉用户已有的真实分区，并在 2 秒后安排一次恢复尝试。
    */
   async function loadStateFromHost(): Promise<void> {
     let raw: string | null = null
     try {
       raw = await loadSectionsDocument()
     } catch {
-      raw = null
+      if (!disposed && !sectionsLoaded) {
+        window.setTimeout(() => {
+          if (!disposed && !sectionsLoaded) {
+            void loadStateFromHost()
+          }
+        }, 2000)
+      }
+      return
     }
     const parsed = parseSections(raw)
     state = normalizeSections(parsed ?? { sections: [] })

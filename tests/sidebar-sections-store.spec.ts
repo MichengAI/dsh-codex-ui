@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   flushSectionsSave,
+  httpTransport,
   scheduleSectionsSave,
   setSectionsTransport,
 } from '../src/client/sidebar/sections/store.ts'
@@ -38,5 +39,62 @@ describe('工作区分区客户端存储：保存与重试熔断', () => {
     // 继续等待，确认不会继续无限重试
     await vi.advanceTimersByTimeAsync(1200)
     expect(saveCallCount).toBe(2)
+  })
+})
+
+describe('工作区分区客户端存储：默认 httpTransport 启动竞态退避重试与异常防护', () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+    vi.useRealTimers()
+  })
+
+  it('当遇到 503 时退避重试，宿主就绪返回 200 后成功获取数据', async () => {
+    let attempts = 0
+    const mockJson = JSON.stringify({ version: 1, sections: [{ id: 's1', name: '测试', ids: [] }] })
+    globalThis.fetch = vi.fn(async () => {
+      attempts++
+      if (attempts < 3) {
+        return new Response(null, { status: 503 })
+      }
+      return new Response(mockJson, { status: 200 })
+    })
+
+    const promise = httpTransport.load()
+    const result = await promise
+    expect(attempts).toBe(3)
+    expect(result).toBe(mockJson)
+  })
+
+  it('当持续 503 且重试耗尽时，抛出明确异常而非静默吞错返回 null', async () => {
+    let attempts = 0
+    globalThis.fetch = vi.fn(async () => {
+      attempts++
+      return new Response(null, { status: 503 })
+    })
+
+    await expect(httpTransport.load()).rejects.toThrow('Sections store unavailable: HTTP 503')
+    expect(attempts).toBe(4) // 首次 + 3 次重试
+  })
+
+  it('当返回 404 时视为服务端未持久化文档，不重试并返回 null', async () => {
+    let attempts = 0
+    globalThis.fetch = vi.fn(async () => {
+      attempts++
+      return new Response('Not Found', { status: 404 })
+    })
+
+    const result = await httpTransport.load()
+    expect(attempts).toBe(1)
+    expect(result).toBeNull()
+  })
+
+  it('save 正常返回布尔值', async () => {
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }))
+    expect(await httpTransport.save('{}')).toBe(true)
+
+    globalThis.fetch = vi.fn(async () => new Response(null, { status: 503 }))
+    expect(await httpTransport.save('{}')).toBe(false)
   })
 })

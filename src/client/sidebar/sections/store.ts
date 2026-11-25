@@ -9,25 +9,48 @@ import { CODEX_UI_API_ENDPOINTS } from '../../../business-api.ts'
 
 /** 存取通道：默认走宿主 HTTP 接口，单测注入内存实现。 */
 export interface SectionsTransport {
-  /** @returns 宿主里的原始文档文本；没有文档时返回 `null`。 */
+  /** @returns 宿主里的原始文档文本；没有文档时返回 `null`。暂不可用时抛出异常。 */
   load: () => Promise<string | null>
   /** @param body - 完整文档 JSON。 @returns 是否写入成功。 */
   save: (body: string) => Promise<boolean>
 }
 
-const httpTransport: SectionsTransport = {
+export const MAX_LOAD_RETRIES = 3
+export const RETRY_DELAYS = [300, 600, 1000]
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+export const httpTransport: SectionsTransport = {
   async load(): Promise<string | null> {
-    try {
-      const response = await fetch(CODEX_UI_API_ENDPOINTS.sections, {
-        credentials: 'same-origin',
-        headers: { accept: 'application/json' },
-      })
-      if (!response.ok) return null
-      const text = await response.text()
-      return text.trim() === '' ? null : text
-    } catch {
-      return null
+    let lastError: unknown
+    for (let attempt = 0; attempt <= MAX_LOAD_RETRIES; attempt++) {
+      try {
+        const response = await fetch(CODEX_UI_API_ENDPOINTS.sections, {
+          credentials: 'same-origin',
+          headers: { accept: 'application/json' },
+        })
+        if (response.status === 503 || response.status === 502) {
+          if (attempt < MAX_LOAD_RETRIES) {
+            await sleep(RETRY_DELAYS[attempt] ?? 1000)
+            continue
+          }
+          throw new Error(`Sections store unavailable: HTTP ${response.status}`)
+        }
+        if (!response.ok) return null
+        const text = await response.text()
+        return text.trim() === '' ? null : text
+      } catch (error) {
+        lastError = error
+        if (attempt < MAX_LOAD_RETRIES) {
+          await sleep(RETRY_DELAYS[attempt] ?? 1000)
+          continue
+        }
+        throw lastError
+      }
     }
+    return null
   },
   async save(body: string): Promise<boolean> {
     try {

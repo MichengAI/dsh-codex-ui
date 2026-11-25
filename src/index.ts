@@ -90,14 +90,26 @@ type HostResponse = {
 type AuthenticationStatus = 401 | 403 | 503
 type AuthenticationErrorBody = (status: AuthenticationStatus, message: string) => Record<string, unknown>
 
+let dynamicConnection: {
+  requestRejection?: (request: { headers?: HostRequest['headers'] }) => 401 | 403 | undefined
+  admit?: (request: { headers?: HostRequest['headers'] }) => { rejection?: 401 | 403 | 503; peer?: unknown } | undefined
+} | undefined
+
 function resolveConnectionService(ctx: Context): {
   requestRejection?: (request: { headers?: HostRequest['headers'] }) => 401 | 403 | undefined
   admit?: (request: { headers?: HostRequest['headers'] }) => { rejection?: 401 | 403 | 503; peer?: unknown } | undefined
 } | undefined {
   try {
+    const reflectConn = (ctx as any).reflect?.get?.('connection', false)
+    if (reflectConn) return reflectConn as any
+  } catch {}
+
+  try {
     const conn = typeof ctx.get === 'function' ? ctx.get('connection') : undefined
     if (conn) return conn as any
   } catch {}
+
+  if (dynamicConnection) return dynamicConnection
 
   try {
     const rootCtx = (ctx as any)[Symbol.for('cordis.root')] ?? (ctx as any).root
@@ -186,6 +198,13 @@ export const inject = ['webServer', 'profileContext', 'pluginManager']
 
 /** 提供不泄露地址、命令和凭证的连接器目录。 */
 export function apply(ctx: Context): void {
+  if (typeof (ctx as any).inject === 'function') {
+    try {
+      (ctx as any).inject(['connection'], (connCtx: Context) => {
+        dynamicConnection = (connCtx as any).connection ?? (typeof connCtx.get === 'function' ? connCtx.get('connection') : undefined)
+      })
+    } catch {}
+  }
   const host = hostServices(ctx)
   ctx.effect(() => {
     if (typeof ctx.on !== 'function') return () => {}

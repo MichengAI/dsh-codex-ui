@@ -3289,4 +3289,26 @@ describe('分区二级菜单的可访问性：', () => {
     document.body.removeAttribute('data-sidebar-collapsed')
     dispose?.()
   })
+
+  it('当宿主存储加载抛错（如 503 未就绪）时，不标记已加载，不注入标题，也不触发存盘覆盖', async () => {
+    let saveCount = 0
+    setSectionsTransport({
+      load: async () => {
+        throw new Error('503 Service Unavailable')
+      },
+      save: async () => {
+        saveCount++
+        return true
+      },
+    })
+    mountFixture(['ws1', 'ws2'])
+    mount(['ws1', 'ws2'])
+    await waitForSync(3)
+
+    // 未能成功加载文档时不应注入任何分区标题
+    expect(document.querySelectorAll(`[${SECTION_HEADER_ATTR}]`).length).toBe(0)
+    // 严禁触发任何存盘调用
+    expect(saveCount).toBe(0)
+    dispose?.()
+  })
 })
