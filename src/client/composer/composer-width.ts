@@ -68,19 +68,22 @@ export function observeHeroWidthHandles(label: string): () => void {
         let initial = COMPOSER_MIN_WIDTH
         let dragging = false
         let pointerId: number | undefined
+        // 最后一次真正拖到的宽度：窗口外松开时用它结算，而不是用「重新进窗」那一帧的坐标。
+        let last = COMPOSER_MIN_WIDTH
         const delta = (event: PointerEvent) => initial + (event.clientX - origin) * (side === 'right' ? 2 : -2)
         // 拖拽状态机放在 window 上：setPointerCapture 在部分宿主/窗口未聚焦时会抛错，
         // 只挂 handle 自己的 pointermove 会让拖拽彻底失灵（拖动无反应）。window 监听不依赖捕获。
         const onWindowMove = (event: PointerEvent) => {
           if (!dragging || event.pointerId !== pointerId) return
           // 在窗口外松开时 pointerup 不会被投递，只剩一串 buttons=0 的 move：
-          // 不在这里收尾，宽度会跟着无按键的鼠标继续变，且不会落盘（下次启动又跳回去）。
+          // 这里按最后拖到的宽度落盘（不能用本次事件坐标，否则宽度会跟着重新进窗的位置跳一下并持久化）。
           if (event.buttons === 0) {
-            publish(delta(event), true)
+            publish(last, true)
             finish()
             return
           }
-          publish(delta(event), false)
+          last = delta(event)
+          publish(last, false)
         }
         const onWindowEnd = (event: PointerEvent) => {
           if (!dragging || event.pointerId !== pointerId) return
@@ -101,6 +104,7 @@ export function observeHeroWidthHandles(label: string): () => void {
           event.preventDefault()
           origin = event.clientX
           initial = current()
+          last = initial
           dragging = true
           pointerId = event.pointerId
           handle.dataset.dragging = ''
@@ -113,9 +117,9 @@ export function observeHeroWidthHandles(label: string): () => void {
           handle.style.setProperty('--dcu-pointer-y', `${event.clientY - handle.getBoundingClientRect().top}px`)
         })
         handle.addEventListener('lostpointercapture', event => {
-          // 捕获被系统收回（窗口失焦、设备切换）时把这次拖拽按当前位置落定，避免状态卡在 dragging。
+          // 捕获被系统收回（窗口失焦、设备切换）时按最后拖到的宽度落定，避免状态卡在 dragging。
           if (!dragging || event.pointerId !== pointerId) return
-          publish(delta(event), true)
+          publish(last, true)
           finish()
         })
         handle.addEventListener('keydown', event => {

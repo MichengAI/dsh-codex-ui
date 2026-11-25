@@ -57,8 +57,8 @@ describe('新建页拖柄与宿主宽度变量的边界', () => {
       const handle = root.querySelector<HTMLElement>('[data-dcu-width-handle="right"]')!
       handle.setPointerCapture = () => { throw new Error('capture 不可用') }
       handle.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 500 }))
-      window.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 560 }))
-      window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 560 }))
+      window.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 560, buttons: 1 }))
+      window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 560, buttons: 0 }))
       // 右侧拖柄 1px 位移对应 2px 宽度：640 + (560 - 500) * 2
       expect(root.style.getPropertyValue('--dcu-hero-chat-width')).toBe('760px')
       expect(localStorage.getItem('dsh.conversation.contentWidth')).toBe('760')
@@ -70,7 +70,7 @@ describe('新建页拖柄与宿主宽度变量的边界', () => {
     Object.defineProperty(event, 'pointerId', { value: init.id ?? 1 })
     return event
   }
-  it('在窗口外松开（只收到 buttons=0 的 move）时收尾并落盘，之后不再粘滞改宽', () => {
+  it('在窗口外松开（只收到 buttons=0 的 move）时按最后拖到的宽度落盘，不跟随重新进窗的位置', () => {
     const root = mountHero()
     Object.defineProperty(root, 'clientWidth', { value: 1400, configurable: true })
     localStorage.setItem('dsh.conversation.contentWidth', '640')
@@ -79,13 +79,28 @@ describe('新建页拖柄与宿主宽度变量的边界', () => {
       const handle = root.querySelector<HTMLElement>('[data-dcu-width-handle="right"]')!
       handle.dispatchEvent(pointer('pointerdown', { x: 500, buttons: 1 }))
       window.dispatchEvent(pointer('pointermove', { x: 560, buttons: 1 }))
-      // 窗口外松开：pointerup 丢失，只来一个 buttons=0 的 move
+      // 窗口外松开：pointerup 丢失，只来一个 buttons=0 的 move（坐标已经跑到 600）
       window.dispatchEvent(pointer('pointermove', { x: 600, buttons: 0 }))
-      expect(root.style.getPropertyValue('--dcu-hero-chat-width')).toBe('840px')
-      expect(localStorage.getItem('dsh.conversation.contentWidth')).toBe('840')
+      // 结算最后拖到的位置（x=560 → 760），不采用重新进窗的 x=600（840）
+      expect(root.style.getPropertyValue('--dcu-hero-chat-width')).toBe('760px')
+      expect(localStorage.getItem('dsh.conversation.contentWidth')).toBe('760')
       // 拖拽已结束：后续无按键的移动不得继续改宽
       window.dispatchEvent(pointer('pointermove', { x: 900, buttons: 0 }))
-      expect(root.style.getPropertyValue('--dcu-hero-chat-width')).toBe('840px')
+      expect(root.style.getPropertyValue('--dcu-hero-chat-width')).toBe('760px')
+    } finally { stop() }
+  })
+  it('捕获被收回时按最后拖到的宽度落定，不采用收回事件的坐标', () => {
+    const root = mountHero()
+    Object.defineProperty(root, 'clientWidth', { value: 1400, configurable: true })
+    localStorage.setItem('dsh.conversation.contentWidth', '640')
+    const stop = observeHeroWidthHandles('调整宽度')
+    try {
+      const handle = root.querySelector<HTMLElement>('[data-dcu-width-handle="right"]')!
+      handle.dispatchEvent(pointer('pointerdown', { x: 500, buttons: 1 }))
+      window.dispatchEvent(pointer('pointermove', { x: 560, buttons: 1 }))
+      handle.dispatchEvent(pointer('lostpointercapture', { x: 900, buttons: 0 }))
+      expect(root.style.getPropertyValue('--dcu-hero-chat-width')).toBe('760px')
+      expect(localStorage.getItem('dsh.conversation.contentWidth')).toBe('760')
     } finally { stop() }
   })
   it('第二个指针设备的 pointerup 不会提前结束拖拽', () => {
