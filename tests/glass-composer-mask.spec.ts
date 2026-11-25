@@ -191,9 +191,10 @@ test('编队卡片样式隔离（Issue #113）：header 浮动卡片规则不得
   expect(css).toContain('[data-dsh-glass-float] [data-phase] header:not([class*=headerBlank]):not(.lc-pulse-header):not([class*="lc-"])')
   expect(css).toContain('[data-dsh-glass-frame][data-sidebar-collapsed] [data-phase] header:not([class*=headerBlank]):not(.lc-pulse-header):not([class*="lc-"])')
 
-  // 2. 必须包含 lc-pulse-header 的防御性重置与层级控制，防止滚动遮挡真正的宿主顶栏
-  expect(GLASS_EXTRA_CSS).toContain('header.lc-pulse-header')
+  // 2. 必须包含 lc-pulse-header 的防御性重置与层级控制，防止滚动遮挡真正的宿主顶栏；且严格限制在 float 模式，不越界污染 compat
+  expect(GLASS_EXTRA_CSS).toContain('[data-dsh-glass-float] header.lc-pulse-header')
   expect(GLASS_EXTRA_CSS).toContain('z-index: 1 !important;')
+  expect(GLASS_EXTRA_CSS).not.toContain('[data-dsh-glass] header.lc-pulse-header')
 })
 
 test('会话操作栏 Tooltip 气泡样式隔离（Issue #113）：bubble 样式不得污染复制、分支等操作气泡', () => {
@@ -203,10 +204,10 @@ test('会话操作栏 Tooltip 气泡样式隔离（Issue #113）：bubble 样式
   // 1. 生成 CSS 中的 bubble 规则必须排除 role="tooltip" 和 tooltip 类
   expect(css).toContain('[data-dsh-glass-float] [data-conversation-scroll] [class*=bubble]:not([role=tooltip]):not([class*=tooltip])')
 
-  // 2. 追加样式中必须包含专用的 tooltip 防御规则，锁定深色底板与纯白文字，杜绝白底白字
-  expect(GLASS_EXTRA_CSS).toContain('[data-dsh-glass] [role="tooltip"]')
+  // 2. 追加样式中必须包含专用的 tooltip 防御规则，锁定深色底板、纯白文字与统一 8px 圆角，且严格限制在 float 模式
+  expect(GLASS_EXTRA_CSS).toContain('[data-dsh-glass-float] [role="tooltip"]')
   expect(GLASS_EXTRA_CSS).toContain('color: var(--dsw-alias-tooltip-label, #ffffff) !important;')
   expect(GLASS_EXTRA_CSS).toContain('background: var(--dsw-alias-tooltip-bg, #1e1e24) !important;')
+  expect(GLASS_EXTRA_CSS).toContain('border-radius: var(--dsw-radius-md, 8px) !important;')
+  expect(GLASS_EXTRA_CSS).not.toContain('[data-dsh-glass] [role="tooltip"]')
 })
-
-

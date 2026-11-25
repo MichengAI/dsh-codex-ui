@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.4.6] - 2026-11-25
+
+- **Adaptive Auto-Hiding for Unused Default Workspace Section (Issue #114)**:
+  - Automatically hides the default "Projects" section header when empty in partitioned views or in flat view, avoiding redundant vertical space in the sidebar;
+  - Section headers only appear when there are active workspaces in that group, keeping the sidebar uncluttered.
+- **Isolate Floating Mica Theme Styles from Third-Party Cards and Action Tooltips (Issue #113)**:
+  - Prevented conversation header styles from spilling over into inline plugin headers (such as squad and fleet status cards), avoiding layout distortion or layering conflicts;
+  - Restored high-contrast dark backgrounds and crisp white text for conversation action tooltips (copy, branch, etc.), ensuring legibility against glass backgrounds.
+
 ## [2.4.5] - 2026-11-25
 
 - **Improve Workspace Section Recovery and Real-Time Synchronization**:

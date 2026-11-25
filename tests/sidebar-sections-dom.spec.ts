@@ -562,6 +562,22 @@ describe('工作区分区：DOM 层', () => {
     expect(headerIdsInDomOrder()).toEqual([PINNED_SECTION_ID, 's1', DEFAULT_SECTION_ID])
   })
 
+  it('自定义分区模式下，空「项目」分区标题自适应隐身（Issue #114）', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+        { id: 's1', name: '客户项目', ids: ['b'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    })
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
+    await waitForSync()
+    // 置顶渲染，s1 渲染，但空的「项目」分区标题不渲染
+    expect(headerIdsInDomOrder()).toEqual([PINNED_SECTION_ID, 's1'])
+    expect(headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)).toBeUndefined()
+  })
+
   it('顺序已一致时不再写宿主', async () => {
     seedSections({
         sections: [
