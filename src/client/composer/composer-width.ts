@@ -1,5 +1,15 @@
 export const COMPOSER_MIN_WIDTH = 640
 export const COMPOSER_EDGE_BUDGET = 176
+/**
+ * 新建页拖柄唯一允许写入的变量。
+ *
+ * 宿主宽度变量（`--dsh-chat-user-width` / `--dsh-chat-content-width`）由 DSH 自己发布：0.2.2-rc.5 发布到
+ * 会话根节点，0.2.3-alpha.2 改为只发布到正文节点并注册为不继承。插件若把值写进这两个变量，行内样式会
+ * 盖住宿主之后的重算；宿主也不会再改写它，于是正文停在旧宽度，直到正文节点重挂（切页）才恢复（Issue #115）。
+ * 因此这里只写插件私有变量，再由新建页样式映射给宿主变量，且映射规则限定在 `[data-phase=hero]` 内 ——
+ * 离开新建页即自动失效，不需要清理时序配合。
+ */
+const HERO_WIDTH_VAR = '--dcu-hero-chat-width'
 /** 按用户要求用最窄宽度替代宿主自适应默认；已有有效偏好不重置，拖拽起点沿用宿主存储。 */
 export function initializeComposerWidth(storage: Pick<Storage, 'getItem' | 'setItem'>): void {
   const key = 'dsh.conversation.contentWidth'
@@ -15,7 +25,7 @@ export function initializeComposerWidth(storage: Pick<Storage, 'getItem' | 'setI
 export function observeHeroWidthHandles(label: string): () => void {
   const mounted = new Map<HTMLElement, () => void>()
   const style = document.createElement('style')
-  style.textContent = `[data-phase=hero]:has([data-conversation-scroll]){position:relative}[data-dcu-width-handle]{position:absolute;top:0;bottom:0;width:32px;padding:0;border:0;background:transparent;cursor:col-resize;touch-action:none;z-index:100;outline-offset:-5px}[data-dcu-width-handle=left]{right:calc(50% + var(--dsh-chat-content-width, var(--dsh-chat-user-width, 640px)) / 2 + 16px)}[data-dcu-width-handle=right]{left:calc(50% + var(--dsh-chat-content-width, var(--dsh-chat-user-width, 640px)) / 2 + 16px)}[data-dcu-width-handle]::after{content:'';position:absolute;top:calc(var(--dcu-pointer-y,50%) - 50px);height:100px;width:3px;left:14px;border-radius:3px;background:linear-gradient(transparent,var(--dsw-alias-scrollbar-hover-l1,#888),transparent);opacity:0}[data-dcu-width-handle]:hover::after,[data-dcu-width-handle]:focus-visible::after,[data-dcu-width-handle][data-dragging]::after{opacity:1}[data-phase=hero]:has([data-conversation-composer-overlay]) [data-dcu-width-handle]{display:none}`
+  style.textContent = `[data-phase=hero]:has([data-conversation-scroll]){position:relative}[data-dcu-width-handle]{position:absolute;top:0;bottom:0;width:32px;padding:0;border:0;background:transparent;cursor:col-resize;touch-action:none;z-index:100;outline-offset:-5px}[data-dcu-width-handle=left]{right:calc(50% + var(--dcu-hero-chat-width, 640px) / 2 + 16px)}[data-dcu-width-handle=right]{left:calc(50% + var(--dcu-hero-chat-width, 640px) / 2 + 16px)}[data-dcu-width-handle]::after{content:'';position:absolute;top:calc(var(--dcu-pointer-y,50%) - 50px);height:100px;width:3px;left:14px;border-radius:3px;background:linear-gradient(transparent,var(--dsw-alias-scrollbar-hover-l1,#888),transparent);opacity:0}[data-dcu-width-handle]:hover::after,[data-dcu-width-handle]:focus-visible::after,[data-dcu-width-handle][data-dragging]::after{opacity:1}[data-phase=hero]:has([data-conversation-composer-overlay]) [data-dcu-width-handle]{display:none}`
   document.head.append(style)
   const sync = () => {
     for (const [root, dispose] of mounted) {
@@ -25,24 +35,28 @@ export function observeHeroWidthHandles(label: string): () => void {
       if (mounted.has(root) || !root.querySelector('[data-conversation-scroll]')) continue
       const body = root.querySelector<HTMLElement>('[class*="_body"]:has([data-conversation-scroll])') ?? root.querySelector<HTMLElement>('[class*="_body"]')
       const clamp = (value: number) => Math.min(Math.max(COMPOSER_MIN_WIDTH, value), Math.max(COMPOSER_MIN_WIDTH, root.clientWidth - COMPOSER_EDGE_BUDGET))
-      const current = () => {
-        const raw = body?.style.getPropertyValue('--dsh-chat-user-width') || getComputedStyle(root).getPropertyValue('--dsh-chat-user-width') || getComputedStyle(root).getPropertyValue('--dsh-chat-content-width')
-        return clamp(parseFloat(raw) || COMPOSER_MIN_WIDTH)
+      const stored = () => {
+        try { return localStorage.getItem('dsh.conversation.contentWidth') ?? undefined }
+        catch { return undefined }
       }
+      const current = () => {
+        const own = root.style.getPropertyValue(HERO_WIDTH_VAR)
+        // 已经在本节点拖过：本次拖拽以插件私有变量为起点；否则先读宿主发布值（0.2.2 写根、0.2.3 写正文）。
+        const host = root.hasAttribute('data-dcu-hero-width') ? '' : body?.style.getPropertyValue('--dsh-chat-user-width') || getComputedStyle(root).getPropertyValue('--dsh-chat-user-width') || getComputedStyle(root).getPropertyValue('--dsh-chat-content-width')
+        const raw = host || own || stored()
+        return clamp(Number.parseFloat(raw ?? '') || COMPOSER_MIN_WIDTH)
+      }
+      // 宿主已发布宽度时以其为准；只有宿主没给值时，私有变量才作为上一次拖拽的起点。
       const publish = (width: number, save: boolean) => {
         const value = clamp(width)
-        body?.style.setProperty('--dsh-chat-user-width', `${value}px`)
-        root.style.setProperty('--dsh-chat-user-width', `${value}px`)
-        root.style.setProperty('--dsh-chat-content-width', `${value}px`)
+        root.dataset.dcuHeroWidth = ''
+        root.style.setProperty(HERO_WIDTH_VAR, `${value}px`)
         if (save) {
           try { localStorage.setItem('dsh.conversation.contentWidth', String(value)) }
           catch (error) { console.warn('[codex-ui] 无法保存输入区宽度。', error) }
         }
       }
-      const initialWidth = current()
-      body?.style.setProperty('--dsh-chat-user-width', `${initialWidth}px`)
-      root.style.setProperty('--dsh-chat-user-width', `${initialWidth}px`)
-      root.style.setProperty('--dsh-chat-content-width', `${initialWidth}px`)
+      publish(current(), false)
       const handles = ['left', 'right'].map(side => {
         const handle = document.createElement('button')
         handle.type = 'button'
@@ -85,7 +99,11 @@ export function observeHeroWidthHandles(label: string): () => void {
         root.append(handle)
         return handle
       })
-      mounted.set(root, () => { handles.forEach(handle => handle.remove()) })
+      mounted.set(root, () => {
+        handles.forEach(handle => handle.remove())
+        root.style.removeProperty(HERO_WIDTH_VAR)
+        delete root.dataset.dcuHeroWidth
+      })
     }
   }
   const observer = new MutationObserver(sync)

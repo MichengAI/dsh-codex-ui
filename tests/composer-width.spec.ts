@@ -1,7 +1,54 @@
 import { createRequire } from 'node:module'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { initializeComposerWidth, COMPOSER_MIN_WIDTH, COMPOSER_EDGE_BUDGET } from '../src/client/composer/composer-width.ts'
+import { initializeComposerWidth, observeHeroWidthHandles, COMPOSER_MIN_WIDTH, COMPOSER_EDGE_BUDGET } from '../src/client/composer/composer-width.ts'
+
+/** 搭一个新建页骨架：新建页拖柄只认 `[data-phase=hero]` 且含会话滚动区。 */
+function mountHero(): HTMLElement {
+  document.body.innerHTML = '<main data-phase="hero"><div class="_body"><div data-conversation-scroll></div></div></main>'
+  return document.querySelector<HTMLElement>('main')!
+}
+
+/** 宿主宽度变量归宿主所有；插件只能写自己的私有变量，离开新建页后不得留存。 */
+describe('新建页拖柄与宿主宽度变量的边界', () => {
+  it('只写插件私有变量，绝不覆盖宿主宽度变量', () => {
+    const root = mountHero()
+    const body = root.querySelector<HTMLElement>('._body')!
+    localStorage.setItem('dsh.conversation.contentWidth', '900')
+    const stop = observeHeroWidthHandles('调整宽度')
+    try {
+      expect(root.querySelectorAll('[data-dcu-width-handle]')).toHaveLength(2)
+      expect(root.hasAttribute('data-dcu-hero-width')).toBe(true)
+      expect(root.style.getPropertyValue('--dcu-hero-chat-width')).toMatch(/^\d+px$/)
+      for (const el of [root, body]) {
+        expect(el.style.getPropertyValue('--dsh-chat-user-width')).toBe('')
+        expect(el.style.getPropertyValue('--dsh-chat-content-width')).toBe('')
+      }
+    } finally { stop() }
+  })
+  it('注销时清掉插件私有变量，宿主变量始终保持未被占用', () => {
+    const root = mountHero()
+    const body = root.querySelector<HTMLElement>('._body')!
+    const stop = observeHeroWidthHandles('调整宽度')
+    stop()
+    expect(root.querySelectorAll('[data-dcu-width-handle]')).toHaveLength(0)
+    expect(root.hasAttribute('data-dcu-hero-width')).toBe(false)
+    expect(root.style.getPropertyValue('--dcu-hero-chat-width')).toBe('')
+    expect(root.style.getPropertyValue('--dsh-chat-user-width')).toBe('')
+    expect(body.style.getPropertyValue('--dsh-chat-user-width')).toBe('')
+  })
+  it('宿主已发布宽度时以其为准，不被过期的私有值覆盖', () => {
+    const root = mountHero()
+    const body = root.querySelector<HTMLElement>('._body')!
+    Object.defineProperty(root, 'clientWidth', { value: 1400, configurable: true })
+    root.style.setProperty('--dsh-chat-user-width', '1100px')
+    const stop = observeHeroWidthHandles('调整宽度')
+    try {
+      expect(root.style.getPropertyValue('--dcu-hero-chat-width')).toBe('1100px')
+      expect(body.style.getPropertyValue('--dsh-chat-user-width')).toBe('')
+    } finally { stop() }
+  })
+})
 
 describe('输入区初始宽度', () => {
   for (const initial of [null, '', 'invalid', '-1']) {

@@ -2,6 +2,9 @@
 
 ## [2.4.6] - 2026-11-25
 
+- **Custom Input Width Restored After Restart and Maximize (Issue #115)**:
+  - After you set a custom message/input width, restarting the app and maximizing the window now applies that width immediately; switching to another page and back is no longer required;
+  - The new-conversation width handles still work as before, and the saved width carries over into new sessions.
 - **Adaptive Auto-Hiding for Unused Default Workspace Section (Issue #114)**:
   - In the plain flat view (no pinned projects and no custom sections), all built-in "Pinned" and "Projects" headers hide themselves so the sidebar falls back to the host's native flat list;
   - In section mode, the default "Projects" header hides when it has no workspaces, freeing the vertical space it used to take up.
