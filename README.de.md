@@ -142,7 +142,7 @@ Direkte Aktionen an jeder Konversation: Anheften, Umbenennen, Als ungelesen/gele
 ## Host-Kompatibilität
 
 * **Unterstützte Generationen**: Vollständige DeepSeek Harness `0.2.x`-Reihe (`>=0.2.2-rc.1 <0.3.0-0`);
-* **Geprüfte Builds**: Alle `0.2.2` Release Candidates (`0.2.2-rc.1`–`0.2.2-rc.5`) und `0.2.3` (`0.2.3-alpha.2`);
+* **Geprüfte Builds**: Alle `0.2.2` Release Candidates (`0.2.2-rc.1`–`0.2.2-rc.5`) übernehmen die Prüfung aus 2.4.4; `0.2.3` (`0.2.3-alpha.2`) ist mit dem aktuellen Authentifizierungs-Fix geprüft;
 * **Laufzeit-Anforderungen**: Node.js `^22.19.0 || >=24.0.0`, pnpm `^11.0.0`.
 
 > ⚠️ **Wichtiger Hinweis**: Aktivieren Sie Codex UI und `ds-bot` nicht gleichzeitig, da beide Modifikationen an der Seitenleiste vornehmen.
