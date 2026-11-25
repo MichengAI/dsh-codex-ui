@@ -34,7 +34,7 @@ it('HTTP reports the host restart outcome instead of assuming restart', async ()
     await routes.get(CODEX_UI_API_ENDPOINTS.dependencies).handler({ method: 'POST', url: '?dependency=schedule' }, { writeHead: () => {}, end: (value: string) => { body = value } })
     expect(JSON.parse(body)).toMatchObject({ application: 'applied', restartRequired: false, autoReload: false })
   } finally { fetchMock.mockRestore(); await rm(dir, { recursive: true, force: true }) }
-}, 15000)
+})
 
 it.each(['applied', 'restart-required', 'overridden', 'cancelled'] as const)('preserves %s outcome', async application => {
   const dir = await mkdtemp(join(tmpdir(), 'dcu-outcome-'))

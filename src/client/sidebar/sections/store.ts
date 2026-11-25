@@ -31,16 +31,20 @@ export const httpTransport: SectionsTransport = {
           credentials: 'same-origin',
           headers: { accept: 'application/json' },
         })
-        if (response.status === 503 || response.status === 502) {
-          if (attempt < MAX_LOAD_RETRIES) {
-            await sleep(RETRY_DELAYS[attempt] ?? 1000)
-            continue
-          }
-          throw new Error(`Sections store unavailable: HTTP ${response.status}`)
+        // 404 / 204 明确表示服务端无文档（全新安装）
+        if (response.status === 404 || response.status === 204) {
+          return null
         }
-        if (!response.ok) return null
-        const text = await response.text()
-        return text.trim() === '' ? null : text
+        if (response.ok) {
+          const text = await response.text()
+          return text.trim() === '' ? null : text
+        }
+        // 其余任何非 ok（500, 502, 503, 504, 401, 403 等）均视为服务未就绪或鉴权未同步
+        if (attempt < MAX_LOAD_RETRIES) {
+          await sleep(RETRY_DELAYS[attempt] ?? 1000)
+          continue
+        }
+        throw new Error(`Sections store unavailable: HTTP ${response.status}`)
       } catch (error) {
         lastError = error
         if (attempt < MAX_LOAD_RETRIES) {
@@ -50,7 +54,7 @@ export const httpTransport: SectionsTransport = {
         throw lastError
       }
     }
-    return null
+    throw lastError ?? new Error('Sections store unavailable: retry exhausted')
   },
   async save(body: string): Promise<boolean> {
     try {
@@ -102,10 +106,8 @@ async function flush(): Promise<void> {
     retried = true
     pending = body
     scheduleSave()
-  } else if (ok) {
-    retried = false
   } else {
-    // 已经重试过一次依然失败，放弃重试，避免控制台死循环刷屏
+    // 写入成功，或已重试过一次依然失败（放弃重试避免死循环），或新内容已排队（pending !== undefined）
     retried = false
   }
 }

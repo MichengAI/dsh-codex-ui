@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { apply, inject } from '../src/index.ts'
+import { apply, inject, resolveConnectionService, authenticateBusinessRequest } from '../src/index.ts'
 import { Context } from '@deepseek-ai/cordis'
 import { ConnectionAuthentication, HostConnectionService } from '@deepseek-ai/dsh-client-connection'
 
@@ -191,6 +191,20 @@ try {
   admitResult = { peer: { principal: { kind: 'owner' } } }
   const respSuccess = await invoke(sectionsPath, 'GET')
   assert.equal(respSuccess.status, 200, 'connection.admit 返回有效 peer 时必须放行业务请求')
+
+  // 7) 验证 resolveConnectionService 精确契约（P1-A）：能取到 / 跨上下文注入 fallback / 取不到返回 undefined / 缺 admit 与 requestRejection 时判为无效
+  const mockValidConn = { admit: () => ({ peer: {} }) }
+  const mockEmptyCtx = { get: () => undefined, logger: { warn() {} } }
+  assert.equal(resolveConnectionService(context as any), services.connection as any, '直接上下文存在有效 connection 时优先返回')
+  assert.equal(resolveConnectionService(mockEmptyCtx as any, mockValidConn), mockValidConn, '直接上下文无 connection 时回退至 injectedConn')
+  assert.equal(resolveConnectionService(mockEmptyCtx as any), undefined, '无有效 connection 时返回 undefined')
+  assert.equal(resolveConnectionService(mockEmptyCtx as any, {} as any), undefined, '对象缺少 admit/requestRejection 时拒绝采纳并返回 undefined')
+
+  // 验证缺少有效认证接口时 authenticateBusinessRequest 直接返回 503
+  const dummyResp: ResponseRecorder = { writeHead(s) { dummyResp.status = s }, end(b) { dummyResp.body = b } }
+  const authFailed = authenticateBusinessRequest(mockEmptyCtx as any, createRequest('GET') as any, dummyResp as any, undefined, undefined, {} as any)
+  assert.equal(authFailed, false, '缺失有效认证接口时必须拒绝请求')
+  assert.equal(dummyResp.status, 503, '缺失有效认证接口时必须返回 503')
 
 
   // 使用锁文件中的真实宿主信任检查，仅将登录层固定为已登录，证明跨站拒绝不依赖 401。

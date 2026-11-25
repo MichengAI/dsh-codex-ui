@@ -90,6 +90,29 @@ describe('工作区分区客户端存储：默认 httpTransport 启动竞态退�
     expect(result).toBeNull()
   })
 
+  it('当返回 204 时视为无内容，不重试并返回 null', async () => {
+    let attempts = 0
+    globalThis.fetch = vi.fn(async () => {
+      attempts++
+      return new Response(null, { status: 204 })
+    })
+
+    const result = await httpTransport.load()
+    expect(attempts).toBe(1)
+    expect(result).toBeNull()
+  })
+
+  it.each([401, 403, 500, 504])('当遇到 HTTP %i 未就绪或鉴权异常时，退避重试并在耗尽后抛出明确异常，绝不伪装为 null', async (status) => {
+    let attempts = 0
+    globalThis.fetch = vi.fn(async () => {
+      attempts++
+      return new Response(null, { status })
+    })
+
+    await expect(httpTransport.load()).rejects.toThrow(`Sections store unavailable: HTTP ${status}`)
+    expect(attempts).toBe(4) // 首次 + 3 次重试
+  })
+
   it('save 正常返回布尔值', async () => {
     globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }))
     expect(await httpTransport.save('{}')).toBe(true)

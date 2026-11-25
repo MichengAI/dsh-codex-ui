@@ -22,8 +22,32 @@ declare function publicDependencyError(error: unknown): string;
 declare class RequestBodyTooLargeError extends Error {}
 /** 有界读取 Node HTTP body；偏好接口只接受很小的 JSON。 */
 declare function readRequestBody(request: HostRequest, maxBytes?: number): Promise<string>;
+type HostResponse = {
+  writeHead(status: number, headers?: Record<string, string>): void;
+  end(body?: string): void;
+};
+type AuthenticationStatus = 401 | 403 | 503;
+type AuthenticationErrorBody = (status: AuthenticationStatus, message: string) => Record<string, unknown>;
+type ConnectionServiceLike = {
+  requestRejection?: (request: {
+    headers?: HostRequest['headers'];
+  }) => 401 | 403 | undefined;
+  admit?: (request: {
+    headers?: HostRequest['headers'];
+  }) => {
+    rejection?: 401 | 403 | 503;
+    peer?: unknown;
+  } | undefined;
+};
+declare function resolveConnectionService(ctx: Context, injectedConn?: ConnectionServiceLike): ConnectionServiceLike | undefined;
+/**
+ * 所有业务 REST 依赖 connection >=0.1.2-rc.1 的 Host/Origin/Fetch Metadata 与登录检查。
+ * 必须在读取请求体及执行副作用前调用；不得将 undefined 以外的拒绝结果当作放行。
+ * 发布包信任边界由 tests/business-rest-auth.assert.ts 的真实宿主契约用例验证。
+ */
+declare function authenticateBusinessRequest(ctx: Context, request: HostRequest, response: HostResponse, errorBody?: AuthenticationErrorBody, peer?: unknown, localConnection?: ConnectionServiceLike): boolean;
 declare const inject: string[];
 /** 提供不泄露地址、命令和凭证的连接器目录。 */
 declare function apply(ctx: Context): void;
 //#endregion
-export { RequestBodyTooLargeError, apply, inject, publicDependencyError, readRequestBody, registerComposerStatusFallback };
+export { ConnectionServiceLike, RequestBodyTooLargeError, apply, authenticateBusinessRequest, inject, publicDependencyError, readRequestBody, registerComposerStatusFallback, resolveConnectionService };

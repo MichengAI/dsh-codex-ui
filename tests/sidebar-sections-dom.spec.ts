@@ -3311,4 +3311,31 @@ describe('分区二级菜单的可访问性：', () => {
     expect(saveCount).toBe(0)
     dispose?.()
   })
+
+  it('当宿主存储遇到 401 抛错且持续失败时，重试 5 次后停止重试并打出警告', async () => {
+    vi.useFakeTimers()
+    let loadCalls = 0
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    setSectionsTransport({
+      load: async () => {
+        loadCalls++
+        throw new Error('Sections store unavailable: HTTP 401')
+      },
+      save: async () => true,
+    })
+    mountFixture(['ws1'])
+    mount(['ws1'])
+    await vi.advanceTimersByTimeAsync(0)
+    expect(loadCalls).toBe(1)
+
+    // 依次快进 5 次重试退避定时器 (2s, 4s, 8s, 16s, 30s)
+    for (let i = 0; i < 5; i++) {
+      await vi.runAllTimersAsync()
+    }
+    expect(loadCalls).toBe(6) // 首次 + 5 次重试
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('已停止后台恢复重试'))
+    warnSpy.mockRestore()
+    dispose?.()
+    vi.useRealTimers()
+  })
 })

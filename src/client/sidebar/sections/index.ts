@@ -750,13 +750,16 @@ export function observeWorkspaceSections(
   const domOrder = (): string[] =>
     collectProjectBlocks(list ?? document, list).map(block => block.workspaceId)
 
+  let hostReloadAttempts = 0
+  const MAX_HOST_RELOAD_ATTEMPTS = 5
+
   /**
    * 从宿主导入分区文档。
    *
    * 宿主返回空（如 404 或首次运行）时按默认结构启动：只有「置顶 + 项目」两个内置分区，
    * 首次同步会把宿主现有工作区顺序采纳进「项目」，与以前的全新安装行为一致。
    * 若宿主未就绪抛出异常（503 等）：不标记 sectionsLoaded，不触发 persist() 存盘，
-   * 避免启动竞态下用空结构冲掉用户已有的真实分区，并在 2 秒后安排一次恢复尝试。
+   * 避免启动竞态下用空结构冲掉用户已有的真实分区，并在指数退避（最多 5 次）后安排恢复尝试。
    */
   async function loadStateFromHost(): Promise<void> {
     let raw: string | null = null
@@ -764,14 +767,21 @@ export function observeWorkspaceSections(
       raw = await loadSectionsDocument()
     } catch {
       if (!disposed && !sectionsLoaded) {
-        window.setTimeout(() => {
-          if (!disposed && !sectionsLoaded) {
-            void loadStateFromHost()
-          }
-        }, 2000)
+        hostReloadAttempts++
+        if (hostReloadAttempts <= MAX_HOST_RELOAD_ATTEMPTS) {
+          const delay = Math.min(2000 * Math.pow(2, hostReloadAttempts - 1), 30000)
+          window.setTimeout(() => {
+            if (!disposed && !sectionsLoaded) {
+              void loadStateFromHost()
+            }
+          }, delay)
+        } else {
+          console.warn('[Codex UI] 工作区分区宿主连接持续不可用，已停止后台恢复重试。')
+        }
       }
       return
     }
+    hostReloadAttempts = 0
     const parsed = parseSections(raw)
     state = normalizeSections(parsed ?? { sections: [] })
     committedState = state

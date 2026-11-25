@@ -90,51 +90,32 @@ type HostResponse = {
 type AuthenticationStatus = 401 | 403 | 503
 type AuthenticationErrorBody = (status: AuthenticationStatus, message: string) => Record<string, unknown>
 
-let dynamicConnection: {
+export type ConnectionServiceLike = {
   requestRejection?: (request: { headers?: HostRequest['headers'] }) => 401 | 403 | undefined
   admit?: (request: { headers?: HostRequest['headers'] }) => { rejection?: 401 | 403 | 503; peer?: unknown } | undefined
-} | undefined
+}
 
-function resolveConnectionService(ctx: Context): {
-  requestRejection?: (request: { headers?: HostRequest['headers'] }) => 401 | 403 | undefined
-  admit?: (request: { headers?: HostRequest['headers'] }) => { rejection?: 401 | 403 | 503; peer?: unknown } | undefined
-} | undefined {
-  try {
-    const reflectConn = (ctx as any).reflect?.get?.('connection', false)
-    if (reflectConn) return reflectConn as any
-  } catch {}
-
+export function resolveConnectionService(ctx: Context, injectedConn?: ConnectionServiceLike): ConnectionServiceLike | undefined {
+  // 1. 优先直接从当前上下文取
   try {
     const conn = typeof ctx.get === 'function' ? ctx.get('connection') : undefined
-    if (conn) return conn as any
-  } catch {}
-
-  if (dynamicConnection) return dynamicConnection
-
-  try {
-    const rootCtx = (ctx as any)[Symbol.for('cordis.root')] ?? (ctx as any).root
-    if (rootCtx && typeof rootCtx.get === 'function') {
-      const conn = rootCtx.get('connection')
-      if (conn) return conn as any
+    if (conn && (typeof (conn as any).admit === 'function' || typeof (conn as any).requestRejection === 'function')) {
+      return conn as any
     }
   } catch {}
 
+  // 2. 检查公开反射获取
   try {
-    const store = (ctx as any).reflect?.store
-    if (store && typeof store === 'object') {
-      for (const sym of Object.getOwnPropertySymbols(store)) {
-        const impl = store[sym]
-        if (impl && impl.name === 'connection' && impl.value) {
-          return impl.value as any
-        }
-      }
+    const reflectConn = (ctx as any).reflect?.get?.('connection', false)
+    if (reflectConn && (typeof reflectConn.admit === 'function' || typeof reflectConn.requestRejection === 'function')) {
+      return reflectConn as any
     }
   } catch {}
 
-  try {
-    const direct = (ctx as any).connection
-    if (direct) return direct as any
-  } catch {}
+  // 3. 动态注入的连接服务（由 ctx.inject 捕获）
+  if (injectedConn && (typeof injectedConn.admit === 'function' || typeof injectedConn.requestRejection === 'function')) {
+    return injectedConn
+  }
 
   return undefined
 }
@@ -144,12 +125,13 @@ function resolveConnectionService(ctx: Context): {
  * 必须在读取请求体及执行副作用前调用；不得将 undefined 以外的拒绝结果当作放行。
  * 发布包信任边界由 tests/business-rest-auth.assert.ts 的真实宿主契约用例验证。
  */
-function authenticateBusinessRequest(
+export function authenticateBusinessRequest(
   ctx: Context,
   request: HostRequest,
   response: HostResponse,
   errorBody: AuthenticationErrorBody = (_status, message) => ({ error: message }),
   peer?: unknown,
+  localConnection?: ConnectionServiceLike,
 ): boolean {
   if (peer) return true
   const reject = (status: AuthenticationStatus, message: string): false => {
@@ -158,7 +140,7 @@ function authenticateBusinessRequest(
     return false
   }
   try {
-    const connection = resolveConnectionService(ctx)
+    const connection = resolveConnectionService(ctx, localConnection)
     if (!connection || (typeof connection.requestRejection !== 'function' && typeof connection.admit !== 'function')) {
       ctx.logger.warn('Codex UI 业务 REST 认证不可用：缺少 connection 认证接口。')
       return reject(503, '宿主认证服务暂不可用。')
@@ -198,10 +180,19 @@ export const inject = ['webServer', 'profileContext', 'pluginManager']
 
 /** 提供不泄露地址、命令和凭证的连接器目录。 */
 export function apply(ctx: Context): void {
+  let injectedConnection: ConnectionServiceLike | undefined
   if (typeof (ctx as any).inject === 'function') {
     try {
       (ctx as any).inject(['connection'], (connCtx: Context) => {
-        dynamicConnection = (connCtx as any).connection ?? (typeof connCtx.get === 'function' ? connCtx.get('connection') : undefined)
+        const c = (connCtx as any).connection ?? (typeof connCtx.get === 'function' ? connCtx.get('connection') : undefined)
+        if (c && (typeof c.admit === 'function' || typeof c.requestRejection === 'function')) {
+          injectedConnection = c
+        }
+        if (typeof (connCtx as any).on === 'function') {
+          ;(connCtx.on as any)('dispose', () => {
+            injectedConnection = undefined
+          })
+        }
       })
     } catch {}
   }
@@ -222,7 +213,7 @@ export function apply(ctx: Context): void {
       path: dependenciesEndpoint,
       auth: 'anonymous',
       handler: async (request, response, peer?: unknown) => {
-        if (!authenticateBusinessRequest(ctx, request, response, undefined, peer)) return
+        if (!authenticateBusinessRequest(ctx, request, response, undefined, peer, injectedConnection)) return
         const url = new URL(request.url ?? '/', 'http://localhost')
         try {
           if (request.method === 'GET') {
@@ -298,7 +289,7 @@ export function apply(ctx: Context): void {
       path: CODEX_UI_API_ENDPOINTS.sections,
       auth: 'anonymous',
       handler: async (request, response, peer?: unknown) => {
-        if (!authenticateBusinessRequest(ctx, request, response, undefined, peer)) return
+        if (!authenticateBusinessRequest(ctx, request, response, undefined, peer, injectedConnection)) return
         const json = (status: number, body: unknown): void => {
           response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
           response.end(JSON.stringify(body))

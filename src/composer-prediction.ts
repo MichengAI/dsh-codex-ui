@@ -73,6 +73,31 @@ export function apply(ctx: Context, config?: any): void {
   const cache = new Map<string, any>()
   const inflight = new Set<AbortController>()
 
+  let injectedSessions: any
+  let injectedConnection: any
+  if (typeof (ctx as any).inject === 'function') {
+    try {
+      (ctx as any).inject(['sessions'], (sessCtx: Context) => {
+        injectedSessions = (sessCtx as any).sessions ?? (typeof sessCtx.get === 'function' ? sessCtx.get('sessions') : undefined)
+        if (typeof (sessCtx as any).on === 'function') {
+          ;(sessCtx.on as any)('dispose', () => { injectedSessions = undefined })
+        }
+      })
+    } catch {}
+    try {
+      (ctx as any).inject(['connection'], (connCtx: Context) => {
+        injectedConnection = (connCtx as any).connection ?? (typeof connCtx.get === 'function' ? connCtx.get('connection') : undefined)
+        if (typeof (connCtx as any).on === 'function') {
+          ;(connCtx.on as any)('dispose', () => { injectedConnection = undefined })
+        }
+      })
+    } catch {}
+  }
+  const servicesFallback = {
+    get sessions() { return injectedSessions },
+    get connection() { return injectedConnection },
+  }
+
   const getWebServer = () => (ctx as any).webServer ?? (ctx as any).get?.('webServer')
 
   ctx.effect(() => () => {
@@ -88,7 +113,7 @@ export function apply(ctx: Context, config?: any): void {
       kind: 'exact',
       path: ENDPOINT,
       auth: 'anonymous',
-      handler: (request: any, response: any) => serveJson(ctx, options, cache, inflight, request, response),
+      handler: (request: any, response: any) => serveJson(ctx, options, cache, inflight, request, response, servicesFallback),
     })
   })
 
@@ -99,7 +124,7 @@ export function apply(ctx: Context, config?: any): void {
       kind: 'exact',
       path: STREAM_ENDPOINT,
       auth: 'anonymous',
-      handler: (request: any, response: any) => serveStream(ctx, options, cache, inflight, request, response),
+      handler: (request: any, response: any) => serveStream(ctx, options, cache, inflight, request, response, servicesFallback),
     })
   })
 }
@@ -133,9 +158,9 @@ function textOption(value: any, maximum: number) {
   return typeof value === 'string' && value.length <= maximum ? value.trim() : ''
 }
 
-async function serveJson(ctx: any, options: any, cache: any, inflight: any, request: any, response: any) {
+async function serveJson(ctx: any, options: any, cache: any, inflight: any, request: any, response: any, servicesFallback?: any) {
   try {
-    const plan = await planRequest(ctx, request, response)
+    const plan = await planRequest(ctx, request, response, servicesFallback)
     if (plan === null) return
     if (plan.error !== undefined) {
       respond(response, plan.status, { suggestion: null, suggestions: [], reason: plan.error })
@@ -158,13 +183,15 @@ async function serveJson(ctx: any, options: any, cache: any, inflight: any, requ
       respond(response, 200, { suggestion: null, suggestions: [], reason: describeError(error) })
     }
   } catch (error) {
-    respond(response, 500, { suggestion: null, suggestions: [], reason: describeError(error) })
+    const reason = describeError(error)
+    ctx.logger?.warn?.('[Codex UI] 预测处理异常：%s', reason)
+    respond(response, 200, { suggestion: null, suggestions: [], reason })
   }
 }
 
-async function serveStream(ctx: any, options: any, cache: any, inflight: any, request: any, response: any) {
+async function serveStream(ctx: any, options: any, cache: any, inflight: any, request: any, response: any, servicesFallback?: any) {
   try {
-    const plan = await planRequest(ctx, request, response)
+    const plan = await planRequest(ctx, request, response, servicesFallback)
     if (plan === null) return
     if (plan.error !== undefined) {
       respond(response, plan.status, { suggestion: null, suggestions: [], reason: plan.error })
@@ -191,21 +218,28 @@ async function serveStream(ctx: any, options: any, cache: any, inflight: any, re
       closeStream(response)
     }
   } catch (error) {
+    const reason = describeError(error)
+    ctx.logger?.warn?.('[Codex UI] 预测流处理异常：%s', reason)
     if (response.headersSent === true) closeStream(response)
-    else respond(response, 200, { suggestion: null, suggestions: [], reason: describeError(error) })
+    else respond(response, 200, { suggestion: null, suggestions: [], reason })
   }
 }
 
-function getService<T = any>(ctx: any, name: string): T | undefined {
+function getService<T = any>(ctx: any, name: string, fallback?: any): T | undefined {
   try {
     if (typeof ctx?.get === 'function') {
       const svc = ctx.get(name)
       if (svc !== undefined) return svc
     }
-    return ctx?.[name]
-  } catch {
-    return undefined
-  }
+  } catch {}
+  try {
+    const reflectSvc = ctx?.reflect?.get?.(name, false)
+    if (reflectSvc !== undefined) return reflectSvc
+  } catch {}
+  try {
+    if (ctx?.[name] !== undefined) return ctx[name]
+  } catch {}
+  return fallback
 }
 
 /** Short, safe reason text for a client that only displays nothing. */
@@ -218,8 +252,8 @@ function describeError(error: any) {
  * Read and validate one request body, resolving the live Session it names.
  * @returns `null` when the response was already written, a plan, or an error.
  */
-async function planRequest(ctx: any, request: any, response: any) {
-  const connection = getService(ctx, 'connection')
+async function planRequest(ctx: any, request: any, response: any, servicesFallback?: any) {
+  const connection = getService(ctx, 'connection', servicesFallback?.connection)
   const admission = connection?.admit ? connection.admit(request) : { peer: { principal: { kind: 'owner' } } }
   if (admission && 'rejection' in admission) {
     return { status: admission.rejection, error: admission.rejection === 401 ? 'unauthorized' : 'forbidden' }
@@ -248,8 +282,11 @@ async function planRequest(ctx: any, request: any, response: any) {
   const sessionId = typeof body?.sessionId === 'string' ? body.sessionId : ''
   if (sessionId === '') return { status: 400, error: 'missing-session' }
 
-  const sessions = getService(ctx, 'sessions')
-  if (!sessions || typeof sessions.get !== 'function') return { status: 200, error: 'no-sessions-service' }
+  const sessions = getService(ctx, 'sessions', servicesFallback?.sessions)
+  if (!sessions || typeof sessions.get !== 'function') {
+    ctx.logger?.warn?.('[Codex UI] 预测请求跳过：未找到有效的 sessions 服务。')
+    return { status: 200, error: 'no-sessions-service' }
+  }
 
   const session = sessions.get(sessionId)
   if (session === undefined) return { status: 200, error: 'session-not-live' }
