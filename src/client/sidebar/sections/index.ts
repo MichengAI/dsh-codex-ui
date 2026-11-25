@@ -1077,14 +1077,16 @@ export function observeWorkspaceSections(
   /** 把标题按分区顺序放到各自第一个分组块前面；空分区贴着下一个分区显示。 */
   function placeHeaders(blocks: readonly ProjectBlock[], layoutState: SectionsState = state): void {
     if (blocks.length === 0) {
-      // 当全部工作区被删空时，及时清理残留的空置顶标题并复位折叠状态
-      const stalePinned = headers.get(PINNED_SECTION_ID)
-      if (stalePinned !== undefined) {
-        stalePinned.remove()
-        headers.delete(PINNED_SECTION_ID)
-        if (collapsed[PINNED_SECTION_ID] === true) {
-          delete collapsed[PINNED_SECTION_ID]
-          persistCollapsed()
+      // 当全部工作区被删空时，及时清理残留的空置顶/项目标题并复位折叠状态
+      for (const builtinId of [PINNED_SECTION_ID, DEFAULT_SECTION_ID]) {
+        const stale = headers.get(builtinId)
+        if (stale !== undefined) {
+          stale.remove()
+          headers.delete(builtinId)
+          if (collapsed[builtinId] === true) {
+            delete collapsed[builtinId]
+            persistCollapsed()
+          }
         }
       }
       return
@@ -1104,6 +1106,10 @@ export function observeWorkspaceSections(
       relocatingIds.size === 0
         ? byId
         : new Map(blocks.filter(item => !relocatingIds.has(item.workspaceId)).map(item => [item.workspaceId, item.block]))
+    // 分区模式判定：用户存在自定义分区，或者「置顶」分区中有项目
+    const hasCustomSections = layoutState.sections.some(s => !isBuiltinSection(s.id))
+    const hasPinnedItems = (layoutState.sections.find(s => s.id === PINNED_SECTION_ID)?.ids.length ?? 0) > 0
+    const isPartitioned = hasCustomSections || hasPinnedItems
     // 末尾兜底锚点：存在未分组桶时，末尾任何空分区标题均应插入在未分组桶之前，绝不落到桶下方。
     let reference: Element | null = ungrouped ?? null
     // 从后向前确定边界：有成员贴自己的首项，空分区贴下一个标题；绝不插到上一区成员之前。
@@ -1122,6 +1128,22 @@ export function observeWorkspaceSections(
           // 置顶区收起状态下被清空的话，把折叠状态一并复位：下次置顶项目时应当直接可见。
           if (collapsed[PINNED_SECTION_ID] === true) {
             delete collapsed[PINNED_SECTION_ID]
+            persistCollapsed()
+          }
+        }
+        continue
+      }
+      // 兜底「项目」分区自适应隐身：
+      // 1. 当用户未置顶且无自定义分区时（!isPartitioned），侧栏直接原生平铺，不展示多余的「项目」标题行；
+      // 2. 当用户已创建自定义分区，但「项目」中无成员时（Issue #114），自动隐藏空「项目」标题行不占位；
+      // 仅在处于分区模式且内部有实际成员时才渲染标题行。
+      if (section.id === DEFAULT_SECTION_ID && (!isPartitioned || section.ids.length === 0)) {
+        const stale = headers.get(DEFAULT_SECTION_ID)
+        if (stale !== undefined) {
+          stale.remove()
+          headers.delete(DEFAULT_SECTION_ID)
+          if (collapsed[DEFAULT_SECTION_ID] === true) {
+            delete collapsed[DEFAULT_SECTION_ID]
             persistCollapsed()
           }
         }

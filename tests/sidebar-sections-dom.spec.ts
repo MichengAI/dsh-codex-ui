@@ -527,8 +527,8 @@ describe('工作区分区：DOM 层', () => {
     mountFixture(['a', 'b'])
     mount(['a', 'b'])
     await waitForSync()
-    // 没有任何置顶项目时，「置顶」标题整行都不渲染，不占侧栏高度。
-    expect(headerIdsInDomOrder()).toEqual([DEFAULT_SECTION_ID])
+    // 纯平铺模式下，没有置顶也没有自定义分区，置顶与项目标题均隐身，直接原生平铺
+    expect(headerIdsInDomOrder()).toEqual([])
     expect(hostSection(DEFAULT_SECTION_ID).ids).toEqual(['a', 'b'])
   })
 
@@ -604,10 +604,10 @@ describe('工作区分区：DOM 层', () => {
   it('卸载后标题、菜单与存储写入全部撤销', async () => {
     seedSections({ sections: [
       { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
-      { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b'] },
     ] })
-    mountFixture(['a'])
-    mount(['a'])
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
     await waitForSync()
     expect(headers()).toHaveLength(2)
     dispose?.()
@@ -848,7 +848,13 @@ describe('工作区分区：DOM 层', () => {
   })
 
   it('未分组桶归属于「项目」分区：跟着缩进并跟着折叠', async () => {
-    const list = mountFixture(['a'])
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a'] },
+      ],
+    })
+    const list = mountFixture(['p1', 'a'])
     // 宿主把未归类的工作区放在 `workspace:`（空 id）这个桶里。
     const ungrouped = document.createElement('div')
     ungrouped.className = 'groupSection'
@@ -858,7 +864,7 @@ describe('工作区分区：DOM 层', () => {
     ungrouped.appendChild(row)
     list.appendChild(ungrouped)
 
-    mount(['a'])
+    mount(['p1', 'a'])
     await waitForSync()
     expect(ungrouped.getAttribute('data-dcu-section-member')).toBe(DEFAULT_SECTION_ID)
 
@@ -872,15 +878,15 @@ describe('工作区分区：DOM 层', () => {
     expect(ungrouped.getAttribute('data-dcu-section-hidden')).toBe('true')
   })
 
-  it('当空「项目」分区上移至其他分区上方时，标题正确定位在下一分区之前，未分组桶不作为跨区成员', async () => {
+  it('当「项目」分区上移至其他分区上方时，标题正确定位在下一分区之前，未分组桶不作为跨区成员', async () => {
     seedSections({
       sections: [
         { id: PINNED_SECTION_ID, name: '置顶', ids: [] },
-        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b'] },
         { id: 's1', name: '归档任务', ids: ['a'] },
       ],
     })
-    const list = mountFixture(['a'])
+    const list = mountFixture(['b', 'a'])
     const ungrouped = document.createElement('div')
     ungrouped.className = 'groupSection'
     const row = document.createElement('div')
@@ -889,7 +895,7 @@ describe('工作区分区：DOM 层', () => {
     ungrouped.appendChild(row)
     list.appendChild(ungrouped)
 
-    mount(['a'])
+    mount(['b', 'a'])
     await waitForSync()
 
     const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
@@ -913,8 +919,8 @@ describe('工作区分区：DOM 层', () => {
     seedSections({
       sections: [
         { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
-        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
         { id: 's1', name: '归档任务', ids: [] },
+        { id: 's2', name: '备用项目', ids: [] },
       ],
     })
     const list = mountFixture(['a'])
@@ -929,28 +935,28 @@ describe('工作区分区：DOM 层', () => {
     mount(['a'])
     await waitForSync()
 
-    const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
     const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
-    const blockA = list.querySelector<HTMLElement>('[data-dcu-test-group=\"a\"]')!
+    const s2Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's2')!
+    const blockA = list.querySelector<HTMLElement>('[data-dcu-test-group="a"]')!
 
-    expect(defaultHeader).not.toBeUndefined()
     expect(s1Header).not.toBeUndefined()
+    expect(s2Header).not.toBeUndefined()
     expect(blockA).not.toBeNull()
 
-    // 相对顺序必须为：blockA -> defaultHeader -> s1Header -> ungrouped
-    expect(blockA.compareDocumentPosition(defaultHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(defaultHeader.compareDocumentPosition(s1Header) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(s1Header.compareDocumentPosition(ungrouped) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // 相对顺序必须为：blockA -> s1Header -> s2Header -> ungrouped
+    expect(blockA.compareDocumentPosition(s1Header) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(s1Header.compareDocumentPosition(s2Header) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(s2Header.compareDocumentPosition(ungrouped) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('内置分区有 ···（只提供「新建分区」），且不可拖动', async () => {
-    // 置顶一个项目，让两个内置分区标题都真实存在（空的置顶分区不渲染标题）。
+    // 置顶一个项目，项目分区保留一个项目，让两个内置分区标题都真实存在（空内置分区不渲染标题）。
     seedSections({ sections: [
       { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
-      { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      { id: DEFAULT_SECTION_ID, name: '项目', ids: ['b'] },
     ] })
-    mountFixture(['a'])
-    mount(['a'])
+    mountFixture(['a', 'b'])
+    mount(['a', 'b'])
     await waitForSync()
     for (const id of [PINNED_SECTION_ID, DEFAULT_SECTION_ID]) {
       const header = headers().find(item => item.getAttribute(SECTION_HEADER_ATTR) === id)!
@@ -1209,8 +1215,14 @@ describe('工作区分区：DOM 层', () => {
     expect(hostSection('s1').ids).toEqual(['c'])
   })
   it('收起后再展开，内容会真的留在展开态（不会自己缩回去）', async () => {
-    mountFixture(['a', 'b'])
-    mount(['a', 'b'])
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a', 'b'] },
+      ],
+    })
+    mountFixture(['p1', 'a', 'b'])
+    mount(['p1', 'a', 'b'])
     await waitForSync()
     const def = headers().find(header => header.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
 
@@ -1272,8 +1284,14 @@ describe('工作区分区：DOM 层', () => {
   })
 
   it('展开后即使宿主重渲染、同步多跑几拍，也不会自己收回', async () => {
-    mountFixture(['a', 'b'])
-    mount(['a', 'b'])
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['a', 'b'] },
+      ],
+    })
+    mountFixture(['p1', 'a', 'b'])
+    mount(['p1', 'a', 'b'])
     await waitForSync()
     const def = headers().find(header => header.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
     const settle = async (): Promise<void> => {
@@ -1511,6 +1529,12 @@ describe('工作区分区：DOM 层', () => {
   })
 
   it('dispose() 时彻底解绑全部 document 级事件监听器，避免多次启停时内存与全局点击泄漏', async () => {
+    seedSections({
+      sections: [
+        { id: PINNED_SECTION_ID, name: '置顶', ids: ['a'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+      ],
+    })
     mountFixture(['a'])
     mount(['a'])
     await waitForSync()
@@ -1760,7 +1784,7 @@ describe('工作区分区：DOM 层', () => {
     mountFixture(['a', 'b'])
     mount(['a', 'b'])
     await waitForSync()
-    expect(headerIdsInDomOrder()).toEqual([DEFAULT_SECTION_ID])
+    expect(headerIdsInDomOrder()).toEqual([])
 
     // 置顶 b：标题立刻出现在最上方，并贴着 b 的分组块。
     const pinMenu = await openWorkspaceMenu('b')
@@ -1774,7 +1798,7 @@ describe('工作区分区：DOM 层', () => {
     unpinMenu.querySelector<HTMLButtonElement>(`[${MENU_ITEM_ATTR}]`)!.click()
     await waitForSync()
     expect(hostSection(PINNED_SECTION_ID).ids).toEqual([])
-    expect(headerIdsInDomOrder()).toEqual([DEFAULT_SECTION_ID])
+    expect(headerIdsInDomOrder()).toEqual([])
   })
 
 // 下面两组用例必须留在本 describe 内部：mountFixture / mount / waitForSync / seedSections/
@@ -3172,15 +3196,15 @@ describe('分区二级菜单的可访问性：', () => {
     seedSections({
       sections: [
         { id: PINNED_SECTION_ID, name: '置顶', ids: ['p1'] },
-        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
+        { id: 's_empty', name: '末尾空分区', ids: [] },
       ],
     })
     mountFixture(['p1'])
     mount(['p1'])
     await waitForSync()
 
-    const lastDefaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
-    const lastMoreBtn = lastDefaultHeader.querySelector<HTMLButtonElement>('button[data-dcu-action="more"]')!
+    const lastEmptyHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's_empty')!
+    const lastMoreBtn = lastEmptyHeader.querySelector<HTMLButtonElement>('button[data-dcu-action="more"]')!
     lastMoreBtn.click()
     await waitForSync()
 
@@ -3204,7 +3228,7 @@ describe('分区二级菜单的可访问性：', () => {
     const originalInsertBefore = hostTarget.insertBefore.bind(hostTarget)
     const movedNodes: Node[] = []
     hostTarget.insertBefore = ((newNode: Node, referenceNode: Node | null) => {
-      if (newNode === editingRow || newNode === lastDefaultHeader) {
+      if (newNode === editingRow || newNode === lastEmptyHeader) {
         movedNodes.push(newNode)
       }
       return originalInsertBefore(newNode, referenceNode)
@@ -3217,8 +3241,8 @@ describe('分区二级菜单的可访问性：', () => {
     expect(movedNodes).toEqual([])
     expect(blurCount).toBe(0)
     expect(document.activeElement).toBe(input)
-    // 验证末尾空分区时输入框必须在 lastDefaultHeader 之后
-    expect(lastDefaultHeader.compareDocumentPosition(editingRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // 验证末尾空分区时输入框必须在 lastEmptyHeader 之后
+    expect(lastEmptyHeader.compareDocumentPosition(editingRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     dispose?.()
   })
@@ -3226,15 +3250,16 @@ describe('分区二级菜单的可访问性：', () => {
   it('侧栏收起态下尝试调用新建分区（如通过已打开菜单），startCreateSection 守卫阻止在 DOM 中插入编辑行', async () => {
     seedSections({
       sections: [
-        { id: DEFAULT_SECTION_ID, name: '项目', ids: ['d1'] },
+        { id: 's1', name: '分组一', ids: ['d1'] },
+        { id: DEFAULT_SECTION_ID, name: '项目', ids: [] },
       ],
     })
     mountFixture(['d1'])
     mount(['d1'])
     await waitForSync()
 
-    const defaultHeader = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === DEFAULT_SECTION_ID)!
-    const moreBtn = defaultHeader.querySelector<HTMLButtonElement>('button[data-dcu-action="more"]')!
+    const s1Header = headers().find(h => h.getAttribute(SECTION_HEADER_ATTR) === 's1')!
+    const moreBtn = s1Header.querySelector<HTMLButtonElement>('button[data-dcu-action="more"]')!
     moreBtn.click()
     await waitForSync()
 
