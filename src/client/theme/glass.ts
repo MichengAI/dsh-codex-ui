@@ -30,6 +30,22 @@ const STYLE_TAG_ID = 'dsh-codex-ui-glass-style'
 const GLASS_COMPOSER_CSS = GLASS_CSS_TEXT
   .replaceAll('[data-dsh-glass-float] [data-composer-card]:before', '[data-dsh-glass-float] [data-composer-card] > [data-dcu-glass-composer-surface]')
   .replaceAll('[data-dsh-glass-compat] [data-composer-card]:before', '[data-dsh-glass-compat] [data-composer-card] > [data-dcu-glass-composer-surface]')
+  .replaceAll(
+    '[data-dsh-glass-float] [data-phase=active] header',
+    '[data-dsh-glass-float] [data-phase=active] header:not(.lc-pulse-header):not([class*="lc-"])',
+  )
+  .replaceAll(
+    '[data-dsh-glass-float] [data-phase] header:not([class*=headerBlank])',
+    '[data-dsh-glass-float] [data-phase] header:not([class*=headerBlank]):not(.lc-pulse-header):not([class*="lc-"])',
+  )
+  .replaceAll(
+    '[data-dsh-glass-frame][data-sidebar-collapsed] [data-phase] header:not([class*=headerBlank])',
+    '[data-dsh-glass-frame][data-sidebar-collapsed] [data-phase] header:not([class*=headerBlank]):not(.lc-pulse-header):not([class*="lc-"])',
+  )
+  .replaceAll(
+    '[data-dsh-glass-float] [data-conversation-scroll] [class*=bubble]',
+    '[data-dsh-glass-float] [data-conversation-scroll] [class*=bubble]:not([role=tooltip]):not([class*=tooltip])',
+  )
 
 /** 玻璃层追加样式（拼在生成 CSS 之后，同特异性下后者胜出）；导出以便契约测试断言 */
 export const GLASS_EXTRA_CSS = `
@@ -84,9 +100,47 @@ export const GLASS_EXTRA_CSS = `
    这正是「还是透」的真因：兜底模糊一直在，只是被 mask 变成惰性。
    因此顶部遮挡改为与对标插件一致的做法：不给滚动容器加遮罩，只把顶栏自己的磨砂设为下限值，
    让从顶栏背后穿过的正文被磨砂化开。 */
-[data-dsh-glass-float] [data-phase] header:not([class*="headerBlank"]) {
+[data-dsh-glass-float] [data-phase] header:not([class*="headerBlank"]):not(.lc-pulse-header):not([class*="lc-"]) {
   backdrop-filter: blur(max(var(--dsh-glass-blur, 12px), 12px)) !important;
   -webkit-backdrop-filter: blur(max(var(--dsh-glass-blur, 12px), 12px)) !important;
+}
+
+/* 防御 dsh-context 编队卡片样式污染（Issue #113）：
+   .lc-pulse-header 属于编队内容流内部卡片，严禁继承宿主会话顶栏的浮动排版、最大宽度截断或高层级定位；
+   向上滚动时平滑穿入真正的宿主会话顶栏下方。 */
+[data-dsh-glass] header.lc-pulse-header,
+[data-dsh-glass-float] header.lc-pulse-header,
+[data-dsh-glass] header[class*="lc-pulse-"],
+[data-dsh-glass-float] header[class*="lc-pulse-"],
+[data-dsh-glass] [class*="lc-"] header,
+[data-dsh-glass-float] [class*="lc-"] header {
+  position: relative !important;
+  z-index: 1 !important;
+  width: auto !important;
+  max-width: none !important;
+  margin: 0 !important;
+  border-radius: 14px !important;
+}
+
+/* 防御会话操作栏 Tooltip 气泡样式污染（Issue #113）：
+   对话下方功能控件（复制、分支等）的 Tooltip 气泡挂载在会话滚动流内部，
+   严禁被 [class*=bubble] 污染为亮色透明背景导致的白底白字；
+   严格维持宿主规范的深色底板、纯白文字与紧凑圆角。 */
+[data-dsh-glass] [role="tooltip"],
+[data-dsh-glass-float] [role="tooltip"],
+[data-dsh-glass] [class*="bubble"][role="tooltip"],
+[data-dsh-glass-float] [class*="bubble"][role="tooltip"] {
+  background: var(--dsw-alias-tooltip-bg, #1e1e24) !important;
+  color: var(--dsw-alias-tooltip-label, #ffffff) !important;
+  border: none !important;
+  border-radius: var(--dsw-radius-sm, 6px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+[data-dsh-glass] [role="tooltip"] *,
+[data-dsh-glass-float] [role="tooltip"] * {
+  color: inherit !important;
 }
 
 /* 对齐平铺风格（Compat）防漏字规范：将云母输入框卡片底色提升为高遮蔽度的 card-raised，
