@@ -2,7 +2,10 @@
 export const NEW_CONVERSATION_STYLE = `
 [data-phase=hero]:has([data-conversation-scroll]){container:dcu-new-conversation / inline-size}
 [data-phase=hero] [class*="_body"]{--dsh-chat-user-width:inherit}
-[data-dcu-hero-width][data-phase=hero] [class*="_body"]{--dsh-chat-user-width:var(--dcu-hero-chat-width)}
+/* 必须 !important：0.2.3 宿主在新建页也会把偏好行内发布到正文节点（--dsh-chat-user-width），
+   普通作者规则压不过行内声明，映射会变成死代码（拖了没反应）。important 只在「新建页 + 插件已接管宽度」
+   时生效，离开相位或注销时标记被移除，行内发布重新接管。 */
+[data-dcu-hero-width][data-phase=hero] [class*="_body"]{--dsh-chat-user-width:var(--dcu-hero-chat-width)!important}
 [data-phase=hero] [data-conversation-scroll][class]{--dsh-composer-side-clearance:16px;justify-content:flex-start;scrollbar-gutter:stable both-edges}
 [data-phase=hero] [data-composer-seat]{flex:1 0 auto;min-height:100%}
 [data-phase=hero] [data-composer-seat]>:has([class*="_composerHero"]){display:flex;flex:1;flex-direction:column}

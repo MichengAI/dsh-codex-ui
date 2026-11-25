@@ -122,8 +122,9 @@ export const GLASS_EXTRA_CSS = `
 /* 浮动顶栏宽度跟随正文：新宿主（0.2.3 起）把内容宽度注册为不继承、只写在正文节点上，
    顶栏与正文互为兄弟读不到，只能退回按列宽估算的兜底宽度（拖宽输入区时顶栏不变）。
    这里优先读由 header-width 追踪器提升到会话根的绝对宽度，读不到时保持上游兜底不变。
-   折叠侧栏有自己的通栏规则，所以显式排除折叠态，避免覆盖它的 max-width: none。 */
-[data-dsh-glass-frame]:not([data-sidebar-collapsed]) [data-phase] header:not([class*="headerBlank"]):not(.lc-pulse-header):not([class*="lc-"]) {
+   必须带上 [data-dsh-glass-float] 门控：平铺（compat）模式没有浮动顶栏卡片，这条只改 max-width
+   会把宿主原生顶栏夹成内容宽+32 且不居中。折叠侧栏有自己的通栏规则，同样排除。 */
+[data-dsh-glass-float] [data-dsh-glass-frame]:not([data-sidebar-collapsed]) [data-phase] header:not([class*="headerBlank"]):not(.lc-pulse-header):not([class*="lc-"]) {
   max-width: min(calc(var(--dcu-chat-content-width, var(--dsh-chat-user-width, clamp(680px, calc(var(--dsh-conversation-column-width, 1500px) * 0.64), 920px))) + 32px), calc(100% - 32px));
 }
 

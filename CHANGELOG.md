@@ -1,12 +1,15 @@
 # Changelog
 
-## [2.4.6] - 2026-11-25
+## [2.4.7] - 2026-11-25
 
 - **Custom Input Width Restored After Restart and Maximize (Issue #115)**:
   - After you set a custom message/input width, restarting the app and maximizing the window now applies that width immediately; switching to another page and back is no longer required;
-  - The new-conversation width handles still work as before, and the saved width carries over into new sessions.
+  - The new-conversation width handles keep working, including on hosts that publish the saved width directly on the message column.
 - **Floating Conversation Header Follows Your Width**:
   - With the mica floating cards turned on, the conversation header now follows the message column when you drag the input area wider or narrower, and keeps matching it after maximizing the window, switching sessions or returning from a full-page view.
+
+## [2.4.6] - 2026-11-25
+
 - **Adaptive Auto-Hiding for Unused Default Workspace Section (Issue #114)**:
   - In the plain flat view (no pinned projects and no custom sections), all built-in "Pinned" and "Projects" headers hide themselves so the sidebar falls back to the host's native flat list;
   - In section mode, the default "Projects" header hides when it has no workspaces, freeing the vertical space it used to take up.

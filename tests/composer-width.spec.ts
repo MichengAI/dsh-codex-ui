@@ -48,6 +48,22 @@ describe('新建页拖柄与宿主宽度变量的边界', () => {
       expect(body.style.getPropertyValue('--dsh-chat-user-width')).toBe('')
     } finally { stop() }
   })
+  it('指针捕获被系统拒绝时仍能靠 window 监听完成拖拽', () => {
+    const root = mountHero()
+    Object.defineProperty(root, 'clientWidth', { value: 1400, configurable: true })
+    localStorage.setItem('dsh.conversation.contentWidth', '640')
+    const stop = observeHeroWidthHandles('调整宽度')
+    try {
+      const handle = root.querySelector<HTMLElement>('[data-dcu-width-handle="right"]')!
+      handle.setPointerCapture = () => { throw new Error('capture 不可用') }
+      handle.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 500 }))
+      window.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 560 }))
+      window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 560 }))
+      // 右侧拖柄 1px 位移对应 2px 宽度：640 + (560 - 500) * 2
+      expect(root.style.getPropertyValue('--dcu-hero-chat-width')).toBe('760px')
+      expect(localStorage.getItem('dsh.conversation.contentWidth')).toBe('760')
+    } finally { stop() }
+  })
 })
 
 describe('输入区初始宽度', () => {

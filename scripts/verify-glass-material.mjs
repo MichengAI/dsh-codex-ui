@@ -391,6 +391,12 @@ try {
     const body = root.querySelector('[data-conversation-content]')
     const width = () => Math.round(header.getBoundingClientRect().width)
     const before = width()
+    // 平铺（compat）模式没有浮动顶栏卡片，宽度跟随规则必须完全不介入。
+    window.__glass.applyGlassSettings({ enabled: true, mode: 'compat', preset: 'standard' })
+    await wait()
+    const compat = { width: width(), maxWidth: getComputedStyle(header).maxWidth }
+    window.__glass.applyGlassSettings({ enabled: true, mode: 'mica', preset: 'standard' })
+    await wait()
     body.style.setProperty('--dsh-chat-content-width', '1100px')
     await wait()
     const after = width()
@@ -403,7 +409,7 @@ try {
     await wait()
     const unresolved = root.style.getPropertyValue('--dcu-chat-content-width')
     stop()
-    return { before, after, published, collapsed, unresolved, cleaned: root.style.getPropertyValue('--dcu-chat-content-width') }
+    return { before, after, published, collapsed, unresolved, compat, cleaned: root.style.getPropertyValue('--dcu-chat-content-width') }
   })
   // content-box：头栏宽度 = 内容宽度 + 32（max-width 上限）+ 32（左右各 16px 内边距）
   check('浮动·顶栏初始跟随正文内容宽度', follow.before, v => v === 964, '964')
@@ -411,6 +417,8 @@ try {
   check('浮动·提升的是正文宽度且写插件变量', follow.published, v => v === '1100px', '1100px')
   check('浮动·折叠侧栏仍走通栏（不被跟随规则压窄）', follow.collapsed, v => v > 1200, '> 1200')
   check('浮动·未解析宽度不写入', follow.unresolved, v => v === '', '空')
+  check('平铺·顶栏不被宽度跟随规则夹窄', follow.compat.maxWidth, v => v === 'none', 'none')
+  check('平铺·顶栏保持原生宽度', follow.compat.width, v => v > 1100, '> 1100')
   check('浮动·注销后不残留变量', follow.cleaned, v => v === '', '空')
   await widthPage.close()
 
