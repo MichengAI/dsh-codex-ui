@@ -3329,7 +3329,7 @@ describe('分区二级菜单的可访问性：', () => {
     expect(warnSpy).toHaveBeenCalledOnce()
   })
 
-  it.each([401, 403, 404])('收到 HTTP %i 时不重试，也不写回空分区', async status => {
+  it.each([403, 404])('收到 HTTP %i 时不重试，也不写回空分区', async status => {
     vi.useFakeTimers()
     const fetchStub = vi.fn<typeof fetch>(async () => new Response(null, { status }))
     vi.stubGlobal('fetch', fetchStub)
@@ -3338,6 +3338,43 @@ describe('分区二级菜单的可访问性：', () => {
     mount(['ws1'])
     await vi.advanceTimersByTimeAsync(90_000)
     expect(fetchStub).toHaveBeenCalledOnce()
+    expect(document.querySelector(`[${SECTION_HEADER_ATTR}]`)).toBeNull()
+  })
+
+  it('收到 HTTP 401 时按低频退避重试，登录态恢复后自动导入已有分区', async () => {
+    vi.useFakeTimers()
+    const fetchStub = vi.fn<typeof fetch>(async () => Response.json({
+      version: 1,
+      sections: [{ id: 'diagnostic', name: '登录后分区', ids: ['ws1'] }],
+    })).mockResolvedValueOnce(new Response(null, { status: 401 }))
+    vi.stubGlobal('fetch', fetchStub)
+    setSectionsTransport(undefined)
+    mountFixture(['ws1'])
+    mount(['ws1'])
+
+    // 首次即 401：不立刻重试，也不写回空分区
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(fetchStub).toHaveBeenCalledOnce()
+    expect(document.querySelectorAll(`[${SECTION_HEADER_ATTR}]`).length).toBe(0)
+
+    // 登录态恢复后由低频退避自动补齐，之后不再继续请求
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(fetchStub).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(fetchStub).toHaveBeenCalledTimes(2)
+    expect(Array.from(document.querySelectorAll(`[${SECTION_HEADER_ATTR}]`)).some(header => header.textContent?.includes('登录后分区'))).toBe(true)
+    expect(fetchStub.mock.calls.every(([, options]) => (options?.method ?? 'GET') === 'GET')).toBe(true)
+  })
+
+  it('持久 401 时重试次数有上限，不会变成轮询', async () => {
+    vi.useFakeTimers()
+    const fetchStub = vi.fn<typeof fetch>(async () => new Response(null, { status: 401 }))
+    vi.stubGlobal('fetch', fetchStub)
+    setSectionsTransport(undefined)
+    mountFixture(['ws1'])
+    mount(['ws1'])
+    await vi.advanceTimersByTimeAsync(10 * 60_000)
+    expect(fetchStub.mock.calls.length).toBeLessThanOrEqual(4)
     expect(document.querySelector(`[${SECTION_HEADER_ATTR}]`)).toBeNull()
   })
 

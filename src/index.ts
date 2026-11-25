@@ -92,6 +92,11 @@ type AuthenticationErrorBody = (status: AuthenticationStatus, message: string) =
 
 export type { ConnectionServiceLike } from './host-services.ts'
 
+/**
+ * 解析可用于校验业务请求的连接服务。
+ *
+ * @internal 仅供用例直接验收宿主契约，不属于本包的公开 API。
+ */
 export function resolveConnectionService(ctx: Context, injectedConn?: ConnectionServiceLike): ConnectionServiceLike | undefined {
   // 新宿主的 admit 经代理访问关联认证服务，必须保留具备该依赖的调用作用域。
   if (injectedConn && (typeof injectedConn.admit === 'function' || typeof injectedConn.requestRejection === 'function')) {
@@ -107,6 +112,8 @@ export function resolveConnectionService(ctx: Context, injectedConn?: Connection
  * 所有业务 REST 依赖 connection >=0.1.2-rc.1 的 Host/Origin/Fetch Metadata 与登录检查。
  * 必须在读取请求体及执行副作用前调用；不得将 undefined 以外的拒绝结果当作放行。
  * 发布包信任边界由 tests/business-rest-auth.assert.ts 的真实宿主契约用例验证。
+ *
+ * @internal 仅供用例直接验收宿主契约，不属于本包的公开 API。
  */
 export function authenticateBusinessRequest(
   ctx: Context,

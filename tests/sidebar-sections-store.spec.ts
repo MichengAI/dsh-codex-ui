@@ -40,6 +40,31 @@ describe('工作区分区客户端存储：保存与重试熔断', () => {
     await vi.advanceTimersByTimeAsync(1200)
     expect(saveCallCount).toBe(2)
   })
+
+  it('上一次写入还没返回时产生的新内容不会被丢弃', async () => {
+    const bodies: string[] = []
+    let releaseFirst: (() => void) | undefined
+    setSectionsTransport({
+      load: async () => null,
+      save: async body => {
+        bodies.push(body)
+        // 第一次写入挂起，模拟宿主响应慢：新内容的定时器会在它返回之前到期。
+        if (bodies.length === 1) await new Promise<void>(resolve => { releaseFirst = resolve })
+        return true
+      },
+    })
+
+    scheduleSectionsSave('A')
+    await vi.advanceTimersByTimeAsync(400)
+    expect(bodies).toEqual(['A'])
+
+    scheduleSectionsSave('B')
+    await vi.advanceTimersByTimeAsync(400)
+    releaseFirst?.()
+    await vi.advanceTimersByTimeAsync(1200)
+
+    expect(bodies).toEqual(['A', 'B'])
+  })
 })
 
 describe('工作区分区客户端存储：默认 HTTP 传输', () => {

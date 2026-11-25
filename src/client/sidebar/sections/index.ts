@@ -752,22 +752,44 @@ export function observeWorkspaceSections(
 
   let hostReloadAttempts = 0
   const MAX_HOST_RELOAD_ATTEMPTS = 5
+  /** 登录 / 权限态可能在会话中途变化：401 时低频再试几次，避免「登录后分区永久消失」。 */
+  let authReloadAttempts = 0
+  const MAX_AUTH_RELOAD_ATTEMPTS = 3
+  const AUTH_RELOAD_DELAY = 20_000
 
   /**
    * 从宿主导入分区文档。
    *
-   * 宿主返回空（如 404 或首次运行）时按默认结构启动：只有「置顶 + 项目」两个内置分区，
+   * 宿主返回 200 且内容为空（首次运行）时按默认结构启动：只有「置顶 + 项目」两个内置分区，
    * 首次同步会把宿主现有工作区顺序采纳进「项目」，与以前的全新安装行为一致。
-   * 若宿主未就绪抛出异常（503 等）：不标记 sectionsLoaded，不触发 persist() 存盘，
+   * 若宿主未就绪抛出异常（503、网络错误等）：不标记 sectionsLoaded，不触发 persist() 存盘，
    * 避免启动竞态下用空结构冲掉用户已有的真实分区，并在指数退避（最多 5 次）后安排恢复尝试。
+   * 401 另走一条低频重试（最多 3 次、间隔 20s），覆盖「登录态在会话中途变化」的场景；
+   * 403 / 404 这类不会自行恢复的客户端状态直接放弃，由页面重新挂载时再加载。
    */
   async function loadStateFromHost(): Promise<void> {
     let raw: string | null = null
     try {
       raw = await loadSectionsDocument()
     } catch (error) {
-      // 登录拒绝、找不到路由等客户端状态不会靠定时重试恢复。
-      if (error instanceof SectionsLoadError && error.status < 500) return
+      const status = error instanceof SectionsLoadError ? error.status : 0
+      if (status === 401) {
+        if (!disposed && !sectionsLoaded) {
+          if (authReloadAttempts < MAX_AUTH_RELOAD_ATTEMPTS) {
+            authReloadAttempts++
+            window.setTimeout(() => {
+              if (!disposed && !sectionsLoaded) {
+                void loadStateFromHost()
+              }
+            }, AUTH_RELOAD_DELAY)
+          } else {
+            console.warn('[Codex UI] 工作区分区需要登录后才能加载，已停止自动重试。')
+          }
+        }
+        return
+      }
+      // 找不到路由、渠道被拒这类客户端状态不会靠定时重试恢复。
+      if (status !== 0 && status < 500) return
       if (!disposed && !sectionsLoaded) {
         hostReloadAttempts++
         if (hostReloadAttempts <= MAX_HOST_RELOAD_ATTEMPTS) {
@@ -784,6 +806,7 @@ export function observeWorkspaceSections(
       return
     }
     hostReloadAttempts = 0
+    authReloadAttempts = 0
     const parsed = parseSections(raw)
     state = normalizeSections(parsed ?? { sections: [] })
     committedState = state

@@ -48,11 +48,18 @@ type HostResponse = {
 };
 type AuthenticationStatus = 401 | 403 | 503;
 type AuthenticationErrorBody = (status: AuthenticationStatus, message: string) => Record<string, unknown>;
+/**
+ * 解析可用于校验业务请求的连接服务。
+ *
+ * @internal 仅供用例直接验收宿主契约，不属于本包的公开 API。
+ */
 declare function resolveConnectionService(ctx: Context, injectedConn?: ConnectionServiceLike): ConnectionServiceLike | undefined;
 /**
  * 所有业务 REST 依赖 connection >=0.1.2-rc.1 的 Host/Origin/Fetch Metadata 与登录检查。
  * 必须在读取请求体及执行副作用前调用；不得将 undefined 以外的拒绝结果当作放行。
  * 发布包信任边界由 tests/business-rest-auth.assert.ts 的真实宿主契约用例验证。
+ *
+ * @internal 仅供用例直接验收宿主契约，不属于本包的公开 API。
  */
 declare function authenticateBusinessRequest(ctx: Context, request: HostRequest, response: HostResponse, errorBody?: AuthenticationErrorBody, peer?: unknown, localConnection?: ConnectionServiceLike): boolean;
 declare const inject: string[];

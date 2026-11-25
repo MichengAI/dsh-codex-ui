@@ -104,7 +104,11 @@ function scheduleSave(): void {
   if (timer !== undefined) window.clearTimeout(timer)
   timer = window.setTimeout(() => {
     timer = undefined
-    if (inFlight !== undefined) return
+    // 上一次写入还没返回时不能直接丢弃：把待写内容重新排一次队，等它落地再发。
+    if (inFlight !== undefined) {
+      if (pending !== undefined) scheduleSave()
+      return
+    }
     inFlight = flush().finally(() => {
       inFlight = undefined
     })

@@ -65,6 +65,17 @@ describe('业务路由的真实 Cordis 认证作用域', () => {
       }
       await connection.dispose()
       expect(await request(true)).toBe(503)
+
+      // 宿主重载连接插件后必须重新捕获作用域，而不是永久停在 503。
+      const reloaded = host.plugin(connectionHost)
+      await reloaded
+      host['connection.authentication'].register({ authenticate: request => {
+        const headers = request.headers
+        const fixtureApproval = headers instanceof Headers ? headers.get('x-fixture-auth') : headers?.['x-fixture-auth']
+        return fixtureApproval === 'yes' ? peer : undefined
+      } })
+      expect(await request(true)).toBe(200)
+      expect(await request()).toBe(401)
     } finally {
       await host.fiber.dispose()
     }
