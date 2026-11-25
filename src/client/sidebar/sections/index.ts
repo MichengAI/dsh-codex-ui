@@ -38,7 +38,7 @@ import {
 } from './model.ts'
 import { SectionLayoutMotion } from './motion.ts'
 import { planWorkspaceMoves } from './order.ts'
-import { flushSectionsSave, loadSectionsDocument, scheduleSectionsSave } from './store.ts'
+import { SectionsLoadError, flushSectionsSave, loadSectionsDocument, scheduleSectionsSave } from './store.ts'
 
 /** 分区标题行的标记属性，样式与测试都靠它定位。 */
 export const SECTION_HEADER_ATTR = 'data-dcu-ws-section'
@@ -765,7 +765,9 @@ export function observeWorkspaceSections(
     let raw: string | null = null
     try {
       raw = await loadSectionsDocument()
-    } catch {
+    } catch (error) {
+      // 登录拒绝、找不到路由等客户端状态不会靠定时重试恢复。
+      if (error instanceof SectionsLoadError && error.status < 500) return
       if (!disposed && !sectionsLoaded) {
         hostReloadAttempts++
         if (hostReloadAttempts <= MAX_HOST_RELOAD_ATTEMPTS) {

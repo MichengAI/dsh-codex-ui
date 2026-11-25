@@ -173,6 +173,8 @@ describe('工作区分区：DOM 层', () => {
     document.body.innerHTML = ''
     localStorage.clear()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
   })
 
   const defaultSlots = {
@@ -3312,30 +3314,48 @@ describe('分区二级菜单的可访问性：', () => {
     dispose?.()
   })
 
-  it('当宿主存储遇到 401 抛错且持续失败时，重试 5 次后停止重试并打出警告', async () => {
+  it('持续收到 503 时只由侧栏退避重试，最多发送 6 次 GET 且不写入', async () => {
     vi.useFakeTimers()
-    let loadCalls = 0
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    setSectionsTransport({
-      load: async () => {
-        loadCalls++
-        throw new Error('Sections store unavailable: HTTP 401')
-      },
-      save: async () => true,
-    })
+    const fetchStub = vi.fn<typeof fetch>(async () => new Response(null, { status: 503 }))
+    vi.stubGlobal('fetch', fetchStub)
+    setSectionsTransport(undefined)
     mountFixture(['ws1'])
     mount(['ws1'])
-    await vi.advanceTimersByTimeAsync(0)
-    expect(loadCalls).toBe(1)
+    await vi.advanceTimersByTimeAsync(90_000)
+    expect(fetchStub).toHaveBeenCalledTimes(6)
+    expect(fetchStub.mock.calls.every(([, options]) => (options?.method ?? 'GET') === 'GET')).toBe(true)
+    expect(document.querySelector(`[${SECTION_HEADER_ATTR}]`)).toBeNull()
+    expect(warnSpy).toHaveBeenCalledOnce()
+  })
 
-    // 依次快进 5 次重试退避定时器 (2s, 4s, 8s, 16s, 30s)
-    for (let i = 0; i < 5; i++) {
-      await vi.runAllTimersAsync()
-    }
-    expect(loadCalls).toBe(6) // 首次 + 5 次重试
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('已停止后台恢复重试'))
-    warnSpy.mockRestore()
-    dispose?.()
-    vi.useRealTimers()
+  it.each([401, 403, 404])('收到 HTTP %i 时不重试，也不写回空分区', async status => {
+    vi.useFakeTimers()
+    const fetchStub = vi.fn<typeof fetch>(async () => new Response(null, { status }))
+    vi.stubGlobal('fetch', fetchStub)
+    setSectionsTransport(undefined)
+    mountFixture(['ws1'])
+    mount(['ws1'])
+    await vi.advanceTimersByTimeAsync(90_000)
+    expect(fetchStub).toHaveBeenCalledOnce()
+    expect(document.querySelector(`[${SECTION_HEADER_ATTR}]`)).toBeNull()
+  })
+
+  it('宿主恢复后导入已有分区，不再继续读请求', async () => {
+    vi.useFakeTimers()
+    const fetchStub = vi.fn<typeof fetch>(async () => Response.json({
+      version: 1,
+      sections: [{ id: 'diagnostic', name: '已有分区', ids: ['ws1'] }],
+    })).mockResolvedValueOnce(new Response(null, { status: 503 }))
+    vi.stubGlobal('fetch', fetchStub)
+    setSectionsTransport(undefined)
+    mountFixture(['ws1'])
+    mount(['ws1'])
+    await vi.advanceTimersByTimeAsync(1_999)
+    expect(fetchStub).toHaveBeenCalledOnce()
+    await vi.advanceTimersByTimeAsync(90_000)
+    const reads = fetchStub.mock.calls.filter(([, options]) => (options?.method ?? 'GET') === 'GET')
+    expect(reads).toHaveLength(2)
+    expect(Array.from(document.querySelectorAll(`[${SECTION_HEADER_ATTR}]`)).some(header => header.textContent?.includes('已有分区'))).toBe(true)
   })
 })

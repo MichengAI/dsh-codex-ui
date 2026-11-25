@@ -12,6 +12,23 @@ type HttpResponse = {
   end: (body?: string) => void
 }
 
+export type ConnectionServiceLike = {
+  requestRejection?: (request: { headers?: HttpRequest['headers'] }) => 401 | 403 | undefined
+  admit?: (request: { headers?: HttpRequest['headers'] }) => { rejection?: 401 | 403 | 503; peer?: unknown } | undefined
+}
+
+/** 新宿主的 admit 会访问关联认证服务；仅此子作用域依赖它，旧宿主不受启动门控。 */
+export function captureScopedConnection(ctx: Context): () => ConnectionServiceLike | undefined {
+  let connection: ConnectionServiceLike | undefined
+  ctx.inject?.(['connection', 'connection.authentication'], (authCtx) => {
+    authCtx.effect(() => {
+      connection = authCtx.get('connection') as ConnectionServiceLike | undefined
+      return () => { connection = undefined }
+    })
+  })
+  return () => connection
+}
+
 type HostServices = {
   webServer: { register: (route: { kind: 'exact'; path: string; auth?: 'anonymous' | 'required' | 'deny'; handler: (request: HttpRequest, response: HttpResponse, peer?: unknown) => Promise<void> }) => () => void }
 }

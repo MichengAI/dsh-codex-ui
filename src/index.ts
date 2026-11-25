@@ -2,7 +2,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
 import { dependencyStatuses, installDependency, installProgressSnapshot, noteHostInstallState, resolveDependencyRuntime, updateAllDependencies } from './dependency-manager.ts'
-import { hostServices } from './host-services.ts'
+import { captureScopedConnection, hostServices, type ConnectionServiceLike } from './host-services.ts'
 import { isSubPluginDisabledOnDisk } from './profile-resolver.ts'
 import {
   SectionsDocumentError,
@@ -90,34 +90,17 @@ type HostResponse = {
 type AuthenticationStatus = 401 | 403 | 503
 type AuthenticationErrorBody = (status: AuthenticationStatus, message: string) => Record<string, unknown>
 
-export type ConnectionServiceLike = {
-  requestRejection?: (request: { headers?: HostRequest['headers'] }) => 401 | 403 | undefined
-  admit?: (request: { headers?: HostRequest['headers'] }) => { rejection?: 401 | 403 | 503; peer?: unknown } | undefined
-}
+export type { ConnectionServiceLike } from './host-services.ts'
 
 export function resolveConnectionService(ctx: Context, injectedConn?: ConnectionServiceLike): ConnectionServiceLike | undefined {
-  // 1. 优先直接从当前上下文取
-  try {
-    const conn = typeof ctx.get === 'function' ? ctx.get('connection') : undefined
-    if (conn && (typeof (conn as any).admit === 'function' || typeof (conn as any).requestRejection === 'function')) {
-      return conn as any
-    }
-  } catch {}
-
-  // 2. 检查公开反射获取
-  try {
-    const reflectConn = (ctx as any).reflect?.get?.('connection', false)
-    if (reflectConn && (typeof reflectConn.admit === 'function' || typeof reflectConn.requestRejection === 'function')) {
-      return reflectConn as any
-    }
-  } catch {}
-
-  // 3. 动态注入的连接服务（由 ctx.inject 捕获）
+  // 新宿主的 admit 经代理访问关联认证服务，必须保留具备该依赖的调用作用域。
   if (injectedConn && (typeof injectedConn.admit === 'function' || typeof injectedConn.requestRejection === 'function')) {
     return injectedConn
   }
-
-  return undefined
+  const connection = ctx.get?.('connection') as ConnectionServiceLike | undefined
+  if (connection && (typeof connection.admit === 'function' || typeof connection.requestRejection === 'function')) {
+    return connection
+  }
 }
 
 /**
@@ -180,22 +163,7 @@ export const inject = ['webServer', 'profileContext', 'pluginManager']
 
 /** 提供不泄露地址、命令和凭证的连接器目录。 */
 export function apply(ctx: Context): void {
-  let injectedConnection: ConnectionServiceLike | undefined
-  if (typeof (ctx as any).inject === 'function') {
-    try {
-      (ctx as any).inject(['connection'], (connCtx: Context) => {
-        const c = (connCtx as any).connection ?? (typeof connCtx.get === 'function' ? connCtx.get('connection') : undefined)
-        if (c && (typeof c.admit === 'function' || typeof c.requestRejection === 'function')) {
-          injectedConnection = c
-        }
-        if (typeof (connCtx as any).on === 'function') {
-          ;(connCtx.on as any)('dispose', () => {
-            injectedConnection = undefined
-          })
-        }
-      })
-    } catch {}
-  }
+  const scopedConnection = captureScopedConnection(ctx)
   const host = hostServices(ctx)
   ctx.effect(() => {
     if (typeof ctx.on !== 'function') return () => {}
@@ -213,7 +181,7 @@ export function apply(ctx: Context): void {
       path: dependenciesEndpoint,
       auth: 'anonymous',
       handler: async (request, response, peer?: unknown) => {
-        if (!authenticateBusinessRequest(ctx, request, response, undefined, peer, injectedConnection)) return
+        if (!authenticateBusinessRequest(ctx, request, response, undefined, peer, scopedConnection())) return
         const url = new URL(request.url ?? '/', 'http://localhost')
         try {
           if (request.method === 'GET') {
@@ -289,7 +257,7 @@ export function apply(ctx: Context): void {
       path: CODEX_UI_API_ENDPOINTS.sections,
       auth: 'anonymous',
       handler: async (request, response, peer?: unknown) => {
-        if (!authenticateBusinessRequest(ctx, request, response, undefined, peer, injectedConnection)) return
+        if (!authenticateBusinessRequest(ctx, request, response, undefined, peer, scopedConnection())) return
         const json = (status: number, body: unknown): void => {
           response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
           response.end(JSON.stringify(body))

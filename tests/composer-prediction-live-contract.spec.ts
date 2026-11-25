@@ -275,6 +275,7 @@ describe('composer-prediction: 真实宿主契约与防御回归', () => {
     }
     applyPredictions({
       webServer: { register },
+      connection: { admit: () => ({ peer: { principal: { kind: 'owner' } } }) },
       llm: {
         prepareCall: async (config: unknown) => ({
           config,

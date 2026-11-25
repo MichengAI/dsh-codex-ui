@@ -5,6 +5,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { CODEX_UI_API_ENDPOINTS } from './business-api.ts'
 import { isNoPrediction, isPredictionPromptEcho, NO_PREDICTION, PREDICTION_CUES, PREDICTION_LABELS, predictionLineIdentity } from './composer-prediction-format.ts'
+import { captureScopedConnection, type ConnectionServiceLike } from './host-services.ts'
 
 export const name = 'composer-predictions'
 
@@ -74,7 +75,6 @@ export function apply(ctx: Context, config?: any): void {
   const inflight = new Set<AbortController>()
 
   let injectedSessions: any
-  let injectedConnection: any
   if (typeof (ctx as any).inject === 'function') {
     try {
       (ctx as any).inject(['sessions'], (sessCtx: Context) => {
@@ -84,18 +84,11 @@ export function apply(ctx: Context, config?: any): void {
         }
       })
     } catch {}
-    try {
-      (ctx as any).inject(['connection'], (connCtx: Context) => {
-        injectedConnection = (connCtx as any).connection ?? (typeof connCtx.get === 'function' ? connCtx.get('connection') : undefined)
-        if (typeof (connCtx as any).on === 'function') {
-          ;(connCtx.on as any)('dispose', () => { injectedConnection = undefined })
-        }
-      })
-    } catch {}
   }
+  const scopedConnection = captureScopedConnection(ctx)
   const servicesFallback = {
     get sessions() { return injectedSessions },
-    get connection() { return injectedConnection },
+    get connection() { return scopedConnection() },
   }
 
   const getWebServer = () => (ctx as any).webServer ?? (ctx as any).get?.('webServer')
@@ -253,13 +246,20 @@ function describeError(error: any) {
  * @returns `null` when the response was already written, a plan, or an error.
  */
 async function planRequest(ctx: any, request: any, response: any, servicesFallback?: any) {
-  const connection = getService(ctx, 'connection', servicesFallback?.connection)
-  const admission = connection?.admit ? connection.admit(request) : { peer: { principal: { kind: 'owner' } } }
-  if (admission && 'rejection' in admission) {
-    return { status: admission.rejection, error: admission.rejection === 401 ? 'unauthorized' : 'forbidden' }
+  const connection = (servicesFallback?.connection as ConnectionServiceLike | undefined)
+    ?? getService<ConnectionServiceLike>(ctx, 'connection')
+  let admission: ReturnType<NonNullable<ConnectionServiceLike['admit']>>
+  try {
+    admission = connection?.admit?.(request)
+  } catch (error) {
+    ctx.logger?.warn?.('[Codex UI] 预测请求认证异常：%s', describeError(error))
+    return { status: 503, error: 'authentication-unavailable' }
   }
-  // Predictions read the owner's sessions and spend the owner's model tokens.
-  if ((admission?.peer?.principal?.kind ?? 'owner') !== 'owner') return { status: 403, error: 'forbidden' }
+  if (!admission || admission.rejection === 503) return { status: 503, error: 'authentication-unavailable' }
+  if (admission.rejection === 401) return { status: 401, error: 'unauthorized' }
+  // 预测会读取会话并消耗模型额度，只有明确通过认证的 owner 才能继续。
+  const peer = admission.peer as { principal?: { kind?: string } } | undefined
+  if (admission.rejection !== undefined || peer?.principal?.kind !== 'owner') return { status: 403, error: 'forbidden' }
 
   if (request.method !== 'POST') {
     respond(response, 405, { suggestion: null, suggestions: [], reason: 'method-not-allowed' })

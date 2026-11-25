@@ -15,46 +15,23 @@ export interface SectionsTransport {
   save: (body: string) => Promise<boolean>
 }
 
-export const MAX_LOAD_RETRIES = 3
-export const RETRY_DELAYS = [300, 600, 1000]
-
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+/** 保留失败状态，让侧栏区分访问被拒绝和宿主暂时不可用。 */
+export class SectionsLoadError extends Error {
+  constructor(readonly status: number) {
+    super(`Sections store unavailable: HTTP ${status}`)
+  }
 }
 
 export const httpTransport: SectionsTransport = {
   async load(): Promise<string | null> {
-    let lastError: unknown
-    for (let attempt = 0; attempt <= MAX_LOAD_RETRIES; attempt++) {
-      try {
-        const response = await fetch(CODEX_UI_API_ENDPOINTS.sections, {
-          credentials: 'same-origin',
-          headers: { accept: 'application/json' },
-        })
-        // 404 / 204 明确表示服务端无文档（全新安装）
-        if (response.status === 404 || response.status === 204) {
-          return null
-        }
-        if (response.ok) {
-          const text = await response.text()
-          return text.trim() === '' ? null : text
-        }
-        // 其余任何非 ok（500, 502, 503, 504, 401, 403 等）均视为服务未就绪或鉴权未同步
-        if (attempt < MAX_LOAD_RETRIES) {
-          await sleep(RETRY_DELAYS[attempt] ?? 1000)
-          continue
-        }
-        throw new Error(`Sections store unavailable: HTTP ${response.status}`)
-      } catch (error) {
-        lastError = error
-        if (attempt < MAX_LOAD_RETRIES) {
-          await sleep(RETRY_DELAYS[attempt] ?? 1000)
-          continue
-        }
-        throw lastError
-      }
-    }
-    throw lastError ?? new Error('Sections store unavailable: retry exhausted')
+    const response = await fetch(CODEX_UI_API_ENDPOINTS.sections, {
+      credentials: 'same-origin',
+      headers: { accept: 'application/json' },
+    })
+    // 路由未注册的 404 不代表文档为空，否则侧栏可能用默认分区覆盖已有数据。
+    if (!response.ok) throw new SectionsLoadError(response.status)
+    const text = await response.text()
+    return text.trim() === '' ? null : text
   },
   async save(body: string): Promise<boolean> {
     try {
@@ -85,7 +62,7 @@ export function setSectionsTransport(next?: SectionsTransport): void {
 /**
  * 读取宿主里的分区文档。
  *
- * @returns 原始 JSON 文本；读取失败时返回 `null`，调用方按默认结构启动，不影响侧栏渲染。
+ * @returns 原始 JSON 文本；仅成功读取空内容时返回 `null`，读取失败时抛出异常。
  */
 export async function loadSectionsDocument(): Promise<string | null> {
   return transport.load()

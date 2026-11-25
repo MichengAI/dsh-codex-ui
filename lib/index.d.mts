@@ -1,4 +1,24 @@
 import { Context } from "@deepseek-ai/cordis";
+//#region src/host-services.d.ts
+type HttpRequest = {
+  method?: string;
+  url?: string;
+  /** Node 原生请求头（小写键名），用于跨站请求判定。 */
+  headers?: Record<string, string | string[] | undefined>;
+  [Symbol.asyncIterator]?: () => AsyncIterator<Uint8Array | string>;
+};
+type ConnectionServiceLike = {
+  requestRejection?: (request: {
+    headers?: HttpRequest['headers'];
+  }) => 401 | 403 | undefined;
+  admit?: (request: {
+    headers?: HttpRequest['headers'];
+  }) => {
+    rejection?: 401 | 403 | 503;
+    peer?: unknown;
+  } | undefined;
+};
+//#endregion
 //#region src/index.d.ts
 /**
  * composer 子插件被停用时，由主插件补一个只读状态兜底端点。
@@ -28,17 +48,6 @@ type HostResponse = {
 };
 type AuthenticationStatus = 401 | 403 | 503;
 type AuthenticationErrorBody = (status: AuthenticationStatus, message: string) => Record<string, unknown>;
-type ConnectionServiceLike = {
-  requestRejection?: (request: {
-    headers?: HostRequest['headers'];
-  }) => 401 | 403 | undefined;
-  admit?: (request: {
-    headers?: HostRequest['headers'];
-  }) => {
-    rejection?: 401 | 403 | 503;
-    peer?: unknown;
-  } | undefined;
-};
 declare function resolveConnectionService(ctx: Context, injectedConn?: ConnectionServiceLike): ConnectionServiceLike | undefined;
 /**
  * 所有业务 REST 依赖 connection >=0.1.2-rc.1 的 Host/Origin/Fetch Metadata 与登录检查。
@@ -50,4 +59,4 @@ declare const inject: string[];
 /** 提供不泄露地址、命令和凭证的连接器目录。 */
 declare function apply(ctx: Context): void;
 //#endregion
-export { ConnectionServiceLike, RequestBodyTooLargeError, apply, authenticateBusinessRequest, inject, publicDependencyError, readRequestBody, registerComposerStatusFallback, resolveConnectionService };
+export { type ConnectionServiceLike, RequestBodyTooLargeError, apply, authenticateBusinessRequest, inject, publicDependencyError, readRequestBody, registerComposerStatusFallback, resolveConnectionService };
