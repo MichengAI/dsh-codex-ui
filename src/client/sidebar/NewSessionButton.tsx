@@ -2,6 +2,7 @@ import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 import { MessageSquarePlus } from 'lucide-react'
 import { isValidElement, useCallback, useEffect, useMemo, useState, type FC, type ReactNode } from 'react'
+import { getNewSessionDropHandler } from './state.ts'
 
 const IconNewChat =
   ((primitives as Record<string, unknown>).IconNewChatOutlineMedium as FC<{ size?: number }>) ??
@@ -100,6 +101,8 @@ export interface NewSessionButtonProps {
   ctx: ClientContext
   label: string
   ariaHint?: string
+  /** 展开态下与宿主 SidebarRoot 一致禁用重复悬停气泡，默认 true。 */
+  tooltipDisabled?: boolean
 }
 
 /** 解析宿主 uiWorkspace.startSession；供 HOC 闸门与降级点击共用。 */
@@ -117,7 +120,12 @@ export function resolveStartSession(ctx: ClientContext): (() => Promise<void> | 
 }
 
 /** Codex 风格扁平「新会话」行按钮，复用于 sidebar.session.action HOC 与旧宿主降级模式。 */
-export const NewSessionButton: FC<NewSessionButtonProps> = ({ ctx, label, ariaHint }) => {
+export const NewSessionButton: FC<NewSessionButtonProps> = ({
+  ctx,
+  label,
+  ariaHint,
+  tooltipDisabled = true,
+}) => {
   const [startingSession, setStartingSession] = useState(false)
   const [catalogShortcut, setCatalogShortcut] = useState<NewSessionShortcut | undefined>(() =>
     readShortcutFromCatalog(ctx),
@@ -173,6 +181,25 @@ export const NewSessionButton: FC<NewSessionButtonProps> = ({ ctx, label, ariaHi
           void handleStartSession()
         }
       }}
+      onDragOver={e => {
+        const handler = getNewSessionDropHandler()
+        if (!handler?.isDragging()) return
+        e.preventDefault()
+        e.stopPropagation()
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+        handler.onDragOver()
+      }}
+      onDrop={e => {
+        const handler = getNewSessionDropHandler()
+        if (!handler) return
+        e.preventDefault()
+        e.stopPropagation()
+        const id =
+          e.dataTransfer?.getData('application/x-dsh-panel-id') ||
+          e.dataTransfer?.getData('text/plain') ||
+          undefined
+        handler.onDrop(id)
+      }}
     >
       <span className="dcu-sb-glyph" aria-hidden="true">
         <IconNewChat size={16} />
@@ -187,7 +214,7 @@ export const NewSessionButton: FC<NewSessionButtonProps> = ({ ctx, label, ariaHi
   )
 
   return Tooltip ? (
-    <Tooltip label={label} shortcutKeys={shortcut.keys} delayMs={500} side="right">
+    <Tooltip label={label} shortcutKeys={shortcut.keys} delayMs={500} side="right" disabled={tooltipDisabled}>
       {button}
     </Tooltip>
   ) : (

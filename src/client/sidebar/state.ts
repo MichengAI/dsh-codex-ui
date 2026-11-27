@@ -39,3 +39,19 @@ export function subscribeSessionActionDeclared(listener: Listener): () => void {
     sessionActionListeners.delete(listener)
   }
 }
+
+export interface NewSessionDropHandler {
+  isDragging: () => boolean
+  onDragOver: () => void
+  onDrop: (draggedId?: string | null) => void
+}
+
+let newSessionDropHandler: NewSessionDropHandler | null = null
+
+export function setNewSessionDropHandler(handler: NewSessionDropHandler | null): void {
+  newSessionDropHandler = handler
+}
+
+export function getNewSessionDropHandler(): NewSessionDropHandler | null {
+  return newSessionDropHandler
+}

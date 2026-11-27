@@ -53,6 +53,7 @@ function createSessionActionLayer(ctx: ClientContext): FC<{ wide?: boolean; chil
       ctx,
       label: resolveNewSessionLabel(ctx, t),
       ariaHint: extractAriaKeyshortcuts(children),
+      tooltipDisabled: wide,
     })
   }
   return SessionActionLayer

@@ -832,9 +832,14 @@ describe('observeSidebarNav 挂载与回退生命周期', () => {
       () => null,
     )
 
+    const panelEntries = [
+      { options: { id: 'plugins', label: '插件管理', order: 10 }, component: () => createElement('span', null, 'IconPlugins') },
+      { options: { id: 'skills', label: '技能管理', order: 20 }, component: () => createElement('span', null, 'IconSkills') },
+      { options: { id: 'im', label: 'IM助理', order: 30 }, component: () => createElement('span', null, 'IconIM') },
+    ]
     const ctx = {
       slots: {
-        entriesOfSlot: core.entriesOfSlot.bind(core),
+        entriesOfSlot: (slot: string) => (slot === 'sidebar.panellist' ? panelEntries : core.entriesOfSlot(slot)),
         subscribe: core.subscribe.bind(core),
         inject: (key: string, factory: () => unknown) => {
           if (!core.specDynamic(key)) return vi.fn()
@@ -901,6 +906,35 @@ describe('observeSidebarNav 挂载与回退生命周期', () => {
       codexNewBtn?.click()
     })
     expect(startSession).toHaveBeenCalledTimes(1)
+
+    // P2-3：在接管模式下，从「更多」拖动入口到 newSessionRow 内的 Codex 新会话按钮上，应精准置顶到 pinned[0]
+    const moreTrigger = managedContainer?.querySelector('.dcu-sb-more-trigger') as HTMLButtonElement | null
+    await act(async () => {
+      moreTrigger?.click()
+    })
+    const imBtn = managedContainer?.querySelector('[data-dcu-panel-id="im"]') as HTMLButtonElement | null
+    expect(imBtn).not.toBeNull()
+    await act(async () => {
+      const dragStart = new Event('dragstart', { bubbles: true })
+      Object.defineProperty(dragStart, 'dataTransfer', {
+        value: { setData: vi.fn(), getData: () => 'im', effectAllowed: 'move' },
+      })
+      imBtn?.dispatchEvent(dragStart)
+
+      const dragOver = new Event('dragover', { bubbles: true, cancelable: true })
+      Object.defineProperty(dragOver, 'dataTransfer', { value: { dropEffect: 'none' } })
+      codexNewBtn?.dispatchEvent(dragOver)
+
+      const drop = new Event('drop', { bubbles: true, cancelable: true })
+      Object.defineProperty(drop, 'dataTransfer', {
+        value: { getData: (type: string) => (type === 'application/x-dsh-panel-id' ? 'im' : '') },
+      })
+      codexNewBtn?.dispatchEvent(drop)
+    })
+    const pinnedBtns = [...(managedContainer?.querySelectorAll('[data-zone="pinned"] [data-dcu-panel-id]') ?? [])].map(
+      el => el.getAttribute('data-dcu-panel-id'),
+    )
+    expect(pinnedBtns).toEqual(['plugins', 'im'])
 
     // 折叠态（wide = false）及缺省 wide（undefined）下：原样透传原生 newSession 按钮与导入按钮
     await act(async () => {

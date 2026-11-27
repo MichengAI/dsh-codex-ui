@@ -34,6 +34,11 @@ export const SIDEBAR_CSS = `
   margin: 1px 0;
 }
 
+.dcu-sb-new-session-row[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 /* 统一同行扩展按钮（如会话导入）为 36x36 Codex 扁平悬停胶囊风格，消除白框割裂感 */
 [${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) [class*="newSessionRow"]:has(.dcu-sb-new-session-row) button:not(.dcu-sb-new-session-row):not([class*="newSession"]),
 [${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) [class*="newSessionRow"]:has(.dcu-sb-new-session-row) [role="button"]:not(.dcu-sb-new-session-row):not([class*="newSession"]) {

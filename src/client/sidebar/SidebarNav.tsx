@@ -13,7 +13,11 @@ import {
   type SidebarLayout,
 } from './layout.ts'
 import { NewSessionButton } from './NewSessionButton.tsx'
-import { getSessionActionDeclared, subscribeSessionActionDeclared } from './state.ts'
+import {
+  getSessionActionDeclared,
+  setNewSessionDropHandler,
+  subscribeSessionActionDeclared,
+} from './state.ts'
 
 const IconBrowse = ((primitives as Record<string, unknown>).IconPluginPinwheelOutlineRegular as FC<{ size?: number }>) ?? Blocks
 const IconCreate = ((primitives as Record<string, unknown>).IconPlusOutlineRegular as FC<{ size?: number }>) ?? Plus
@@ -499,6 +503,26 @@ export const SidebarNav: FC<SidebarNavProps> = ({ ctx, onLayoutChange, initialLa
     [commitDrop, draggingId, handleDragEnd],
   )
 
+  // 让原位接管在 newSessionRow 内的 NewSessionButton 与降级行共享「拖放至常驻第 0 位」能力
+  useEffect(() => {
+    setNewSessionDropHandler({
+      isDragging: () => Boolean(isDraggingRef.current ?? draggingId),
+      onDragOver: () => {
+        const firstPanel = layoutRef.current.pinned[0]
+        updateDragOver({ zone: 'pinned', target: firstPanel ?? '__end__' })
+      },
+      onDrop: draggedId => {
+        const id = draggedId || isDraggingRef.current || draggingId
+        const firstPanel = layoutRef.current.pinned[0]
+        commitDrop(id, 'pinned', firstPanel ?? '__end__')
+        handleDragEnd()
+      },
+    })
+    return () => {
+      setNewSessionDropHandler(null)
+    }
+  }, [commitDrop, draggingId, handleDragEnd, updateDragOver])
+
   // 7. 渲染数据划分
   const panelMap = useMemo(() => new Map(panels.map(p => [p.id, p])), [panels])
 
@@ -524,30 +548,7 @@ export const SidebarNav: FC<SidebarNavProps> = ({ ctx, onLayoutChange, initialLa
     <nav className="dcu-sb-root" data-dcu-sb-root="true">
       {/* 新会话普通行（仅在旧宿主未声明 sidebar.session.action 时作为降级渲染，并支持置顶放置落点） */}
       {!sessionActionTakenOver && (
-        <div
-          className="dcu-sb-section dcu-sb-new-session-section"
-          onDragOver={e => {
-            const currentDragged = isDraggingRef.current ?? draggingId
-            if (!currentDragged) return
-            e.preventDefault()
-            e.stopPropagation()
-            if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
-            const firstPanel = layoutRef.current.pinned[0]
-            updateDragOver({ zone: 'pinned', target: firstPanel ?? '__end__' })
-          }}
-          onDrop={e => {
-            e.preventDefault()
-            e.stopPropagation()
-            const id =
-              e.dataTransfer?.getData('application/x-dsh-panel-id') ||
-              e.dataTransfer?.getData('text/plain') ||
-              isDraggingRef.current ||
-              draggingId
-            const firstPanel = layoutRef.current.pinned[0]
-            commitDrop(id, 'pinned', firstPanel ?? '__end__')
-            handleDragEnd()
-          }}
-        >
+        <div className="dcu-sb-section dcu-sb-new-session-section">
           <NewSessionButton ctx={ctx} label={t('sidebar.newSession', '新会话')} />
         </div>
       )}
