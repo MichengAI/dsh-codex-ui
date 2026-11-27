@@ -1,6 +1,6 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
-import { ChevronDown, MoreHorizontal, MessageSquarePlus, Blocks, Plus } from 'lucide-react'
+import { ChevronDown, MoreHorizontal, Blocks, Plus } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type FC, type DragEvent as ReactDragEvent } from 'react'
 import { NS } from '../locales.ts'
 import {
@@ -12,56 +12,11 @@ import {
   SIDEBAR_LAYOUT_KEY,
   type SidebarLayout,
 } from './layout.ts'
+import { NewSessionButton } from './NewSessionButton.tsx'
+import { getSessionActionDeclared, subscribeSessionActionDeclared } from './state.ts'
 
 const IconBrowse = ((primitives as Record<string, unknown>).IconPluginPinwheelOutlineRegular as FC<{ size?: number }>) ?? Blocks
 const IconCreate = ((primitives as Record<string, unknown>).IconPlusOutlineRegular as FC<{ size?: number }>) ?? Plus
-const IconNewChat =
-  ((primitives as Record<string, unknown>).IconNewChatOutlineMedium as FC<{ size?: number }>) ??
-  ((primitives as Record<string, unknown>).IconNewChatOutlineRegular as FC<{ size?: number }>) ??
-  MessageSquarePlus
-
-const Tooltip = (primitives as Record<string, unknown>).Tooltip as
-  | FC<{
-      label: string
-      shortcutKeys?: string[]
-      side?: 'right' | 'top' | 'bottom' | 'left'
-      delayMs?: number
-      disabled?: boolean
-      children: React.ReactElement
-    }>
-  | undefined
-
-const ShortcutKeys = (primitives as Record<string, unknown>).ShortcutKeys as
-  | FC<{
-      keys: string[]
-      variant?: 'plain' | 'solid'
-    }>
-  | undefined
-
-function getNewSessionShortcut(): { aria?: string; keys?: string[] } {
-  if (typeof document === 'undefined') return {}
-  const btn = document.querySelector('button[class*="newSession"]')
-  const aria = btn?.getAttribute('aria-keyshortcuts') || undefined
-  if (!aria) {
-    const isMac =
-      typeof navigator !== 'undefined' &&
-      /Mac|iPhone|iPod|iPad/i.test(navigator.platform || navigator.userAgent)
-    return isMac
-      ? { aria: '⌥⌘N', keys: ['⌥', '⌘', 'N'] }
-      : { aria: 'Ctrl+Alt+N', keys: ['Ctrl', 'Alt', 'N'] }
-  }
-  const keys = aria
-    .split('+')
-    .map(k => {
-      const lower = k.trim().toLowerCase()
-      if (lower === 'control') return 'Ctrl'
-      if (lower === 'alt') return 'Alt'
-      if (lower === 'shift') return 'Shift'
-      if (lower === 'meta' || lower === 'command') return '⌘'
-      return k.trim()
-    })
-  return { aria, keys }
-}
 
 function resolveSlotLabel(label: unknown): string | undefined {
   if (typeof label === 'function') {
@@ -287,29 +242,14 @@ export const SidebarNav: FC<SidebarNavProps> = ({ ctx, onLayoutChange, initialLa
   // 4. 更多手风琴状态
   const [moreOpen, setMoreOpen] = useState(false)
 
-  // 5. 新建会话 Pending 锁
-  const [startingSession, setStartingSession] = useState(false)
-
-  const handleStartSession = useCallback(async () => {
-    if (startingSession) return
-    setStartingSession(true)
-    try {
-      const uiWorkspace = (ctx.get?.('uiWorkspace') ?? (ctx as unknown as { uiWorkspace?: unknown })?.uiWorkspace) as {
-        startSession?: () => Promise<void> | void
-      }
-      if (typeof uiWorkspace?.startSession === 'function') {
-        await Promise.resolve(uiWorkspace.startSession())
-      } else {
-        // 回退触发原生隐藏按钮
-        const nativeNewSession = document.querySelector('button[class*="newSession"]') as HTMLButtonElement | null
-        nativeNewSession?.click()
-      }
-    } catch (err) {
-      console.warn('startSession failed:', err)
-    } finally {
-      setStartingSession(false)
-    }
-  }, [ctx, startingSession])
+  // 若宿主声明了 sidebar.session.action HOC，新会话行由 HOC 原位接管，此处不再重复渲染
+  const [sessionActionTakenOver, setSessionActionTakenOver] = useState(() => getSessionActionDeclared())
+  useEffect(() => {
+    setSessionActionTakenOver(getSessionActionDeclared())
+    return subscribeSessionActionDeclared(() => {
+      setSessionActionTakenOver(getSessionActionDeclared())
+    })
+  }, [])
 
   const handleSelectPanel = useCallback(
     (id: string) => {
@@ -363,8 +303,9 @@ export const SidebarNav: FC<SidebarNavProps> = ({ ctx, onLayoutChange, initialLa
     } catch {
       // 容错
     }
-    handleStartSession()
-  }, [ctx, handleStartSession, t])
+    const nativeNewSession = document.querySelector('button[class*="newSession"]') as HTMLButtonElement | null
+    nativeNewSession?.click()
+  }, [ctx, t])
 
   // 6. 拖拽交互状态
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -579,75 +520,37 @@ export const SidebarNav: FC<SidebarNavProps> = ({ ctx, onLayoutChange, initialLa
     [layout.more, panelMap],
   )
 
-  const newSessionShortcut = useMemo(() => getNewSessionShortcut(), [])
-
-  const newSessionButton = (
-    <button
-      type="button"
-      className="dcu-sb-row dcu-sb-new-session-row"
-      aria-label={t('sidebar.newSession', '新会话')}
-      aria-keyshortcuts={newSessionShortcut.aria}
-      aria-disabled={startingSession}
-      onClick={handleStartSession}
-      onKeyDown={e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          handleStartSession()
-        }
-      }}
-    >
-      <span className="dcu-sb-glyph" aria-hidden="true">
-        <IconNewChat size={16} />
-      </span>
-      <span className="dcu-sb-title">{t('sidebar.newSession', '新会话')}</span>
-      {ShortcutKeys && newSessionShortcut.keys && newSessionShortcut.keys.length > 0 && (
-        <span className="dcu-sb-shortcut" aria-hidden="true">
-          <ShortcutKeys keys={newSessionShortcut.keys} />
-        </span>
-      )}
-    </button>
-  )
-
   return (
     <nav className="dcu-sb-root" data-dcu-sb-root="true">
-      {/* 新会话普通行（支持作为置顶放置落点） */}
-      <div
-        className="dcu-sb-section dcu-sb-new-session-section"
-        onDragOver={e => {
-          const currentDragged = isDraggingRef.current ?? draggingId
-          if (!currentDragged) return
-          e.preventDefault()
-          e.stopPropagation()
-          if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
-          const firstPanel = layoutRef.current.pinned[0]
-          updateDragOver({ zone: 'pinned', target: firstPanel ?? '__end__' })
-        }}
-        onDrop={e => {
-          e.preventDefault()
-          e.stopPropagation()
-          const id =
-            e.dataTransfer?.getData('application/x-dsh-panel-id') ||
-            e.dataTransfer?.getData('text/plain') ||
-            isDraggingRef.current ||
-            draggingId
-          const firstPanel = layoutRef.current.pinned[0]
-          commitDrop(id, 'pinned', firstPanel ?? '__end__')
-          handleDragEnd()
-        }}
-      >
-        {Tooltip ? (
-          <Tooltip
-            label={t('sidebar.newSession', '新会话')}
-            shortcutKeys={newSessionShortcut.keys}
-            delayMs={500}
-            side="right"
-          >
-            {newSessionButton}
-          </Tooltip>
-        ) : (
-          newSessionButton
-        )}
-      </div>
+      {/* 新会话普通行（仅在旧宿主未声明 sidebar.session.action 时作为降级渲染，并支持置顶放置落点） */}
+      {!sessionActionTakenOver && (
+        <div
+          className="dcu-sb-section dcu-sb-new-session-section"
+          onDragOver={e => {
+            const currentDragged = isDraggingRef.current ?? draggingId
+            if (!currentDragged) return
+            e.preventDefault()
+            e.stopPropagation()
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+            const firstPanel = layoutRef.current.pinned[0]
+            updateDragOver({ zone: 'pinned', target: firstPanel ?? '__end__' })
+          }}
+          onDrop={e => {
+            e.preventDefault()
+            e.stopPropagation()
+            const id =
+              e.dataTransfer?.getData('application/x-dsh-panel-id') ||
+              e.dataTransfer?.getData('text/plain') ||
+              isDraggingRef.current ||
+              draggingId
+            const firstPanel = layoutRef.current.pinned[0]
+            commitDrop(id, 'pinned', firstPanel ?? '__end__')
+            handleDragEnd()
+          }}
+        >
+          <NewSessionButton ctx={ctx} label={t('sidebar.newSession', '新会话')} />
+        </div>
+      )}
 
       {/* 常驻入口区 */}
       <div

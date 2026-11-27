@@ -1,14 +1,62 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
-import React from 'react'
+import React, { useEffect, useState, type FC, type ReactNode } from 'react'
 import { render, unmountComponentAtNode } from 'react-dom'
 import { CODEX_UI_API_ENDPOINTS } from '../../business-api.ts'
+import { NS } from '../locales.ts'
+import { extractAriaKeyshortcuts, NewSessionButton } from './NewSessionButton.tsx'
 import { SidebarNav } from './SidebarNav.tsx'
+import {
+  getSessionActionDeclared,
+  getSidebarEnabled,
+  setSessionActionDeclared,
+  setSidebarEnabled,
+  subscribeSidebarEnabled,
+} from './state.ts'
 import { injectSidebarStyles, SIDEBAR_ACTIVE_ATTR } from './styles.ts'
 
 export * from './layout.ts'
 export * from './SidebarNav.tsx'
 
 const CONTAINER_CLASS = 'dcu-sidebar-nav-root'
+
+function resolveNewSessionLabel(ctx: ClientContext, t?: (key: string) => string): string {
+  try {
+    const direct = t?.('sidebar.newSession')
+    if (direct && direct !== 'sidebar.newSession') return direct
+    const bound = ctx.locale?.bind?.(NS)?.('sidebar.newSession' as never)
+    if (bound && bound !== 'sidebar.newSession') return bound
+  } catch {
+    // 回退中文默认
+  }
+  return '新会话'
+}
+
+function createSessionActionLayer(ctx: ClientContext): FC<{ wide?: boolean; children?: ReactNode; t?: (k: string) => string }> {
+  const SessionActionLayer: FC<{ wide?: boolean; children?: ReactNode; t?: (k: string) => string }> = ({
+    wide = true,
+    children,
+    t,
+  }) => {
+    const [enabled, setEnabled] = useState(() => getSidebarEnabled())
+    useEffect(() => {
+      setEnabled(getSidebarEnabled())
+      return subscribeSidebarEnabled(() => {
+        setEnabled(getSidebarEnabled())
+      })
+    }, [])
+
+    if (!enabled || !wide) {
+      return React.createElement(React.Fragment, null, children)
+    }
+
+    return React.createElement(NewSessionButton, {
+      ctx,
+      label: resolveNewSessionLabel(ctx, t),
+      ariaHint: extractAriaKeyshortcuts(children),
+    })
+  }
+  return SessionActionLayer
+}
 
 /**
  * 校验侧栏子插件是否在 Host 侧启用。
@@ -34,8 +82,9 @@ export async function checkSidebarEnabled(): Promise<boolean> {
 /**
  * 挂载并观察侧栏导航增强：
  * - 只有在子插件探活成功时激活；
- * - 在原生 newSession 前挂载唯一的 React 独立导航容器；
- * - 靶向隐藏原生 newSession 与 panelList，绝不删除或克隆宿主 DOM 节点；
+ * - 若宿主声明了 sidebar.session.action HOC，则原位接管新会话按钮为 Codex 扁平风格，保留同行扩展入口，并在其后挂载导航容器；
+ * - 旧宿主未声明 sidebar.session.action 时，在原生 newSession 前挂载导航容器并同步隐藏原生入口；
+ * - 仅靶向隐藏原生 panelList（及无 HOC 接管时的原生 newSession），绝不删除或克隆宿主 DOM 节点；
  * - 观察器仅监听挂载容器的存续，彻底切断 DOM 自触发循环；
  * - 卸载时彻底 unmount React Root、移除样式与标记，原生侧栏无损秒级复原。
  */
@@ -47,6 +96,10 @@ export function observeSidebarNav(ctx: ClientContext): () => void {
   let currentSidebarRoot: HTMLElement | null = null
   let rafPending = false
   let isEnabled = false
+  let unsubSessionAction: (() => void) | undefined
+
+  setSidebarEnabled(false)
+  setSessionActionDeclared(false)
 
   const teardownMount = (): void => {
     if (currentContainer) {
@@ -64,34 +117,66 @@ export function observeSidebarNav(ctx: ClientContext): () => void {
     }
   }
 
+  const resolveMountAnchor = (
+    sidebarRoot: HTMLElement,
+    target: HTMLElement,
+  ): HTMLElement | null => {
+    let anchor: HTMLElement = target
+    while (anchor.parentElement && anchor.parentElement !== sidebarRoot) {
+      anchor = anchor.parentElement
+    }
+    return anchor.parentElement === sidebarRoot ? anchor : null
+  }
+
   const tryMount = (): void => {
     if (disposed || !isEnabled || typeof document === 'undefined') return
 
-    // 已经挂载且仍在 DOM 树中，快速跳过，不触发任何重绘
-    if (currentContainer && document.contains(currentContainer)) return
+    // 已经挂载且仍在 DOM 树中，必要时仅校验与 newSessionRow 的相对位置，不触发任何重绘
+    if (currentContainer && document.contains(currentContainer)) {
+      if (currentSidebarRoot && currentContainer.parentElement === currentSidebarRoot) {
+        const newSessionEl = currentSidebarRoot.querySelector(
+          '[class*="newSessionRow"], button[class*="newSession"]',
+        ) as HTMLElement | null
+        if (newSessionEl) {
+          const anchor = resolveMountAnchor(currentSidebarRoot, newSessionEl)
+          if (anchor) {
+            const wantAfter = getSessionActionDeclared()
+            if (wantAfter && anchor.nextElementSibling !== currentContainer) {
+              currentSidebarRoot.insertBefore(currentContainer, anchor.nextSibling)
+            } else if (!wantAfter && currentContainer.nextElementSibling !== anchor) {
+              currentSidebarRoot.insertBefore(currentContainer, anchor)
+            }
+          }
+        }
+      }
+      return
+    }
 
     // 如果之前挂载过但容器脱离了 DOM，必须先彻底释放旧 React 树与订阅，防止泄漏
     if (currentContainer) {
       teardownMount()
     }
 
-    // 寻找宿主原生 newSession 按钮
-    const nativeNewSession = document.querySelector('button[class*="newSession"]') as HTMLButtonElement | null
-    if (!nativeNewSession) {
+    // 寻找宿主原生 newSessionRow / newSession 按钮，或回退到 panelList（兼容无 session/create 权限场景）
+    const nativeSessionEl = document.querySelector(
+      '[class*="newSessionRow"], button[class*="newSession"]',
+    ) as HTMLElement | null
+    const nativePanelList = document.querySelector('nav[class*="panelList"]') as HTMLElement | null
+    const anchorTarget = nativeSessionEl ?? nativePanelList
+    if (!anchorTarget) {
       // 宿主侧栏未加载，等待下一次 DOM 变更
       return
     }
 
-    const sidebarRoot = (nativeNewSession.closest('[class*="root"]') ||
-      nativeNewSession.parentElement) as HTMLElement | null
+    const sidebarRoot = (anchorTarget.closest('[class*="root"]') ||
+      anchorTarget.parentElement) as HTMLElement | null
     if (!sidebarRoot) return
 
-    // 向上寻找位于 sidebarRoot 下的直接子元素作为挂载插入锚点（兼容 0.2.2-rc.3 newSessionRow 等外层包装）
-    let mountAnchor: HTMLElement = nativeNewSession
-    while (mountAnchor.parentElement && mountAnchor.parentElement !== sidebarRoot) {
-      mountAnchor = mountAnchor.parentElement
-    }
-    if (mountAnchor.parentElement !== sidebarRoot) return
+    const mountAnchor = resolveMountAnchor(sidebarRoot, anchorTarget)
+    if (!mountAnchor) return
+
+    const insertAfterAnchor = Boolean(nativeSessionEl && getSessionActionDeclared())
+    const insertBeforeNode = insertAfterAnchor ? mountAnchor.nextSibling : mountAnchor
 
     // 注入样式
     if (!cleanupStyles) {
@@ -103,7 +188,7 @@ export function observeSidebarNav(ctx: ClientContext): () => void {
     container.setAttribute('data-dcu-managed', 'true')
 
     try {
-      sidebarRoot.insertBefore(container, mountAnchor)
+      sidebarRoot.insertBefore(container, insertBeforeNode)
       currentContainer = container
 
       // 渲染独立 React 树 (复用宿主 react-dom 静态提供的 render)
@@ -143,6 +228,7 @@ export function observeSidebarNav(ctx: ClientContext): () => void {
     if (disposed) return
     if (nextEnabled === isEnabled) return
     isEnabled = nextEnabled
+    setSidebarEnabled(nextEnabled)
     if (isEnabled) {
       tryMount()
     } else {
@@ -151,6 +237,32 @@ export function observeSidebarNav(ctx: ClientContext): () => void {
         cleanupStyles()
         cleanupStyles = null
       }
+    }
+  }
+
+  // 注册 sidebar.session.action HOC：在现代 DSH 宿主上原位替换新会话按钮，保留同行第三方扩展（如会话导入）
+  if (typeof ctx.slots?.inject === 'function' && typeof ctx.slots?.register === 'function') {
+    const SessionActionLayer = createSessionActionLayer(ctx)
+    try {
+      const result = ctx.slots.inject('sidebar.session.action', () => {
+        const unregister = ctx.slots.register(
+          {
+            name: 'sidebar.session.action',
+            id: 'codex-ui',
+            order: Number.MAX_SAFE_INTEGER,
+            locale: NS,
+          } as never,
+          SessionActionLayer as never,
+        )
+        setSessionActionDeclared(true)
+        scheduleCheck()
+        return unregister
+      })
+      if (typeof result === 'function') {
+        unsubSessionAction = result
+      }
+    } catch {
+      setSessionActionDeclared(false)
     }
   }
 
@@ -211,6 +323,10 @@ export function observeSidebarNav(ctx: ClientContext): () => void {
 
   return () => {
     disposed = true
+    unsubSessionAction?.()
+    unsubSessionAction = undefined
+    setSessionActionDeclared(false)
+    setSidebarEnabled(false)
     if (typeof window !== 'undefined') {
       window.removeEventListener('focus', onFocus)
     }

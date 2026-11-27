@@ -1,5 +1,6 @@
 import React, { act, createElement, useState, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { SlotCore } from '@deepseek-ai/dsh-client-ui-slots'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SidebarNav } from '../src/client/sidebar/SidebarNav.tsx'
 import { observeSidebarNav, checkSidebarEnabled } from '../src/client/sidebar/index.ts'
@@ -800,6 +801,134 @@ describe('observeSidebarNav 挂载与回退生命周期', () => {
     expect(document.querySelector('.dcu-sidebar-nav-root')).toBeNull()
     expect(sidebarRoot.hasAttribute(SIDEBAR_ACTIVE_ATTR)).toBe(false)
 
+    dispose()
+  })
+
+  it('方案 A（Issue #116）：声明 sidebar.session.action 时原位接管新会话按钮、保留同行会话导入按钮并统一样式', async () => {
+    sidebarRoot.innerHTML = ''
+    const newSessionRow = document.createElement('div')
+    newSessionRow.className = 'host_newSessionRow'
+    const scrollRegion = document.createElement('div')
+    scrollRegion.className = 'host_scrollRegion'
+    scrollRegion.appendChild(nativePanelList)
+    sidebarRoot.append(newSessionRow, scrollRegion)
+
+    let enabled = true
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => ({
+      ok: true,
+      json: async () => ({ enabled }),
+    } as Response))
+
+    const startSession = vi.fn()
+    const core = new SlotCore()
+    core.register(
+      {
+        name: 'root',
+        children: {
+          'sidebar.session.action': { kind: 'hoc', scope: 'root' },
+        },
+      } as never,
+      () => null,
+    )
+
+    const ctx = {
+      slots: {
+        entriesOfSlot: core.entriesOfSlot.bind(core),
+        subscribe: core.subscribe.bind(core),
+        inject: (key: string, factory: () => unknown) => {
+          if (!core.specDynamic(key)) return vi.fn()
+          return factory()
+        },
+        register: core.register.bind(core),
+      },
+      locale: { bind: () => (k: string) => (k === 'sidebar.newSession' ? '新会话' : k), subscribe: () => vi.fn() },
+      uiWorkspace: { startSession },
+      get: (name: string) => (name === 'uiWorkspace' ? { startSession } : undefined),
+      effect: vi.fn(),
+    }
+
+    // 模拟官方「DeepSeek会话导入」插件（order: 0）在真实 SlotCore 上注册外层 HOC
+    const ImportHoc: React.FC<{ wide: boolean; children: ReactNode }> = ({ children }) =>
+      createElement(
+        React.Fragment,
+        null,
+        children,
+        createElement('button', { type: 'button', className: 'official_importBtn', 'aria-label': '导入 DeepSeek 会话' }, '↑'),
+      )
+    core.register({ name: 'sidebar.session.action', id: 'official-chat-import', order: 0 } as never, ImportHoc as never)
+
+    const dispose = observeSidebarNav(ctx as never)
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 40))
+    })
+
+    // 1. 导航容器挂载在 newSessionRow 之后，且不再重复绘制 .dcu-sb-new-session-row
+    const managedContainer = document.querySelector('.dcu-sidebar-nav-root')
+    expect(managedContainer).not.toBeNull()
+    expect(managedContainer?.previousElementSibling).toBe(newSessionRow)
+    expect(managedContainer?.nextElementSibling).toBe(scrollRegion)
+    expect(managedContainer?.querySelector('.dcu-sb-new-session-row')).toBeNull()
+
+    // 2. 从真实 SlotCore 读出 hocLayers 并按 ui-renderer 规则（order 升序外层包内层）组合
+    const sortedLayers = [...core.entriesOfSlot('sidebar.session.action')].sort(
+      (a, b) => (a.options.order ?? 0) - (b.options.order ?? 0),
+    )
+    expect(sortedLayers).toHaveLength(2)
+    expect(sortedLayers[1]?.options.id).toBe('codex-ui')
+    const renderRow = (wide: boolean) =>
+      sortedLayers.reduceRight<ReactNode>(
+        (inner, layer) => createElement(layer.component as React.FC<{ wide: boolean; children: ReactNode }>, { wide, children: inner }),
+        createElement('button', { type: 'button', className: 'host_newSession', 'aria-keyshortcuts': 'Control+Alt+N' }, '原生新会话'),
+      )
+
+    const rowRoot = createRoot(newSessionRow)
+    await act(async () => {
+      rowRoot.render(renderRow(true))
+    })
+
+    // 展开态下：原生按钮被替换为 Codex 风格按钮，导入按钮并排保留在同一行
+    expect(newSessionRow.querySelector('button.host_newSession')).toBeNull()
+    const codexNewBtn = newSessionRow.querySelector('button.dcu-sb-new-session-row') as HTMLButtonElement | null
+    const importBtn = newSessionRow.querySelector('button.official_importBtn') as HTMLButtonElement | null
+    expect(codexNewBtn).not.toBeNull()
+    expect(codexNewBtn?.getAttribute('aria-label')).toBe('新会话')
+    expect(codexNewBtn?.getAttribute('aria-keyshortcuts')).toBe('Control+Alt+N')
+    expect(importBtn).not.toBeNull()
+
+    await act(async () => {
+      codexNewBtn?.click()
+    })
+    expect(startSession).toHaveBeenCalledTimes(1)
+
+    // 折叠态（wide = false）下：原样透传原生 newSession 按钮与导入按钮
+    await act(async () => {
+      rowRoot.render(renderRow(false))
+    })
+    expect(newSessionRow.querySelector('button.host_newSession')).not.toBeNull()
+    expect(newSessionRow.querySelector('button.dcu-sb-new-session-row')).toBeNull()
+    expect(newSessionRow.querySelector('button.official_importBtn')).not.toBeNull()
+
+    // 恢复展开态后切为停用子插件：HOC 立即复原原生按钮
+    await act(async () => {
+      rowRoot.render(renderRow(true))
+    })
+    expect(newSessionRow.querySelector('button.dcu-sb-new-session-row')).not.toBeNull()
+
+    enabled = false
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'))
+      await new Promise(r => setTimeout(r, 40))
+    })
+    expect(newSessionRow.querySelector('button.host_newSession')).not.toBeNull()
+    expect(newSessionRow.querySelector('button.dcu-sb-new-session-row')).toBeNull()
+
+    // 验证 CSS：仅在未接管时隐藏 newSessionRow，接管时同行扩展按钮扁平化对齐
+    expect(SIDEBAR_CSS).toContain('[class*="newSessionRow"]:not(:has(.dcu-sb-new-session-row))')
+    expect(SIDEBAR_CSS).toContain('[class*="newSessionRow"]:has(.dcu-sb-new-session-row) button:not(.dcu-sb-new-session-row):not([class*="newSession"])')
+
+    await act(async () => {
+      rowRoot.unmount()
+    })
     dispose()
   })
 })

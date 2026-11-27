@@ -4,7 +4,7 @@
  * - 使用 grid-template-rows 实现原位折叠动画；
  * - 原生减弱动画感知支持；
  * - 拖拽放置指示线样式；
- * - 宿主原生 newSession 与 panelList 靶向隐藏。
+ * - 宿主原生 panelList 靶向隐藏；当存在 sidebar.session.action HOC 接管时对齐同行样式，否则兼容隐藏原生 newSession / newSessionRow。
  */
 
 export const SIDEBAR_STYLES_ID = 'michengai-codex-ui-sidebar-styles'
@@ -12,11 +12,60 @@ export const SIDEBAR_STYLES_ID = 'michengai-codex-ui-sidebar-styles'
 export const SIDEBAR_ACTIVE_ATTR = 'data-dcu-sidebar-active'
 
 export const SIDEBAR_CSS = `
-/* 仅在展开态隐藏宿主原生 newSession/newSessionRow 和 panelList；折叠收缩态 100% 对齐宿主官方 56px 原生导轨 */
-[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) [class*="newSessionRow"],
+/* 仅在展开态隐藏宿主原生 panelList；当新会话未由 sidebar.session.action HOC 原位接管时，同步隐藏原生 newSession / newSessionRow；折叠收缩态 100% 对齐宿主官方 56px 原生导轨 */
+[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) [class*="newSessionRow"]:not(:has(.dcu-sb-new-session-row)),
 [${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) button[class*="newSession"],
 [${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) nav[class*="panelList"] {
   display: none !important;
+}
+
+/* 方案 A：HOC 原位接管 newSessionRow 时，对齐 Codex 侧栏行距与扁平胶囊外观 */
+[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) [class*="newSessionRow"]:has(.dcu-sb-new-session-row) {
+  margin-left: 2px;
+  margin-right: 2px;
+  margin-bottom: 2px;
+  gap: 4px;
+}
+
+[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) [class*="newSessionRow"] .dcu-sb-new-session-row {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  margin: 1px 0;
+}
+
+/* 统一同行扩展按钮（如会话导入）为 36x36 Codex 扁平悬停胶囊风格，消除白框割裂感 */
+[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) [class*="newSessionRow"]:has(.dcu-sb-new-session-row) button:not(.dcu-sb-new-session-row):not([class*="newSession"]),
+[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) [class*="newSessionRow"]:has(.dcu-sb-new-session-row) [role="button"]:not(.dcu-sb-new-session-row):not([class*="newSession"]) {
+  box-sizing: border-box;
+  height: 36px;
+  min-height: 36px;
+  max-height: 36px;
+  min-width: 36px;
+  padding: 0 9px;
+  margin: 1px 0;
+  border: none;
+  border-radius: var(--dsw-radius-md, 8px);
+  background: transparent;
+  box-shadow: none;
+  color: var(--dsw-alias-label-secondary, var(--dsw-alias-label-primary, inherit));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) [class*="newSessionRow"]:has(.dcu-sb-new-session-row) button:not(.dcu-sb-new-session-row):not([class*="newSession"]):hover,
+[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) [class*="newSessionRow"]:has(.dcu-sb-new-session-row) [role="button"]:not(.dcu-sb-new-session-row):not([class*="newSession"]):hover {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.08));
+  color: var(--dsw-alias-label-primary, inherit);
+}
+
+[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) [class*="newSessionRow"]:has(.dcu-sb-new-session-row) button:not(.dcu-sb-new-session-row):not([class*="newSession"]):focus-visible,
+[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) [class*="newSessionRow"]:has(.dcu-sb-new-session-row) [role="button"]:not(.dcu-sb-new-session-row):not([class*="newSession"]):focus-visible {
+  outline: 1.5px solid var(--dsw-alias-brand-primary, #4176e6);
+  outline-offset: -1px;
 }
 
 /* 折叠收缩态下隐藏自研导航，完全回退展示宿主原生折叠导轨（自带全部图标与完整生态） */
