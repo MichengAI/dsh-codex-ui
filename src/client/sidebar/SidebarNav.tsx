@@ -15,7 +15,7 @@ import {
 import { NewSessionButton } from './NewSessionButton.tsx'
 import {
   getSessionActionDeclared,
-  setNewSessionDropHandler,
+  registerNewSessionDropHandler,
   subscribeSessionActionDeclared,
 } from './state.ts'
 
@@ -505,7 +505,7 @@ export const SidebarNav: FC<SidebarNavProps> = ({ ctx, onLayoutChange, initialLa
 
   // 让原位接管在 newSessionRow 内的 NewSessionButton 与降级行共享「拖放至常驻第 0 位」能力
   useEffect(() => {
-    setNewSessionDropHandler({
+    return registerNewSessionDropHandler({
       isDragging: () => Boolean(isDraggingRef.current ?? draggingId),
       onDragOver: () => {
         const firstPanel = layoutRef.current.pinned[0]
@@ -518,9 +518,6 @@ export const SidebarNav: FC<SidebarNavProps> = ({ ctx, onLayoutChange, initialLa
         handleDragEnd()
       },
     })
-    return () => {
-      setNewSessionDropHandler(null)
-    }
   }, [commitDrop, draggingId, handleDragEnd, updateDragOver])
 
   // 7. 渲染数据划分

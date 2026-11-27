@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SidebarNav } from '../src/client/sidebar/SidebarNav.tsx'
 import { observeSidebarNav, checkSidebarEnabled } from '../src/client/sidebar/index.ts'
 import { SIDEBAR_ACTIVE_ATTR, SIDEBAR_CSS, SIDEBAR_STYLES_ID } from '../src/client/sidebar/styles.ts'
-import { getSessionActionDeclared } from '../src/client/sidebar/state.ts'
+import { getNewSessionDropHandler, getSessionActionDeclared, registerNewSessionDropHandler } from '../src/client/sidebar/state.ts'
 import { SIDEBAR_LAYOUT_KEY, type SidebarLayout } from '../src/client/sidebar/layout.ts'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
@@ -935,6 +935,25 @@ describe('observeSidebarNav 挂载与回退生命周期', () => {
       el => el.getAttribute('data-dcu-panel-id'),
     )
     expect(pinnedBtns).toEqual(['plugins', 'im'])
+
+    // 非侧栏面板拖拽时，外部 drop 事件不得被 NewSessionButton 拦截
+    const externalDrop = new Event('drop', { bubbles: true, cancelable: true })
+    Object.defineProperty(externalDrop, 'dataTransfer', {
+      value: { getData: () => 'file.txt' },
+    })
+    codexNewBtn?.dispatchEvent(externalDrop)
+    expect(externalDrop.defaultPrevented).toBe(false)
+
+    // registerNewSessionDropHandler 卸载守卫：旧挂载释放不得误清较新挂载的处理器
+    const latestHandler = getNewSessionDropHandler()
+    const staleHandler = { isDragging: () => false, onDragOver: vi.fn(), onDrop: vi.fn() }
+    const freshHandler = { isDragging: () => false, onDragOver: vi.fn(), onDrop: vi.fn() }
+    const cleanupStale = registerNewSessionDropHandler(staleHandler)
+    const cleanupFresh = registerNewSessionDropHandler(freshHandler)
+    cleanupStale()
+    expect(getNewSessionDropHandler()).toBe(freshHandler)
+    cleanupFresh()
+    if (latestHandler) registerNewSessionDropHandler(latestHandler)
 
     // 折叠态（wide = false）及缺省 wide（undefined）下：原样透传原生 newSession 按钮与导入按钮
     await act(async () => {

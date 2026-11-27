@@ -191,7 +191,7 @@ export const NewSessionButton: FC<NewSessionButtonProps> = ({
       }}
       onDrop={e => {
         const handler = getNewSessionDropHandler()
-        if (!handler) return
+        if (!handler?.isDragging()) return
         e.preventDefault()
         e.stopPropagation()
         const id =

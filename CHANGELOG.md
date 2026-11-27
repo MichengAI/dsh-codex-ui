@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.4.8] - 2026-11-28
+
+- **Preserve Third-Party New-Session Action Buttons in Sidebar (Issue #116)**:
+  - Keep third-party `sidebar.session.action` buttons (such as the official "DeepSeek Chat Import" button) visible side-by-side in the new-session row while preserving the flat borderless Codex new-session button style;
+  - Preserve full sidebar shortcut keys, tooltips, and panel drag-to-pin interactions across both hosted and legacy hosts, while letting external drag-and-drop events pass through untouched.
+
 ## [2.4.7] - 2026-11-25
 
 - **Custom Input Width Restored After Restart and Maximize (Issue #115)**:

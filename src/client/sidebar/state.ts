@@ -48,8 +48,13 @@ export interface NewSessionDropHandler {
 
 let newSessionDropHandler: NewSessionDropHandler | null = null
 
-export function setNewSessionDropHandler(handler: NewSessionDropHandler | null): void {
+export function registerNewSessionDropHandler(handler: NewSessionDropHandler): () => void {
   newSessionDropHandler = handler
+  return () => {
+    if (newSessionDropHandler === handler) {
+      newSessionDropHandler = null
+    }
+  }
 }
 
 export function getNewSessionDropHandler(): NewSessionDropHandler | null {
