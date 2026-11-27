@@ -46,6 +46,7 @@ export const SIDEBAR_CSS = `
   height: 36px;
   min-height: 36px;
   max-height: 36px;
+  width: auto;
   min-width: 36px;
   padding: 0 9px;
   margin: 1px 0;
