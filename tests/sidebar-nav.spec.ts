@@ -4,7 +4,8 @@ import { SlotCore } from '@deepseek-ai/dsh-client-ui-slots'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SidebarNav } from '../src/client/sidebar/SidebarNav.tsx'
 import { observeSidebarNav, checkSidebarEnabled } from '../src/client/sidebar/index.ts'
-import { SIDEBAR_ACTIVE_ATTR, SIDEBAR_CSS } from '../src/client/sidebar/styles.ts'
+import { SIDEBAR_ACTIVE_ATTR, SIDEBAR_CSS, SIDEBAR_STYLES_ID } from '../src/client/sidebar/styles.ts'
+import { getSessionActionDeclared } from '../src/client/sidebar/state.ts'
 import { SIDEBAR_LAYOUT_KEY, type SidebarLayout } from '../src/client/sidebar/layout.ts'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
@@ -869,15 +870,16 @@ describe('observeSidebarNav 挂载与回退生命周期', () => {
     expect(managedContainer?.nextElementSibling).toBe(scrollRegion)
     expect(managedContainer?.querySelector('.dcu-sb-new-session-row')).toBeNull()
 
-    // 2. 从真实 SlotCore 读出 hocLayers 并按 ui-renderer 规则（order 升序外层包内层）组合
+    // 2. 从真实 SlotCore 读出 hocLayers 并按 ui-renderer 规则（order 升序外层包内层，复刻 composeHocLayers）组合
     const sortedLayers = [...core.entriesOfSlot('sidebar.session.action')].sort(
       (a, b) => (a.options.order ?? 0) - (b.options.order ?? 0),
     )
     expect(sortedLayers).toHaveLength(2)
     expect(sortedLayers[1]?.options.id).toBe('codex-ui')
-    const renderRow = (wide: boolean) =>
+    const renderRow = (wide?: boolean) =>
       sortedLayers.reduceRight<ReactNode>(
-        (inner, layer) => createElement(layer.component as React.FC<{ wide: boolean; children: ReactNode }>, { wide, children: inner }),
+        (inner, layer) =>
+          createElement(layer.component as React.FC<{ wide?: boolean; children: ReactNode }>, { wide, children: inner }),
         createElement('button', { type: 'button', className: 'host_newSession', 'aria-keyshortcuts': 'Control+Alt+N' }, '原生新会话'),
       )
 
@@ -900,7 +902,7 @@ describe('observeSidebarNav 挂载与回退生命周期', () => {
     })
     expect(startSession).toHaveBeenCalledTimes(1)
 
-    // 折叠态（wide = false）下：原样透传原生 newSession 按钮与导入按钮
+    // 折叠态（wide = false）及缺省 wide（undefined）下：原样透传原生 newSession 按钮与导入按钮
     await act(async () => {
       rowRoot.render(renderRow(false))
     })
@@ -908,11 +910,18 @@ describe('observeSidebarNav 挂载与回退生命周期', () => {
     expect(newSessionRow.querySelector('button.dcu-sb-new-session-row')).toBeNull()
     expect(newSessionRow.querySelector('button.official_importBtn')).not.toBeNull()
 
-    // 恢复展开态后切为停用子插件：HOC 立即复原原生按钮
+    await act(async () => {
+      rowRoot.render(renderRow(undefined))
+    })
+    expect(newSessionRow.querySelector('button.host_newSession')).not.toBeNull()
+    expect(newSessionRow.querySelector('button.dcu-sb-new-session-row')).toBeNull()
+
+    // 恢复展开态后切为停用子插件：HOC 立即复原原生按钮并移除样式表
     await act(async () => {
       rowRoot.render(renderRow(true))
     })
     expect(newSessionRow.querySelector('button.dcu-sb-new-session-row')).not.toBeNull()
+    expect(document.getElementById(SIDEBAR_STYLES_ID)).not.toBeNull()
 
     enabled = false
     await act(async () => {
@@ -921,6 +930,7 @@ describe('observeSidebarNav 挂载与回退生命周期', () => {
     })
     expect(newSessionRow.querySelector('button.host_newSession')).not.toBeNull()
     expect(newSessionRow.querySelector('button.dcu-sb-new-session-row')).toBeNull()
+    expect(document.getElementById(SIDEBAR_STYLES_ID)).toBeNull()
 
     // 验证 CSS：仅在未接管时隐藏 newSessionRow，接管时同行扩展按钮扁平化对齐
     expect(SIDEBAR_CSS).toContain('[class*="newSessionRow"]:not(:has(.dcu-sb-new-session-row))')
@@ -929,6 +939,128 @@ describe('observeSidebarNav 挂载与回退生命周期', () => {
     await act(async () => {
       rowRoot.unmount()
     })
+    dispose()
+  })
+
+  it('P1/P2/P3 健壮性：无 startSession 时透传原生按钮、提前注样式、支持声明撤回复位与 shortcuts.catalog', async () => {
+    // 宿主侧栏尚未渲染到 DOM，但探活已开启：样式应随 sync() 提前注入
+    sidebarRoot.innerHTML = ''
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ enabled: true }),
+    } as Response)
+
+    let catalogRows = [{ id: 'session.new', aria: 'Meta+N', keys: ['⌘', 'N'] }]
+    let catalogListener: (() => void) | undefined
+    let innerCleanup: (() => void) | undefined
+    let registeredLayer: React.FC<{ wide?: boolean; children: ReactNode }> | undefined
+
+    const ctx = {
+      slots: {
+        entriesOfSlot: () => [],
+        subscribe: () => vi.fn(),
+        inject: (key: string, factory: () => unknown) => {
+          if (key === 'sidebar.session.action') {
+            innerCleanup = factory() as (() => void) | undefined
+          }
+          return vi.fn()
+        },
+        register: (_opts: unknown, component: React.FC<{ wide?: boolean; children: ReactNode }>) => {
+          registeredLayer = component
+          return vi.fn()
+        },
+      },
+      locale: { bind: () => (k: string) => (k === 'sidebar.newSession' ? '新会话' : k), subscribe: () => vi.fn() },
+      get: ((name: string) => {
+        if (name === 'shortcuts') {
+          return {
+            catalog: {
+              getSnapshot: () => catalogRows,
+              subscribe: (fn: () => void) => {
+                catalogListener = fn
+                return () => {
+                  catalogListener = undefined
+                }
+              },
+            },
+          }
+        }
+        // 故意不提供 uiWorkspace.startSession
+        return undefined
+      }) as (name: string) => unknown,
+      effect: vi.fn(),
+    }
+
+    const dispose = observeSidebarNav(ctx as never)
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 40))
+    })
+
+    // P1-3：即使 DOM 尚未挂载容器，SIDEBAR_CSS 已注入
+    expect(document.getElementById(SIDEBAR_STYLES_ID)).not.toBeNull()
+    expect(getSessionActionDeclared()).toBe(true)
+
+    // P1-2：无 uiWorkspace.startSession 时 HOC 透传原生按钮而不替换为无响应按钮
+    const probeContainer = document.createElement('div')
+    document.body.appendChild(probeContainer)
+    const probeRoot = createRoot(probeContainer)
+    await act(async () => {
+      probeRoot.render(
+        createElement(registeredLayer!, {
+          wide: true,
+          children: createElement('button', { type: 'button', className: 'host_newSession' }, '原生新会话'),
+        }),
+      )
+    })
+    expect(probeContainer.querySelector('button.host_newSession')).not.toBeNull()
+    expect(probeContainer.querySelector('button.dcu-sb-new-session-row')).toBeNull()
+
+    // 补全 uiWorkspace.startSession 后，校验 shortcuts.catalog 读取与订阅更新
+    const startSession = vi.fn()
+    ctx.get = (name: string) => {
+      if (name === 'uiWorkspace') return { startSession }
+      if (name === 'shortcuts') {
+        return {
+          catalog: {
+            getSnapshot: () => catalogRows,
+            subscribe: (fn: () => void) => {
+              catalogListener = fn
+              return () => {
+                catalogListener = undefined
+              }
+            },
+          },
+        }
+      }
+      return undefined
+    }
+    await act(async () => {
+      probeRoot.render(
+        createElement(registeredLayer!, {
+          wide: true,
+          children: createElement('button', { type: 'button', className: 'host_newSession', 'aria-keyshortcuts': 'Control+Alt+N' }, '原生新会话'),
+        }),
+      )
+    })
+    expect(probeContainer.querySelector('button.dcu-sb-new-session-row')?.getAttribute('aria-keyshortcuts')).toBe('Meta+N')
+
+    // shortcuts.catalog 变更后自动刷新，catalog 清空时回退到 ariaHint
+    catalogRows = []
+    await act(async () => {
+      catalogListener?.()
+    })
+    expect(probeContainer.querySelector('button.dcu-sb-new-session-row')?.getAttribute('aria-keyshortcuts')).toBe('Control+Alt+N')
+
+    // P2-4：模拟宿主动态撤回 sidebar.session.action 声明时，内层清理函数同步复位状态
+    await act(async () => {
+      innerCleanup?.()
+    })
+    expect(getSessionActionDeclared()).toBe(false)
+
+    await act(async () => {
+      probeRoot.unmount()
+    })
+    probeContainer.remove()
     dispose()
   })
 })

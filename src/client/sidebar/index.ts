@@ -31,9 +31,20 @@ function resolveNewSessionLabel(ctx: ClientContext, t?: (key: string) => string)
   return '新会话'
 }
 
+function hasUiWorkspaceStartSession(ctx: ClientContext): boolean {
+  try {
+    const uiWorkspace = (ctx.get?.('uiWorkspace') ?? (ctx as unknown as { uiWorkspace?: unknown })?.uiWorkspace) as {
+      startSession?: unknown
+    } | undefined
+    return typeof uiWorkspace?.startSession === 'function'
+  } catch {
+    return false
+  }
+}
+
 function createSessionActionLayer(ctx: ClientContext): FC<{ wide?: boolean; children?: ReactNode; t?: (k: string) => string }> {
   const SessionActionLayer: FC<{ wide?: boolean; children?: ReactNode; t?: (k: string) => string }> = ({
-    wide = true,
+    wide = false,
     children,
     t,
   }) => {
@@ -45,7 +56,7 @@ function createSessionActionLayer(ctx: ClientContext): FC<{ wide?: boolean; chil
       })
     }, [])
 
-    if (!enabled || !wide) {
+    if (!enabled || !wide || !hasUiWorkspaceStartSession(ctx)) {
       return React.createElement(React.Fragment, null, children)
     }
 
@@ -178,11 +189,6 @@ export function observeSidebarNav(ctx: ClientContext): () => void {
     const insertAfterAnchor = Boolean(nativeSessionEl && getSessionActionDeclared())
     const insertBeforeNode = insertAfterAnchor ? mountAnchor.nextSibling : mountAnchor
 
-    // 注入样式
-    if (!cleanupStyles) {
-      cleanupStyles = injectSidebarStyles()
-    }
-
     const container = document.createElement('div')
     container.className = CONTAINER_CLASS
     container.setAttribute('data-dcu-managed', 'true')
@@ -230,6 +236,9 @@ export function observeSidebarNav(ctx: ClientContext): () => void {
     isEnabled = nextEnabled
     setSidebarEnabled(nextEnabled)
     if (isEnabled) {
+      if (!cleanupStyles) {
+        cleanupStyles = injectSidebarStyles()
+      }
       tryMount()
     } else {
       teardownMount()
@@ -256,7 +265,11 @@ export function observeSidebarNav(ctx: ClientContext): () => void {
         )
         setSessionActionDeclared(true)
         scheduleCheck()
-        return unregister
+        return () => {
+          unregister?.()
+          setSessionActionDeclared(false)
+          scheduleCheck()
+        }
       })
       if (typeof result === 'function') {
         unsubSessionAction = result
