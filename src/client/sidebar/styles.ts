@@ -12,9 +12,9 @@ export const SIDEBAR_STYLES_ID = 'michengai-codex-ui-sidebar-styles'
 export const SIDEBAR_ACTIVE_ATTR = 'data-dcu-sidebar-active'
 
 export const SIDEBAR_CSS = `
-/* 仅在展开态隐藏宿主原生 panelList；当新会话未由 sidebar.session.action HOC 原位接管时，同步隐藏原生 newSession / newSessionRow；折叠收缩态 100% 对齐宿主官方 56px 原生导轨 */
-[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) [class*="newSessionRow"]:not(:has(.dcu-sb-new-session-row)),
-[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) button[class*="newSession"],
+/* 仅在展开态隐藏宿主原生 panelList；仅当独立导航容器实际渲染了降级 .dcu-sb-new-session-row 时，才同步隐藏原生 newSession / newSessionRow（保证 HOC 接管态与透传态均可见原生行）；折叠收缩态 100% 对齐宿主官方 56px 原生导轨 */
+[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]):has(.dcu-sidebar-nav-root .dcu-sb-new-session-row) [class*="newSessionRow"],
+[${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]):has(.dcu-sidebar-nav-root .dcu-sb-new-session-row) button[class*="newSession"],
 [${SIDEBAR_ACTIVE_ATTR}]:not([class*="collapsed"]) nav[class*="panelList"] {
   display: none !important;
 }

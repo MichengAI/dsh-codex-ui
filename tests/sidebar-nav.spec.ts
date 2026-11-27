@@ -932,8 +932,9 @@ describe('observeSidebarNav 挂载与回退生命周期', () => {
     expect(newSessionRow.querySelector('button.dcu-sb-new-session-row')).toBeNull()
     expect(document.getElementById(SIDEBAR_STYLES_ID)).toBeNull()
 
-    // 验证 CSS：仅在未接管时隐藏 newSessionRow，接管时同行扩展按钮扁平化对齐
-    expect(SIDEBAR_CSS).toContain('[class*="newSessionRow"]:not(:has(.dcu-sb-new-session-row))')
+    // 验证 CSS：仅在 .dcu-sidebar-nav-root 渲染了降级行时才隐藏 newSessionRow / newSession，接管时同行扩展按钮扁平化对齐
+    expect(SIDEBAR_CSS).toContain(':has(.dcu-sidebar-nav-root .dcu-sb-new-session-row) [class*="newSessionRow"]')
+    expect(SIDEBAR_CSS).toContain(':has(.dcu-sidebar-nav-root .dcu-sb-new-session-row) button[class*="newSession"]')
     expect(SIDEBAR_CSS).toContain('[class*="newSessionRow"]:has(.dcu-sb-new-session-row) button:not(.dcu-sb-new-session-row):not([class*="newSession"])')
 
     await act(async () => {

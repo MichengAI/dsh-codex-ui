@@ -102,6 +102,20 @@ export interface NewSessionButtonProps {
   ariaHint?: string
 }
 
+/** 解析宿主 uiWorkspace.startSession；供 HOC 闸门与降级点击共用。 */
+export function resolveStartSession(ctx: ClientContext): (() => Promise<void> | void) | undefined {
+  try {
+    const uiWorkspace = (ctx.get?.('uiWorkspace') ?? (ctx as unknown as { uiWorkspace?: unknown })?.uiWorkspace) as {
+      startSession?: () => Promise<void> | void
+    } | undefined
+    return typeof uiWorkspace?.startSession === 'function'
+      ? () => uiWorkspace.startSession!()
+      : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** Codex 风格扁平「新会话」行按钮，复用于 sidebar.session.action HOC 与旧宿主降级模式。 */
 export const NewSessionButton: FC<NewSessionButtonProps> = ({ ctx, label, ariaHint }) => {
   const [startingSession, setStartingSession] = useState(false)
@@ -130,12 +144,11 @@ export const NewSessionButton: FC<NewSessionButtonProps> = ({ ctx, label, ariaHi
     if (startingSession) return
     setStartingSession(true)
     try {
-      const uiWorkspace = (ctx.get?.('uiWorkspace') ?? (ctx as unknown as { uiWorkspace?: unknown })?.uiWorkspace) as {
-        startSession?: () => Promise<void> | void
-      }
-      if (typeof uiWorkspace?.startSession === 'function') {
-        await Promise.resolve(uiWorkspace.startSession())
+      const startSession = resolveStartSession(ctx)
+      if (startSession) {
+        await Promise.resolve(startSession())
       } else {
+        // 命名约束：本组件自身 class 为 dcu-sb-new-session-row（带连字符），绝不能包含驼峰 newSession，避免自点击递归
         const nativeNewSession = document.querySelector('button[class*="newSession"]') as HTMLButtonElement | null
         nativeNewSession?.click()
       }

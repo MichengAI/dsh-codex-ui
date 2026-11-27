@@ -3,7 +3,7 @@ import React, { useEffect, useState, type FC, type ReactNode } from 'react'
 import { render, unmountComponentAtNode } from 'react-dom'
 import { CODEX_UI_API_ENDPOINTS } from '../../business-api.ts'
 import { NS } from '../locales.ts'
-import { extractAriaKeyshortcuts, NewSessionButton } from './NewSessionButton.tsx'
+import { extractAriaKeyshortcuts, NewSessionButton, resolveStartSession } from './NewSessionButton.tsx'
 import { SidebarNav } from './SidebarNav.tsx'
 import {
   getSessionActionDeclared,
@@ -31,17 +31,6 @@ function resolveNewSessionLabel(ctx: ClientContext, t?: (key: string) => string)
   return '新会话'
 }
 
-function hasUiWorkspaceStartSession(ctx: ClientContext): boolean {
-  try {
-    const uiWorkspace = (ctx.get?.('uiWorkspace') ?? (ctx as unknown as { uiWorkspace?: unknown })?.uiWorkspace) as {
-      startSession?: unknown
-    } | undefined
-    return typeof uiWorkspace?.startSession === 'function'
-  } catch {
-    return false
-  }
-}
-
 function createSessionActionLayer(ctx: ClientContext): FC<{ wide?: boolean; children?: ReactNode; t?: (k: string) => string }> {
   const SessionActionLayer: FC<{ wide?: boolean; children?: ReactNode; t?: (k: string) => string }> = ({
     wide = false,
@@ -56,7 +45,7 @@ function createSessionActionLayer(ctx: ClientContext): FC<{ wide?: boolean; chil
       })
     }, [])
 
-    if (!enabled || !wide || !hasUiWorkspaceStartSession(ctx)) {
+    if (!enabled || !wide || !resolveStartSession(ctx)) {
       return React.createElement(React.Fragment, null, children)
     }
 
