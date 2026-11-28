@@ -4,7 +4,10 @@
  * 纯函数，方便单测；不读写 localStorage。
  */
 
-/** 始终常驻的入口；Claude Style 搜索是直接操作，放在面板导航前。 */
+/**
+ * 始终常驻的入口；Claude Style 搜索是直接操作，放在面板导航前。
+ * 'dsh-claude-style.search' 源自 dsh-claude-style packages/client/src/features/search/search-trigger.ts (SEARCH_PANEL_ID)。
+ */
 export const FIXED_PANEL_IDS = ['dsh-claude-style.search', 'plugins'] as const
 
 /** 首次使用时默认常驻的入口（除固定入口外全部收入更多）。 */

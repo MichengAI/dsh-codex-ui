@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.9] - 2026-11-28
+
+- **Fix Sidebar "New Session" Button and Quick Entry Placement When Coexisting with Claude Style (Issue #117)**:
+  - Keep the host's native "New Session" button intact whenever `Claude Style` (`body[data-dsh-claude-style]`) is active so its inline action styling no longer hides or crowds out the button label, and automatically restore the flat Codex style as soon as the theme is turned off;
+  - Treat the `Claude Style` search entry (`dsh-claude-style.search`) as a fixed pinned entry ordered before "Plugins" while preserving its direct search click handler (automatically restoring it from saved "More" layouts);
+  - Known limitation: while coexisting with `Claude Style`, keeping the native "New Session" button disables dragging sidebar panels onto the "New Session" row to pin them to the top; drop panels directly onto the pinned section instead.
+
 ## [2.4.8] - 2026-11-28
 
 - **Preserve Third-Party New-Session Action Buttons in Sidebar (Issue #116)**:

@@ -18,6 +18,7 @@ export * from './layout.ts'
 export * from './SidebarNav.tsx'
 
 const CONTAINER_CLASS = 'dcu-sidebar-nav-root'
+/** 上游出处：dsh-claude-style packages/client/src/constants.ts (STYLE_STAMP_ATTR) 写入 document.body 的标记属性。 */
 const CLAUDE_STYLE_ATTR = 'data-dsh-claude-style'
 
 function resolveNewSessionLabel(ctx: ClientContext, t?: (key: string) => string): string {

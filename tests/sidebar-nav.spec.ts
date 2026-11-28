@@ -151,6 +151,11 @@ describe('SidebarNav 组件与交互测试', () => {
       await act(async () => {
         root.render(createElement(SidebarNav, { ctx: ctx as never }))
       })
+      const pinnedIds = [...container.querySelectorAll('[data-zone="pinned"] [data-dcu-panel-id]')].map(
+        el => el.getAttribute('data-dcu-panel-id'),
+      )
+      expect(pinnedIds).toEqual([searchId, 'plugins'])
+      expect(container.querySelector(`[data-zone="more"] [data-dcu-panel-id="${searchId}"]`)).toBeNull()
       const searchButton = container.querySelector<HTMLButtonElement>(`[data-zone="pinned"] [data-dcu-panel-id="${searchId}"]`)
       expect(searchButton).not.toBeNull()
       searchButton?.click()
