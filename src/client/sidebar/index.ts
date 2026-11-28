@@ -18,6 +18,7 @@ export * from './layout.ts'
 export * from './SidebarNav.tsx'
 
 const CONTAINER_CLASS = 'dcu-sidebar-nav-root'
+const CLAUDE_STYLE_ATTR = 'data-dsh-claude-style'
 
 function resolveNewSessionLabel(ctx: ClientContext, t?: (key: string) => string): string {
   try {
@@ -32,20 +33,28 @@ function resolveNewSessionLabel(ctx: ClientContext, t?: (key: string) => string)
 }
 
 function createSessionActionLayer(ctx: ClientContext): FC<{ wide?: boolean; children?: ReactNode; t?: (k: string) => string }> {
+  // Claude Style 通过宿主按钮的标记识别主操作，替换节点会被它按同行图标布局。
+  const shouldReplace = () => getSidebarEnabled() &&
+    (typeof document === 'undefined' || !document.body?.hasAttribute(CLAUDE_STYLE_ATTR))
   const SessionActionLayer: FC<{ wide?: boolean; children?: ReactNode; t?: (k: string) => string }> = ({
     wide = false,
     children,
     t,
   }) => {
-    const [enabled, setEnabled] = useState(() => getSidebarEnabled())
+    const [replace, setReplace] = useState(shouldReplace)
     useEffect(() => {
-      setEnabled(getSidebarEnabled())
-      return subscribeSidebarEnabled(() => {
-        setEnabled(getSidebarEnabled())
-      })
+      const sync = () => setReplace(shouldReplace())
+      const unsubscribe = subscribeSidebarEnabled(sync)
+      const observer = new MutationObserver(sync)
+      observer.observe(document.body, { attributes: true, attributeFilter: [CLAUDE_STYLE_ATTR] })
+      sync()
+      return () => {
+        observer.disconnect()
+        unsubscribe()
+      }
     }, [])
 
-    if (!enabled || !wide || !resolveStartSession(ctx)) {
+    if (!replace || !wide || !resolveStartSession(ctx)) {
       return React.createElement(React.Fragment, null, children)
     }
 

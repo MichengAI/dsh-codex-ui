@@ -4,8 +4,8 @@
  * 纯函数，方便单测；不读写 localStorage。
  */
 
-/** 宿主固定的入口：始终常驻，不参与收纳与拖动。 */
-export const FIXED_PANEL_IDS = ['plugins'] as const
+/** 始终常驻的入口；Claude Style 搜索是直接操作，放在面板导航前。 */
+export const FIXED_PANEL_IDS = ['dsh-claude-style.search', 'plugins'] as const
 
 /** 首次使用时默认常驻的入口（除固定入口外全部收入更多）。 */
 export const DEFAULT_PINNED: readonly string[] = []
@@ -46,7 +46,7 @@ export function serializeLayout(layout: SidebarLayout): string {
   return JSON.stringify({ pinned: layout.pinned, more: layout.more })
 }
 
-const isFixed = (id: string): boolean => (FIXED_PANEL_IDS as readonly string[]).includes(id)
+export const isFixed = (id: string): boolean => (FIXED_PANEL_IDS as readonly string[]).includes(id)
 
 /**
  * 把已保存布局与当前实际注册的入口对齐：

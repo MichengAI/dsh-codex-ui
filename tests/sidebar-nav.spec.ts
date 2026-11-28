@@ -134,6 +134,33 @@ describe('SidebarNav 组件与交互测试', () => {
     root.unmount()
   })
 
+  it('Issue #117：Claude Style 的搜索入口从已保存的更多区恢复至常驻区，并保留搜索操作', async () => {
+    const { ctx, selectPanel } = createMockCtx()
+    const searchId = 'dsh-claude-style.search'
+    const openSearch = vi.fn((event: Event) => event.stopImmediatePropagation())
+    const panels = ctx.slots.entriesOfSlot('sidebar.panellist')
+    panels.push({
+      options: { id: searchId, label: '搜索', order: -1 },
+      component: () => createElement('span', {
+        ref: (icon: HTMLSpanElement | null) => icon?.closest('button')?.addEventListener('click', openSearch, true),
+      }),
+    })
+    localStorage.setItem(SIDEBAR_LAYOUT_KEY, JSON.stringify({ pinned: [], more: [searchId] }))
+    const root = createRoot(container)
+    try {
+      await act(async () => {
+        root.render(createElement(SidebarNav, { ctx: ctx as never }))
+      })
+      const searchButton = container.querySelector<HTMLButtonElement>(`[data-zone="pinned"] [data-dcu-panel-id="${searchId}"]`)
+      expect(searchButton).not.toBeNull()
+      searchButton?.click()
+      expect(openSearch).toHaveBeenCalledTimes(1)
+      expect(selectPanel).not.toHaveBeenCalled()
+    } finally {
+      await act(async () => root.unmount())
+    }
+  })
+
   it('点击入口调用 layout.selectPanel，点击新会话调用 uiWorkspace.startSession', async () => {
     const { ctx, selectPanel, startSession } = createMockCtx()
     const root = createRoot(container)
@@ -881,17 +908,33 @@ describe('observeSidebarNav 挂载与回退生命周期', () => {
     )
     expect(sortedLayers).toHaveLength(2)
     expect(sortedLayers[1]?.options.id).toBe('codex-ui')
+    const nativeStartSession = vi.fn()
     const renderRow = (wide?: boolean) =>
       sortedLayers.reduceRight<ReactNode>(
         (inner, layer) =>
           createElement(layer.component as React.FC<{ wide?: boolean; children: ReactNode }>, { wide, children: inner }),
-        createElement('button', { type: 'button', className: 'host_newSession', 'aria-keyshortcuts': 'Control+Alt+N' }, '原生新会话'),
+        createElement('button', {
+          type: 'button', className: 'host_newSession', 'aria-keyshortcuts': 'Control+Alt+N', onClick: nativeStartSession,
+        }, '原生新会话'),
       )
 
     const rowRoot = createRoot(newSessionRow)
     await act(async () => {
       rowRoot.render(renderRow(true))
     })
+
+    // Issue #117：切换主题无需重挂侧栏，Claude Style 启用时保留原生行与点击行为。
+    try {
+      await act(async () => { document.body.setAttribute('data-dsh-claude-style', '') })
+      const nativeButton = newSessionRow.querySelector<HTMLButtonElement>('button.host_newSession')
+      expect(nativeButton).not.toBeNull()
+      expect(newSessionRow.querySelector('.dcu-sb-new-session-row')).toBeNull()
+      expect(newSessionRow.querySelector('button.official_importBtn')).not.toBeNull()
+      nativeButton?.click()
+      expect(nativeStartSession).toHaveBeenCalledTimes(1)
+    } finally {
+      await act(async () => { document.body.removeAttribute('data-dsh-claude-style') })
+    }
 
     // 展开态下：原生按钮被替换为 Codex 风格按钮，导入按钮并排保留在同一行
     expect(newSessionRow.querySelector('button.host_newSession')).toBeNull()

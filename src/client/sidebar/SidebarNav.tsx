@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FC, type DragEv
 import { NS } from '../locales.ts'
 import {
   FIXED_PANEL_IDS,
+  isFixed,
   moveEntry,
   normalizeLayout,
   parseLayout,
@@ -335,7 +336,7 @@ export const SidebarNav: FC<SidebarNavProps> = ({ ctx, onLayoutChange, initialLa
       zone: 'pinned' | 'more',
       target: string,
     ) => {
-      if (!draggedId || FIXED_PANEL_IDS.includes(draggedId as never)) return
+      if (!draggedId || isFixed(draggedId)) return
       const currentLayout = layoutRef.current
 
       // 1. 投放至“更多”触发器上 -> 收纳进更多分区末尾
@@ -385,7 +386,7 @@ export const SidebarNav: FC<SidebarNavProps> = ({ ctx, onLayoutChange, initialLa
   )
 
   const handleDragStart = useCallback((e: ReactDragEvent<HTMLElement>, id: string, label: string) => {
-    if (FIXED_PANEL_IDS.includes(id as never)) {
+    if (isFixed(id)) {
       e.preventDefault()
       return
     }
@@ -420,8 +421,8 @@ export const SidebarNav: FC<SidebarNavProps> = ({ ctx, onLayoutChange, initialLa
 
       const list = zone === 'pinned' ? layoutRef.current.pinned : layoutRef.current.more
 
-      // 如果悬停在固定插件行 plugins 上，指示线稳固吸附在常驻区第 1 项顶部
-      if (targetId === 'plugins') {
+      // 悬停在固定入口时，落点吸附到常驻区第一项之前。
+      if (isFixed(targetId)) {
         const firstPanel = list[0]
         updateDragOver({ zone: 'pinned', target: firstPanel ?? '__end__' })
         return
@@ -558,9 +559,10 @@ export const SidebarNav: FC<SidebarNavProps> = ({ ctx, onLayoutChange, initialLa
         onDrop={e => handleDropZone(e, 'pinned')}
       >
         {/* 固定项（不可拖动，但支持作为放置落点） */}
-        {fixedPanels.map(panel => {
+        {fixedPanels.map((panel, index) => {
           const active = activePanelId === panel.id
-          const isPluginsOverAfter =
+          const showDropAfter =
+            index === fixedPanels.length - 1 &&
             dragOver?.zone === 'pinned' &&
             dragOver.target === '__end__' &&
             userPinnedPanels.length === 0
@@ -573,15 +575,9 @@ export const SidebarNav: FC<SidebarNavProps> = ({ ctx, onLayoutChange, initialLa
               title={t('sidebar.fixed', '始终常驻')}
               aria-current={active ? 'page' : undefined}
               data-dcu-panel-id={panel.id}
-              data-drag-over={isPluginsOverAfter ? 'after' : undefined}
+              data-drag-over={showDropAfter ? 'after' : undefined}
               draggable={false}
               onClick={() => handleSelectPanel(panel.id)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  handleSelectPanel(panel.id)
-                }
-              }}
               onDragOver={e => handleDragOverRow(e, panel.id, 'pinned')}
               onDragLeave={e => handleDragLeaveRow(e, panel.id)}
               onDrop={e => handleDropRow(e, panel.id, 'pinned')}
